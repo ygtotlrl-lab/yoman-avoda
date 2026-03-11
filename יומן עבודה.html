@@ -145,6 +145,7 @@ body{font-family:'Heebo',sans-serif;background:linear-gradient(160deg,#0E1830,#1
       <div class="hdr-bh">ב״ה</div>
       <div class="hdr-h1">טאג בוך | <span>יומן עבודה</span></div>
       <div class="hdr-sub">ישיבת תומכי תמימים ליובאוויטש ראשון לציון</div>
+      <div style="font-size:9px;color:rgba(201,168,76,0.4);margin-top:2px">v4 · מתעדכן אוטומטית</div>
       <div class="hdr-div"></div>
     </div>
   </div>
@@ -716,6 +717,85 @@ function exportArchivePDF(id) {
   selDay = savedDay;
   document.getElementById("hebDateInput").value = origHeb;
 }
+
+
+// ============================================================
+// AUTO-UPDATE SYSTEM
+// ============================================================
+var GITHUB_USER = "ygtotlrl-lab";
+var GITHUB_REPO = "yoman-avoda";
+var GITHUB_FILE = "%D7%99%D7%95%D7%9E%D7%9F_%D7%A2%D7%91%D7%95%D7%93%D7%94.html";
+var RAW_URL = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/" + GITHUB_FILE;
+
+var UPDATE_KEY = "tb_file_hash";
+
+function simpleHash(str) {
+  var h = 0;
+  for (var i = 0; i < Math.min(str.length, 5000); i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h.toString(36);
+}
+
+function showUpdateBanner(newContent) {
+  var banner = document.getElementById("updateBanner");
+  if (banner) return;
+  banner = document.createElement("div");
+  banner.id = "updateBanner";
+  banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1A2B5E,#2A3D80);color:#F5EDD6;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:Heebo,sans-serif;font-size:14px;direction:rtl;";
+  banner.innerHTML = '<span>✨ <strong>גרסה חדשה זמינה!</strong> נמצאו עדכונים לאפליקציה</span>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button id="updateNowBtn" style="background:#C9A84C;color:#101A3A;border:none;border-radius:8px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇ עדכן עכשיו</button>'
+    + '<button onclick="document.getElementById(\'updateBanner\').remove()" style="background:rgba(255,255,255,0.15);color:#F5EDD6;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;">✕</button>'
+    + '</div>';
+  document.body.prepend(banner);
+  document.getElementById("updateNowBtn").onclick = function() {
+    // Save current data before updating
+    var savedData = {
+      entries: localStorage.getItem("tb_entries"),
+      cats: localStorage.getItem("tb_cats"),
+      subs: localStorage.getItem("tb_subs"),
+      archive: localStorage.getItem("tb_archive")
+    };
+    // Replace page with new content
+    document.open();
+    document.write(newContent);
+    document.close();
+    // Restore data
+    if (savedData.entries) localStorage.setItem("tb_entries", savedData.entries);
+    if (savedData.cats) localStorage.setItem("tb_cats", savedData.cats);
+    if (savedData.subs) localStorage.setItem("tb_subs", savedData.subs);
+    if (savedData.archive) localStorage.setItem("tb_archive", savedData.archive);
+    localStorage.setItem(UPDATE_KEY, simpleHash(newContent));
+  };
+}
+
+function checkForUpdates() {
+  var currentHash = localStorage.getItem(UPDATE_KEY) || "";
+  fetch(RAW_URL + "?t=" + Date.now())
+    .then(function(r){ return r.text(); })
+    .then(function(text){
+      var remoteHash = simpleHash(text);
+      if (remoteHash !== currentHash) {
+        // First run or genuine update
+        if (currentHash === "") {
+          // First time - just save hash, no banner
+          localStorage.setItem(UPDATE_KEY, remoteHash);
+        } else {
+          showUpdateBanner(text);
+        }
+      }
+    })
+    .catch(function(){ /* offline - silent */ });
+}
+
+// Check on load and every 5 minutes
+window.addEventListener("DOMContentLoaded", function() {
+  setTimeout(checkForUpdates, 2000);
+  setInterval(checkForUpdates, 5 * 60 * 1000);
+});
+// ============================================================
 
 // INIT
 window.addEventListener("DOMContentLoaded", function() {
