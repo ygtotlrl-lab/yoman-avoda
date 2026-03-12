@@ -264,6 +264,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
   <!-- SETTINGS -->
   <div class="panel" id="panel-settings" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-ttl">📱 שליחה לוואטסאפ</div>
+      <div style="margin:10px 0 8px;font-size:13px;color:var(--textmid)">מספר הנמען (קידומת בינלאומית, ללא +)</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="waPhone" type="tel" placeholder="972501234567"
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:Heebo,sans-serif;direction:ltr;text-align:left;letter-spacing:1px">
+        <button class="btn-save" style="white-space:nowrap" onclick="saveWAPhone()">💾 שמור</button>
+      </div>
+      <div id="waPhoneStatus" style="font-size:11px;color:var(--success);margin-top:6px;display:none">✅ נשמר!</div>
+    </div>
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
