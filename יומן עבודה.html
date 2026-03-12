@@ -257,7 +257,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <button class="btn-sm btn-red" onclick="clearAll()">🗑 נקה</button>
         <button class="btn-sm btn-green" onclick="exportTxt()">⬇ טקסט</button>
         <button class="btn-sm btn-blue" onclick="exportPDF()">📄 PDF יומי</button>
-      <button class="btn-sm" style="background:#25D366;color:white" onclick="copyForWhatsApp()">📋 העתק לוואטסאפ</button>
+      <button class="btn-sm" style="background:#25D366;color:white" onclick="sendWhatsApp()">📱 שלח לוואטסאפ</button>
       </div>
     </div>
   </div>
@@ -835,8 +835,23 @@ function saveWAPhone() {
   st.style.display = 'block';
   setTimeout(function(){ st.style.display = 'none'; }, 2000);
 }
-function copyForWhatsApp() {
-  if (!ENTRIES.length) { showToast("אין רשומות להעתקה"); return; }
+function saveWAPhone() {
+  var val = document.getElementById('waPhone').value.trim();
+  localStorage.setItem('tb_wa_phone', val);
+  var st = document.getElementById('waPhoneStatus');
+  st.style.display = 'block';
+  setTimeout(function(){ st.style.display = 'none'; }, 2000);
+}
+
+function sendWhatsApp() {
+  if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
+  var phone = localStorage.getItem('tb_wa_phone') || '';
+  if (!phone) {
+    showToast("⚠️ הכנס מספר טלפון בהגדרות");
+    showTab('settings');
+    setTimeout(function(){ document.getElementById('waPhone').focus(); }, 300);
+    return;
+  }
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var dayLabel = selDay || "";
@@ -861,17 +876,9 @@ function copyForWhatsApp() {
       msg += "\n";
     });
   msg += "_יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!_";
-  navigator.clipboard.writeText(msg).then(function() {
-    showToast("✅ הועתק! פתח את הקבוצה בוואטסאפ והדבק (Ctrl+V)");
-  }).catch(function() {
-    // Fallback for older browsers
-    var ta = document.createElement("textarea");
-    ta.value = msg; ta.style.position="fixed"; ta.style.opacity="0";
-    document.body.appendChild(ta); ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-    showToast("✅ הועתק! פתח את הקבוצה בוואטסאפ והדבק");
-  });
+  var url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+  showToast("📱 וואטסאפ נפתח — לחץ שלח!");
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
