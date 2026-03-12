@@ -176,6 +176,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .toast.show{transform:translateX(-50%) translateY(0);}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="app">
@@ -186,7 +187,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       <div class="hdr-bh">ב״ה</div>
       <div class="hdr-title-wrap"><div class="hdr-h1">טאג בוך | יומן עבודה</div></div>
       <div class="hdr-sub">ישיבת תומכי תמימים ליובאוויטש ראשון לציון</div>
-      <div style="font-size:9px;color:rgba(201,168,76,0.4);margin-top:2px">v15 · מתעדכן אוטומטית</div>
+      <button onclick="syncFromCloud()" style="margin-top:6px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:3px 12px;font-family:Heebo;font-size:10px;cursor:pointer;">🔄 סנכרן</button>
+      <div style="font-size:9px;color:rgba(201,168,76,0.4);margin-top:2px">v16 · ☁️ ענן</div>
       <div class="hdr-div"></div>
     </div>
   </div>
@@ -289,6 +291,82 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 <script>
 
+// ═══════════ SUPABASE SYNC ═══════════
+const SB_URL = "https://kxbtskqobynewvnckaaz.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg";
+var _sb = null;
+
+function getSB() {
+  if (!_sb) _sb = supabase.createClient(SB_URL, SB_KEY);
+  return _sb;
+}
+
+// Generic save to Supabase (key/value store in table "kv")
+async function sbSet(key, value) {
+  try {
+    var sb = getSB();
+    await sb.from("kv").upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"});
+  } catch(e) { console.warn("sbSet failed:", e); }
+}
+
+async function sbGet(key) {
+  try {
+    var sb = getSB();
+    var res = await sb.from("kv").select("value").eq("key", key).single();
+    if (res.data) return JSON.parse(res.data.value);
+  } catch(e) { console.warn("sbGet failed:", e); }
+  return null;
+}
+
+// Save functions — write to both localStorage and Supabase
+function saveCats() {
+  localStorage.setItem("tb_cats", JSON.stringify(CATS));
+  sbSet("tb_cats", CATS);
+}
+function saveSubs() {
+  localStorage.setItem("tb_subs", JSON.stringify(SUBS));
+  sbSet("tb_subs", SUBS);
+}
+function saveEntries() {
+  localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
+  sbSet("tb_entries", ENTRIES);
+}
+function saveArchive() {
+  localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
+  sbSet("tb_archive", ARCHIVE);
+}
+
+// Load from Supabase on startup (overrides localStorage if cloud is newer)
+async function syncFromCloud() {
+  showToast("🔄 מסנכרן...", 3000);
+  try {
+    var cats = await sbGet("tb_cats");
+    if (cats) { CATS = cats; localStorage.setItem("tb_cats", JSON.stringify(CATS)); }
+    var subs = await sbGet("tb_subs");
+    if (subs) { SUBS = subs; localStorage.setItem("tb_subs", JSON.stringify(SUBS)); }
+    var entries = await sbGet("tb_entries");
+    if (entries) { ENTRIES = entries; localStorage.setItem("tb_entries", JSON.stringify(ENTRIES)); }
+    var archive = await sbGet("tb_archive");
+    if (archive) {
+      // Merge: keep seeds that aren't in cloud
+      var cloudGdates = archive.map(function(s){ return s.gdate; });
+      ARCHIVE_SEED.forEach(function(seed) {
+        if (cloudGdates.indexOf(seed.gdate) < 0) archive.push(seed);
+      });
+      ARCHIVE = archive;
+      localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
+    }
+    buildCatGrid();
+    buildSubBtns();
+    renderLog();
+    renderSettings();
+    showToast("✓ מסונכרן!", 2000);
+  } catch(e) {
+    showToast("⚠️ לא ניתן להתחבר לענן", 2000);
+  }
+}
+// ═══════════════════════════════════════
+
 const MONTHS_HEB = ["תשרי","חשון","כסלו","טבת","שבט","אדר","ניסן","אייר","סיון","תמוז","אב","אלול"];
 const DAYS_HEB = ["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט׳","י׳","י״א","י״ב","י״ג","י״ד","ט״ו","ט״ז","י״ז","י״ח","י״ט","כ׳","כ״א","כ״ב","כ״ג","כ״ד","כ״ה","כ״ו","כ״ז","כ״ח","כ״ט","ל׳"];
 
@@ -371,9 +449,7 @@ let selSub = null;
 let selDay = "";
 let todayDateKey = ""; // set on init and when date changes
 
-function saveCats() { localStorage.setItem("tb_cats", JSON.stringify(CATS)); }
-function saveSubs() { localStorage.setItem("tb_subs", JSON.stringify(SUBS)); }
-function saveEntries() { localStorage.setItem("tb_entries", JSON.stringify(ENTRIES)); }
+// save functions defined above in Supabase layer
 
 function getCurrentDateKey() {
   var g = document.getElementById("gregDateInput");
@@ -1012,7 +1088,7 @@ var ARCHIVE = (function() {
   return JSON.parse(JSON.stringify(ARCHIVE_SEED));
 })();
 
-function saveArchive() { localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE)); }
+// saveArchive defined above in Supabase layer
 
 function archiveCurrent() {
   if (!ENTRIES.length) { showToast("אין רשומות לשמירה"); return; }
@@ -1590,6 +1666,8 @@ window.addEventListener("DOMContentLoaded", function() {
   buildCatGrid();
   buildSubBtns();
   renderLog();
+  // Sync from cloud after short delay
+  setTimeout(syncFromCloud, 1000);
 });
 
 </script>
