@@ -835,9 +835,11 @@ function exportPDF() {
   var fileTitle = today + " " + todayGreg;
   // Inject title into the html
   html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8"><title>' + fileTitle + '</title>');
+  var fileTitle = "יומן עבודה " + today + " " + todayGreg;
   var w = window.open("","_blank","width=900,height=700");
   w.document.write(html);
   w.document.close();
+  setTimeout(function(){ try { w.document.title = fileTitle; } catch(e){} }, 80);
   showToast("📄 PDF נפתח!");
 }
 
