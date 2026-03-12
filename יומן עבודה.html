@@ -193,10 +193,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
     </div>
     <div class="card" style="margin-top:12px">
       <div class="card-ttl">📱 שליחה לוואטסאפ</div>
-      <div style="margin:12px 0;font-size:13px;color:var(--textmid)">מספר טלפון לשליחת היומן (עם קידומת בינלאומית, ללא +)</div>
+      <div style="margin:12px 0;font-size:13px;color:var(--textmid)">קישור הזמנה לקבוצה (מתוך וואטסאפ: שלוש נקודות ← הוסף איש קשר ← קישור הזמנה)</div>
       <div style="display:flex;gap:8px;align-items:center">
-        <input id="waPhone" type="tel" placeholder="לדוגמה: 972501234567"
-          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:Heebo,sans-serif;direction:ltr;text-align:left"
+        <input id="waPhone" type="url" placeholder="https://chat.whatsapp.com/XXXXXX"
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:Heebo,sans-serif;direction:ltr;text-align:left"
           oninput="localStorage.setItem('tb_wa_phone',this.value)">
         <button class="btn-save" style="white-space:nowrap" onclick="saveWAPhone()">💾 שמור</button>
       </div>
@@ -849,7 +849,7 @@ function sendWhatsApp() {
   if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
   var phone = localStorage.getItem('tb_wa_phone') || '';
   if (!phone) {
-    showToast("⚠️ הכנס מספר וואטסאפ בהגדרות");
+    showToast("⚠️ הכנס קישור קבוצת וואטסאפ בהגדרות");
     showTab('settings');
     setTimeout(function(){ document.getElementById('waPhone').focus(); }, 300);
     return;
@@ -880,9 +880,17 @@ function sendWhatsApp() {
     });
   msg += "_יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!_";
   setTimeout(function() {
-    var url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
+    var url;
+    if (phone.indexOf('chat.whatsapp.com') >= 0) {
+      // Group invite link - open group then user pastes manually
+      url = phone;
+      showToast("📱 פתח את הקבוצה, הדבק את ההודעה וצרף את ה-PDF");
+    } else {
+      // Personal phone number fallback
+      url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
+      showToast("📱 וואטסאפ נפתח — שמור את ה-PDF וצרף!");
+    }
     window.open(url, "_blank");
-    showToast("📱 וואטסאפ נפתח — שמור את ה-PDF וצרף!");
   }, 800);
 }
 // SETTINGS
