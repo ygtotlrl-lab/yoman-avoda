@@ -191,17 +191,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       <div style="font-size:9px;color:rgba(201,168,76,0.4);margin-top:2px">v16 · ☁️ ענן</div>
       <div class="hdr-div"></div>
     </div>
-    <div class="card" style="margin-top:12px">
-      <div class="card-ttl">📱 שליחה לוואטסאפ</div>
-      <div style="margin:12px 0;font-size:13px;color:var(--textmid)">קישור הזמנה לקבוצה (מתוך וואטסאפ: שלוש נקודות ← הוסף איש קשר ← קישור הזמנה)</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="waPhone" type="url" placeholder="https://chat.whatsapp.com/XXXXXX"
-          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:Heebo,sans-serif;direction:ltr;text-align:left"
-          oninput="localStorage.setItem('tb_wa_phone',this.value)">
-        <button class="btn-save" style="white-space:nowrap" onclick="saveWAPhone()">💾 שמור</button>
-      </div>
-      <div id="waPhoneStatus" style="font-size:11px;color:var(--success);margin-top:6px;display:none">✅ נשמר!</div>
-    </div>
+
   </div>
 
   <div class="tabs">
@@ -267,7 +257,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <button class="btn-sm btn-red" onclick="clearAll()">🗑 נקה</button>
         <button class="btn-sm btn-green" onclick="exportTxt()">⬇ טקסט</button>
         <button class="btn-sm btn-blue" onclick="exportPDF()">📄 PDF יומי</button>
-      <button class="btn-sm" style="background:#25D366;color:white" onclick="sendWhatsApp()">📱 WhatsApp</button>
+      <button class="btn-sm" style="background:#25D366;color:white" onclick="copyForWhatsApp()">📋 העתק לוואטסאפ</button>
       </div>
     </div>
   </div>
@@ -845,19 +835,11 @@ function saveWAPhone() {
   st.style.display = 'block';
   setTimeout(function(){ st.style.display = 'none'; }, 2000);
 }
-function sendWhatsApp() {
-  if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
-  var phone = localStorage.getItem('tb_wa_phone') || '';
-  if (!phone) {
-    showToast("⚠️ הכנס קישור קבוצת וואטסאפ בהגדרות");
-    showTab('settings');
-    setTimeout(function(){ document.getElementById('waPhone').focus(); }, 300);
-    return;
-  }
+function copyForWhatsApp() {
+  if (!ENTRIES.length) { showToast("אין רשומות להעתקה"); return; }
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var dayLabel = selDay || "";
-  exportPDF();
   var msg = "📋 *יומן עבודה*\n" + dayLabel + " " + today + " | " + todayGreg + "\n\n";
   var byCat = {}, catOrder2 = {};
   CATS.forEach(function(cat, ci) { catOrder2[cat.letter] = ci; });
@@ -879,19 +861,17 @@ function sendWhatsApp() {
       msg += "\n";
     });
   msg += "_יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!_";
-  setTimeout(function() {
-    var url;
-    if (phone.indexOf('chat.whatsapp.com') >= 0) {
-      // Group invite link - open group then user pastes manually
-      url = phone;
-      showToast("📱 פתח את הקבוצה, הדבק את ההודעה וצרף את ה-PDF");
-    } else {
-      // Personal phone number fallback
-      url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
-      showToast("📱 וואטסאפ נפתח — שמור את ה-PDF וצרף!");
-    }
-    window.open(url, "_blank");
-  }, 800);
+  navigator.clipboard.writeText(msg).then(function() {
+    showToast("✅ הועתק! פתח את הקבוצה בוואטסאפ והדבק (Ctrl+V)");
+  }).catch(function() {
+    // Fallback for older browsers
+    var ta = document.createElement("textarea");
+    ta.value = msg; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    showToast("✅ הועתק! פתח את הקבוצה בוואטסאפ והדבק");
+  });
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
