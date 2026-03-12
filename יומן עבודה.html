@@ -886,9 +886,21 @@ function sendWhatsApp() {
       msg += "\n";
     });
   msg += "_יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!_";
-  var url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
-  window.open(url, "_blank");
-  showToast("📱 וואטסאפ נפתח — לחץ שלח!");
+  var waMsg = encodeURIComponent(msg);
+  var waPhone = encodeURIComponent(phone);
+  // Try desktop app first (Windows/Mac), fallback to web
+  var appUrl = "whatsapp://send?phone=" + waPhone + "&text=" + waMsg;
+  var webUrl = "https://web.whatsapp.com/send?phone=" + waPhone + "&text=" + waMsg;
+  
+  // Open desktop app
+  window.location.href = appUrl;
+  
+  // After short delay, if app didn't open → open web as fallback
+  setTimeout(function() {
+    window.open(webUrl, "_blank");
+  }, 1500);
+  
+  showToast("📱 פותח וואטסאפ — לחץ שלח!");
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
