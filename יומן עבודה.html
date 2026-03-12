@@ -191,6 +191,17 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       <div style="font-size:9px;color:rgba(201,168,76,0.4);margin-top:2px">v16 · ☁️ ענן</div>
       <div class="hdr-div"></div>
     </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-ttl">📱 שליחה לוואטסאפ</div>
+      <div style="margin:12px 0;font-size:13px;color:var(--textmid)">מספר טלפון לשליחת היומן (עם קידומת בינלאומית, ללא +)</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="waPhone" type="tel" placeholder="לדוגמה: 972501234567"
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:Heebo,sans-serif;direction:ltr;text-align:left"
+          oninput="localStorage.setItem('tb_wa_phone',this.value)">
+        <button class="btn-save" style="white-space:nowrap" onclick="saveWAPhone()">💾 שמור</button>
+      </div>
+      <div id="waPhoneStatus" style="font-size:11px;color:var(--success);margin-top:6px;display:none">✅ נשמר!</div>
+    </div>
   </div>
 
   <div class="tabs">
@@ -256,6 +267,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <button class="btn-sm btn-red" onclick="clearAll()">🗑 נקה</button>
         <button class="btn-sm btn-green" onclick="exportTxt()">⬇ טקסט</button>
         <button class="btn-sm btn-blue" onclick="exportPDF()">📄 PDF יומי</button>
+      <button class="btn-sm" style="background:#25D366;color:white" onclick="sendWhatsApp()">📱 WhatsApp</button>
       </div>
     </div>
   </div>
@@ -825,6 +837,54 @@ function exportPDF() {
   showToast("📄 PDF נפתח!");
 }
 
+// ── WhatsApp Send ──
+function saveWAPhone() {
+  var val = document.getElementById('waPhone').value.trim();
+  localStorage.setItem('tb_wa_phone', val);
+  var st = document.getElementById('waPhoneStatus');
+  st.style.display = 'block';
+  setTimeout(function(){ st.style.display = 'none'; }, 2000);
+}
+function sendWhatsApp() {
+  if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
+  var phone = localStorage.getItem('tb_wa_phone') || '';
+  if (!phone) {
+    showToast("⚠️ הכנס מספר וואטסאפ בהגדרות");
+    showTab('settings');
+    setTimeout(function(){ document.getElementById('waPhone').focus(); }, 300);
+    return;
+  }
+  var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
+  var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
+  var dayLabel = selDay || "";
+  exportPDF();
+  var msg = "📋 *יומן עבודה*\n" + dayLabel + " " + today + " | " + todayGreg + "\n\n";
+  var byCat = {}, catOrder2 = {};
+  CATS.forEach(function(cat, ci) { catOrder2[cat.letter] = ci; });
+  ENTRIES.slice().sort(function(a,b){ return (catOrder2[a.cat]||99)-(catOrder2[b.cat]||99); })
+    .forEach(function(e) {
+      if (!byCat[e.cat]) byCat[e.cat] = {name: e.catName, list: []};
+      byCat[e.cat].list.push(e);
+    });
+  Object.keys(byCat).sort(function(a,b){ return (catOrder2[a]||99)-(catOrder2[b]||99); })
+    .forEach(function(letter) {
+      var data = byCat[letter];
+      msg += "*" + data.name + "*\n";
+      data.list.forEach(function(e) {
+        msg += "• " + e.task;
+        if (e.sub) msg += " › " + e.sub;
+        if (e.notes) msg += " — " + e.notes;
+        msg += "\n";
+      });
+      msg += "\n";
+    });
+  msg += "_יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!_";
+  setTimeout(function() {
+    var url = "https://web.whatsapp.com/send?phone=" + encodeURIComponent(phone) + "&text=" + encodeURIComponent(msg);
+    window.open(url, "_blank");
+    showToast("📱 וואטסאפ נפתח — שמור את ה-PDF וצרף!");
+  }, 800);
+}
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
 var _dragData = {};
