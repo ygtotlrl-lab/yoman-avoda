@@ -831,6 +831,10 @@ function exportPDF() {
     + '<script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>'
     + '</body></html>';
 
+  // Set filename = hebrew date + gregorian date
+  var fileTitle = today + " " + todayGreg;
+  // Inject title into the html
+  html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8"><title>' + fileTitle + '</title>');
   var w = window.open("","_blank","width=900,height=700");
   w.document.write(html);
   w.document.close();
