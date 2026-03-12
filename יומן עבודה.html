@@ -856,6 +856,8 @@ function saveWAPhone() {
 function sendWhatsApp() {
   if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
   var phone = localStorage.getItem('tb_wa_phone') || '';
+  // Also export PDF
+  exportPDF();
   if (!phone) {
     showToast("⚠️ הכנס מספר טלפון בהגדרות");
     showTab('settings');
