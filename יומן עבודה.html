@@ -856,8 +856,7 @@ function saveWAPhone() {
 function sendWhatsApp() {
   if (!ENTRIES.length) { showToast("אין רשומות להשלחה"); return; }
   var phone = localStorage.getItem('tb_wa_phone') || '';
-  // Also export PDF
-  exportPDF();
+
   if (!phone) {
     showToast("⚠️ הכנס מספר טלפון בהגדרות");
     showTab('settings');
@@ -893,14 +892,19 @@ function sendWhatsApp() {
   var appUrl = "whatsapp://send?phone=" + waPhone + "&text=" + waMsg;
   
   // Use <a> tag — the only reliable way to trigger custom protocols from browser
-  var a = document.createElement('a');
-  a.href = appUrl;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // First open PDF
+  exportPDF();
   
-  showToast("📱 פותח וואטסאפ — לחץ שלח!");
+  // Then open WhatsApp after delay so PDF window has time to open
+  setTimeout(function() {
+    var a = document.createElement('a');
+    a.href = appUrl;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("📱 וואטסאפ נפתח — צרף את ה-PDF ולחץ שלח!");
+  }, 2000);
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
