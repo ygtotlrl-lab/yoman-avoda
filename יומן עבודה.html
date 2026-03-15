@@ -821,56 +821,51 @@ function exportTxt() {
 // EXPORT PDF
 function exportPDF() {
   if (!ENTRIES.length) { showToast("אין רשומות להדפסה"); return; }
-  var catOrder = {};
-  CATS.forEach(function(c,i){ catOrder[typeof c==='object'?c.letter:c]=i; });
-  var sorted = ENTRIES.slice().sort(function(a,b){
+  var catOrder={};
+  CATS.forEach(function(c,i){catOrder[typeof c==='object'?c.letter:c]=i;});
+  var sorted=ENTRIES.slice().sort(function(a,b){
     var ai=catOrder[a.cat]!==undefined?catOrder[a.cat]:999;
     var bi=catOrder[b.cat]!==undefined?catOrder[b.cat]:999;
-    return ai!==bi ? ai-bi : 0;
+    return ai!==bi?ai-bi:0;
   });
-  var CAT_COLORS=["#e8f4fd","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
+  var CAT_COLORS=["#e3edf7","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
   var ccMap={};
-  CATS.forEach(function(c,i){ var k=typeof c==='object'?c.letter:c; ccMap[k]=CAT_COLORS[i%CAT_COLORS.length]; });
+  CATS.forEach(function(c,i){var k=typeof c==='object'?c.letter:c;ccMap[k]=CAT_COLORS[i%CAT_COLORS.length];});
 
+  // Build rows with rowspan on both קטגוריה AND משימה
   var rows='', i=0;
   while(i<sorted.length){
     var ck=sorted[i].cat;
     var co=CATS.find(function(c){return(typeof c==='object'?c.letter:c)===ck;});
     var cn=co?(typeof co==='object'?(co.name||co.letter):co):ck;
     var cc=ccMap[ck]||'#f5f5f5';
-    // Count cat span
+    // Cat span: count all rows with same cat
     var catJ=i; while(catJ<sorted.length&&sorted[catJ].cat===ck)catJ++;
     var catSpan=catJ-i;
-    var catDrawn=false;
-
+    var firstCatRow=true;
     var ki=i;
     while(ki<catJ){
+      // Task span: count rows with same cat AND same desc
       var taskDesc=sorted[ki].desc||'';
-      // Count task span (same cat + same desc)
       var tj=ki; while(tj<catJ&&(sorted[tj].desc||'')===taskDesc)tj++;
       var taskSpan=tj-ki;
-      var taskDrawn=false;
-
+      var firstTaskRow=true;
       for(var kk=ki;kk<tj;kk++){
         var en=sorted[kk];
-        var subObj=en.sub&&SUBS&&SUBS[en.cat]
-          ?SUBS[en.cat].find(function(s){return(typeof s==='object'?s.letter:s)===en.sub;})
-          :null;
+        var subObj=en.sub&&SUBS&&SUBS[en.cat]?SUBS[en.cat].find(function(s){return(typeof s==='object'?s.letter:s)===en.sub;}):null;
         var subName=subObj?(typeof subObj==='object'?(subObj.name||subObj.letter):subObj):(en.sub||'');
         rows+='<tr>';
-        // קטגוריה — rowspan = catSpan, only first row of cat
-        if(!catDrawn){
-          rows+='<td rowspan="'+catSpan+'" class="cat-cell" style="background:'+cc+'">'+cn+'</td>';
-          catDrawn=true;
+        if(firstCatRow){
+          rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';font-weight:700;text-align:center;vertical-align:middle;border-left:3px solid rgba(0,0,0,0.08);padding:9px 12px;border-bottom:1px solid #dde3ea;">'+cn+'</td>';
+          firstCatRow=false;
         }
-        // משימה — rowspan = taskSpan, only first row of task group
-        if(!taskDrawn){
-          rows+='<td rowspan="'+taskSpan+'" class="task-cell">'+taskDesc+'</td>';
-          taskDrawn=true;
+        if(firstTaskRow){
+          rows+='<td rowspan="'+taskSpan+'" style="font-weight:500;vertical-align:middle;padding:9px 14px;border-bottom:1px solid #dde3ea;border-right:1px solid #dde3ea;">'+taskDesc+'</td>';
+          firstTaskRow=false;
         }
-        rows+='<td>'+subName+'</td>';
-        rows+='<td class="num">'+(en.dur||'')+'</td>';
-        rows+='<td>'+(en.note||'')+'</td>';
+        rows+='<td style="padding:9px 12px;border-bottom:1px solid #dde3ea;">'+subName+'</td>';
+        rows+='<td style="padding:9px 12px;text-align:center;color:#555;border-bottom:1px solid #dde3ea;">'+(en.dur||'')+'</td>';
+        rows+='<td style="padding:9px 12px;border-bottom:1px solid #dde3ea;">'+(en.note||'')+'</td>';
         rows+='</tr>';
       }
       ki=tj;
@@ -883,79 +878,109 @@ function exportPDF() {
   var instName=document.getElementById("instNameInput")?document.getElementById("instNameInput").value:'';
 
   var html='<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
-    +'<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap" rel="stylesheet">'
+    +'<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">'
     +'<style>'
     +'*{margin:0;padding:0;box-sizing:border-box}'
-    +'body{font-family:Heebo,Arial,sans-serif;direction:rtl;background:#f0f2f5;color:#222;}'
-    +'.page{max-width:960px;margin:0 auto;padding:24px 16px;}'
-    +'.header{background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:white;border-radius:12px;padding:20px 28px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}'
-    +'.header-title{font-size:28px;font-weight:900;letter-spacing:1px;}'
-    +'.header-sub{font-size:13px;opacity:0.85;margin-top:4px;}'
-    +'.header-date{text-align:left;font-size:14px;opacity:0.9;line-height:1.6;}'
-    +'table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);}'
-    +'thead tr{background:#1a3a5c;color:white;}'
-    +'th{padding:11px 14px;font-size:13px;font-weight:700;border:none;}'
-    +'td{padding:9px 14px;font-size:13px;border-bottom:1px solid #e8ecf0;vertical-align:middle;}'
+    +'body{font-family:Heebo,Arial,sans-serif;direction:rtl;background:#eef1f6;}'
+    +'.page{max-width:980px;margin:0 auto;padding:28px 20px;}'
+    +'.header{background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:white;border-radius:14px;padding:22px 32px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 18px rgba(26,58,92,0.18);}'
+    +'.ht{font-size:30px;font-weight:900;letter-spacing:1px;}'
+    +'.hs{font-size:13px;opacity:0.8;margin-top:5px;}'
+    +'.hd{text-align:left;font-size:14px;opacity:0.92;line-height:1.7;}'
+    +'.wrap{background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.09);}'
+    +'table{width:100%;border-collapse:collapse;}'
+    +'thead tr{background:#1a3a5c;}'
+    +'th{color:white;padding:12px 14px;font-size:13px;font-weight:700;text-align:right;}'
+    +'td{font-size:13px;border-bottom:1px solid #dde3ea;vertical-align:middle;}'
     +'tr:last-child td{border-bottom:none;}'
-    +'.cat-cell{font-weight:700;text-align:center;vertical-align:middle;border-left:3px solid rgba(0,0,0,0.08);}'
-    +'.task-cell{font-weight:500;vertical-align:middle;border-left:1px solid #e8ecf0;}'
-    +'.num{text-align:center;color:#555;}'
-    +'@media print{body{background:white;}.page{padding:0;}table{box-shadow:none;}}'
+    +'tbody tr:hover td{background:#f5f8fc;}'
+    +'@media print{body{background:white;}.page{padding:4px;}.header{border-radius:8px;}.wrap{box-shadow:none;}}'
     +'</style></head><body><div class="page">'
     +'<div class="header">'
-    +'<div><div class="header-title">יומן עבודה</div>'
-    +'<div class="header-sub">'+instName+'</div></div>'
-    +'<div class="header-date">'+today+'<br>'+todayGreg+'</div>'
+    +'<div><div class="ht">יומן עבודה</div><div class="hs">'+instName+'</div></div>'
+    +'<div class="hd">'+today+'<br>'+todayGreg+'</div>'
     +'</div>'
-    +'<table><thead><tr>'
+    +'<div class="wrap"><table>'
+    +'<thead><tr>'
     +'<th>קטגוריה</th>'
     +'<th>משימה</th>'
     +'<th>תת-משימה</th>'
-    +'<th>כמות</th>'
+    +'<th style="text-align:center">כמות</th>'
     +'<th>הרחבה</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table></div>'
     +'</div></body></html>';
 
+  var t=document.title;
+  document.title=today+' '+todayGreg;
   var win=window.open('','_blank');
   win.document.write(html);
   win.document.close();
-  setTimeout(function(){win.print();},600);
+  document.title=t;
+  setTimeout(function(){win.print();},700);
 }
 function _buildReportDiv(cb){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';
-    div.style.cssText='position:fixed;top:0;left:0;background:white;padding:20px;width:820px;direction:rtl;font-family:Arial,sans-serif;z-index:9999;';
+    div.style.cssText='position:fixed;top:0;left:0;background:#eef1f6;padding:28px 20px;width:900px;direction:rtl;font-family:Arial,sans-serif;z-index:9999;';
     document.body.appendChild(div);}
+
   var catOrder={};CATS.forEach(function(c,i){catOrder[typeof c==='object'?c.letter:c]=i;});
   var sorted=ENTRIES.slice().sort(function(a,b){
     var ai=catOrder[a.cat]!==undefined?catOrder[a.cat]:999;
     var bi=catOrder[b.cat]!==undefined?catOrder[b.cat]:999;return ai-bi;});
-  var CAT_COLORS=["#e8f4fd","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
+  var CAT_COLORS=["#e3edf7","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
   var ccMap={};CATS.forEach(function(c,i){var k=typeof c==='object'?c.letter:c;ccMap[k]=CAT_COLORS[i%CAT_COLORS.length];});
+
   var rows='',i=0;
   while(i<sorted.length){
-    var e=sorted[i],ck=e.cat;
+    var ck=sorted[i].cat;
     var co=CATS.find(function(c){return(typeof c==='object'?c.letter:c)===ck;});
     var cn=co?(typeof co==='object'?(co.name||co.letter):co):ck;
-    var cc=ccMap[ck]||'#fff';
-    var j=i;while(j<sorted.length&&sorted[j].cat===ck)j++;
-    var sp=j-i;
-    var catTd='<td rowspan="'+sp+'" style="background:'+cc+';font-weight:bold;text-align:center;vertical-align:middle;padding:4px 8px;border:1px solid #ccc;width:90px;">'+cn+'</td>';
-    for(var k2=i;k2<j;k2++){
-      var en=sorted[k2];
-      rows+='<tr>'+(k2===i?catTd:'');
-      rows+='<td style="border:1px solid #ccc;padding:4px 8px;">'+(en.desc||'')+'</td>';
-      rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;width:55px;">'+(en.dur||'')+'</td>';
-      rows+='</tr>';}
-    i=j;}
+    var cc=ccMap[ck]||'#f5f5f5';
+    var catJ=i;while(catJ<sorted.length&&sorted[catJ].cat===ck)catJ++;
+    var catSpan=catJ-i; var firstCat=true;
+    var ki=i;
+    while(ki<catJ){
+      var taskDesc=sorted[ki].desc||'';
+      var tj=ki;while(tj<catJ&&(sorted[tj].desc||'')===taskDesc)tj++;
+      var taskSpan=tj-ki; var firstTask=true;
+      for(var kk=ki;kk<tj;kk++){
+        var en=sorted[kk];
+        var subObj=en.sub&&SUBS&&SUBS[en.cat]?SUBS[en.cat].find(function(s){return(typeof s==='object'?s.letter:s)===en.sub;}):null;
+        var subName=subObj?(typeof subObj==='object'?(subObj.name||subObj.letter):subObj):(en.sub||'');
+        rows+='<tr>';
+        if(firstCat){rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';font-weight:700;text-align:center;vertical-align:middle;padding:8px 10px;border-bottom:1px solid #dde3ea;border-left:3px solid rgba(0,0,0,0.08);">'+cn+'</td>';firstCat=false;}
+        if(firstTask){rows+='<td rowspan="'+taskSpan+'" style="font-weight:500;vertical-align:middle;padding:8px 12px;border-bottom:1px solid #dde3ea;border-right:1px solid #dde3ea;">'+taskDesc+'</td>';firstTask=false;}
+        rows+='<td style="padding:8px 12px;border-bottom:1px solid #dde3ea;">'+subName+'</td>';
+        rows+='<td style="padding:8px 12px;text-align:center;border-bottom:1px solid #dde3ea;">'+(en.dur||'')+'</td>';
+        rows+='</tr>';
+      }
+      ki=tj;
+    }
+    i=catJ;
+  }
+
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:'';
-  div.innerHTML='<h2 style="text-align:center;margin-bottom:10px;">יומן עבודה — '+today+'</h2>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr>'
-    +'<th style="background:#2c3e50;color:white;padding:8px;border:1px solid #ccc;">קטגוריה</th>'
-    +'<th style="background:#2c3e50;color:white;padding:8px;border:1px solid #ccc;">תיאור</th>'
-    +'<th style="background:#2c3e50;color:white;padding:8px;border:1px solid #ccc;">משך</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>';
-  div.style.left='0';cb(div);
+  var instName=document.getElementById("instNameInput")?document.getElementById("instNameInput").value:'';
+
+  div.innerHTML=''
+    +'<div style="background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:white;border-radius:12px;padding:18px 28px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">'
+    +'<div><div style="font-size:24px;font-weight:900;">יומן עבודה</div><div style="font-size:12px;opacity:0.8;margin-top:3px;">'+instName+'</div></div>'
+    +'<div style="font-size:13px;text-align:left;">'+today+'</div>'
+    +'</div>'
+    +'<div style="background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.09);">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#1a3a5c;">'
+    +'<th style="color:white;padding:11px 12px;text-align:right;">קטגוריה</th>'
+    +'<th style="color:white;padding:11px 12px;text-align:right;">משימה</th>'
+    +'<th style="color:white;padding:11px 12px;text-align:right;">תת-משימה</th>'
+    +'<th style="color:white;padding:11px 12px;text-align:center;">כמות</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>'
+    +'</div>';
+
+  div.style.left='0';
+  cb(div);
 }
 function exportJPEG(){
   if(!ENTRIES.length){showToast("אין רשומות");return;}
