@@ -982,7 +982,16 @@ function exportJPEG(){
   _buildReportDiv(function(div){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
-      var a=document.createElement('a');a.download=fname;a.href=canvas.toDataURL('image/jpeg',0.95);a.click();
+      canvas.toBlob(function(blob){
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        a.href=url;
+        a.download=fname;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      },'image/jpeg',0.95);
     });
   });
 }
