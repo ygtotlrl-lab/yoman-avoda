@@ -846,13 +846,13 @@ function exportPDF() {
   });
 
   // Sort category display by order
-  var catLettersSorted = Object.keys(byCat).sort(function(a,b){
+  var catLettersSorted = CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
     return (catOrder2[a]||99) - (catOrder2[b]||99);
   });
   catLettersSorted.forEach(function(letter){
     var data = byCat[letter];
     var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
-    // group list by task for rowspan on task column
+    // group by task for rowspan, zebra stripes on task column
     var taskGroups = [];
     data.list.forEach(function(e) {
       var last = taskGroups[taskGroups.length - 1];
@@ -860,20 +860,19 @@ function exportPDF() {
       else { taskGroups.push({ task: e.task || '', items: [e] }); }
     });
     var catRowIdx = 0;
-    taskGroups.forEach(function(tg) {
+    taskGroups.forEach(function(tg, tgIdx) {
+      var taskBg = (tgIdx % 2 === 0) ? '#ffffff' : '#f5f5f5';
       tg.items.forEach(function(e, ti) {
         rows += '<tr>';
-        // קטגוריה — rowspan on first row of cat only
         if (catRowIdx === 0) {
           rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">' + data.name + '</td>';
         }
-        // משימה — rowspan on first row of task group
         if (ti === 0) {
-          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;">' + tg.task + '</td>';
+          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
         }
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">' + (e.sub || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;">' + (e.count || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">' + (e.notes || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.sub || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + (e.count || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.notes || '') + '</td>';
         rows += '</tr>';
         catRowIdx++;
       });
