@@ -985,11 +985,8 @@ function exportJPEG(){
       canvas.toBlob(function(blob){
         var url=URL.createObjectURL(blob);
         var a=document.createElement('a');
-        a.href=url;
-        a.download=fname;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href=url; a.download=fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url);},1000);
       },'image/jpeg',0.95);
     });
