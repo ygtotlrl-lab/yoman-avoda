@@ -352,22 +352,57 @@ function saveArchive() {
 async function syncFromCloud() {
   showToast("🔄 מסנכרן...", 3000);
   try {
-    var cats = await sbGet("tb_cats");
-    if (cats) { CATS = cats; localStorage.setItem("tb_cats", JSON.stringify(CATS)); }
-    var subs = await sbGet("tb_subs");
-    if (subs) { SUBS = subs; localStorage.setItem("tb_subs", JSON.stringify(SUBS)); }
-    var entries = await sbGet("tb_entries");
-    if (entries) { ENTRIES = entries; localStorage.setItem("tb_entries", JSON.stringify(ENTRIES)); }
-    var archive = await sbGet("tb_archive");
-    if (archive) {
-      // Merge: keep seeds that aren't in cloud
-      var cloudGdates = archive.map(function(s){ return s.gdate; });
-      ARCHIVE_SEED.forEach(function(seed) {
-        if (cloudGdates.indexOf(seed.gdate) < 0) archive.push(seed);
-      });
-      ARCHIVE = archive;
-      localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
+    const SUPA_URL = 'https://kxbtskqobynewvnckaaz.supabase.co';
+    const SUPA_KEY = getSB();
+    const headers = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+
+    async function getKey(k) {
+      const r = await fetch(SUPA_URL + '/rest/v1/kv?key=eq.' + k, { headers });
+      const d = await r.json();
+      return (d && d[0]) ? JSON.parse(d[0].value) : null;
     }
+
+    // CATS: use cloud only if localStorage is empty
+    const localCats = localStorage.getItem('tb_cats');
+    if (!localCats) {
+      const cats = await getKey('tb_cats');
+      if (cats && cats.length) {
+        CATS = cats;
+        localStorage.setItem('tb_cats', JSON.stringify(CATS));
+      }
+    }
+
+    // ENTRIES: use cloud only if localStorage is empty
+    const localEntries = localStorage.getItem('tb_entries');
+    if (!localEntries || localEntries === '[]') {
+      const entries = await getKey('tb_entries');
+      if (entries && entries.length) {
+        ENTRIES = entries;
+        localStorage.setItem('tb_entries', JSON.stringify(ENTRIES));
+      }
+    }
+
+    // ARCHIVE: merge cloud + local (cloud wins for same gdate)
+    const cloudArchive = await getKey('tb_archive');
+    if (cloudArchive && cloudArchive.length) {
+      const localGdates = ARCHIVE.map(function(a){ return a.gdate; });
+      cloudArchive.forEach(function(item) {
+        if (localGdates.indexOf(item.gdate) < 0) ARCHIVE.push(item);
+        else {
+          // replace local with cloud if cloud has more entries
+          var idx = ARCHIVE.findIndex(function(a){ return a.gdate === item.gdate; });
+          if (idx >= 0 && item.entries && item.entries.length >= ARCHIVE[idx].entries.length) {
+            ARCHIVE[idx] = item;
+          }
+        }
+      });
+      // Also keep ARCHIVE_SEED entries not in cloud
+      ARCHIVE_SEED.forEach(function(seed) {
+        if (ARCHIVE.findIndex(function(a){ return a.gdate === seed.gdate; }) < 0) ARCHIVE.push(seed);
+      });
+      localStorage.setItem('tb_archive', JSON.stringify(ARCHIVE));
+    }
+
     buildCatGrid();
     buildSubBtns();
     renderLog();
