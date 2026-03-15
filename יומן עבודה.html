@@ -992,9 +992,10 @@ function exportJPEG(){
 function saveWAPhone() {
   var val = document.getElementById('waPhone').value.trim();
   localStorage.setItem('tb_wa_phone', val);
+  sbSet('tb_wa_phone', val);
   var st = document.getElementById('waPhoneStatus');
   st.style.display = 'block';
-  setTimeout(function(){ st.style.display = 'none'; }, 2000);
+  setTimeout(function(){ st.style.display = 'none'; }, 1500);
 }
 function saveWAPhone() {
   var val = document.getElementById('waPhone').value.trim();
@@ -1211,6 +1212,10 @@ function renderSettings() {
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
   });
+
+  // Load saved WA phone
+  var waPhoneEl = document.getElementById('waPhone');
+  if(waPhoneEl) waPhoneEl.value = localStorage.getItem('tb_wa_phone') || '';
 }
 
 function removeTask(ci, ti) {
