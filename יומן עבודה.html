@@ -1900,12 +1900,13 @@ window.addEventListener("DOMContentLoaded", function() {
 });
 
 
-// PATCH: fix exportJPEG filename using Blob URL
+// PATCH: fix exportJPEG filename using Blob URL + clean Hebrew name
 window.exportJPEG = function(){
   if(!ENTRIES.length){showToast("אין רשומות");return;}
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
-  var fname='יומן עבודה '+today+' '+todayGreg+'.jpg';
+  var safeHeb=today.replace(/[׳״"']/g,'').trim();
+  var fname='יומן עבודה '+safeHeb+' '+todayGreg+'.jpg';
   _buildReportDiv(function(div){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
