@@ -1919,6 +1919,26 @@ window.exportJPEG = function(){
     });
   });
 };
+
+// FIX: exportJPEG with clean Hebrew filename (no geresh)
+window.exportJPEG=function(){
+  if(!ENTRIES.length){showToast("אין רשומות");return;}
+  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
+  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
+  var safeHeb=today.replace(/[^א-תװ-״ ]/g,'').trim();
+  var fname='יומן עבודה '+safeHeb+' '+todayGreg+'.jpg';
+  _buildReportDiv(function(div){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+      div.style.left='-9999px';
+      canvas.toBlob(function(blob){
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=url;a.download=fname;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      },'image/jpeg',0.95);
+    });
+  });
+};
 </script>
 </body>
 </html>
