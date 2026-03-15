@@ -843,12 +843,11 @@ function exportPDF() {
     var catCell='<td rowspan="'+sp+'" style="background:'+cc+';font-weight:bold;text-align:center;vertical-align:middle;padding:4px 8px;border:1px solid #ccc;">'+cn+'</td>';
     for(var k2=i;k2<j;k2++){
       var en=sorted[k2];
-      var sub=en.sub||''; var note=en.note||'';
       rows+='<tr>'+(k2===i?catCell:'');
       rows+='<td style="border:1px solid #ccc;padding:4px 8px;">'+(en.desc||'')+'</td>';
-      rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">'+sub+'</td>';
+      rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">'+(en.sub||'')+'</td>';
       rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">'+(en.dur||'')+'</td>';
-      rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">'+note+'</td>';
+      rows+='<td style="border:1px solid #ccc;padding:4px 8px;text-align:center;">'+(en.note||'')+'</td>';
       rows+='</tr>';
     }
     i=j;
