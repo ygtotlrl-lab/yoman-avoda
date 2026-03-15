@@ -653,6 +653,30 @@ function pickSub(s) {
   buildSubBtns();
 }
 
+
+// AUTO ARCHIVE - called after every addEntry
+function autoArchiveDay(dayKey, hdate, gdate) {
+  var dayEntries = ENTRIES.filter(function(e){ return e.day === dayKey; });
+  if (!dayEntries.length) return;
+  var existIdx = ARCHIVE.findIndex(function(a){ return a.gdate === gdate; });
+  var snapshot = {
+    id: existIdx >= 0 ? ARCHIVE[existIdx].id : Date.now(),
+    name: hdate,
+    hdate: hdate,
+    gdate: gdate,
+    day: dayKey,
+    date: gdate,
+    entries: JSON.parse(JSON.stringify(dayEntries)),
+    count: dayEntries.length
+  };
+  if (existIdx >= 0) {
+    ARCHIVE[existIdx] = snapshot;
+  } else {
+    ARCHIVE.unshift(snapshot);
+  }
+  saveArchive();
+}
+
 // ADD ENTRY
 function addEntry() {
   var task = document.getElementById("taskInput").value.trim() || selTask || "";
@@ -672,8 +696,9 @@ function addEntry() {
   };
   ENTRIES.unshift(entry);
   saveEntries();
+  autoArchiveDay(entry.day, entry.hdate, entry.gdate);
   clearForm();
-  showToast("✓ נוסף!");
+  showToast("✓ נוסף ונשמר!");
 }
 
 function clearForm() {
@@ -724,8 +749,11 @@ function renderLog() {
 }
 
 function delEntry(id) {
+  var deleted = ENTRIES.find(function(e){ return e.id === id; });
   ENTRIES = ENTRIES.filter(function(e){ return e.id !== id; });
-  saveEntries(); renderLog();
+  saveEntries();
+  if (deleted) autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
+  renderLog();
 }
 
 function clearAll() {
