@@ -1899,6 +1899,25 @@ window.addEventListener("DOMContentLoaded", function() {
   setTimeout(syncFromCloud, 1000);
 });
 
+
+// PATCH: fix exportJPEG filename using Blob URL
+window.exportJPEG = function(){
+  if(!ENTRIES.length){showToast("אין רשומות");return;}
+  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
+  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
+  var fname='יומן עבודה '+today+' '+todayGreg+'.jpg';
+  _buildReportDiv(function(div){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+      div.style.left='-9999px';
+      canvas.toBlob(function(blob){
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=url;a.download=fname;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      },'image/jpeg',0.95);
+    });
+  });
+};
 </script>
 </body>
 </html>
