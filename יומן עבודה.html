@@ -847,8 +847,6 @@ function exportPDF() {
 
   // Sort category display by order
   var catLettersSorted = CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
-    return (catOrder2[a]||99) - (catOrder2[b]||99);
-  });
   catLettersSorted.forEach(function(letter){
     var data = byCat[letter];
     var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
