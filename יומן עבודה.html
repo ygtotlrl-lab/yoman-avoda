@@ -821,56 +821,116 @@ function exportTxt() {
 // EXPORT PDF
 function exportPDF() {
   if (!ENTRIES.length) { showToast("אין רשומות להדפסה"); return; }
-  
-  var catOrder={};
-  CATS.forEach(function(c,i){catOrder[typeof c==='object'?c.letter:c]=i;});
-  var sorted=ENTRIES.slice().sort(function(a,b){
+
+  var today = document.getElementById("hebDateInput") ? document.getElementById("hebDateInput").value : hebrewDate(new Date());
+  var todayGreg = document.getElementById("gregDateInput") ? document.getElementById("gregDateInput").value : gregDateStr(new Date());
+  var dayName = document.getElementById("dayNameEl") ? document.getElementById("dayNameEl").textContent : '';
+  var instName = document.getElementById("instNameInput") ? document.getElementById("instNameInput").value : '';
+  var logoUrl = document.querySelector('.logo-img') ? document.querySelector('.logo-img').src : '';
+
+  // Sort by CATS order
+  var catOrder = {};
+  CATS.forEach(function(c,i){ catOrder[typeof c==='object'?c.letter:c]=i; });
+  var sorted = ENTRIES.slice().sort(function(a,b){
     var ai=catOrder[a.cat]!==undefined?catOrder[a.cat]:999;
     var bi=catOrder[b.cat]!==undefined?catOrder[b.cat]:999;
     return ai!==bi?ai-bi:0;
   });
-  var CAT_COLORS=["#e3edf7","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
-  var ccMap={};
-  CATS.forEach(function(c,i){var k=typeof c==='object'?c.letter:c;ccMap[k]=CAT_COLORS[i%CAT_COLORS.length];});
-  var rows='',i=0;
+
+  // Build cat color map from CATS colors
+  var rows='', i=0;
   while(i<sorted.length){
     var ck=sorted[i].cat;
     var co=CATS.find(function(c){return(typeof c==='object'?c.letter:c)===ck;});
     var cn=co?(typeof co==='object'?(co.name||co.letter):co):ck;
-    var cc=ccMap[ck]||'#f5f5f5';
+    // Use cat's own color if available, else fallback palette
+    var palette=["#f5a623","#4a90d9","#7b68ee","#50c878","#e07b54","#5b9bd5","#c0392b","#16a085","#8e44ad","#d4ac0d"];
+    var catIdx=catOrder[ck]!==undefined?catOrder[ck]:0;
+    var cc=palette[catIdx%palette.length];
+
+    // Cat span
     var catJ=i; while(catJ<sorted.length&&sorted[catJ].cat===ck)catJ++;
     var catSpan=catJ-i; var firstCat=true;
     var ki=i;
     while(ki<catJ){
+      // Task span
       var taskVal=sorted[ki].task||'';
       var tj=ki; while(tj<catJ&&(sorted[tj].task||'')===taskVal)tj++;
       var taskSpan=tj-ki; var firstTask=true;
       for(var kk=ki;kk<tj;kk++){
         var en=sorted[kk];
         rows+='<tr>';
-        if(firstCat){rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';font-weight:700;text-align:center;vertical-align:middle;padding:9px 12px;border-bottom:1px solid #dde3ea;border-left:3px solid rgba(0,0,0,0.08);">'+cn+'</td>';firstCat=false;}
-        if(firstTask){rows+='<td rowspan="'+taskSpan+'" style="font-weight:500;vertical-align:middle;padding:9px 14px;border-bottom:1px solid #dde3ea;border-right:1px solid #dde3ea;">'+taskVal+'</td>';firstTask=false;}
-        rows+='<td style="padding:9px 12px;border-bottom:1px solid #dde3ea;">'+(en.sub||'')+'</td>';
-        rows+='<td style="padding:9px 12px;text-align:center;color:#555;border-bottom:1px solid #dde3ea;">'+(en.count||'')+'</td>';
-        rows+='<td style="padding:9px 12px;border-bottom:1px solid #dde3ea;">'+(en.notes||'')+'</td>';
+        if(firstCat){
+          rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';color:white;font-weight:700;text-align:center;vertical-align:middle;padding:8px 10px;border:1px solid rgba(255,255,255,0.3);font-size:13px;">'+cn+'</td>';
+          firstCat=false;
+        }
+        if(firstTask){
+          rows+='<td rowspan="'+taskSpan+'" style="padding:7px 10px;border:1px solid #ddd;font-weight:600;font-size:12px;vertical-align:middle;background:#fafafa;">'+taskVal+'</td>';
+          firstTask=false;
+        }
+        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">'+(en.sub||'')+'</td>';
+        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;">'+(en.count||'')+'</td>';
+        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">'+(en.notes||'')+'</td>';
         rows+='</tr>';
       }
       ki=tj;
     }
     i=catJ;
   }
-  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
-  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
-  var instName=document.getElementById("instNameInput")?document.getElementById("instNameInput").value:'';
-  var html='<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
-    +'<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap" rel="stylesheet">'
-    +'<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Heebo,Arial,sans-serif;direction:rtl;background:#eef1f6;}.page{max-width:980px;margin:0 auto;padding:28px 20px;}.header{background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:white;border-radius:14px;padding:22px 32px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 18px rgba(26,58,92,0.18);}.ht{font-size:30px;font-weight:900;letter-spacing:1px;}.hs{font-size:13px;opacity:0.8;margin-top:5px;}.hd{text-align:left;font-size:14px;opacity:0.92;line-height:1.7;}.wrap{background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.09);}table{width:100%;border-collapse:collapse;}thead tr{background:#1a3a5c;}th{color:white;padding:12px 14px;font-size:13px;font-weight:700;text-align:right;}td{font-size:13px;border-bottom:1px solid #dde3ea;vertical-align:middle;}tr:last-child td{border-bottom:none;}tbody tr:hover td{background:#f5f8fc;}@media print{body{background:white;}.page{padding:4px;}.header{border-radius:8px;}.wrap{box-shadow:none;}}</style>'
-    +'</head><body><div class="page"><div class="header"><div><div class="ht">יומן עבודה</div><div class="hs">'+instName+'</div></div><div class="hd">'+today+'<br>'+todayGreg+'</div></div>'
-    +'<div class="wrap"><table><thead><tr>'
-    +'<th>קטגוריה</th><th>משימה</th><th>תת-משימה</th><th style="text-align:center">כמות</th><th>הרחבה</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div></body></html>';
-  var t=document.title; document.title=today+' '+todayGreg;
-  var win=window.open('','_blank'); win.document.write(html); win.document.close();
+
+  var logoHtml = logoUrl ? '<img src="'+logoUrl+'" style="width:55px;height:55px;object-fit:contain;border-radius:6px;">' : '';
+
+  var html = '<!DOCTYPE html><html dir="rtl" lang="he"><head>'
+    +'<meta charset="UTF-8">'
+    +'<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">'
+    +'<style>'
+    +'*{margin:0;padding:0;box-sizing:border-box}'
+    +'body{font-family:Heebo,sans-serif;direction:rtl;padding:24px;background:#fff;}'
+    +'.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A2B5E;padding-bottom:14px;margin-bottom:18px;}'
+    +'.hd img{width:55px;height:55px;object-fit:contain;border-radius:6px;}'
+    +'.hd-center{flex:1;text-align:center;}'
+    +'.hd-bh{font-size:11px;color:#888;letter-spacing:2px;margin-bottom:2px;}'
+    +'.hd-title{font-size:32px;font-weight:900;color:#1A2B5E;line-height:1;}'
+    +'.hd-sub{font-size:12px;color:#555;margin-top:4px;}'
+    +'.hd-date{text-align:left;min-width:90px;}'
+    +'.hd-day{font-size:14px;font-weight:700;color:#1A2B5E;}'
+    +'.hd-hdate{font-size:12px;color:#444;margin-top:2px;}'
+    +'.hd-gdate{font-size:11px;color:#888;}'
+    +'table{width:100%;border-collapse:collapse;font-size:13px;}'
+    +'thead th{background:#1A2B5E;color:white;padding:10px 12px;text-align:right;font-weight:700;font-size:13px;border:1px solid #1A2B5E;}'
+    +'tbody tr:hover td{filter:brightness(0.97);}'
+    +'@media print{body{padding:12px;}}'
+    +'</style></head><body>'
+    +'<div class="hd">'
+    +logoHtml
+    +'<div class="hd-center">'
+    +'<div class="hd-bh">ב"ה &nbsp;|&nbsp; ימות המשיח</div>'
+    +'<div class="hd-title">יומן עבודה</div>'
+    +'<div class="hd-sub">'+instName+'</div>'
+    +'</div>'
+    +'<div class="hd-date">'
+    +'<div class="hd-day">'+dayName+'</div>'
+    +'<div class="hd-hdate">'+today+'</div>'
+    +'<div class="hd-gdate">'+todayGreg+'</div>'
+    +'</div>'
+    +'</div>'
+    +'<table>'
+    +'<thead><tr>'
+    +'<th>קטגוריה</th>'
+    +'<th>משימה</th>'
+    +'<th>תת-משימה</th>'
+    +'<th style="text-align:center">כמות</th>'
+    +'<th>הרחבה</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rows+'</tbody>'
+    +'</table>'
+    +'</body></html>';
+
+  var t=document.title;
+  document.title=today+' '+todayGreg;
+  var win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
   document.title=t;
   setTimeout(function(){win.print();},700);
 }
