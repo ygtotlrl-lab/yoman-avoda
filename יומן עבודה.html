@@ -850,7 +850,7 @@ function exportPDF() {
   catLettersSorted.forEach(function(letter){
     var data = byCat[letter];
     var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
-    // group by task for rowspan, zebra stripes on task column
+    // group by task for rowspan + zebra
     var taskGroups = [];
     data.list.forEach(function(e) {
       var last = taskGroups[taskGroups.length - 1];
@@ -859,15 +859,11 @@ function exportPDF() {
     });
     var catRowIdx = 0;
     taskGroups.forEach(function(tg, tgIdx) {
-      var taskBg = (tgIdx % 2 === 0) ? '#ffffff' : '#f5f5f5';
+      var taskBg = (tgIdx % 2 === 0) ? '#ffffff' : '#f4f4f4';
       tg.items.forEach(function(e, ti) {
         rows += '<tr>';
-        if (catRowIdx === 0) {
-          rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">' + data.name + '</td>';
-        }
-        if (ti === 0) {
-          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
-        }
+        if (catRowIdx === 0) rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">' + data.name + '</td>';
+        if (ti === 0) rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
         rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.sub || '') + '</td>';
         rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + (e.count || '') + '</td>';
         rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.notes || '') + '</td>';
@@ -919,70 +915,62 @@ function exportPDF() {
 }
 function _buildReportDiv(cb){
   var div=document.getElementById('_rpDiv');
-  if(!div){div=document.createElement('div');div.id='_rpDiv';
-    div.style.cssText='position:fixed;top:0;left:0;background:#eef1f6;padding:24px 20px;width:880px;direction:rtl;font-family:Arial,sans-serif;z-index:9999;';
-    document.body.appendChild(div);}
-  
-  var catOrder={};
-  CATS.forEach(function(c,i){catOrder[typeof c==='object'?c.letter:c]=i;});
-  var sorted=ENTRIES.slice().sort(function(a,b){
-    var ai=catOrder[a.cat]!==undefined?catOrder[a.cat]:999;
-    var bi=catOrder[b.cat]!==undefined?catOrder[b.cat]:999;
-    return ai!==bi?ai-bi:0;
-  });
-  var CAT_COLORS=["#e3edf7","#fef9e7","#eafaf1","#fdf2f8","#fef5e4","#f4ecf7","#e8f8f5","#fdedec","#f0f3f4","#eaf2ff"];
-  var ccMap={};
-  CATS.forEach(function(c,i){var k=typeof c==='object'?c.letter:c;ccMap[k]=CAT_COLORS[i%CAT_COLORS.length];});
-  var rows='',i=0;
-  while(i<sorted.length){
-    var ck=sorted[i].cat;
-    var co=CATS.find(function(c){return(typeof c==='object'?c.letter:c)===ck;});
-    var cn=co?(typeof co==='object'?(co.name||co.letter):co):ck;
-    var cc=ccMap[ck]||'#f5f5f5';
-    var catJ=i; while(catJ<sorted.length&&sorted[catJ].cat===ck)catJ++;
-    var catSpan=catJ-i; var firstCat=true;
-    var ki=i;
-    while(ki<catJ){
-      var taskVal=sorted[ki].task||'';
-      var tj=ki; while(tj<catJ&&(sorted[tj].task||'')===taskVal)tj++;
-      var taskSpan=tj-ki; var firstTask=true;
-      for(var kk=ki;kk<tj;kk++){
-        var en=sorted[kk];
-        rows+='<tr>';
-        if(firstCat){rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';font-weight:700;text-align:center;vertical-align:middle;padding:9px 12px;border-bottom:1px solid #dde3ea;border-left:3px solid rgba(0,0,0,0.08);">'+cn+'</td>';firstCat=false;}
-        if(firstTask){rows+='<td rowspan="'+taskSpan+'" style="font-weight:500;vertical-align:middle;padding:9px 14px;border-bottom:1px solid #dde3ea;border-right:1px solid #dde3ea;">'+taskVal+'</td>';firstTask=false;}
-        rows+='<td style="padding:9px 12px;border-bottom:1px solid #dde3ea;">'+(en.sub||'')+'</td>';
-        rows+='<td style="padding:9px 12px;text-align:center;color:#555;border-bottom:1px solid #dde3ea;">'+(en.count||'')+'</td>';
-        
-        rows+='</tr>';
-      }
-      ki=tj;
-    }
-    i=catJ;
-  }
-  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:'';
+  if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
+  div.style.cssText='position:fixed;top:0;left:0;background:#fff;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
+  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
+  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
+  var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
   var instName=document.getElementById("instNameInput")?document.getElementById("instNameInput").value:'';
-  div.innerHTML=''
-    +'<div style="background:linear-gradient(135deg,#1a3a5c 0%,#2563a8 100%);color:white;border-radius:12px;padding:18px 28px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">'
-    +'<div><div style="font-size:22px;font-weight:900;">יומן עבודה</div><div style="font-size:12px;opacity:0.8;margin-top:3px;">'+instName+'</div></div>'
-    +'<div style="font-size:13px;text-align:left;line-height:1.6;">'+today+'</div>'
-    +'</div>'
-    +'<div style="background:white;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.09);">'
-    +'<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#1a3a5c;">'
-    +'<th style="color:white;padding:11px 12px;text-align:right;">קטגוריה</th>'
-    +'<th style="color:white;padding:11px 12px;text-align:right;">משימה</th>'
-    +'<th style="color:white;padding:11px 12px;text-align:right;">תת-משימה</th>'
-    +'<th style="color:white;padding:11px 12px;text-align:center;">כמות</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
-  div.style.left='0'; cb(div);
+  var logoEl=document.querySelector('img.logo-img')||document.querySelector('.logo img')||document.querySelector('header img');
+  var logoUrl=logoEl?logoEl.src:'';
+  var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
+  var sortedPDF=ENTRIES.slice().sort(function(a,b){var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;return ca-cb2;});
+  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
+  var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
+  var rows='';
+  catLetters.forEach(function(letter){
+    var data=byCAT[letter];
+    var c=CATS.find(function(cat){return cat.letter===letter;})||{bg:'#888',fg:'#fff'};
+    var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
+    var cri=0;
+    tgs.forEach(function(tg,ti){
+      var bg=ti%2===0?'#fff':'#f4f4f4';
+      tg.items.forEach(function(e,ii){
+        rows+='<tr>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:65px">'+data.name+'</td>';
+        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+(e.sub||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;text-align:center;background:'+bg+';">'+(e.count||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+(e.notes||'')+'</td>';
+        rows+='</tr>';cri++;
+      });
+    });
+  });
+  var li=logoUrl?'<img src="'+logoUrl+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:14px;">'+li
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#999;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
+    +'<div style="font-size:26px;font-weight:900;color:#1A2B5E;">יומן עבודה</div>'
+    +'<div style="font-size:11px;color:#555;">'+instName+'</div></div>'
+    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2B5E;">'+dayLabel+'</div>'
+    +'<div style="font-size:11px;color:#444;">'+today+'</div><div style="font-size:10px;color:#888;">'+todayGreg+'</div></div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2B5E;color:white;">'
+    +'<th style="padding:9px 10px;text-align:right;font-size:12px;">קטגוריה</th>'
+    +'<th style="padding:9px 10px;text-align:right;font-size:12px;">משימה</th>'
+    +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
+    +'<th style="padding:9px 10px;text-align:center;font-size:12px;">כמות</th>'
+    +'<th style="padding:9px 10px;text-align:right;font-size:12px;">הרחבה</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+  div.style.left='0';cb(div);
 }
 function exportJPEG(){
   if(!ENTRIES.length){showToast("אין רשומות");return;}
+  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
+  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
+  var fname='יומן עבודה '+today+' '+todayGreg+'.jpg';
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
-      var a=document.createElement('a');a.download='yoman-avoda.jpg';
-      a.href=canvas.toDataURL('image/jpeg',0.95);a.click();
+      var a=document.createElement('a');a.download=fname;a.href=canvas.toDataURL('image/jpeg',0.95);a.click();
     });
   });
 }
@@ -1008,17 +996,12 @@ function sendWhatsApp(){
   if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
   showToast("מכין תמונה...");
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         var file=new File([blob],'yoman.jpg',{type:'image/jpeg'});
-        if(navigator.share&&navigator.canShare({files:[file]})){
-          navigator.share({files:[file],title:'יומן עבודה'}).catch(function(){});
-        } else {
-          var a=document.createElement('a');a.download='yoman.jpg';
-          a.href=canvas.toDataURL('image/jpeg',0.95);a.click();
-          setTimeout(function(){window.open('https://web.whatsapp.com/','_blank');},600);
-        }
+        if(navigator.share&&navigator.canShare({files:[file]})){navigator.share({files:[file],title:'יומן עבודה'}).catch(function(){});}
+        else{var a=document.createElement('a');a.download='yoman.jpg';a.href=canvas.toDataURL('image/jpeg',0.95);a.click();setTimeout(function(){window.open('https://web.whatsapp.com/','_blank');},600);}
       },'image/jpeg',0.95);
     });
   });
