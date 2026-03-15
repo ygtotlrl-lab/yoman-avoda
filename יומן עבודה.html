@@ -846,14 +846,41 @@ function exportPDF() {
   });
 
   // Sort category display by order
-  var catLettersSorted = CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
+  var catLettersSorted = Object.keys(byCat).sort(function(a,b){
+    var ai=CATS.findIndex(function(c){return c.letter===a;});
+    var bi=CATS.findIndex(function(c){return c.letter===b;});
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  });
+  var globalTaskIdx = 0;
   catLettersSorted.forEach(function(letter){
     var data = byCat[letter];
     var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
-    // rowspan cat+task, zebra
-    var taskGroups=[];data.list.forEach(function(e){var last=taskGroups[taskGroups.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else taskGroups.push({task:e.task||'',items:[e]});});
-    var catRowIdx=0;
-    taskGroups.forEach(function(tg,tgIdx){var taskBg=(tgIdx%2===0)?'#ffffff':'#f0f0f0';tg.items.forEach(function(e,ti){rows+='<tr>';if(catRowIdx===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">'+data.name+'</td>';if(ti===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:'+taskBg+';">'+tg.task+'</td>';rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:'+taskBg+';">'+(e.sub||'')+'</td>';rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:'+taskBg+';">'+(e.count||'')+'</td>';rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:'+taskBg+';">'+(e.notes||'')+'</td>';rows+='</tr>';catRowIdx++;});});
+    // rowspan cat+task, GLOBAL zebra
+    var taskGroups = [];
+    data.list.forEach(function(e) {
+      var last = taskGroups[taskGroups.length - 1];
+      if (last && last.task === (e.task || '')) { last.items.push(e); }
+      else { taskGroups.push({ task: e.task || '', items: [e] }); }
+    });
+    var catRowIdx = 0;
+    taskGroups.forEach(function(tg) {
+      var taskBg = (globalTaskIdx % 2 === 0) ? '#ffffff' : '#f0f0f0';
+      globalTaskIdx++;
+      tg.items.forEach(function(e, ti) {
+        rows += '<tr>';
+        if (catRowIdx === 0) {
+          rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">' + data.name + '</td>';
+        }
+        if (ti === 0) {
+          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
+        }
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.sub || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + (e.count || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.notes || '') + '</td>';
+        rows += '</tr>';
+        catRowIdx++;
+      });
+    });
     
   });
 
@@ -911,13 +938,14 @@ function _buildReportDiv(cb){
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
+  var globalTaskIdx = 0;
   catLetters.forEach(function(letter){
     var data=byCAT[letter];
     var c=(typeof CAT_COLORS!=='undefined'&&CAT_COLORS[letter])||{bg:'#555',fg:'white'};
     var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
     var cri=0;
     tgs.forEach(function(tg,ti){
-      var bg=ti%2===0?'#fff':'#f0f0f0';
+      var bg=(globalTaskIdx%2===0)?'#fff':'#f0f0f0'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
         if(cri===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:65px">'+data.name+'</td>';
