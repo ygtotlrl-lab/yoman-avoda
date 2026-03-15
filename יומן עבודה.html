@@ -1327,10 +1327,12 @@ var ARC_PREMADE = (function() {
   }
   return result;
 })();
-var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
 
 function extractYM(hdate) {
   if (!hdate) return {year:"", month:"", order:99};
+  // Skip Gregorian-format dates
+  if (/\d{4}/.test(hdate) && !/ה׳תש/.test(hdate)) return {year:"", month:"", order:99};
   var parts = hdate.trim().split(" ");
   var year = "", month = "";
   for (var i = parts.length-1; i >= 0; i--) {
