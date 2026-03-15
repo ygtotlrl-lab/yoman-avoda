@@ -820,119 +820,104 @@ function exportTxt() {
 
 // EXPORT PDF
 function exportPDF() {
-  if (!ENTRIES.length) { showToast("אין רשומות להדפסה"); return; }
+  if (!ENTRIES.length) { showToast("אין רשומות"); return; }
+  var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
+  var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
+  var dayLabel = selDay || "";
 
-  var today = document.getElementById("hebDateInput") ? document.getElementById("hebDateInput").value : hebrewDate(new Date());
-  var todayGreg = document.getElementById("gregDateInput") ? document.getElementById("gregDateInput").value : gregDateStr(new Date());
-  var dayName = document.getElementById("dayNameEl") ? document.getElementById("dayNameEl").textContent : '';
-  var instName = document.getElementById("instNameInput") ? document.getElementById("instNameInput").value : '';
-  var logoUrl = document.querySelector('.logo-img') ? document.querySelector('.logo-img').src : '';
-
-  // Sort by CATS order
-  var catOrder = {};
-  CATS.forEach(function(c,i){ catOrder[typeof c==='object'?c.letter:c]=i; });
-  var sorted = ENTRIES.slice().sort(function(a,b){
-    var ai=catOrder[a.cat]!==undefined?catOrder[a.cat]:999;
-    var bi=catOrder[b.cat]!==undefined?catOrder[b.cat]:999;
-    return ai!==bi?ai-bi:0;
+  var rows = "";
+  var byCat = {};
+  // Sort entries by category/task order
+  var catOrder2 = {};
+  CATS.forEach(function(cat, ci) { catOrder2[cat.letter] = ci; });
+  var sortedPDF = ENTRIES.slice().sort(function(a, b) {
+    var ca = catOrder2[a.cat] !== undefined ? catOrder2[a.cat] : 99;
+    var cb = catOrder2[b.cat] !== undefined ? catOrder2[b.cat] : 99;
+    if (ca !== cb) return ca - cb;
+    var cat = CATS.find(function(c){ return c.letter === a.cat; });
+    if (!cat) return 0;
+    var ta = cat.tasks.indexOf(a.task);
+    var tb = cat.tasks.indexOf(b.task);
+    return (ta === -1 ? 999 : ta) - (tb === -1 ? 999 : tb);
+  });
+  sortedPDF.forEach(function(e){
+    if (!byCat[e.cat]) byCat[e.cat] = {name:e.catName, list:[]};
+    byCat[e.cat].list.push(e);
   });
 
-  // Build cat color map from CATS colors
-  var rows='', i=0;
-  while(i<sorted.length){
-    var ck=sorted[i].cat;
-    var co=CATS.find(function(c){return(typeof c==='object'?c.letter:c)===ck;});
-    var cn=co?(typeof co==='object'?(co.name||co.letter):co):ck;
-    // Use cat's own color if available, else fallback palette
-    var palette=["#f5a623","#4a90d9","#7b68ee","#50c878","#e07b54","#5b9bd5","#c0392b","#16a085","#8e44ad","#d4ac0d"];
-    var catIdx=catOrder[ck]!==undefined?catOrder[ck]:0;
-    var cc=palette[catIdx%palette.length];
-
-    // Cat span
-    var catJ=i; while(catJ<sorted.length&&sorted[catJ].cat===ck)catJ++;
-    var catSpan=catJ-i; var firstCat=true;
-    var ki=i;
-    while(ki<catJ){
-      // Task span
-      var taskVal=sorted[ki].task||'';
-      var tj=ki; while(tj<catJ&&(sorted[tj].task||'')===taskVal)tj++;
-      var taskSpan=tj-ki; var firstTask=true;
-      for(var kk=ki;kk<tj;kk++){
-        var en=sorted[kk];
-        rows+='<tr>';
-        if(firstCat){
-          rows+='<td rowspan="'+catSpan+'" style="background:'+cc+';color:white;font-weight:700;text-align:center;vertical-align:middle;padding:8px 10px;border:1px solid rgba(255,255,255,0.3);font-size:13px;">'+cn+'</td>';
-          firstCat=false;
+  // Sort category display by order
+  var catLettersSorted = Object.keys(byCat).sort(function(a,b){
+    return (catOrder2[a]||99) - (catOrder2[b]||99);
+  });
+  catLettersSorted.forEach(function(letter){
+    var data = byCat[letter];
+    var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
+    // group by task for rowspan
+    var taskGroups = [];
+    data.list.forEach(function(e) {
+      var last = taskGroups[taskGroups.length-1];
+      if (last && last.task === (e.task||'')) { last.items.push(e); }
+      else { taskGroups.push({task: e.task||'', items:[e]}); }
+    });
+    var rowIdx = 0;
+    taskGroups.forEach(function(tg) {
+      tg.items.forEach(function(e, ti) {
+        rows += '<tr>';
+        if (rowIdx === 0) {
+          rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">'
+                + data.name + '</td>';
         }
-        if(firstTask){
-          rows+='<td rowspan="'+taskSpan+'" style="padding:7px 10px;border:1px solid #ddd;font-weight:600;font-size:12px;vertical-align:middle;background:#fafafa;">'+taskVal+'</td>';
-          firstTask=false;
+        if (ti === 0) {
+          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;">' + tg.task + '</td>';
         }
-        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">'+(en.sub||'')+'</td>';
-        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;">'+(en.count||'')+'</td>';
-        rows+='<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">'+(en.notes||'')+'</td>';
-        rows+='</tr>';
-      }
-      ki=tj;
-    }
-    i=catJ;
-  }
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">' + (e.sub||'') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;">' + (e.count||'') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;">' + (e.notes||'') + '</td>';
+        rows += '</tr>';
+        rowIdx++;
+      });
+    });
+    
+  });
 
-  var logoHtml = logoUrl ? '<img src="'+logoUrl+'" style="width:55px;height:55px;object-fit:contain;border-radius:6px;">' : '';
+  var LOGO = document.getElementById("appLogo").src;
 
-  var html = '<!DOCTYPE html><html dir="rtl" lang="he"><head>'
-    +'<meta charset="UTF-8">'
-    +'<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&display=swap" rel="stylesheet">'
-    +'<style>'
-    +'*{margin:0;padding:0;box-sizing:border-box}'
-    +'body{font-family:Heebo,sans-serif;direction:rtl;padding:24px;background:#fff;}'
-    +'.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A2B5E;padding-bottom:14px;margin-bottom:18px;}'
-    +'.hd img{width:55px;height:55px;object-fit:contain;border-radius:6px;}'
-    +'.hd-center{flex:1;text-align:center;}'
-    +'.hd-bh{font-size:11px;color:#888;letter-spacing:2px;margin-bottom:2px;}'
-    +'.hd-title{font-size:32px;font-weight:900;color:#1A2B5E;line-height:1;}'
-    +'.hd-sub{font-size:12px;color:#555;margin-top:4px;}'
-    +'.hd-date{text-align:left;min-width:90px;}'
-    +'.hd-day{font-size:14px;font-weight:700;color:#1A2B5E;}'
-    +'.hd-hdate{font-size:12px;color:#444;margin-top:2px;}'
-    +'.hd-gdate{font-size:11px;color:#888;}'
-    +'table{width:100%;border-collapse:collapse;font-size:13px;}'
-    +'thead th{background:#1A2B5E;color:white;padding:10px 12px;text-align:right;font-weight:700;font-size:13px;border:1px solid #1A2B5E;}'
-    +'tbody tr:hover td{filter:brightness(0.97);}'
-    +'@media print{body{padding:12px;}}'
-    +'</style></head><body>'
-    +'<div class="hd">'
-    +logoHtml
-    +'<div class="hd-center">'
-    +'<div class="hd-bh">ב"ה &nbsp;|&nbsp; ימות המשיח</div>'
-    +'<div class="hd-title">יומן עבודה</div>'
-    +'<div class="hd-sub">'+instName+'</div>'
-    +'</div>'
-    +'<div class="hd-date">'
-    +'<div class="hd-day">'+dayName+'</div>'
-    +'<div class="hd-hdate">'+today+'</div>'
-    +'<div class="hd-gdate">'+todayGreg+'</div>'
-    +'</div>'
-    +'</div>'
-    +'<table>'
-    +'<thead><tr>'
-    +'<th>קטגוריה</th>'
-    +'<th>משימה</th>'
-    +'<th>תת-משימה</th>'
-    +'<th style="text-align:center">כמות</th>'
-    +'<th>הרחבה</th>'
-    +'</tr></thead>'
-    +'<tbody>'+rows+'</tbody>'
-    +'</table>'
-    +'</body></html>';
+  var html = '<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
+    + '<link href="                                                                  ;700;900&family=Heebo:wght@400;700&display=swap" rel="stylesheet">'
+    + '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Heebo,sans-serif;direction:rtl;padding:20px}'
+    + '.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:16px}'
+    + '.hd img{width:55px;height:55px;object-fit:contain}'
+    + '.hd-mid{flex:1;text-align:center}'
+    + '.bh{font-size:10px;color:#C9A84C;letter-spacing:3px}'
+    + '.t1{font-family:"Frank Ruhl Libre",serif;font-size:24px;font-weight:900;color:#1A2B5E}'
+    + '.t2{font-size:10px;color:#666;margin-top:2px}'
+    + '.dt{font-size:13px;color:#333;text-align:left}'
+    + '.dt b{display:block;font-family:"Frank Ruhl Libre",serif;font-size:16px;color:#1A2B5E}'
+    + 'table{width:100%;border-collapse:collapse;margin-top:14px}'
+    + 'thead th{background:#1A2B5E;color:white;padding:7px 10px;font-size:11px;border:1px solid #ddd}'
+    + 'tbody tr:nth-child(even) td:not(:first-child){background:#F7F7F7}'
+    + '.ft{margin-top:16px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:"Frank Ruhl Libre",serif}'
+    + '</style></head><body>'
+    + '<div class="hd"><img src="' + LOGO + '" />'
+    + '<div class="hd-mid"><div class="bh">ב״ה | ימות המשיח</div><div class="t1">יומן עבודה</div>'
+    + '<div class="t2">ישיבת תומכי תמימים ליובאוויטש ראשון לציון</div></div>'
+    + '<div class="dt"><b>' + dayLabel + '</b>' + today + '<small style="color:#888;font-size:11px;display:block">' + todayGreg + '</small></div></div>'
+    + '<table><thead><tr><th>קטגוריה</th><th>משימה</th><th>תת-משימה</th><th>הרחבה</th><th>כמות</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>'
+    + '<div class="ft">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + ENTRIES.length + ' רשומות</div>'
+    + '<script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>'
+    + '</body></html>';
 
-  var t=document.title;
-  document.title=today+' '+todayGreg;
-  var win=window.open('','_blank');
-  win.document.write(html);
-  win.document.close();
-  document.title=t;
-  setTimeout(function(){win.print();},700);
+  // Set filename = hebrew date + gregorian date
+  var fileTitle = today + " " + todayGreg;
+  // Inject title into the html
+  html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8"><title>' + fileTitle + '</title>');
+  var fileTitle = "יומן עבודה " + today + " " + todayGreg;
+  var w = window.open("","_blank","width=900,height=700");
+  w.document.write(html);
+  w.document.close();
+  setTimeout(function(){ try { w.document.title = fileTitle; } catch(e){} }, 80);
+  showToast("📄 PDF נפתח!");
 }
 function _buildReportDiv(cb){
   var div=document.getElementById('_rpDiv');
