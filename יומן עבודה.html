@@ -1327,12 +1327,14 @@ var ARC_PREMADE = (function() {
   }
   return result;
 })();
-var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
 
 function extractYM(hdate) {
   if (!hdate) return {year:"", month:"", order:99};
   // Skip Gregorian-format dates
   if (/\d{4}/.test(hdate) && !/ה׳תש/.test(hdate)) return {year:"", month:"", order:99};
+  // Normalize מרחשון → חשון
+  hdate = hdate.replace(/מרחשון/g, "חשון");
   var parts = hdate.trim().split(" ");
   var year = "", month = "";
   for (var i = parts.length-1; i >= 0; i--) {
@@ -1493,7 +1495,7 @@ function renderArcMonths(year) {
   Object.keys(withData).forEach(function(m){ monthSet[m] = true; });
 
   // Sort by HMO order
-  var monthList = Object.keys(monthSet).sort(function(a,b){
+  var monthList = Object.keys(monthSet).filter(function(m){ return HMO.indexOf(m) >= 0; }).sort(function(a,b){
     return HMO.indexOf(a) - HMO.indexOf(b);
   });
 
