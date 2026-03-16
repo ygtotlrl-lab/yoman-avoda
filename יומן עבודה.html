@@ -1659,7 +1659,8 @@ function renderArcDetail() {
     sortedE.forEach(function(e, ei) {
       var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
       html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+arcSelDayKey+'\','+e.id+')">×</button>' : '')+
+        (arcEditMode ? '<button class="arc-entry-edit" onclick="arcEditEntry(\''+arcSelDayKey+'\','+e.id+')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+        '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+arcSelDayKey+'\','+e.id+')">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
         '<span style="color:var(--textmid);font-size:11px">'+e.catName+'</span>'+
         '<span style="color:#bbb">←</span>'+
@@ -1967,6 +1968,50 @@ function saveEntry(id) {
   e.notes = document.getElementById('ei_notes').value.trim();
   saveEntries();
   renderLog();
+  showToast('נשמר!');
+}
+
+function arcEditEntry(gdateKey, entryId) {
+  var days = getAllArchiveDays();
+  var d = days[gdateKey];
+  if(!d) return;
+  var e = d.entries.find(function(x){ return x.id === entryId; });
+  if(!e) return;
+  // Find the row element and replace with inline edit form
+  var rows = document.querySelectorAll('.arc-entry-row');
+  var target = null;
+  rows.forEach(function(r){
+    if(r.innerHTML.indexOf('arcDeleteEntry(\'' + gdateKey + '\',' + entryId + ')') > -1 ||
+       r.innerHTML.indexOf('arcEditEntry(\'' + gdateKey + '\',' + entryId + ')') > -1) {
+      target = r;
+    }
+  });
+  if(!target) return;
+  target.innerHTML =
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
+    '<input id="aei_task" value="' + (e.task||'').replace(/"/g,'&quot;') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_sub" value="' + (e.sub||'').replace(/"/g,'&quot;') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_notes" value="' + (e.notes||'').replace(/"/g,'&quot;') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<button onclick="arcSaveEntry(\'' + gdateKey + '\',' + entryId + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '</div>';
+}
+
+function arcSaveEntry(gdateKey, entryId) {
+  // Update in ARCHIVE
+  ARCHIVE.forEach(function(snap) {
+    (snap.entries||[]).forEach(function(e) {
+      if(e.id === entryId) {
+        e.task  = document.getElementById('aei_task').value.trim();
+        e.sub   = document.getElementById('aei_sub').value.trim();
+        e.count = document.getElementById('aei_count').value.trim();
+        e.notes = document.getElementById('aei_notes').value.trim();
+      }
+    });
+  });
+  saveArchive();
+  renderArcDetail();
   showToast('נשמר!');
 }
 </script>
