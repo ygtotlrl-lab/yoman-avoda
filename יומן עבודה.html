@@ -779,6 +779,7 @@ function renderLog() {
       + (e.notes ? '<div class="e-sub">' + e.notes + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+e.count : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
+      + '<button class="edit-btn" onclick="editEntry(' + e.id + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
       + '<button class="del-btn" onclick="delEntry(' + e.id + ')">✕</button>'
       + '</div>';
   }).join("");
@@ -1430,7 +1431,7 @@ function getAllArchiveDays() {
     var k = e.gdate || "";
     if (!days[k]) days[k] = {gdate:e.gdate||"", hdate:e.hdate||"", day:e.day||"",
       name:[e.day,e.hdate,e.gdate?"| "+e.gdate:""].filter(Boolean).join(" "), entries:[], snapId:null};
-    days[k].entries.push(e);
+    if(!days[k].entries.find(function(x){return x.id===e.id;})) days[k].entries.push(e);
   });
 
   return days;
@@ -1939,6 +1940,35 @@ window.exportJPEG=function(){
     });
   });
 };
+
+function editEntry(id) {
+  var e = ENTRIES.find(function(x){ return x.id === id; });
+  if(!e) return;
+  var row = document.querySelector('[onclick*="delEntry(' + id + ')"]');
+  if(!row) { row = document.querySelector('[onclick*="editEntry(' + id + ')"]'); }
+  if(!row) return;
+  var container = row.closest('.entry-row');
+  if(!container) return;
+  container.innerHTML =
+    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;">' +
+    '<input id="ei_sub" value="' + (e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input id="ei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input id="ei_notes" value="' + (e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<button onclick="saveEntry(' + id + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
+    '</div>';
+}
+
+function saveEntry(id) {
+  var e = ENTRIES.find(function(x){ return x.id === id; });
+  if(!e) return;
+  e.sub = document.getElementById('ei_sub').value.trim();
+  e.count = document.getElementById('ei_count').value.trim();
+  e.notes = document.getElementById('ei_notes').value.trim();
+  saveEntries();
+  renderLog();
+  showToast('נשמר!');
+}
 </script>
 </body>
 </html>
