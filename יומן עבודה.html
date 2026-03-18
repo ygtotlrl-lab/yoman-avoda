@@ -1015,30 +1015,27 @@ function saveWAPhone() {
 function sendWhatsApp(){
   if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
   showToast("מכין תמונה...");
-  // Get phone number from settings field, clean it
-  var rawPhone = (document.getElementById('waPhone')||{}).value || '';
-  var phone = rawPhone.replace(/[^0-9+]/g,'');
-  // Convert Israeli local format 05X to international 97X
-  if(phone.startsWith('0')) phone = '972' + phone.substring(1);
+  var rawPhone=(document.getElementById('waPhone')||{}).value||'';
+  var phone=rawPhone.replace(/[^0-9+]/g,'');
+  if(phone.startsWith('0')) phone='972'+phone.substring(1);
   _buildReportDiv(function(div){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
-        // Download the image
-        var a=document.createElement('a');
-        a.download='yoman.jpg';
-        a.href=canvas.toDataURL('image/jpeg',0.95);
-        a.click();
-        // Open WhatsApp with phone number (if provided)
-        setTimeout(function(){
-          if(phone){
-            window.open('https://wa.me/'+phone,'_blank');
-          setTimeout(function(){window.open('https://chat.google.com','_blank');},400);
-          } else {
-            window.open('https://web.whatsapp.com/','_blank');
-          setTimeout(function(){window.open('https://chat.google.com','_blank');},400);
-          }
-        },600);
+        var file=new File([blob],'yoman.jpg',{type:'image/jpeg'});
+        if(navigator.share&&navigator.canShare({files:[file]})){
+          navigator.share({files:[file],title:'יומן עבודה'}).catch(function(){});
+        } else {
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement('a');a.href=url;a.download='yoman.jpg';
+          document.body.appendChild(a);a.click();document.body.removeChild(a);
+          setTimeout(function(){URL.revokeObjectURL(url);},1000);
+          setTimeout(function(){
+            if(phone){window.open('https://wa.me/'+phone,'_blank');}
+            else{window.open('https://web.whatsapp.com/','_blank');}
+          },300);
+          setTimeout(function(){window.open('https://chat.google.com','_blank');},700);
+        }
       },'image/jpeg',0.95);
     });
   });
