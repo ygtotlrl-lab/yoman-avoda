@@ -1030,6 +1030,43 @@ function sendWhatsApp(){
           var a=document.createElement('a');a.href=url;a.download='yoman.jpg';
           document.body.appendChild(a);a.click();document.body.removeChild(a);
           setTimeout(function(){URL.revokeObjectURL(url);},1000);
+          on sendWhatsApp(){
+  if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
+  showToast("מכין תמונה...");
+  var rawPhone=(document.getElementById('waPhone')||{}).value||'';
+  var phone=rawPhone.replace(/[^0-9+]/g,'');
+  if(phone.startsWith('0')) phone='972'+phone.substring(1);
+  _buildReportDiv(function(div){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+      div.style.left='-9999px';
+      canvas.toBlob(function(blob){
+        var file=new File([blob],'yoman.jpg',{type:'image/jpeg'});
+        if(navigator.share&&navigator.canShare({files:[file]})){
+          navigator.share({files:[file],title:'יומן עבודה'}).catch(function(){});
+        } else {
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement('a');a.href=url;a.download='yoman.jpg';
+          document.body.appendChild(a);a.click();document.body.removeChild(a);
+          setTimeout(function(){URL.revokeObjectURL(url);},1000);
+          
+          setTimeout(function(){window.open('https://chat.google.com/','_blank');},1200);on sendWhatsApp(){
+  if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
+  showToast("מכין תמונה...");
+  var rawPhone=(document.getElementById('waPhone')||{}).value||'';
+  var phone=rawPhone.replace(/[^0-9+]/g,'');
+  if(phone.startsWith('0')) phone='972'+phone.substring(1);
+  _buildReportDiv(function(div){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+      div.style.left='-9999px';
+      canvas.toBlob(function(blob){
+        var file=new File([blob],'yoman.jpg',{type:'image/jpeg'});
+        if(navigator.share&&navigator.canShare({files:[file]})){
+          navigator.share({files:[file],title:'יומן עבודה'}).catch(function(){});
+        } else {
+          var url=URL.createObjectURL(blob);
+          var a=document.createElement('a');a.href=url;a.download='yoman.jpg';
+          document.body.appendChild(a);a.click();document.body.removeChild(a);
+          setTimeout(function(){URL.revokeObjectURL(url);},1000);
           setTimeout(function(){
             if(phone){window.open('https://wa.me/'+phone,'_blank');}
             else{window.open('https://web.whatsapp.com/','_blank');}
