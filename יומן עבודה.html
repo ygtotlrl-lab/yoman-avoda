@@ -1033,8 +1033,10 @@ function sendWhatsApp(){
         setTimeout(function(){
           if(phone){
             window.open('https://wa.me/'+phone,'_blank');
+          setTimeout(function(){window.open('https://chat.google.com','_blank');},400);
           } else {
             window.open('https://web.whatsapp.com/','_blank');
+          setTimeout(function(){window.open('https://chat.google.com','_blank');},400);
           }
         },600);
       },'image/jpeg',0.95);
