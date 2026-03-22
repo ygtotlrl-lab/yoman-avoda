@@ -1435,12 +1435,7 @@ function getAllArchiveDays() {
     if (!days[k]) days[k] = {gdate:snap.gdate||"", hdate:snap.hdate||"", day:snap.day||"",
       name:snap.name, entries:[], snapId:snap.id};
     // merge entries from snapshot if not already there
-    (snap.entries||[]).forEach(function(e){ 
-      // Normalize old "אדר" to "אדר ראשון" for leap years
-      if(e.hdate && e.hdate.indexOf('אדר ') > -1 && ((7*parseInt((e.hdate.match(/\d+$/)||[5786])[0])+1)%19)<7){
-        e = Object.assign({},e,{hdate:e.hdate.replace('אדר ','אדר ראשון '), sub_hdate:'אדר ראשון'});
-      }
-      days[k].entries.push(e); });
+    (snap.entries||[]).forEach(function(e){ days[k].entries.push(e); });
   });
 
   // From live ENTRIES (including today — so current day is visible in archive)
