@@ -1559,8 +1559,7 @@ function renderArcMonths(year) {
   // Get months for this year from premade + data
   var pm = ARC_PREMADE.find(function(p){ return p.year === year; });
   var monthSet = {};
-  if (pm) pm.months.forEach(function(m){ monthSet[m] = true; });
-  var withData = getMonthsWithData(year);
+    var withData = getMonthsWithData(year);
   Object.keys(withData).forEach(function(m){ monthSet[m] = true; });
 
   // Sort by HMO order
