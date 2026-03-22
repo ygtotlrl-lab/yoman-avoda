@@ -1576,6 +1576,14 @@ function renderArcMonths(year) {
 
   // Sort by HMO order
   var monthList = Object.keys(monthSet).sort(function(a,b){
+
+  // Filter Adar based on leap year
+  var isLeapYear = year ? (((7*year+1)%19)<7) : false;
+  monthList = monthList.filter(function(m){
+    if(m==="אדר ראשון" || m==="אדר שני") return isLeapYear;
+    if(m==="אדר") return !isLeapYear;
+    return true;
+  });
     return HMO.indexOf(a) - HMO.indexOf(b);
   });
 
