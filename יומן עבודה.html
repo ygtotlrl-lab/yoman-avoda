@@ -1376,14 +1376,14 @@ var ARC_PREMADE = (function() {
         parts.splice(i,1); break;
       }
     }
-    var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+    var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר ראשון","אדר שני","ניסן","אייר","סיון","תמוז","אב","אלול"];
     mi = HMO2.indexOf(parts.slice(1).join(" ").trim());
     return {hdate: hd, mi: mi < 0 ? 5 : mi};
   })();
 
   // Hebrew year names
   var yearNames = {5785:"ה׳תשפ״ה", 5786:"ה׳תשפ״ו", 5787:"ה׳תשפ״ז", 5788:"ה׳תשפ״ח", 5789:"ה׳תשפ״ט", 5790:"ה׳תש״ץ"};
-  var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+  var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר ראשון","אדר שני","ניסן","אייר","סיון","תמוז","אב","אלול"];
 
   // Figure out current hy from hebrewDate
   var nowHD = hebrewDate(new Date()) || "";
@@ -1409,7 +1409,7 @@ var ARC_PREMADE = (function() {
   }
   return result;
 })();
-var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","אדר","אדר ראשון","אדר שני","ניסן","אייר","סיון","תמוז","אב","אלול"];
 
 function extractYM(hdate) {
   if (!hdate) return {year:"", month:"", order:99};
@@ -1435,7 +1435,12 @@ function getAllArchiveDays() {
     if (!days[k]) days[k] = {gdate:snap.gdate||"", hdate:snap.hdate||"", day:snap.day||"",
       name:snap.name, entries:[], snapId:snap.id};
     // merge entries from snapshot if not already there
-    (snap.entries||[]).forEach(function(e){ days[k].entries.push(e); });
+    (snap.entries||[]).forEach(function(e){ 
+      // Normalize old "אדר" to "אדר ראשון" for leap years
+      if(e.hdate && e.hdate.indexOf('אדר ') > -1 && ((7*parseInt((e.hdate.match(/\d+$/)||[5786])[0])+1)%19)<7){
+        e = Object.assign({},e,{hdate:e.hdate.replace('אדר ','אדר ראשון '), sub_hdate:'אדר ראשון'});
+      }
+      days[k].entries.push(e); });
   });
 
   // From live ENTRIES (including today — so current day is visible in archive)
