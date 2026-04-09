@@ -2014,6 +2014,26 @@ function arcSaveEntry(gdateKey, entryId) {
   renderArcDetail();
   showToast('נשמר!');
 }
+
+// Enter key support for entry and edit tabs
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  var id = e.target.id || '';
+  // Entry tab inputs: taskInput, subInput, countInput, notesInput
+  if (id === 'taskInput' || id === 'subInput' || id === 'countInput' || id === 'notesInput') {
+    e.preventDefault();
+    if (typeof addEntry === 'function') addEntry();
+    return;
+  }
+  // Edit tab new-sub inputs: snewsub-ci-ti
+  if (id.startsWith('snewsub-')) {
+    e.preventDefault();
+    var parts = id.replace('snewsub-', '').split('-');
+    var ci = parseInt(parts[0]), ti = parseInt(parts[1]);
+    if (typeof addSub === 'function') addSub(ci, ti);
+    return;
+  }
+});
 </script>
 </body>
 </html>
