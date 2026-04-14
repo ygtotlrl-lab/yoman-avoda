@@ -368,59 +368,61 @@ function saveArchive() {
   sbSet("tb_archive", ARCHIVE);
 }
 
-// Load from Supabase on startup (overrides localStorage if cloud is newer)
+// Load from Supabase on startup — always pull from cloud to sync across devices
 async function syncFromCloud() {
   showToast("🔄 מסנכרן...", 3000);
   try {
-    const SUPA_URL = 'https://kxbtskqobynewvnckaaz.supabase.co';
-    const SUPA_KEY = getSB();
-    const headers = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+    // Use sbGet which uses the Supabase client correctly
+    // (previous version had a bug: getSB() returns client object, not API key string)
 
-    async function getKey(k) {
-      const r = await fetch(SUPA_URL + '/rest/v1/kv?key=eq.' + k, { headers });
-      const d = await r.json();
-      return (d && d[0]) ? JSON.parse(d[0].value) : null;
+    // CATS: always pull from cloud (cloud wins)
+    var cloudCats = await sbGet('tb_cats');
+    if (cloudCats && cloudCats.length) {
+      CATS = cloudCats;
+      localStorage.setItem('tb_cats', JSON.stringify(CATS));
     }
 
-    // CATS: use cloud only if localStorage is empty
-    const localCats = localStorage.getItem('tb_cats');
-    if (!localCats) {
-      const cats = await getKey('tb_cats');
-      if (cats && cats.length) {
-        CATS = cats;
-        localStorage.setItem('tb_cats', JSON.stringify(CATS));
-      }
+    // SUBS: always pull from cloud
+    var cloudSubs = await sbGet('tb_subs');
+    if (cloudSubs) {
+      SUBS = cloudSubs;
+      localStorage.setItem('tb_subs', JSON.stringify(SUBS));
     }
 
-    // ENTRIES: use cloud only if localStorage is empty
-    const localEntries = localStorage.getItem('tb_entries');
-    if (!localEntries || localEntries === '[]') {
-      const entries = await getKey('tb_entries');
-      if (entries && entries.length) {
-        ENTRIES = entries;
-        localStorage.setItem('tb_entries', JSON.stringify(ENTRIES));
-      }
+    // ENTRIES: always pull from cloud (cloud wins for today's entries)
+    var cloudEntries = await sbGet('tb_entries');
+    if (cloudEntries && cloudEntries.length) {
+      ENTRIES = cloudEntries;
+      localStorage.setItem('tb_entries', JSON.stringify(ENTRIES));
     }
 
     // ARCHIVE: merge cloud + local (cloud wins for same gdate)
-    const cloudArchive = await getKey('tb_archive');
+    var cloudArchive = await sbGet('tb_archive');
     if (cloudArchive && cloudArchive.length) {
-      const localGdates = ARCHIVE.map(function(a){ return a.gdate; });
-      cloudArchive.forEach(function(item) {
-        if (localGdates.indexOf(item.gdate) < 0) ARCHIVE.push(item);
-        else {
-          // replace local with cloud if cloud has more entries
-          var idx = ARCHIVE.findIndex(function(a){ return a.gdate === item.gdate; });
-          if (idx >= 0 && item.entries && item.entries.length >= ARCHIVE[idx].entries.length) {
-            ARCHIVE[idx] = item;
-          }
+      // Start from cloud archive as base
+      var merged = cloudArchive.slice();
+      // Add local entries that are NOT in cloud
+      ARCHIVE.forEach(function(localItem) {
+        var idx = merged.findIndex(function(a){ return a.gdate === localItem.gdate; });
+        if (idx < 0) {
+          merged.push(localItem);
+        } else if (localItem.entries && localItem.entries.length > merged[idx].entries.length) {
+          merged[idx] = localItem;
         }
       });
-      // Also keep ARCHIVE_SEED entries not in cloud
-      ARCHIVE_SEED.forEach(function(seed) {
-        if (ARCHIVE.findIndex(function(a){ return a.gdate === seed.gdate; }) < 0) ARCHIVE.push(seed);
-      });
+      // Also keep ARCHIVE_SEED entries not in merged
+      if (typeof ARCHIVE_SEED !== 'undefined') {
+        ARCHIVE_SEED.forEach(function(seed) {
+          if (merged.findIndex(function(a){ return a.gdate === seed.gdate; }) < 0) merged.push(seed);
+        });
+      }
+      ARCHIVE = merged;
       localStorage.setItem('tb_archive', JSON.stringify(ARCHIVE));
+      // Push merged archive back to cloud so all devices stay in sync
+      sbSet('tb_archive', ARCHIVE);
+    } else if (ARCHIVE.length) {
+      // Cloud is empty but local has data — push to cloud
+      sbSet('tb_archive', ARCHIVE);
     }
 
     buildCatGrid();
