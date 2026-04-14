@@ -424,6 +424,15 @@ async function syncFromCloud() {
       sbSet('tb_archive', ARCHIVE);
     }
 
+    // WA Phone: pull from cloud if not in localStorage
+    var localWaPhone = localStorage.getItem('tb_wa_phone');
+    if (!localWaPhone) {
+      var cloudWaPhone = await sbGet('tb_wa_phone');
+      if (cloudWaPhone) {
+        localStorage.setItem('tb_wa_phone', cloudWaPhone);
+      }
+    }
+
     buildCatGrid();
     buildSubBtns();
     renderLog();
@@ -1049,10 +1058,15 @@ function sendWhatsApp(){
         a.download='yoman.jpg';
         a.href=canvas.toDataURL('image/jpeg',0.95);
         a.click();
-        // Open WhatsApp with phone number (if provided)
+        // Open WhatsApp Business (or regular WhatsApp) with phone number
         setTimeout(function(){
           if(phone){
-            window.open('https://wa.me/'+phone,'_blank');
+            // Try WhatsApp Business intent first, fallback to wa.me
+            var wabUrl = 'intent://send?phone='+phone+'#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
+            var waUrl = 'https://wa.me/'+phone;
+            try { window.location.href = wabUrl; } catch(e) { window.open(waUrl,'_blank'); }
+            // Fallback if intent didn't work after short delay
+            setTimeout(function(){ window.open(waUrl,'_blank'); }, 1500);
           } else {
             window.open('https://web.whatsapp.com/','_blank');
           }
