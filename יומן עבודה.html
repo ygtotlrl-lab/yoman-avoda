@@ -1050,33 +1050,39 @@ function sendWhatsApp(){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         // Download the image
+        var url=URL.createObjectURL(blob);
         var a=document.createElement('a');
+        a.href=url;
         a.download='yoman.jpg';
-        a.href=canvas.toDataURL('image/jpeg',0.95);
+        document.body.appendChild(a);
         a.click();
-        // Detect mobile vs desktop
-        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        // First open Google Chat
-        setTimeout(function(){
-          if(isMobile){
-            window.open('https://chat.google.com/','_blank');
-          } else {
-            window.open('https://chat.google.com/','_blank');
-          }
-        },600);
-        // Then open WhatsApp
-        if(phone){
+        document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},2000);
+        // Open WhatsApp first (main action), then Google Chat
+        // Use hidden iframes to trigger both without navigating away
+        function openExternal(appUrl, delay) {
           setTimeout(function(){
-            if(isMobile){
-              // Mobile: use api.whatsapp.com (Android intent opens WA Business/WA app)
-              window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
-            } else {
-              // Desktop: open WhatsApp Desktop app via whatsapp:// protocol
-              window.location.href = 'whatsapp://send?phone='+phone;
-              // Fallback to web after short delay
-              setTimeout(function(){ window.open('https://web.whatsapp.com/','_blank'); }, 1500);
-            }
-          },1800);
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = appUrl;
+            document.body.appendChild(iframe);
+            setTimeout(function(){ document.body.removeChild(iframe); }, 3000);
+          }, delay);
+        }
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        // Open Google Chat
+        if(isMobile){
+          openExternal('https://chat.google.com/', 800);
+        } else {
+          openExternal('googlechat://', 800);
+        }
+        // Open WhatsApp
+        if(phone){
+          if(isMobile){
+            openExternal('https://api.whatsapp.com/send?phone='+phone, 2500);
+          } else {
+            openExternal('whatsapp://send?phone='+phone, 2500);
+          }
         }
       },'image/jpeg',0.95);
     });
