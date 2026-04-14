@@ -1030,13 +1030,6 @@ function saveWAPhone() {
   st.style.display = 'block';
   setTimeout(function(){ st.style.display = 'none'; }, 1500);
 }
-function saveWAPhone() {
-  var val = document.getElementById('waPhone').value.trim();
-  localStorage.setItem('tb_wa_phone', val);
-  var st = document.getElementById('waPhoneStatus');
-  st.style.display = 'block';
-  setTimeout(function(){ st.style.display = 'none'; }, 2000);
-}
 
 function sendWhatsApp(){
   if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
@@ -1055,15 +1048,15 @@ function sendWhatsApp(){
         a.download='yoman.jpg';
         a.href=canvas.toDataURL('image/jpeg',0.95);
         a.click();
-        // Open WhatsApp Business with phone number
+        // First open Google Chat, then WhatsApp
         setTimeout(function(){
-          if(phone){
-            // Use whatsapp:// scheme which Android resolves to installed WA app
-            // On devices with WA Business, user can choose or it opens default
-            window.location.href = 'https://api.whatsapp.com/send?phone='+phone;
-          }
+          window.open('https://chat.google.com/','_blank');
         },600);
-          setTimeout(function(){window.open('https://chat.google.com/','_blank');},1200);
+        if(phone){
+          setTimeout(function(){
+            window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
+          },1800);
+        }
       },'image/jpeg',0.95);
     });
   });
