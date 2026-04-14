@@ -961,7 +961,9 @@ function _buildReportDiv(cb){
   var logoEl=document.getElementById('appLogo')||document.querySelector('.hdr-logo');
   var logoUrl=logoEl?logoEl.src:'';
   var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
-  var sortedPDF=ENTRIES.slice().sort(function(a,b){var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;return ca-cb2;});
+  var curKey = getCurrentDateKey();
+  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var sortedPDF=todayEntries.slice().sort(function(a,b){var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;return ca-cb2;});
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
@@ -1002,7 +1004,9 @@ function _buildReportDiv(cb){
   div.style.left='0';cb(div);
 }
 function exportJPEG(){
-  if(!ENTRIES.length){showToast("אין רשומות");return;}
+  var curKey = getCurrentDateKey();
+  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  if(!todayEntries.length){showToast("אין רשומות להיום");return;}
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var fname='יומן עבודה '+today+' '+todayGreg+'.jpg';
@@ -1032,7 +1036,9 @@ function saveWAPhone() {
 }
 
 function sendWhatsApp(){
-  if(!ENTRIES.length){showToast("אין רשומות לשיתוף");return;}
+  var curKey = getCurrentDateKey();
+  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  if(!todayEntries.length){showToast("אין רשומות לשיתוף להיום");return;}
   showToast("מכין תמונה...");
   // Get phone number from settings field, clean it
   var rawPhone = (document.getElementById('waPhone')||{}).value || '';
@@ -1048,13 +1054,28 @@ function sendWhatsApp(){
         a.download='yoman.jpg';
         a.href=canvas.toDataURL('image/jpeg',0.95);
         a.click();
-        // First open Google Chat, then WhatsApp
+        // Detect mobile vs desktop
+        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        // First open Google Chat
         setTimeout(function(){
-          window.open('https://chat.google.com/','_blank');
+          if(isMobile){
+            window.open('https://chat.google.com/','_blank');
+          } else {
+            window.open('https://chat.google.com/','_blank');
+          }
         },600);
+        // Then open WhatsApp
         if(phone){
           setTimeout(function(){
-            window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
+            if(isMobile){
+              // Mobile: use api.whatsapp.com (Android intent opens WA Business/WA app)
+              window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
+            } else {
+              // Desktop: open WhatsApp Desktop app via whatsapp:// protocol
+              window.location.href = 'whatsapp://send?phone='+phone;
+              // Fallback to web after short delay
+              setTimeout(function(){ window.open('https://web.whatsapp.com/','_blank'); }, 1500);
+            }
           },1800);
         }
       },'image/jpeg',0.95);
