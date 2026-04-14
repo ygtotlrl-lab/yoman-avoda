@@ -424,13 +424,10 @@ async function syncFromCloud() {
       sbSet('tb_archive', ARCHIVE);
     }
 
-    // WA Phone: pull from cloud if not in localStorage
-    var localWaPhone = localStorage.getItem('tb_wa_phone');
-    if (!localWaPhone) {
-      var cloudWaPhone = await sbGet('tb_wa_phone');
-      if (cloudWaPhone) {
-        localStorage.setItem('tb_wa_phone', cloudWaPhone);
-      }
+    // WA Phone: always pull from cloud to stay in sync across devices
+    var cloudWaPhone = await sbGet('tb_wa_phone');
+    if (cloudWaPhone) {
+      localStorage.setItem('tb_wa_phone', cloudWaPhone);
     }
 
     buildCatGrid();
@@ -1058,17 +1055,12 @@ function sendWhatsApp(){
         a.download='yoman.jpg';
         a.href=canvas.toDataURL('image/jpeg',0.95);
         a.click();
-        // Open WhatsApp Business (or regular WhatsApp) with phone number
+        // Open WhatsApp Business with phone number
         setTimeout(function(){
           if(phone){
-            // Try WhatsApp Business intent first, fallback to wa.me
-            var wabUrl = 'intent://send?phone='+phone+'#Intent;package=com.whatsapp.w4b;scheme=whatsapp;end';
-            var waUrl = 'https://wa.me/'+phone;
-            try { window.location.href = wabUrl; } catch(e) { window.open(waUrl,'_blank'); }
-            // Fallback if intent didn't work after short delay
-            setTimeout(function(){ window.open(waUrl,'_blank'); }, 1500);
-          } else {
-            window.open('https://web.whatsapp.com/','_blank');
+            // Use whatsapp:// scheme which Android resolves to installed WA app
+            // On devices with WA Business, user can choose or it opens default
+            window.location.href = 'https://api.whatsapp.com/send?phone='+phone;
           }
         },600);
           setTimeout(function(){window.open('https://chat.google.com/','_blank');},1200);
