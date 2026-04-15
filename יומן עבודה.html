@@ -1447,14 +1447,18 @@ var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","א
 
 function extractYM(hdate) {
   if (!hdate) return {year:"", month:"", order:99};
-  // Skip Gregorian-format dates
-  if (/\d{4}/.test(hdate) && !/ה׳תש/.test(hdate)) return {year:"", month:"", order:99};
+  // Must contain a Hebrew year marker
+  if (!/ה׳תש/.test(hdate)) return {year:"", month:"", order:99};
   var parts = hdate.trim().split(" ");
   var year = "", month = "";
   for (var i = parts.length-1; i >= 0; i--) {
-    if (parts[i].indexOf("׳") >= 0) { year = parts[i]; parts.splice(i,1); break; }
+    if (parts[i].indexOf("׳") >= 0 && /ה׳תש/.test(parts[i])) { year = parts[i]; parts.splice(i,1); break; }
   }
-  month = parts.slice(1).join(" ").trim();
+  // Keep only parts that are Hebrew words (no digits or Latin)
+  var hebrewParts = parts.filter(function(p) { return p && !/[0-9a-zA-Z]/.test(p); });
+  month = hebrewParts.slice(1).join(" ").trim();
+  // Validate month is in known list
+  if (HMO.indexOf(month) < 0) return {year:"", month:"", order:99};
   return {year: year||"לא ידוע", month: month||"לא ידוע", order: HMO.indexOf(month)};
 }
 
