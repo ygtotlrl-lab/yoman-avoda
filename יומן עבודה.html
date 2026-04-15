@@ -1050,39 +1050,32 @@ function sendWhatsApp(){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         // Download the image
-        var url=URL.createObjectURL(blob);
+        var dataUrl = canvas.toDataURL('image/jpeg',0.95);
         var a=document.createElement('a');
-        a.href=url;
+        a.href=dataUrl;
         a.download='yoman.jpg';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        setTimeout(function(){URL.revokeObjectURL(url);},2000);
-        // Open WhatsApp first (main action), then Google Chat
-        // Use hidden iframes to trigger both without navigating away
-        function openExternal(appUrl, delay) {
-          setTimeout(function(){
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = appUrl;
-            document.body.appendChild(iframe);
-            setTimeout(function(){ document.body.removeChild(iframe); }, 3000);
-          }, delay);
-        }
+        // Detect platform
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        // Open Google Chat
-        if(isMobile){
-          openExternal('https://chat.google.com/', 800);
-        } else {
-          openExternal('googlechat://', 800);
-        }
-        // Open WhatsApp
-        if(phone){
+        // Step 1: Open Google Chat app
+        setTimeout(function(){
           if(isMobile){
-            openExternal('https://api.whatsapp.com/send?phone='+phone, 2500);
+            window.open('https://chat.google.com/','_blank');
           } else {
-            openExternal('whatsapp://send?phone='+phone, 2500);
+            window.location.href = 'googlechat://';
           }
+        },1000);
+        // Step 2: Open WhatsApp app
+        if(phone){
+          setTimeout(function(){
+            if(isMobile){
+              window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
+            } else {
+              window.location.href = 'whatsapp://send?phone='+phone;
+            }
+          },3000);
         }
       },'image/jpeg',0.95);
     });
