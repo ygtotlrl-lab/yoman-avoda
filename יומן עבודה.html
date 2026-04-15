@@ -1060,7 +1060,7 @@ function sendWhatsApp(){
         // Open WhatsApp with phone number
         if(phone){
           setTimeout(function(){
-            window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
+            window.location.href = 'whatsapp://send?phone='+phone;
           },1000);
         }
       },'image/jpeg',0.95);
