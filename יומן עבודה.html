@@ -388,11 +388,22 @@ async function syncFromCloud() {
       localStorage.setItem('tb_subs', JSON.stringify(SUBS));
     }
 
-    // ENTRIES: always pull from cloud (cloud wins for today's entries)
+    // ENTRIES: merge cloud + local (union by id — no data loss)
     var cloudEntries = await sbGet('tb_entries');
     if (cloudEntries && cloudEntries.length) {
-      ENTRIES = cloudEntries;
+      var mergedEntries = cloudEntries.slice();
+      ENTRIES.forEach(function(localEntry) {
+        if (!mergedEntries.find(function(e){ return e.id === localEntry.id; })) {
+          mergedEntries.push(localEntry);
+        }
+      });
+      // Sort by id descending (newest first)
+      mergedEntries.sort(function(a,b){ return b.id - a.id; });
+      ENTRIES = mergedEntries;
       localStorage.setItem('tb_entries', JSON.stringify(ENTRIES));
+      sbSet('tb_entries', ENTRIES); // push merged back to cloud
+    } else if (ENTRIES.length) {
+      sbSet('tb_entries', ENTRIES); // cloud empty — push local up
     }
 
     // ARCHIVE: merge cloud + local (cloud wins for same gdate)
