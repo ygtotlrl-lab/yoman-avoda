@@ -374,11 +374,17 @@ function saveSubs() {
 }
 function saveEntries() {
   localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
-  sbSet("tb_entries", ENTRIES);
+  (async function(){
+    await sbSet("tb_entries", ENTRIES);
+    await sbSet("tb_last_changed", Date.now());
+  })();
 }
 function saveArchive() {
   localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
-  sbSet("tb_archive", ARCHIVE);
+  (async function(){
+    await sbSet("tb_archive", ARCHIVE);
+    await sbSet("tb_last_changed", Date.now());
+  })();
 }
 
 // Load from Supabase on startup — always pull from cloud to sync across devices
