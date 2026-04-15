@@ -1057,10 +1057,10 @@ function sendWhatsApp(){
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        // Detect platform
-        var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        if(isMobile){
-          // Mobile APK: window.open -> shouldOverrideUrlLoading -> external app
+        // Detect if running inside our APK WebView (has wv in user agent)
+        var isAPK = /; wv\)/.test(navigator.userAgent);
+        if(isAPK){
+          // APK WebView: window.open -> shouldOverrideUrlLoading -> external app
           setTimeout(function(){
             window.open('https://chat.google.com/','_blank');
           },1000);
@@ -1070,7 +1070,7 @@ function sendWhatsApp(){
             },3000);
           }
         } else {
-          // Desktop: open WhatsApp app only
+          // Browser (web version): open only WhatsApp app
           if(phone){
             setTimeout(function(){
               window.location.href = 'whatsapp://send?phone='+phone;
