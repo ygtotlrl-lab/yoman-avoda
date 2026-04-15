@@ -336,16 +336,25 @@ function getSB() {
 async function sbSet(key, value) {
   try {
     var sb = getSB();
-    await sb.from("kv").upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"});
-  } catch(e) { console.warn("sbSet failed:", e); }
+    var res = await sb.from("kv").upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"});
+    if (res.error) {
+      console.error("sbSet error [" + key + "]:", res.error.message, res.error);
+    } else {
+      console.log("sbSet ok [" + key + "]");
+    }
+  } catch(e) { console.error("sbSet exception [" + key + "]:", e); }
 }
 
 async function sbGet(key) {
   try {
     var sb = getSB();
     var res = await sb.from("kv").select("value").eq("key", key).single();
+    if (res.error) {
+      console.error("sbGet error [" + key + "]:", res.error.message, res.error);
+      return null;
+    }
     if (res.data) return JSON.parse(res.data.value);
-  } catch(e) { console.warn("sbGet failed:", e); }
+  } catch(e) { console.error("sbGet exception [" + key + "]:", e); }
   return null;
 }
 
