@@ -1059,23 +1059,28 @@ function sendWhatsApp(){
         document.body.removeChild(a);
         // Detect platform
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        // Step 1: Open Google Chat app
-        setTimeout(function(){
-          if(isMobile){
-            window.open('https://chat.google.com/','_blank');
-          } else {
-            window.location.href = 'googlechat://';
-          }
-        },1000);
-        // Step 2: Open WhatsApp app
-        if(phone){
+        if(isMobile){
+          // Mobile (APK): window.open triggers shouldOverrideUrlLoading -> external app
           setTimeout(function(){
-            if(isMobile){
+            window.open('https://chat.google.com/','_blank');
+          },1000);
+          if(phone){
+            setTimeout(function(){
               window.open('https://api.whatsapp.com/send?phone='+phone,'_blank');
-            } else {
-              window.location.href = 'whatsapp://send?phone='+phone;
-            }
-          },3000);
+            },3000);
+          }
+        } else {
+          // Desktop: use protocol URLs to open native apps
+          // Google Chat first via window.open (doesn't navigate away)
+          setTimeout(function(){
+            window.open('googlechat://','_blank');
+          },1000);
+          // WhatsApp via window.open
+          if(phone){
+            setTimeout(function(){
+              window.open('whatsapp://send?phone='+phone,'_blank');
+            },2500);
+          }
         }
       },'image/jpeg',0.95);
     });
@@ -1936,8 +1941,17 @@ window.addEventListener("DOMContentLoaded", function() {
   buildCatGrid();
   buildSubBtns();
   renderLog();
-  // Sync from cloud after short delay
-  setTimeout(syncFromCloud, 1000);
+  // Sync from cloud - wait for Supabase to load, retry if needed
+  function trySync(attempt) {
+    if (typeof supabase !== 'undefined') {
+      syncFromCloud();
+    } else if (attempt < 10) {
+      setTimeout(function(){ trySync(attempt + 1); }, 1000);
+    } else {
+      showToast("⚠️ לא הצליח לטעון סנכרון", 2000);
+    }
+  }
+  setTimeout(function(){ trySync(0); }, 1500);
 });
 
 
