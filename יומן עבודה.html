@@ -1089,6 +1089,8 @@ function scheduleSyncPush() {
   _syncPushTimer = setTimeout(function() {
     sbSet("tb_entries", ENTRIES);
     sbSet("tb_archive", ARCHIVE);
+    // Write a lightweight "last changed" timestamp so other devices can detect changes fast
+    sbSet("tb_last_changed", Date.now());
   }, 2000);
 }
 
@@ -1982,11 +1984,19 @@ function showUpdateBanner(newContent) {
   };
 }
 
-// Silent background sync every 60s — merges cloud data without showing toast
+// Smart sync: poll timestamp every 10s (cheap), pull data only when changed
+var _lastKnownTimestamp = 0;
 async function autoSyncData() {
   try {
     var sb = getSB();
-    // ENTRIES: merge by id
+    // Step 1: check only the lightweight timestamp (very cheap - single small value)
+    var resTs = await sb.from("kv").select("value").eq("key","tb_last_changed").single();
+    if (!resTs.data) return;
+    var remoteTs = parseInt(JSON.parse(resTs.data.value)) || 0;
+    if (remoteTs <= _lastKnownTimestamp) return; // nothing changed — skip
+    _lastKnownTimestamp = remoteTs;
+
+    // Step 2: something changed on another device — pull actual data
     var res = await sb.from("kv").select("value").eq("key","tb_entries").single();
     if (res.data) {
       var cloudEntries = JSON.parse(res.data.value);
@@ -2005,7 +2015,6 @@ async function autoSyncData() {
         }
       }
     }
-    // ARCHIVE: merge by gdate
     var resA = await sb.from("kv").select("value").eq("key","tb_archive").single();
     if (resA.data) {
       var cloudArchive = JSON.parse(resA.data.value);
@@ -2013,14 +2022,9 @@ async function autoSyncData() {
         var changedA = false;
         cloudArchive.forEach(function(ca) {
           var idx = ARCHIVE.findIndex(function(a){ return a.gdate === ca.gdate; });
-          if (idx < 0) {
-            ARCHIVE.unshift(ca);
-            changedA = true;
-          }
+          if (idx < 0) { ARCHIVE.unshift(ca); changedA = true; }
         });
-        if (changedA) {
-          localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
-        }
+        if (changedA) localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
       }
     }
   } catch(e) { /* silent — offline or error */ }
@@ -2050,7 +2054,7 @@ window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkForUpdates, 2000);
   setInterval(checkForUpdates, 5 * 60 * 1000);
   // Auto-sync data from cloud every 60 seconds (silent, merges without UI)
-  setInterval(autoSyncData, 60 * 1000);
+  setInterval(autoSyncData, 10 * 1000); // polls only a timestamp — very lightweight
 });
 // ============================================================
 
