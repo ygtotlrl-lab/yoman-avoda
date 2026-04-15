@@ -127,7 +127,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:16px;font-weight:700;
   cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
-.btn-add:active,.btn-add.btn-flash{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
+.btn-add.btn-flash{background:linear-gradient(135deg,var(--success),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
 
 /* Log */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
@@ -261,7 +261,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <div class="fld"><label>הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
         <div class="fld"><label>כמות</label><input id="countInput" type="text" placeholder="1" /></div>
       </div>
-      <button class="btn-add" id="btn-add-entry" onclick="addEntry(); this.classList.add('btn-flash'); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},600);">+ הוסף לסדר היום</button>
+      <button class="btn-add" id="btn-add-entry"
+        ontouchstart="this.classList.add('btn-flash')"
+        ontouchend="addEntry(); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500); event.preventDefault();"
+        onclick="if(!('ontouchstart' in window)){addEntry(); this.classList.add('btn-flash'); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500);}">+ הוסף לסדר היום</button>
 
     </div>
   </div>
@@ -2054,7 +2057,7 @@ window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkForUpdates, 2000);
   setInterval(checkForUpdates, 5 * 60 * 1000);
   // Auto-sync data from cloud every 60 seconds (silent, merges without UI)
-  setInterval(autoSyncData, 10 * 1000); // polls only a timestamp — very lightweight
+  setInterval(autoSyncData, 3 * 1000); // polls only a timestamp — very lightweight
 });
 // ============================================================
 
