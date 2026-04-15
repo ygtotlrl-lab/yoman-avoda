@@ -376,14 +376,19 @@ function saveEntries() {
   localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
   (async function(){
     await sbSet("tb_entries", ENTRIES);
-    await sbSet("tb_last_changed", Date.now());
+    var ts = Date.now();
+    await sbSet("tb_last_changed", ts);
+    // Update local timestamp so THIS device doesn't re-pull its own push
+    _lastKnownTimestamp = ts;
   })();
 }
 function saveArchive() {
   localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
   (async function(){
     await sbSet("tb_archive", ARCHIVE);
-    await sbSet("tb_last_changed", Date.now());
+    var ts = Date.now();
+    await sbSet("tb_last_changed", ts);
+    _lastKnownTimestamp = ts;
   })();
 }
 
@@ -2124,14 +2129,21 @@ function editEntry(id) {
   if(!row) return;
   var container = row.closest('.entry-row');
   if(!container) return;
-  container.innerHTML =
-    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;">' +
-    '<input id="ei_sub" value="' + (e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input id="ei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input id="ei_notes" value="' + (e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+  function esc(v){ return (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
+  div.innerHTML =
+    '<input id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input id="ei_count" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<button onclick="saveEntry(' + id + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
-    '</div>';
+    '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
+  container.innerHTML = '';
+  container.appendChild(div);
+  // Set values directly via JS — avoids HTML escaping issues completely
+  document.getElementById('ei_sub').value = e.sub || '';
+  document.getElementById('ei_count').value = e.count || '';
+  document.getElementById('ei_notes').value = e.notes || '';
 }
 
 function saveEntry(id) {
