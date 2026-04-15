@@ -1987,47 +1987,34 @@ function showUpdateBanner(newContent) {
   };
 }
 
-// Smart sync: poll timestamp every 10s (cheap), pull data only when changed
+// Smart sync: poll timestamp every 3s (cheap), pull data only when changed
 var _lastKnownTimestamp = 0;
 async function autoSyncData() {
   try {
     var sb = getSB();
-    // Step 1: check only the lightweight timestamp (very cheap - single small value)
+    // Step 1: check only the lightweight timestamp
     var resTs = await sb.from("kv").select("value").eq("key","tb_last_changed").single();
     if (!resTs.data) return;
     var remoteTs = parseInt(JSON.parse(resTs.data.value)) || 0;
     if (remoteTs <= _lastKnownTimestamp) return; // nothing changed — skip
     _lastKnownTimestamp = remoteTs;
 
-    // Step 2: something changed on another device — pull actual data
+    // Step 2: something changed — replace local data with cloud (handles deletes too)
     var res = await sb.from("kv").select("value").eq("key","tb_entries").single();
     if (res.data) {
       var cloudEntries = JSON.parse(res.data.value);
-      if (cloudEntries && cloudEntries.length) {
-        var changed = false;
-        cloudEntries.forEach(function(ce) {
-          if (!ENTRIES.find(function(e){ return e.id === ce.id; })) {
-            ENTRIES.push(ce);
-            changed = true;
-          }
-        });
-        if (changed) {
-          ENTRIES.sort(function(a,b){ return b.id - a.id; });
-          localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
-          renderLog();
-        }
+      if (Array.isArray(cloudEntries)) {
+        ENTRIES = cloudEntries;
+        localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
+        renderLog();
       }
     }
     var resA = await sb.from("kv").select("value").eq("key","tb_archive").single();
     if (resA.data) {
       var cloudArchive = JSON.parse(resA.data.value);
-      if (cloudArchive && cloudArchive.length) {
-        var changedA = false;
-        cloudArchive.forEach(function(ca) {
-          var idx = ARCHIVE.findIndex(function(a){ return a.gdate === ca.gdate; });
-          if (idx < 0) { ARCHIVE.unshift(ca); changedA = true; }
-        });
-        if (changedA) localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
+      if (Array.isArray(cloudArchive)) {
+        ARCHIVE = cloudArchive;
+        localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
       }
     }
   } catch(e) { /* silent — offline or error */ }
