@@ -110,6 +110,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--textmid);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:white;border-color:var(--primaryl);}
 .qbtn.active{background:var(--primary);color:white;border-color:var(--primary);font-weight:700;}
+.qbtn.tapped{background:var(--primaryl);color:white;border-color:var(--primaryl);}
 .hint{color:var(--textlite);font-size:11px;}
 
 /* Inputs */
@@ -260,7 +261,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <div class="fld"><label>כמות</label><input id="countInput" type="text" placeholder="1" /></div>
       </div>
       <button class="btn-add" onclick="addEntry()">+ הוסף לסדר היום</button>
-      <button class="btn-add" onclick="endDay()" style="margin-top:8px;background:linear-gradient(135deg,var(--success),#2ABB6A);font-size:14px;">✓ סיים יום ושמור לארכיון</button>
+
     </div>
   </div>
 
@@ -708,6 +709,12 @@ function buildTaskBtns() {
 
 function pickTask(t) {
   selTask = t; selSub = null;
+  // Flash effect for mobile: briefly highlight then release
+  if (event && event.currentTarget) {
+    var btn = event.currentTarget;
+    btn.classList.add("tapped");
+    setTimeout(function(){ btn.classList.remove("tapped"); }, 600);
+  }
   document.getElementById("taskInput").value = t;
   buildTaskBtns(); buildSubBtns();
 }
@@ -731,6 +738,11 @@ function buildSubBtns() {
 
 function pickSub(s) {
   selSub = s;
+  if (event && event.currentTarget) {
+    var btn = event.currentTarget;
+    btn.classList.add("tapped");
+    setTimeout(function(){ btn.classList.remove("tapped"); }, 600);
+  }
   document.getElementById("subInput").value = s;
   buildSubBtns();
 }
@@ -781,6 +793,7 @@ function addEntry() {
   autoArchiveDay(entry.day, entry.hdate, entry.gdate);
   clearForm();
   showToast("✓ נוסף ונשמר!");
+  scheduleSyncPush();
 }
 
 function clearForm() {
@@ -837,11 +850,33 @@ function delEntry(id) {
   saveEntries();
   if (deleted) autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
   renderLog();
+  scheduleSyncPush();
 }
 
 function clearAll() {
-  if (!confirm("למחוק את כל הרשומות?")) return;
-  ENTRIES = []; saveEntries(); renderLog();
+  showConfirm("🗑 מחיקת כל הרשומות", "האם למחוק את כל רשומות היום הנוכחי?", function() {
+    ENTRIES = ENTRIES.filter(function(e){ return e.gdate !== getCurrentDateKey(); });
+    saveEntries(); renderLog();
+    showToast("✓ הרשומות נמחקו");
+    scheduleSyncPush();
+  });
+}
+function showConfirm(title, msg, onOk) {
+  var overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
+  var box = document.createElement("div");
+  box.style.cssText = "background:var(--card);border-radius:16px;padding:24px 20px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.3);";
+  box.innerHTML = "<div style=\"font-size:20px;font-weight:700;color:var(--text);margin-bottom:8px\">"+title+"</div>"
+    + "<div style=\"font-size:14px;color:var(--textlite);margin-bottom:20px;line-height:1.5\">"+msg+"</div>"
+    + "<div style=\"display:flex;gap:10px;justify-content:center\">"
+    + "<button id=\"conf-cancel\" style=\"flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--bgsec);color:var(--text);font-family:Heebo;font-size:14px;cursor:pointer;\">ביטול</button>"
+    + "<button id=\"conf-ok\" style=\"flex:1;padding:10px;border-radius:10px;border:none;background:#E53935;color:white;font-family:Heebo;font-size:14px;font-weight:700;cursor:pointer;\">מחק</button>"
+    + "</div>";
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  box.querySelector("#conf-cancel").onclick = function(){ document.body.removeChild(overlay); };
+  box.querySelector("#conf-ok").onclick = function(){ document.body.removeChild(overlay); onOk(); };
+  overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
 }
 
 // EXPORT TXT
@@ -1046,6 +1081,16 @@ function exportJPEG(){
 
 
 // ── WhatsApp Send ──
+// Debounced push to cloud after any UI change
+var _syncPushTimer = null;
+function scheduleSyncPush() {
+  if (_syncPushTimer) clearTimeout(_syncPushTimer);
+  _syncPushTimer = setTimeout(function() {
+    sbSet("tb_entries", ENTRIES);
+    sbSet("tb_archive", ARCHIVE);
+  }, 2000);
+}
+
 function saveWAPhone() {
   var val = document.getElementById('waPhone').value.trim();
   localStorage.setItem('tb_wa_phone', val);
@@ -1166,6 +1211,27 @@ function subDrop(e, ci, ti, si) {
   renderSettings();
 }
 
+function editSubInline(ci, ti, si, oldVal, taskName) {
+  var lbl = document.getElementById("sub-lbl-"+ci+"-"+ti+"-"+si);
+  if (!lbl) return;
+  var inp = document.createElement("input");
+  inp.value = oldVal;
+  inp.style.cssText = "border:1px solid var(--primary);border-radius:6px;padding:2px 6px;font-family:Heebo;font-size:12px;width:90px;";
+  lbl.replaceWith(inp);
+  inp.focus();
+  inp.select();
+  function save() {
+    var newVal = inp.value.trim();
+    if (newVal && newVal !== oldVal) {
+      if (!SUBS[taskName]) SUBS[taskName] = [];
+      SUBS[taskName][si] = newVal;
+      saveSubs();
+    }
+    renderSettings();
+  }
+  inp.onblur = save;
+  inp.onkeydown = function(e){ if(e.key==="Enter") { inp.blur(); } if(e.key==="Escape") { inp.value=oldVal; inp.blur(); } };
+}
 function removeSub(taskName, si) {
   if (!SUBS[taskName]) return;
   SUBS[taskName].splice(si, 1);
@@ -1226,6 +1292,7 @@ function renderSettings() {
             subsSection = '<div class="set-lbl" style="font-size:9px;margin:4px 0 2px 0;color:var(--textlite)">תתי משימות:</div>'
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
+                  var safeS = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
                   return '<div class="chip chip-sub" draggable="true" '
                     + 'ondragstart="subDragStart(event,'+ci+','+ti+','+si+')" '
                     + 'ondragover="subDragOver(event)" '
@@ -1233,7 +1300,8 @@ function renderSettings() {
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
-                    + '<span>'+s+'</span>'
+                    + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+s+'</span>'
+                    + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
                     + '<button onclick="removeSub(\''+safeT+'\','+si+')">×</button>'
                     + '</div>';
                 }).join('')
