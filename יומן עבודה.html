@@ -1089,12 +1089,12 @@ function exportJPEG(){
 var _syncPushTimer = null;
 function scheduleSyncPush() {
   if (_syncPushTimer) clearTimeout(_syncPushTimer);
-  _syncPushTimer = setTimeout(function() {
-    sbSet("tb_entries", ENTRIES);
-    sbSet("tb_archive", ARCHIVE);
-    // Write a lightweight "last changed" timestamp so other devices can detect changes fast
-    sbSet("tb_last_changed", Date.now());
-  }, 2000);
+  _syncPushTimer = setTimeout(async function() {
+    await sbSet("tb_entries", ENTRIES);
+    await sbSet("tb_archive", ARCHIVE);
+    // Write timestamp AFTER data is saved — so other devices always get fresh data
+    await sbSet("tb_last_changed", Date.now());
+  }, 500);
 }
 
 function saveWAPhone() {
@@ -1992,14 +1992,14 @@ var _lastKnownTimestamp = 0;
 async function autoSyncData() {
   try {
     var sb = getSB();
-    // Step 1: check only the lightweight timestamp
     var resTs = await sb.from("kv").select("value").eq("key","tb_last_changed").single();
     if (!resTs.data) return;
     var remoteTs = parseInt(JSON.parse(resTs.data.value)) || 0;
-    if (remoteTs <= _lastKnownTimestamp) return; // nothing changed — skip
+    console.log("[sync] remote=" + remoteTs + " local=" + _lastKnownTimestamp);
+    if (remoteTs <= _lastKnownTimestamp) return;
     _lastKnownTimestamp = remoteTs;
+    console.log("[sync] pulling data...");
 
-    // Step 2: something changed — replace local data with cloud (handles deletes too)
     var res = await sb.from("kv").select("value").eq("key","tb_entries").single();
     if (res.data) {
       var cloudEntries = JSON.parse(res.data.value);
@@ -2007,6 +2007,7 @@ async function autoSyncData() {
         ENTRIES = cloudEntries;
         localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
         renderLog();
+        console.log("[sync] done, entries=" + ENTRIES.length);
       }
     }
     var resA = await sb.from("kv").select("value").eq("key","tb_archive").single();
@@ -2017,7 +2018,7 @@ async function autoSyncData() {
         localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
       }
     }
-  } catch(e) { /* silent — offline or error */ }
+  } catch(e) { console.error("[sync] error:", e); }
 }
 
 function checkForUpdates() {
