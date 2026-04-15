@@ -127,6 +127,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:16px;font-weight:700;
   cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
+.btn-add:active,.btn-add.btn-flash{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
 
 /* Log */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
@@ -260,7 +261,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <div class="fld"><label>הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
         <div class="fld"><label>כמות</label><input id="countInput" type="text" placeholder="1" /></div>
       </div>
-      <button class="btn-add" onclick="addEntry()">+ הוסף לסדר היום</button>
+      <button class="btn-add" id="btn-add-entry" onclick="addEntry(); this.classList.add('btn-flash'); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},600);">+ הוסף לסדר היום</button>
 
     </div>
   </div>
@@ -1981,6 +1982,50 @@ function showUpdateBanner(newContent) {
   };
 }
 
+// Silent background sync every 60s — merges cloud data without showing toast
+async function autoSyncData() {
+  try {
+    var sb = getSB();
+    // ENTRIES: merge by id
+    var res = await sb.from("kv").select("value").eq("key","tb_entries").single();
+    if (res.data) {
+      var cloudEntries = JSON.parse(res.data.value);
+      if (cloudEntries && cloudEntries.length) {
+        var changed = false;
+        cloudEntries.forEach(function(ce) {
+          if (!ENTRIES.find(function(e){ return e.id === ce.id; })) {
+            ENTRIES.push(ce);
+            changed = true;
+          }
+        });
+        if (changed) {
+          ENTRIES.sort(function(a,b){ return b.id - a.id; });
+          localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
+          renderLog();
+        }
+      }
+    }
+    // ARCHIVE: merge by gdate
+    var resA = await sb.from("kv").select("value").eq("key","tb_archive").single();
+    if (resA.data) {
+      var cloudArchive = JSON.parse(resA.data.value);
+      if (cloudArchive && cloudArchive.length) {
+        var changedA = false;
+        cloudArchive.forEach(function(ca) {
+          var idx = ARCHIVE.findIndex(function(a){ return a.gdate === ca.gdate; });
+          if (idx < 0) {
+            ARCHIVE.unshift(ca);
+            changedA = true;
+          }
+        });
+        if (changedA) {
+          localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
+        }
+      }
+    }
+  } catch(e) { /* silent — offline or error */ }
+}
+
 function checkForUpdates() {
   var currentHash = localStorage.getItem(UPDATE_KEY) || "";
   fetch(RAW_URL + "?t=" + Date.now())
@@ -2004,6 +2049,8 @@ function checkForUpdates() {
 window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkForUpdates, 2000);
   setInterval(checkForUpdates, 5 * 60 * 1000);
+  // Auto-sync data from cloud every 60 seconds (silent, merges without UI)
+  setInterval(autoSyncData, 60 * 1000);
 });
 // ============================================================
 
