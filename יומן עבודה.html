@@ -1060,7 +1060,7 @@ function sendWhatsApp(){
         // Detect platform
         var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         if(isMobile){
-          // Mobile (APK): window.open triggers shouldOverrideUrlLoading -> external app
+          // Mobile APK: window.open -> shouldOverrideUrlLoading -> external app
           setTimeout(function(){
             window.open('https://chat.google.com/','_blank');
           },1000);
@@ -1070,15 +1070,13 @@ function sendWhatsApp(){
             },3000);
           }
         } else {
-          // Desktop: use protocol URLs to open native apps
-          // Google Chat first via window.open (doesn't navigate away)
+          // Desktop: open Google Chat first, then WhatsApp
           setTimeout(function(){
-            window.open('googlechat://','_blank');
+            window.open('https://chat.google.com','_blank');
           },1000);
-          // WhatsApp via window.open
           if(phone){
             setTimeout(function(){
-              window.open('whatsapp://send?phone='+phone,'_blank');
+              window.location.href = 'whatsapp://send?phone='+phone;
             },2500);
           }
         }
