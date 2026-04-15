@@ -2133,6 +2133,7 @@ function editEntry(id) {
   var div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
   div.innerHTML =
+    '<input id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input id="ei_count" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
@@ -2141,6 +2142,7 @@ function editEntry(id) {
   container.innerHTML = '';
   container.appendChild(div);
   // Set values directly via JS — avoids HTML escaping issues completely
+  document.getElementById('ei_task').value = e.task || '';
   document.getElementById('ei_sub').value = e.sub || '';
   document.getElementById('ei_count').value = e.count || '';
   document.getElementById('ei_notes').value = e.notes || '';
@@ -2149,6 +2151,7 @@ function editEntry(id) {
 function saveEntry(id) {
   var e = ENTRIES.find(function(x){ return x.id === id; });
   if(!e) return;
+  e.task = document.getElementById('ei_task').value.trim() || e.task;
   e.sub = document.getElementById('ei_sub').value.trim();
   e.count = document.getElementById('ei_count').value.trim();
   e.notes = document.getElementById('ei_notes').value.trim();
