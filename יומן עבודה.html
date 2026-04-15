@@ -1070,15 +1070,17 @@ function sendWhatsApp(){
             },3000);
           }
         } else {
-          // Desktop: open Google Chat first, then WhatsApp
-          setTimeout(function(){
-            window.open('https://chat.google.com','_blank');
-          },1000);
+          // Desktop: open apps via protocol URLs only (no browser tabs)
+          // WhatsApp first (location.href proven to work for whatsapp://)
           if(phone){
             setTimeout(function(){
               window.location.href = 'whatsapp://send?phone='+phone;
-            },2500);
+            },1000);
           }
+          // Google Chat after WhatsApp
+          setTimeout(function(){
+            window.location.href = 'googlechat://';
+          }, phone ? 3000 : 1000);
         }
       },'image/jpeg',0.95);
     });
