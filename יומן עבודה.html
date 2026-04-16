@@ -372,6 +372,8 @@ function saveSubs() {
   localStorage.setItem("tb_subs", JSON.stringify(SUBS));
   sbSet("tb_subs", SUBS);
 }
+// Generate a unique key per (category index, task name) to avoid cross-category collisions
+function subKey(ci, taskName) { return ci + "::" + taskName; }
 function saveEntries() {
   localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
   (async function(){
@@ -737,7 +739,8 @@ function pickTask(t) {
 function buildSubBtns() {
   var el = document.getElementById("subBtns");
   el.innerHTML = "";
-  var subs = selTask ? (SUBS[selTask] || []) : [];
+  var ci = selCat ? CATS.indexOf(selCat) : -1;
+  var subs = (selTask && ci >= 0) ? (SUBS[subKey(ci, selTask)] || SUBS[selTask] || []) : [];
   if (!subs.length) {
     el.innerHTML = '<span class="hint">' + (selTask ? "אין תת-משימות" : "בחר משימה...") + '</span>';
     return;
@@ -1220,9 +1223,10 @@ function subDrop(e, ci, ti, si) {
   e.currentTarget.classList.remove("drag-over");
   if (_dragKind !== "sub" || _dragData.ci !== ci || _dragData.ti !== ti || _dragData.si === si) return;
   var taskName = CATS[ci].tasks[ti];
-  if (!SUBS[taskName]) return;
-  var moved = SUBS[taskName].splice(_dragData.si, 1)[0];
-  SUBS[taskName].splice(si, 0, moved);
+  var sk = subKey(ci, taskName);
+  if (!SUBS[sk]) { SUBS[sk] = SUBS[taskName] || []; }
+  var moved = SUBS[sk].splice(_dragData.si, 1)[0];
+  SUBS[sk].splice(si, 0, moved);
   _dragKind = null;
   saveSubs();
   renderSettings();
@@ -1240,8 +1244,9 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
   function save() {
     var newVal = inp.value.trim();
     if (newVal && newVal !== oldVal) {
-      if (!SUBS[taskName]) SUBS[taskName] = [];
-      SUBS[taskName][si] = newVal;
+      var sk = subKey(ci, taskName);
+      if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] || [];
+      SUBS[sk][si] = newVal;
       saveSubs();
     }
     renderSettings();
@@ -1249,9 +1254,10 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
   inp.onblur = save;
   inp.onkeydown = function(e){ if(e.key==="Enter") { inp.blur(); } if(e.key==="Escape") { inp.value=oldVal; inp.blur(); } };
 }
-function removeSub(taskName, si) {
-  if (!SUBS[taskName]) return;
-  SUBS[taskName].splice(si, 1);
+function removeSub(ci, taskName, si) {
+  var sk = subKey(ci, taskName);
+  if (!SUBS[sk]) { if (!SUBS[taskName]) return; SUBS[sk] = SUBS[taskName]; }
+  SUBS[sk].splice(si, 1);
   saveSubs();
   renderSettings();
 }
@@ -1262,11 +1268,37 @@ function addSub(ci, ti) {
   if (!inp) return;
   var val = inp.value.trim();
   if (!val) return;
-  if (!SUBS[taskName]) SUBS[taskName] = [];
-  SUBS[taskName].push(val);
+  var sk = subKey(ci, taskName);
+  if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
+  SUBS[sk].push(val);
   inp.value = "";
   saveSubs();
   renderSettings();
+}
+
+function editTaskInline(ci, ti) {
+  var lbl = document.getElementById("task-lbl-"+ci+"-"+ti);
+  if (!lbl) return;
+  var oldVal = CATS[ci].tasks[ti];
+  var inp = document.createElement("input");
+  inp.value = oldVal;
+  inp.style.cssText = "border:1px solid var(--primary);border-radius:6px;padding:2px 8px;font-family:Heebo;font-size:13px;width:120px;font-weight:600;";
+  lbl.replaceWith(inp);
+  inp.focus(); inp.select();
+  function save() {
+    var newVal = inp.value.trim();
+    if (newVal && newVal !== oldVal) {
+      // Migrate SUBS key if task name changed
+      var oldSk = subKey(ci, oldVal);
+      var newSk = subKey(ci, newVal);
+      if (SUBS[oldSk]) { SUBS[newSk] = SUBS[oldSk]; delete SUBS[oldSk]; }
+      CATS[ci].tasks[ti] = newVal;
+      saveCats(); saveSubs();
+    }
+    renderSettings(); buildCatGrid(); buildTaskBtns();
+  }
+  inp.onblur = save;
+  inp.onkeydown = function(e){ if(e.key==="Enter") inp.blur(); if(e.key==="Escape"){ inp.value=oldVal; inp.blur(); } };
 }
 
 function renderSettings() {
@@ -1302,7 +1334,7 @@ function renderSettings() {
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
-          var subs = SUBS[t] || [];
+          var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
           var safeT = t.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
           var subsSection = '';
           if(subs.length > 0) {
@@ -1319,7 +1351,7 @@ function renderSettings() {
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+s+'</span>'
                     + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
-                    + '<button onclick="removeSub(\''+safeT+'\','+si+')">×</button>'
+                    + '<button onclick="removeSub('+ci+',\''+safeT+'\','+si+')">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
@@ -1336,7 +1368,8 @@ function renderSettings() {
             + 'ondragend="taskDragEnd(event)">'
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
-            + '<span class="task-name">'+t+'</span>'
+            + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+t+'</span>'
+            + '<button onclick="editTaskInline('+ci+','+ti+');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
             + '<button onclick="removeTask('+ci+','+ti+')" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
