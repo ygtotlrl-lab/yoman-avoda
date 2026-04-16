@@ -22,6 +22,36 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// ============ BACKUP ============
+async function backupYoman(btn) {
+  btn.disabled = true;
+  btn.textContent = '⏳ טוען...';
+  try {
+    var entries = await sbGet('tb_entries') || ENTRIES;
+    var archive = await sbGet('tb_archive') || ARCHIVE;
+    var data = {
+      backup_date: new Date().toISOString(),
+      app: 'יומן עבודה',
+      entries: entries,
+      archive: archive
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    var d = new Date();
+    a.href = url;
+    a.download = 'yoman-backup-' + d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ גיבוי הורד בהצלחה');
+  } catch(e) {
+    showToast('שגיאה בגיבוי');
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 גבה את כל הנתונים';
+}
+
 </script>
 <link href="                                                                  ;700;900&family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
@@ -308,6 +338,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   <!-- ARCHIVE -->
   <div class="panel" id="panel-archive" style="display:none">
     <div class="card">
+      <div style="margin-bottom:14px">
+        <button onclick="backupYoman(this)" style="background:#2d7a2d;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:1rem;cursor:pointer;width:100%;font-family:inherit">💾 גבה את כל הנתונים</button>
+      </div>
       <!-- Breadcrumb -->
       <div id="arc-breadcrumb" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;min-height:28px;"></div>
       <!-- Level: years -->
