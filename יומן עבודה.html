@@ -1288,10 +1288,18 @@ function editTaskInline(ci, ti) {
   function save() {
     var newVal = inp.value.trim();
     if (newVal && newVal !== oldVal) {
-      // Migrate SUBS key if task name changed
-      var oldSk = subKey(ci, oldVal);
-      var newSk = subKey(ci, newVal);
-      if (SUBS[oldSk]) { SUBS[newSk] = SUBS[oldSk]; delete SUBS[oldSk]; }
+      // Migrate SUBS — check both old key format (taskName) and new format (ci::taskName)
+      var oldSk = subKey(ci, oldVal);   // "ci::oldName"
+      var newSk = subKey(ci, newVal);   // "ci::newName"
+      if (SUBS[oldSk]) {
+        // new-format key exists → migrate it
+        SUBS[newSk] = SUBS[oldSk];
+        delete SUBS[oldSk];
+      } else if (SUBS[oldVal]) {
+        // old-format key (just task name) → migrate and clean up
+        SUBS[newSk] = SUBS[oldVal];
+        delete SUBS[oldVal];
+      }
       CATS[ci].tasks[ti] = newVal;
       saveCats(); saveSubs();
     }
