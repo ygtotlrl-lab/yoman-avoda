@@ -915,7 +915,7 @@ function showConfirm(title, msg, onOk) {
   var overlay = document.createElement("div");
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
   var box = document.createElement("div");
-  box.style.cssText = "background:#ffffff;border-radius:16px;padding:24px 20px;max-width:320px;width:90%;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.35);border:1.5px solid #e0e0e0;";
+  box.style.cssText = "background:#ffffff !important;border-radius:16px;padding:24px 20px;max-width:320px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1.5px solid #d0d0d0;position:relative;z-index:10000;";
   box.innerHTML = "<div style=\"font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:8px\">"+title+"</div>"
     + "<div style=\"font-size:14px;color:#555;margin-bottom:20px;line-height:1.6\">"+msg+"</div>"
     + "<div style=\"display:flex;gap:10px;justify-content:center\">"
