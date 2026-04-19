@@ -146,6 +146,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* Inputs */
 .inp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;}
 @media(max-width:480px){.inp-grid{grid-template-columns:1fr;}}
+@media(max-width:800px){.hide-mobile{display:none !important;}}
 .fld{display:flex;flex-direction:column;gap:3px;}
 .fld label{font-size:10px;font-weight:700;color:var(--textmid);}
 .fld input{border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;font-family:'Heebo',sans-serif;font-size:13px;
@@ -311,8 +312,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
       <div class="exp-row">
         <button class="btn-sm btn-red" onclick="clearAll()">🗑 נקה</button>
-        <button class="btn-sm btn-green" onclick="exportTxt()">⬇ טקסט</button>
-        <button class="btn-sm btn-blue" onclick="exportPDF()">📄 PDF</button> <button class="btn-sm btn-blue" onclick="exportJPEG()">📷 JPEG</button>
+        <button class="btn-sm btn-green hide-mobile" onclick="exportTxt()">⬇ טקסט</button>
+        <button class="btn-sm btn-blue hide-mobile" onclick="exportPDF()">📄 PDF</button> <button class="btn-sm btn-blue hide-mobile" onclick="exportJPEG()">📷 JPEG</button>
       <button class="btn-sm" style="background:#25D366;color:white" onclick="sendWhatsApp()">📱 שלח לוואטסאפ</button>
       </div>
     </div>
@@ -1857,7 +1858,7 @@ function renderArcDetail() {
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" onclick="arcToggleEdit()" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm" onclick="exportArchivePDF('+d.snapId+')" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
+    (d.snapId ? '<button class="btn-sm hide-mobile" onclick="exportArchivePDF('+d.snapId+')" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
