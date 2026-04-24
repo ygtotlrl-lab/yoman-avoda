@@ -2288,6 +2288,13 @@ document.addEventListener('keydown', function(e) {
     if (typeof addEntry === 'function') addEntry();
     return;
   }
+  // Edit tab new-task inputs: snewtask-ci
+  if (id.startsWith('snewtask-')) {
+    e.preventDefault();
+    var ci = parseInt(id.replace('snewtask-', ''));
+    if (typeof addTask === 'function') addTask(ci);
+    return;
+  }
   // Edit tab new-sub inputs: snewsub-ci-ti
   if (id.startsWith('snewsub-')) {
     e.preventDefault();
