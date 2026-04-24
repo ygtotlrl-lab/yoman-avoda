@@ -1,7 +1,7 @@
-var CACHE_NAME = 'yoman-avoda-v1';
+var CACHE_NAME = 'yoman-avoda-v2';
 var urlsToCache = [
   './',
-  './יומן עבודה.html',
+  './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

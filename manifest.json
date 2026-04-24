@@ -2,7 +2,7 @@
   "name": "טאג בוך - יומן עבודה",
   "short_name": "יומן עבודה",
   "description": "אפליקציית יומן עבודה לניהול שעות ומשימות",
-  "start_url": "./יומן עבודה.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F0F4FA",
