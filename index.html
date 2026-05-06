@@ -626,7 +626,10 @@ function checkDayChange() {
   var lastDay = localStorage.getItem("tb_last_day") || "";
   var today = new Date().toDateString();
   if (lastDay && lastDay !== today && ENTRIES.length > 0) {
-    // New day detected - auto archive silently
+    // New day detected - archive locally only.
+    // CRITICAL: do NOT push to cloud here — syncFromCloud() will run shortly
+    // after and properly merge. Pushing empty ENTRIES to cloud would wipe
+    // entries that another device already added for today.
     var hdate = hebrewDate(new Date(lastDay)) || lastDay;
     var snapshot = {
       id: Date.now(),
@@ -637,9 +640,9 @@ function checkDayChange() {
       auto: true
     };
     ARCHIVE.unshift(snapshot);
-    saveArchive();
+    localStorage.setItem("tb_archive", JSON.stringify(ARCHIVE));
     ENTRIES = [];
-    saveEntries();
+    localStorage.setItem("tb_entries", JSON.stringify(ENTRIES));
     showToast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
   }
   localStorage.setItem("tb_last_day", today);
