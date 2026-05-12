@@ -1206,6 +1206,7 @@ function taskDragStart(e, ci, ti) {
   requestAnimationFrame(function(){ el.classList.add("dragging"); });
 }
 function taskDragEnd(e) {
+  _dragKind = null;
   e.currentTarget.classList.remove("dragging");
   document.querySelectorAll(".drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
 }
@@ -1241,6 +1242,7 @@ function subDragStart(e, ci, ti, si) {
   requestAnimationFrame(function(){ el.classList.add("dragging"); });
 }
 function subDragEnd(e) {
+  _dragKind = null;
   e.currentTarget.classList.remove("dragging");
   document.querySelectorAll(".drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
 }
@@ -1355,18 +1357,22 @@ function renderSettings() {
     div.draggable = true;
     div.dataset.idx = ci;
     div.addEventListener("dragstart", function(e) {
+      _dragKind = "cat";
       e.dataTransfer.setData("text/plain", ci);
       setTimeout(function(){ div.classList.add("dragging"); }, 0);
     });
-    div.addEventListener("dragend", function() { div.classList.remove("dragging"); });
+    div.addEventListener("dragend", function() { _dragKind = null; div.classList.remove("dragging"); });
     div.addEventListener("dragover", function(e) { e.preventDefault(); });
     div.addEventListener("drop", function(e) {
       e.preventDefault();
+      // Only handle category-to-category drags; task/sub drags must not reach here
+      if (_dragKind !== "cat") { _dragKind = null; return; }
       var fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
       var toIdx = parseInt(div.dataset.idx);
-      if (fromIdx === toIdx) return;
+      if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
       var moved = CATS.splice(fromIdx, 1)[0];
       CATS.splice(toIdx, 0, moved);
+      _dragKind = null;
       saveCats();
       renderSettings();
       buildCatGrid();
