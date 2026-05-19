@@ -229,7 +229,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@hebcal/core@5/dist/bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@hebcal/core@4/dist/hdate-bundle.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -518,8 +518,8 @@ const DAYS_HEB = ["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט
 
 function hebrewDate(jsDate) {
   jsDate = jsDate || new Date();
-  if (!window.Hebcal || !Hebcal.HDate) return "";
-  var hd = new Hebcal.HDate(jsDate);
+  if (!window.hebcal || !hebcal.HDate) return "";
+  var hd = new hebcal.HDate(jsDate);
   var day = hd.getDate();
   var month = hd.getMonth();
   var year = hd.getFullYear();
