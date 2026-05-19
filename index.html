@@ -229,6 +229,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@hebcal/core@5/dist/bundle.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -516,30 +517,29 @@ const MONTHS_HEB = ["תשרי","חשון","כסלו","טבת","שבט","אדר",
 const DAYS_HEB = ["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט׳","י׳","י״א","י״ב","י״ג","י״ד","ט״ו","ט״ז","י״ז","י״ח","י״ט","כ׳","כ״א","כ״ב","כ״ג","כ״ד","כ״ה","כ״ו","כ״ז","כ״ח","כ״ט","ל׳"];
 
 function hebrewDate(jsDate) {
-  var y = jsDate.getFullYear(), m = jsDate.getMonth()+1, d = jsDate.getDate();
-  var td = new Date(y,m-1,d);
-  var starts = [
-    {jd: new Date(2024,9,3),  hy:5785, mlen:[30,29,30,29,30,29,30,30,29,30,29,30]},
-    {jd: new Date(2025,8,22), hy:5786, mlen:[30,30,30,29,30,29,30,30,29,30,29,30]},
-    {jd: new Date(2026,8,12), hy:5787, mlen:[30,29,30,29,30,29,30,30,29,30,29,30]},
-    {jd: new Date(2027,9,1),  hy:5788, mlen:[30,29,30,29,30,29,30,30,29,30,29,30]},
-  ];
-  var base = null;
-  for (var i = starts.length-1; i >= 0; i--) {
-    if (td >= starts[i].jd) { base = starts[i]; break; }
-  }
-  if (!base) return "";
-  var diff = Math.round((td - base.jd) / 86400000);
-  var cum = 0;
-  for (var mi = 0; mi < base.mlen.length; mi++) {
-    if (diff < cum + base.mlen[mi]) {
-      var day = diff - cum + 1;
-      var yearStr = {5785:"ה׳תשפ״ה", 5786:"ה׳תשפ״ו", 5787:"ה׳תשפ״ז", 5788:"ה׳תשפ״ח"}[base.hy] || ("ה׳" + base.hy);
-      return DAYS_HEB[day] + " " + MONTHS_HEB[mi] + " " + yearStr;
-    }
-    cum += base.mlen[mi];
-  }
-  return "";
+  jsDate = jsDate || new Date();
+  if (!window.Hebcal || !Hebcal.HDate) return "";
+  var hd = new Hebcal.HDate(jsDate);
+  var day = hd.getDate();
+  var month = hd.getMonth();
+  var year = hd.getFullYear();
+  // Hebcal month numbers: Nisan=1..Elul=6, Tishrei=7..Shevat=11, Adar_I=12, Adar_II=13
+  // MONTHS_HEB index: Tishrei=0, Cheshvan=1, Kislev=2, Tevet=3, Shevat=4, Adar=5,
+  //   Nisan=6, Iyar=7, Sivan=8, Tammuz=9, Av=10, Elul=11
+  var MONTH_MAP = {1:6,2:7,3:8,4:9,5:10,6:11,7:0,8:1,9:2,10:3,11:4,12:5,13:5};
+  var mi = MONTH_MAP[month] !== undefined ? MONTH_MAP[month] : 0;
+  var yearMap = {
+    5785:"ה׳תשפ״ה",5786:"ה׳תשפ״ו",
+    5787:"ה׳תשפ״ז",5788:"ה׳תשפ״ח",
+    5789:"ה׳תשפ״ט",5790:"ה׳תש״צ",
+    5791:"ה׳תשצ״א",5792:"ה׳תשצ״ב",
+    5793:"ה׳תשצ״ג",5794:"ה׳תשצ״ד",
+    5795:"ה׳תשצ״ה",5796:"ה׳תשצ״ו",
+    5797:"ה׳תשצ״ז",5798:"ה׳תשצ״ח",
+    5799:"ה׳תשצ״ט"
+  };
+  var yearStr = yearMap[year] || ("ה׳" + year);
+  return DAYS_HEB[day] + " " + MONTHS_HEB[mi] + " " + yearStr;
 }
 
 const CAT_COLORS = {
