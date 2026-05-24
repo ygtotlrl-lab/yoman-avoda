@@ -879,8 +879,15 @@ function renderLog() {
     var cb = catOrder[b.cat] !== undefined ? catOrder[b.cat] : 99;
     if (ca !== cb) return ca - cb;
     var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    if (!cat) return 0;
-    return cat.tasks.indexOf(a.task) - cat.tasks.indexOf(b.task);
+    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
+    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
+    ta = ta === -1 ? 999 : ta;
+    tb = tb === -1 ? 999 : tb;
+    if (ta !== tb) return ta - tb;
+    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
+    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
+    return sa - sb;
   });
   list.innerHTML = filtered.map(function(e) {
     var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
@@ -971,10 +978,15 @@ function exportPDF() {
     var cb = catOrder2[b.cat] !== undefined ? catOrder2[b.cat] : 99;
     if (ca !== cb) return ca - cb;
     var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    if (!cat) return 0;
-    var ta = cat.tasks.indexOf(a.task);
-    var tb = cat.tasks.indexOf(b.task);
-    return (ta === -1 ? 999 : ta) - (tb === -1 ? 999 : tb);
+    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
+    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
+    ta = ta === -1 ? 999 : ta;
+    tb = tb === -1 ? 999 : tb;
+    if (ta !== tb) return ta - tb;
+    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
+    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
+    return sa - sb;
   });
   sortedPDF.forEach(function(e){
     if (!byCat[e.cat]) byCat[e.cat] = {name:e.catName, list:[]};
@@ -1072,7 +1084,19 @@ function _buildReportDiv(cb){
   var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
   var curKey = getCurrentDateKey();
   var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
-  var sortedPDF=todayEntries.slice().sort(function(a,b){var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;return ca-cb2;});
+  var sortedPDF=todayEntries.slice().sort(function(a,b){
+    var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;
+    var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;
+    if(ca!==cb2)return ca-cb2;
+    var cat=CATS.find(function(c){return c.letter===a.cat;});
+    var ta=cat?cat.tasks.indexOf(a.task):-1; ta=ta===-1?999:ta;
+    var tb=cat?cat.tasks.indexOf(b.task):-1; tb=tb===-1?999:tb;
+    if(ta!==tb)return ta-tb;
+    var subs=(window.SUBS&&window.SUBS[a.task])||[];
+    var sa=subs.indexOf(a.sub); sa=sa===-1?999:sa;
+    var sb=subs.indexOf(b.sub); sb=sb===-1?999:sb;
+    return sa-sb;
+  });
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
@@ -1856,8 +1880,15 @@ function renderArcDetail() {
     var cb = catOrder[b.cat] !== undefined ? catOrder[b.cat] : 99;
     if (ca !== cb) return ca-cb;
     var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    if (!cat) return 0;
-    return cat.tasks.indexOf(a.task) - cat.tasks.indexOf(b.task);
+    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
+    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
+    ta = ta === -1 ? 999 : ta;
+    tb = tb === -1 ? 999 : tb;
+    if (ta !== tb) return ta - tb;
+    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
+    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
+    return sa - sb;
   });
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
