@@ -503,6 +503,11 @@ async function syncFromCloud() {
     }
 
     buildCatGrid();
+    // Reconcile selCat after CATS replaced — old reference is no longer in new array
+    if (selCat) {
+      selCat = CATS.find(function(c){ return c.letter === selCat.letter; }) || null;
+    }
+    buildTaskBtns();
     buildSubBtns();
     renderLog();
     renderSettings();
@@ -884,7 +889,9 @@ function renderLog() {
     ta = ta === -1 ? 999 : ta;
     tb = tb === -1 ? 999 : tb;
     if (ta !== tb) return ta - tb;
-    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var ci2 = cat ? CATS.indexOf(cat) : -1;
+    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
+    var subs = SUBS[sk] || SUBS[a.task] || [];
     var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
     var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
     return sa - sb;
@@ -983,7 +990,9 @@ function exportPDF() {
     ta = ta === -1 ? 999 : ta;
     tb = tb === -1 ? 999 : tb;
     if (ta !== tb) return ta - tb;
-    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var ci2 = cat ? CATS.indexOf(cat) : -1;
+    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
+    var subs = SUBS[sk] || SUBS[a.task] || [];
     var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
     var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
     return sa - sb;
@@ -1092,7 +1101,9 @@ function _buildReportDiv(cb){
     var ta=cat?cat.tasks.indexOf(a.task):-1; ta=ta===-1?999:ta;
     var tb=cat?cat.tasks.indexOf(b.task):-1; tb=tb===-1?999:tb;
     if(ta!==tb)return ta-tb;
-    var subs=(window.SUBS&&window.SUBS[a.task])||[];
+    var ci2=cat?CATS.indexOf(cat):-1;
+    var sk=ci2>=0?subKey(ci2,a.task):a.task;
+    var subs=SUBS[sk]||SUBS[a.task]||[];
     var sa=subs.indexOf(a.sub); sa=sa===-1?999:sa;
     var sb=subs.indexOf(b.sub); sb=sb===-1?999:sb;
     return sa-sb;
@@ -1885,7 +1896,9 @@ function renderArcDetail() {
     ta = ta === -1 ? 999 : ta;
     tb = tb === -1 ? 999 : tb;
     if (ta !== tb) return ta - tb;
-    var subs = (window.SUBS && window.SUBS[a.task]) || [];
+    var ci2 = cat ? CATS.indexOf(cat) : -1;
+    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
+    var subs = SUBS[sk] || SUBS[a.task] || [];
     var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
     var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
     return sa - sb;
