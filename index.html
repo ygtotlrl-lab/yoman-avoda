@@ -807,9 +807,11 @@ function pickSub(s) {
 }
 
 
-// AUTO ARCHIVE - called after every addEntry
+// AUTO ARCHIVE - called after every addEntry / deleteEntry
 function autoArchiveDay(dayKey, hdate, gdate) {
-  var dayEntries = ENTRIES.filter(function(e){ return e.day === dayKey; });
+  // Filter by gdate (unique date string), NOT by day name — day names repeat every week
+  // and would cause entries from different dates to be merged under the current date.
+  var dayEntries = ENTRIES.filter(function(e){ return e.gdate === gdate; });
   if (!dayEntries.length) return;
   var existIdx = ARCHIVE.findIndex(function(a){ return a.gdate === gdate; });
   var snapshot = {
