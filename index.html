@@ -428,6 +428,61 @@ function saveArchive() {
   })();
 }
 
+// ── ניקוי חד-פעמי של סנאפשוטים פגומים (באג autoArchiveDay gdate→day) ──
+window._arcCleanupDone = false;
+function arcCleanupCorrupted() {
+  if (window._arcCleanupDone) return;
+  window._arcCleanupDone = true;
+
+  var changed = false;
+  var misplaced = [];
+
+  // שלב א: נפה רשומות שה-gdate שלהן לא מתאים לסנאפשוט
+  ARCHIVE = ARCHIVE.map(function(snap) {
+    if (!snap.gdate || !Array.isArray(snap.entries) || !snap.entries.length) return snap;
+    var clean  = snap.entries.filter(function(e){ return e.gdate === snap.gdate; });
+    var wrong  = snap.entries.filter(function(e){ return e.gdate && e.gdate !== snap.gdate; });
+    if (!wrong.length) return snap;
+    changed = true;
+    misplaced = misplaced.concat(wrong);
+    console.log('[arcCleanup] סנאפשוט', snap.gdate,
+      '— הוסרו', wrong.length, 'רשומות שגויות:', wrong.map(function(e){return e.gdate;}).join(', '));
+    return Object.assign({}, snap, { entries: clean, count: clean.length });
+  });
+
+  // שלב ב: שלח רשומות פגומות לסנאפשוט הנכון (לפי gdate שלהן)
+  misplaced.forEach(function(e) {
+    var tg = e.gdate || '';
+    if (!tg) return;
+    var idx = ARCHIVE.findIndex(function(a){ return a.gdate === tg; });
+    if (idx >= 0) {
+      if (!ARCHIVE[idx].entries.find(function(x){ return x.id === e.id; })) {
+        ARCHIVE[idx].entries.push(e);
+        ARCHIVE[idx].count = ARCHIVE[idx].entries.length;
+        console.log('[arcCleanup] הועבר לסנאפשוט קיים:', tg);
+      }
+    } else {
+      // צור סנאפשוט חדש עבור תאריך זה
+      ARCHIVE.push({ id: e.id, name: e.hdate || tg, hdate: e.hdate || '',
+        gdate: tg, day: e.day || '', date: tg, entries: [e], count: 1 });
+      console.log('[arcCleanup] נוצר סנאפשוט חדש:', tg);
+      changed = true;
+    }
+  });
+
+  // שלב ג: הסר סנאפשוטים ריקים שנוצרו מהבאג (אין בהם רשומות אחרי הניקוי)
+  var before = ARCHIVE.length;
+  ARCHIVE = ARCHIVE.filter(function(snap){
+    return !snap.gdate || !Array.isArray(snap.entries) || snap.entries.length > 0;
+  });
+  if (ARCHIVE.length < before)
+    console.log('[arcCleanup] הוסרו', before - ARCHIVE.length, 'סנאפשוטים ריקים');
+
+  if (!changed) { console.log('[arcCleanup] ✅ הארכיון תקין — אין צורך בניקוי'); return; }
+  saveArchive();
+  console.log('[arcCleanup] ✅ ניקוי הושלם —', misplaced.length, 'רשומות תוקנו');
+}
+
 // Load from Supabase on startup — always pull from cloud to sync across devices
 async function syncFromCloud() {
   showToast("🔄 מסנכרן...", 3000);
@@ -495,6 +550,9 @@ async function syncFromCloud() {
       // Cloud is empty but local has data — push to cloud
       sbSet('tb_archive', ARCHIVE);
     }
+
+    // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
+    arcCleanupCorrupted();
 
     // WA Phone: always pull from cloud to stay in sync across devices
     var cloudWaPhone = await sbGet('tb_wa_phone');
