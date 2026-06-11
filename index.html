@@ -1265,23 +1265,35 @@ function sendWhatsApp(){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
-        // Download the image
-        var dataUrl = canvas.toDataURL('image/jpeg',0.95);
-        var a=document.createElement('a');
-        a.href=dataUrl;
-        a.download='yoman.jpg';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        // Open WhatsApp with phone number
-        if(phone){
-          setTimeout(function(){
-            window.location.href = 'whatsapp://send?phone='+phone;
-          },1000);
+        // Web Share API: open the system share sheet with the image attached
+        var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
+        if (navigator.canShare && navigator.canShare({files:[file]})) {
+          navigator.share({files:[file]}).catch(function(err){
+            // AbortError = user closed the share sheet — not a failure
+            if (err && err.name !== 'AbortError') _waDownloadFallback(canvas, phone);
+          });
+          return;
         }
+        // Fallback (desktop / unsupported): download + open whatsapp://
+        _waDownloadFallback(canvas, phone);
       },'image/jpeg',0.95);
     });
   });
+}
+
+function _waDownloadFallback(canvas, phone){
+  var dataUrl = canvas.toDataURL('image/jpeg',0.95);
+  var a=document.createElement('a');
+  a.href=dataUrl;
+  a.download='yoman.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  if(phone){
+    setTimeout(function(){
+      window.location.href = 'whatsapp://send?phone='+phone;
+    },1000);
+  }
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
