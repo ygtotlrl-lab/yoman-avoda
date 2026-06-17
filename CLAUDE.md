@@ -37,6 +37,8 @@ git push https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/yoman-avoda.git main
 1. **node --check לפני כל push** — חובה
 2. **smali בלבד** לתיקון URLs ב-APK
 3. **cache APK** — תמיד `TS=$(date +%s)` בשם
+4. **מקור אמת יחיד = `index.html`** — זה הקובץ שמעטפת ה-APK טוענת (Pages: `.../yoman-avoda/index.html`), שאליו מצביע `start_url` במניפסט, וגם היעד של מנגנון האוטו-אפדייט הפנימי. כל עדכון קוד נכנס לכאן בלבד. **אסור ליצור קבצי HTML כפולים** (בעבר היה `יומן עבודה.html` — שונה ל-`index.html`).
+5. **`GITHUB_FILE` במנגנון האוטו-אפדייט חייב להתאים לשם הקובץ האמיתי בריפו** (`index.html`). אם הוא מצביע על שם אחר (כמו `יומן_עבודה.html`) — `RAW_URL` מקבל 404, האפליקציה לא מזהה גרסה חדשה, ועדכונים לא מגיעים למכשירים מותקנים.
 
 ## APK
 - Keystore: `/tmp/yoman.keystore` | alias=yoman | pass=yoman123
