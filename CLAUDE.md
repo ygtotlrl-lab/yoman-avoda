@@ -3,13 +3,13 @@
 ## סביבת עבודה
 - **ריפו:** `ygtotlrl-lab/yoman-avoda`
 - **Pages:** `https://ygtotlrl-lab.github.io/yoman-avoda/`
-- **טוקן:** `TOKEN_IN_MEMORY`
+- **טוקן:** מאוחסן ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ. `git push`/`clone` מושכים אותו אוטומטית דרך GCM.
 - **קובץ ראשי:** `index.html`
 - **Supabase:** `kxbtskqobynewvnckaaz`
 
 ## התחלת סשן — חובה
 ```bash
-git clone https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/yoman-avoda.git /tmp/yoman-avoda
+git clone https://github.com/ygtotlrl-lab/yoman-avoda.git /tmp/yoman-avoda
 cd /tmp/yoman-avoda
 git config user.email "dev@yeshiva.com" && git config user.name "Dev"
 ```
@@ -30,7 +30,7 @@ print('✅ OK' if r.returncode==0 else '❌ '+r.stderr[:300])
 ```bash
 cd /tmp/yoman-avoda
 git add . && git commit -m "תיאור השינוי"
-git push https://TOKEN_IN_MEMORY@github.com/ygtotlrl-lab/yoman-avoda.git main
+git push origin main   # GCM מספק את הטוקן אוטומטית — אין טוקן בפקודה
 ```
 
 ## כללים קריטיים
