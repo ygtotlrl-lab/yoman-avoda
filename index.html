@@ -660,7 +660,11 @@ let todayDateKey = ""; // set on init and when date changes
 
 function getCurrentDateKey() {
   var g = document.getElementById("gregDateInput");
-  return g ? g.value.trim() : todayDateKey;
+  var v = g ? g.value.trim() : "";
+  // Fallback: if the date field hasn't been initialised yet, use today's key so
+  // entries never save with an empty gdate (which breaks archiving + the per-day
+  // log filter). gregDateStr() is pure JS and does not depend on the hebcal lib.
+  return v || getTodayKey();
 }
 
 function getTodayKey() {
@@ -2177,23 +2181,15 @@ function showUpdateBanner(newContent) {
     + '</div>';
   document.body.prepend(banner);
   document.getElementById("updateNowBtn").onclick = function() {
-    // Save current data before updating
-    var savedData = {
-      entries: localStorage.getItem("tb_entries"),
-      cats: localStorage.getItem("tb_cats"),
-      subs: localStorage.getItem("tb_subs"),
-      archive: localStorage.getItem("tb_archive")
-    };
-    // Replace page with new content
-    document.open();
-    document.write(newContent);
-    document.close();
-    // Restore data
-    if (savedData.entries) localStorage.setItem("tb_entries", savedData.entries);
-    if (savedData.cats) localStorage.setItem("tb_cats", savedData.cats);
-    if (savedData.subs) localStorage.setItem("tb_subs", savedData.subs);
-    if (savedData.archive) localStorage.setItem("tb_archive", savedData.archive);
+    // Mark this version as seen so the banner doesn't reappear after reload.
     localStorage.setItem(UPDATE_KEY, simpleHash(newContent));
+    // Reload through the normal load path (the Service Worker is network-first,
+    // so this fetches the fresh file). We MUST NOT use document.write(newContent):
+    // rewriting the document after load means DOMContentLoaded never re-fires, so
+    // initDate() and syncFromCloud() never run — the date/day disappear, new
+    // entries get an empty gdate (and don't archive), and cloud sync stops.
+    // localStorage (entries/cats/subs/archive) survives a reload, so no data loss.
+    location.reload();
   };
 }
 
