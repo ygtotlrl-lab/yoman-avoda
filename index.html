@@ -232,13 +232,23 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 <script src="https://cdn.jsdelivr.net/npm/@hebcal/core@4/dist/hdate-bundle.min.js"></script>
 </head>
 <body>
-<div id="yeshivaSelect" style="position:fixed;inset:0;z-index:10000;background:linear-gradient(160deg,#0f2347,#1a3a6b);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;font-family:Heebo,sans-serif;direction:rtl;padding:24px">
-  <div style="color:#C9A84C;font-size:13px;font-weight:700;letter-spacing:1px">ב״ה | ימות המשיח</div>
-  <div style="color:#fff;font-size:26px;font-weight:800">יומן עבודה</div>
-  <div style="color:rgba(255,255,255,0.75);font-size:15px;margin-bottom:4px">בחר ישיבה</div>
-  <button onclick="selectYeshiva('rishon')" style="width:260px;max-width:80vw;padding:16px;border:none;border-radius:14px;background:#fff;color:#1a3a6b;font-family:Heebo,sans-serif;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.3)">ראשון לציון</button>
-  <button onclick="selectYeshiva('ramataviv')" style="width:260px;max-width:80vw;padding:16px;border:none;border-radius:14px;background:#fff;color:#1a3a6b;font-family:Heebo,sans-serif;font-size:18px;font-weight:800;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.3)">רמת אביב</button>
-  <div style="color:rgba(255,255,255,0.5);font-size:11px;margin-top:8px">הבחירה נדרשת בכל כניסה</div>
+<div id="yeshivaSelect" style="position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Heebo',sans-serif;direction:rtl;padding:20px;overflow:auto">
+  <div style="width:100%;max-width:440px">
+    <div class="hdr" style="margin-bottom:20px">
+      <div class="hdr-mid">
+        <div class="hdr-bh">ב״ה | ימות המשיח</div>
+        <div class="hdr-title-wrap"><div class="hdr-h1">יומן עבודה</div></div>
+        <div style="margin-top:8px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.9);letter-spacing:0.3px;line-height:1.4">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד</div>
+        <div class="hdr-div"></div>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--textmid);font-size:14px;font-weight:700;margin-bottom:14px">בחר ישיבה</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" onclick="selectYeshiva('rishon')">ראשון לציון</button>
+      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" onclick="selectYeshiva('ramataviv')">רמת אביב</button>
+    </div>
+    <div style="text-align:center;color:var(--textmid);font-size:11px;margin-top:14px;opacity:0.7">הבחירה נדרשת בכל כניסה</div>
+  </div>
 </div>
 
 <div class="app">
@@ -1167,6 +1177,7 @@ function _buildReportDiv(cb){
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
   var instName=document.getElementById("instNameInput")?document.getElementById("instNameInput").value:'';
+  if(!instName) instName = (YESHIVA === 'ramataviv') ? 'ישיבת תומכי תמימים ליובאוויטש רמת אביב' : 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון';
   var logoEl=document.getElementById('appLogo')||document.querySelector('.hdr-logo');
   var logoUrl=logoEl?logoEl.src:'';
   var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
@@ -1855,9 +1866,12 @@ function renderArcYears() {
   var el = document.getElementById("arc-years");
   var nowYM = getNowHebYM();
   var allYears = {};
-  ARC_PREMADE.forEach(function(pm){ allYears[pm.year] = true; });
+  // Build the year list ONLY from years that actually have records for this yeshiva.
+  // Do NOT seed from a fixed range (ARC_PREMADE) — that showed spurious empty years.
   var withData = getYearsWithData();
   Object.keys(withData).forEach(function(y){ allYears[y] = true; });
+  // Always include the current Hebrew year (may be empty — that is the valid default view).
+  if (nowYM.year) allYears[nowYM.year] = true;
 
   // Sort years: older first
   var yearList = Object.keys(allYears).sort(function(a,b){ return a > b ? 1 : -1; });
@@ -1888,10 +1902,9 @@ function renderArcMonths(year) {
   var el = document.getElementById("arc-months");
   var nowYM = getNowHebYM();
 
-  // Get months for this year from premade + data
-  var pm = ARC_PREMADE.find(function(p){ return p.year === year; });
+  // Months come only from actual records for this year (data-driven, per yeshiva)
   var monthSet = {};
-    var withData = getMonthsWithData(year);
+  var withData = getMonthsWithData(year);
   Object.keys(withData).forEach(function(m){ monthSet[m] = true; });
 
   // Sort by HMO order
@@ -2328,82 +2341,31 @@ function selectYeshiva(y) {
   startApp();
 }
 
-// ── Signal output: full hierarchical text report (categories → tasks → sub/notes) ──
-function buildReportText() {
-  var curKey = getCurrentDateKey();
-  var filtered = ENTRIES.filter(function(e){ return e.gdate === curKey; });
-  // sort like renderLog: category order → task order → sub order
-  var catOrder = {};
-  CATS.forEach(function(c, i){ catOrder[c.letter] = i; });
-  filtered = filtered.slice().sort(function(a, b){
-    var ca = catOrder[a.cat] !== undefined ? catOrder[a.cat] : 99;
-    var cb = catOrder[b.cat] !== undefined ? catOrder[b.cat] : 99;
-    if (ca !== cb) return ca - cb;
-    var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    var ta = cat ? cat.tasks.indexOf(a.task) : -1; ta = ta === -1 ? 999 : ta;
-    var tb = cat ? cat.tasks.indexOf(b.task) : -1; tb = tb === -1 ? 999 : tb;
-    if (ta !== tb) return ta - tb;
-    return 0;
-  });
-
-  var dayLbl  = document.getElementById('hebDateInput') ? document.getElementById('hebDateInput').value : '';
-  var gregLbl = document.getElementById('gregDateInput') ? document.getElementById('gregDateInput').value : '';
-  var dateLine = [selDay, dayLbl, gregLbl ? '(' + gregLbl + ')' : ''].filter(Boolean).join(' ');
-
-  var lines = ['ב"ה', 'ישיבת תומכי תמימים ליובאוויטש רמת אביב', 'יומן עבודה' + (dateLine ? ' — ' + dateLine : ''), '════════════════════', ''];
-
-  if (!filtered.length) {
-    lines.push('(אין רשומות לתאריך זה)');
-  } else {
-    var curCat = null, curTask = null;
-    filtered.forEach(function(e){
-      if (e.cat !== curCat) {
-        curCat = e.cat; curTask = null;
-        lines.push('🔹 [' + e.cat + '] ' + e.catName);
-      }
-      if (e.task !== curTask) {
-        curTask = e.task;
-        lines.push('   • ' + e.task);
-      }
-      var detail = [];
-      if (e.sub)   detail.push(e.sub);
-      if (e.notes) detail.push(e.notes);
-      if (e.count) detail.push('×' + e.count);
-      if (detail.length) lines.push('       - ' + detail.join(' | '));
-    });
-  }
-  lines.push('', 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד!');
-  return lines.join('\n');
-}
-
-async function sendSignal() {
+// ── Signal output: IMAGE of the daily report (identical to WhatsApp, target = Signal) ──
+// Same mechanism as sendWhatsApp: build report div → html2canvas → file → Web Share sheet
+// (user picks Signal). The report image uses the selected yeshiva's logo + name automatically
+// (via #appLogo.src and _buildReportDiv's per-yeshiva instName). Desktop fallback: download image.
+function sendSignal(){
   var curKey = getCurrentDateKey();
   var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
-  if (!todayEntries.length) { showToast("אין רשומות לשיתוף להיום"); return; }
-  var text = buildReportText();
-  // Web Share API (mobile) → system share sheet → user picks Signal
-  if (navigator.share) {
-    try {
-      await navigator.share({ text: text });
-      return;
-    } catch (err) {
-      if (err && err.name === 'AbortError') return; // user closed the sheet
-      // otherwise fall through to clipboard
-    }
-  }
-  // Desktop / no share sheet → copy to clipboard
-  try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      var ta = document.createElement('textarea');
-      ta.value = text; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-    }
-    showToast("📋 הדו\"ח הועתק ללוח — הדבק בסיגנל");
-  } catch (e) {
-    showToast("שגיאה בהעתקה: " + (e.message || e));
-  }
+  if(!todayEntries.length){ showToast("אין רשומות לשיתוף להיום"); return; }
+  showToast("מכין תמונה...");
+  _buildReportDiv(function(div){
+    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+      div.style.left='-9999px';
+      canvas.toBlob(function(blob){
+        var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
+        if (navigator.canShare && navigator.canShare({files:[file]})) {
+          navigator.share({files:[file]}).catch(function(err){
+            if (err && err.name !== 'AbortError') _waDownloadFallback(canvas, null);
+          });
+          return;
+        }
+        // Desktop / unsupported: download the image (no Signal deep-link exists)
+        _waDownloadFallback(canvas, null);
+      },'image/jpeg',0.95);
+    });
+  });
 }
 
 
