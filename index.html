@@ -1686,57 +1686,6 @@ var arcSelMonth = null;
 var arcSelDayKey = null;  // gdate string
 var arcEditMode = false;
 
-// Pre-defined months (אלול תשפ"ה onwards)
-// Build ARC_PREMADE dynamically from אלול תשפ"ה up to current Hebrew year+month
-var ARC_PREMADE = (function() {
-  var result = [];
-  // Fixed: start from אלול תשפ"ה
-  var startYear = 5785, startMonthIdx = 13; // אלול = index 13 in HMO
-  var nowYM = (function(){
-    var hd = hebrewDate(new Date());
-    if (!hd) return {hy:5786, mi:5}; // fallback
-    var parts = hd.trim().split(" ");
-    var year = 5786, mi = 5;
-    for (var i = parts.length-1; i >= 0; i--) {
-      if (parts[i].indexOf("׳") >= 0) {
-        // extract numeric year from gematria (rough: count ת=400,ש=300,פ=80,ו=6 etc)
-        // simpler: use the hy from hebrewDate internals via a lookup
-        parts.splice(i,1); break;
-      }
-    }
-    var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
-    mi = HMO2.indexOf(parts.slice(1).join(" ").trim());
-    return {hdate: hd, mi: mi < 0 ? 5 : mi};
-  })();
-
-  // Hebrew year names
-  var yearNames = {5785:"ה׳תשפ״ה", 5786:"ה׳תשפ״ו", 5787:"ה׳תשפ״ז", 5788:"ה׳תשפ״ח", 5789:"ה׳תשפ״ט", 5790:"ה׳תש״ץ"};
-  var HMO2 = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
-
-  // Figure out current hy from hebrewDate
-  var nowHD = hebrewDate(new Date()) || "";
-  var nowHY = 5786; // default
-  var nowMI = 5;
-  for (var hy in yearNames) {
-    if (nowHD.indexOf(yearNames[hy]) >= 0) { nowHY = parseInt(hy); break; }
-  }
-  var nowMonthStr = nowHD.split(" ").slice(1, -1).join(" ").trim();
-  nowMI = HMO2.indexOf(nowMonthStr);
-  if (nowMI < 0) nowMI = 5;
-
-  // Build from 5785/אלול to nowHY/nowMI
-  for (var y = startYear; y <= nowHY; y++) {
-    var yname = yearNames[y] || ("ה׳" + y);
-    var mStart = (y === startYear) ? startMonthIdx : 0;
-    var mEnd = (y === nowHY) ? nowMI : HMO2.length - 1;
-    var months = [];
-    for (var mi = mStart; mi <= mEnd; mi++) {
-      if (HMO2[mi]) months.push(HMO2[mi]);
-    }
-    if (months.length) result.push({year: yname, months: months});
-  }
-  return result;
-})();
 var HMO = ["תשרי","חשון","מרחשון","כסלו","טבת","שבט","אדר","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
 
 function extractYM(hdate) {
@@ -1867,7 +1816,7 @@ function renderArcYears() {
   var nowYM = getNowHebYM();
   var allYears = {};
   // Build the year list ONLY from years that actually have records for this yeshiva.
-  // Do NOT seed from a fixed range (ARC_PREMADE) — that showed spurious empty years.
+  // Do NOT seed from a fixed range — that previously showed spurious empty years.
   var withData = getYearsWithData();
   Object.keys(withData).forEach(function(y){ allYears[y] = true; });
   // Always include the current Hebrew year (may be empty — that is the valid default view).
