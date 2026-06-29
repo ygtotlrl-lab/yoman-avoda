@@ -1,4 +1,4 @@
-var CACHE_NAME = 'yoman-avoda-v3';
+var CACHE_NAME = 'yoman-avoda-v4';
 var urlsToCache = [
   './',
   './index.html',
