@@ -1294,6 +1294,8 @@ function sendWhatsApp(){
   _buildReportDiv(function(div){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
+      // Native Android WebView bridge (com.whatsapp) — attaches the image directly
+      if (_androidShareImage(canvas, 'com.whatsapp')) return;
       canvas.toBlob(function(blob){
         // Web Share API: open the system share sheet with the image attached
         var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
@@ -1309,6 +1311,20 @@ function sendWhatsApp(){
       },'image/jpeg',0.95);
     });
   });
+}
+
+// Native share bridge: in the WebView APK, window.AndroidShare.shareImage(base64, mime, pkg)
+// decodes the image to a cache file (FileProvider) and fires ACTION_SEND to the target app.
+// Returns true if the native bridge handled it; false in a plain browser (use Web Share / fallback).
+function _androidShareImage(canvas, appPackage){
+  try {
+    if (window.AndroidShare && typeof window.AndroidShare.shareImage === 'function') {
+      var b64 = canvas.toDataURL('image/jpeg',0.95).split(',')[1];
+      window.AndroidShare.shareImage(b64, 'image/jpeg', appPackage || '');
+      return true;
+    }
+  } catch(e) { /* fall through to browser behavior */ }
+  return false;
 }
 
 function _waDownloadFallback(canvas, phone){
@@ -2302,6 +2318,8 @@ function sendSignal(){
   _buildReportDiv(function(div){
     html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
       div.style.left='-9999px';
+      // Native Android WebView bridge → Signal (org.thoughtcrime.securesms)
+      if (_androidShareImage(canvas, 'org.thoughtcrime.securesms')) return;
       canvas.toBlob(function(blob){
         var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
         if (navigator.canShare && navigator.canShare({files:[file]})) {
