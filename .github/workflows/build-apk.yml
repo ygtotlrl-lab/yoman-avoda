@@ -28,11 +28,7 @@ jobs:
           cp ../index.html    "$ASSETS/index.html"
           cp ../manifest.json "$ASSETS/manifest.json"
           cp ../sw.js         "$ASSETS/sw.js"
-          cp ../apple-touch-icon.png "$ASSETS/icons/" 2>/dev/null || true
-          cp ../favicon-16.png       "$ASSETS/icons/" 2>/dev/null || true
-          cp ../favicon-32.png       "$ASSETS/icons/" 2>/dev/null || true
-          cp ../icon-192.png         "$ASSETS/icons/" 2>/dev/null || true
-          cp ../icon-512.png         "$ASSETS/icons/" 2>/dev/null || true
+          cp -r ../icons/* "$ASSETS/icons/" 2>/dev/null || true
           echo "Assets copied:"
           ls -R "$ASSETS"
 
