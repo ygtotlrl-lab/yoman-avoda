@@ -7,6 +7,12 @@
 - **קובץ ראשי:** `index.html`
 - **Supabase:** `kxbtskqobynewvnckaaz`
 
+## גישת Supabase
+כשזמין ה-Supabase MCP, נהג לפי הכללים הבאים — ללא יוצאים מן הכלל:
+- **שינויי סכימה** (יצירה/שינוי/מחיקת טבלאות, עמודות, פוליסות, הרשאות) — **אך ורק דרך `apply_migration`** עם שם ברור ותיאורי (למשל `add_sync_log_table`). לא דרך `execute_sql`.
+- **שאילתות אבחון וקריאה** (SELECT, בדיקת מבנה, ספירות, `list_tables` וכו') — **חופשיות**, ללא אישור.
+- **עדכון או מחיקת נתונים בטבלאות `kv`** (כאן: `kv_rishon` / `kv_ramataviv`, וכל טבלת נתונים אחרת) — **מחייבים אישור מפורש מהמשתמש לפני הרצה**. אין להריץ `UPDATE`/`DELETE`/`upsert` על נתונים בלי אישור.
+
 ## התחלת סשן — חובה
 ```bash
 git clone https://github.com/ygtotlrl-lab/yoman-avoda.git /tmp/yoman-avoda
