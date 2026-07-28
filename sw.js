@@ -1,4 +1,4 @@
-var CACHE_NAME = 'yoman-avoda-v5';
+var CACHE_NAME = 'yoman-avoda-v6';
 var urlsToCache = [
   './',
   './index.html',
@@ -48,4 +48,11 @@ self.addEventListener('fetch', function(event) {
       return caches.match(event.request);
     })
   );
+});
+
+// Message - page asks the waiting worker to activate immediately
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
