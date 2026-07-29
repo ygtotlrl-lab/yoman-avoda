@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>יומן עבודה</title>
+<!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
+     יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
+<meta name="app-version" content="3a-2026-07-29-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -459,30 +462,48 @@ function getSB() {
   return _sb;
 }
 
-// Generic save to Supabase (key/value store in table "kv")
+// Generic save to Supabase (key/value store in table "kv").
+// Returns {ok, error} — supabase-js does NOT throw on a network/permission failure,
+// it resolves with res.error, so callers that only had try/catch never saw failures
+// and happily told the user everything was saved.
 async function sbSet(key, value) {
   try {
     var sb = getSB();
     var res = await sb.from(KV_TABLE).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"});
     if (res.error) {
       console.error("sbSet error [" + key + "]:", res.error.message, res.error);
-    } else {
-      console.log("sbSet ok [" + key + "]");
+      return { ok: false, error: res.error.message || "שגיאת שרת" };
     }
-  } catch(e) { console.error("sbSet exception [" + key + "]:", e); }
+    console.log("sbSet ok [" + key + "]");
+    return { ok: true, error: null };
+  } catch(e) {
+    console.error("sbSet exception [" + key + "]:", e);
+    return { ok: false, error: (e && e.message) || String(e) };
+  }
 }
 
-async function sbGet(key) {
+// Same read, with the outcome preserved: {ok, data, error}.
+// A missing key (PGRST116 from .single()) is an empty result, not a failure.
+async function sbGetResult(key) {
   try {
     var sb = getSB();
     var res = await sb.from(KV_TABLE).select("value").eq("key", key).single();
     if (res.error) {
-      console.error("sbGet error [" + key + "]:", res.error.message, res.error);
-      return null;
+      var missing = res.error.code === "PGRST116";
+      if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
+      return { ok: missing, data: null, error: missing ? null : (res.error.message || "שגיאת שרת") };
     }
-    if (res.data) return JSON.parse(res.data.value);
-  } catch(e) { console.error("sbGet exception [" + key + "]:", e); }
-  return null;
+    return { ok: true, data: res.data ? JSON.parse(res.data.value) : null, error: null };
+  } catch(e) {
+    console.error("sbGet exception [" + key + "]:", e);
+    return { ok: false, data: null, error: (e && e.message) || String(e) };
+  }
+}
+
+// Value-only wrapper — unchanged contract for the many call sites that just want the data.
+async function sbGet(key) {
+  var r = await sbGetResult(key);
+  return r.data;
 }
 
 // Save functions — write to both localStorage and Supabase
@@ -574,26 +595,33 @@ function arcCleanupCorrupted() {
 // Load from Supabase on startup — always pull from cloud to sync across devices
 async function syncFromCloud() {
   showToast("🔄 מסנכרן...", 3000);
+  // Which pulls actually failed — the final message must describe what really happened.
+  var failed = [];
+  async function pull(key, label) {
+    var r = await sbGetResult(key);
+    if (!r.ok) failed.push(label);
+    return r.data;
+  }
   try {
     // Use sbGet which uses the Supabase client correctly
     // (previous version had a bug: getSB() returns client object, not API key string)
 
     // CATS: always pull from cloud (cloud wins)
-    var cloudCats = await sbGet('tb_cats');
+    var cloudCats = await pull('tb_cats', 'קטגוריות');
     if (cloudCats && cloudCats.length) {
       CATS = cloudCats;
       localStorage.setItem('tb_cats'+LS, JSON.stringify(CATS));
     }
 
     // SUBS: always pull from cloud
-    var cloudSubs = await sbGet('tb_subs');
+    var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     if (cloudSubs) {
       SUBS = cloudSubs;
       localStorage.setItem('tb_subs'+LS, JSON.stringify(SUBS));
     }
 
     // ENTRIES: merge cloud + local (union by id — no data loss)
-    var cloudEntries = await sbGet('tb_entries');
+    var cloudEntries = await pull('tb_entries', 'רשומות');
     if (cloudEntries && cloudEntries.length) {
       var mergedEntries = cloudEntries.slice();
       ENTRIES.forEach(function(localEntry) {
@@ -611,7 +639,7 @@ async function syncFromCloud() {
     }
 
     // ARCHIVE: merge cloud + local (cloud wins for same gdate)
-    var cloudArchive = await sbGet('tb_archive');
+    var cloudArchive = await pull('tb_archive', 'ארכיון');
     if (cloudArchive && cloudArchive.length) {
       // Start from cloud archive as base
       var merged = cloudArchive.slice();
@@ -643,7 +671,7 @@ async function syncFromCloud() {
     arcCleanupCorrupted();
 
     // WA Phone: always pull from cloud to stay in sync across devices
-    var cloudWaPhone = await sbGet('tb_wa_phone');
+    var cloudWaPhone = await pull('tb_wa_phone', 'מספר וואטסאפ');
     if (cloudWaPhone) {
       localStorage.setItem('tb_wa_phone', cloudWaPhone);
     }
@@ -657,9 +685,16 @@ async function syncFromCloud() {
     buildSubBtns();
     renderLog();
     renderSettings();
-    showToast("✓ מסונכרן!", 2000);
+    if (failed.length === 0) {
+      showToast("✓ מסונכרן!");
+    } else if (failed.length >= 5) {
+      showToast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר");
+    } else {
+      showToast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "));
+    }
   } catch(e) {
-    showToast("⚠️ לא ניתן להתחבר לענן", 2000);
+    console.error("[syncFromCloud] error:", e);
+    showToast("⚠️ לא ניתן להתחבר לענן");
   }
 }
 // ═══════════════════════════════════════
@@ -1004,7 +1039,9 @@ function addEntry() {
   saveEntries();
   autoArchiveDay(entry.day, entry.hdate, entry.gdate);
   clearForm();
-  showToast("✓ נוסף ונשמר!");
+  // Local save is done at this point; the cloud push hasn't even started —
+  // scheduleSyncPush() reports the real outcome when it finishes.
+  showToast("✓ נוסף — שומר בענן…");
   scheduleSyncPush();
 }
 
@@ -1233,6 +1270,36 @@ function exportPDF() {
   setTimeout(function(){ try { w.document.title = fileTitle; } catch(e){} }, 80);
   showToast("📄 PDF נפתח!");
 }
+// ── Report rendering safety net ──
+// #_rpDiv is a full-white position:fixed panel put on screen *before* rendering.
+// If rendering throws (offline → html2canvas never loaded → ReferenceError, or a
+// canvas/CORS failure), the panel used to stay on top of the app until a reload.
+function _hideReportDiv(div){
+  try { if (div) div.style.left = '-9999px'; } catch(e) {}
+}
+function _reportError(div, e){
+  _hideReportDiv(div);
+  console.error('[report] rendering failed:', e);
+  showToast(
+    (typeof html2canvas === 'undefined')
+      ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
+      : "⚠️ יצירת התמונה נכשלה — נסה שוב"
+  );
+}
+// Always returns a promise, never throws synchronously.
+function _renderReport(div){
+  if (typeof html2canvas !== 'function') {
+    return Promise.reject(new Error('html2canvas not loaded'));
+  }
+  try {
+    return Promise.resolve(
+      html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+    );
+  } catch(e) {
+    return Promise.reject(e);
+  }
+}
+
 function _buildReportDiv(cb){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
@@ -1309,7 +1376,7 @@ function exportJPEG(){
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var fname='יומן עבודה '+today+' '+todayGreg+'.jpg';
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+    _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         var url=URL.createObjectURL(blob);
@@ -1318,7 +1385,7 @@ function exportJPEG(){
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url);},1000);
       },'image/jpeg',0.95);
-    });
+    }).catch(function(e){ _reportError(div, e); });
   });
 }
 
@@ -1329,10 +1396,18 @@ var _syncPushTimer = null;
 function scheduleSyncPush() {
   if (_syncPushTimer) clearTimeout(_syncPushTimer);
   _syncPushTimer = setTimeout(async function() {
-    await sbSet("tb_entries", ENTRIES);
-    await sbSet("tb_archive", ARCHIVE);
+    var rEntries = await sbSet("tb_entries", ENTRIES);
+    var rArchive = await sbSet("tb_archive", ARCHIVE);
+    if (!rEntries.ok || !rArchive.ok) {
+      // Don't stamp tb_last_changed for data that never arrived — other devices
+      // would pull the stale cloud copy over their own newer entries.
+      showToast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן");
+      return;
+    }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
-    await sbSet("tb_last_changed", Date.now());
+    var rTs = await sbSet("tb_last_changed", Date.now());
+    if (!rTs.ok) { showToast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
+    showToast("✓ נשמר בענן");
   }, 500);
 }
 
@@ -1356,7 +1431,7 @@ function sendWhatsApp(){
   // Convert Israeli local format 05X to international 97X
   if(phone.startsWith('0')) phone = '972' + phone.substring(1);
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+    _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
       // Native Android WebView bridge (com.whatsapp) — attaches the image directly
       if (_androidShareImage(canvas, 'com.whatsapp')) return;
@@ -1373,7 +1448,7 @@ function sendWhatsApp(){
         // Fallback (desktop / unsupported): download + open whatsapp://
         _waDownloadFallback(canvas, phone);
       },'image/jpeg',0.95);
-    });
+    }).catch(function(e){ _reportError(div, e); });
   });
 }
 
@@ -2203,18 +2278,26 @@ var GITHUB_REPO = "yoman-avoda";
 var GITHUB_FILE = "index.html"; // חייב להתאים לשם הקובץ האמיתי בריפו — אחרת האוטו-אפדייט מקבל 404
 var RAW_URL = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/" + GITHUB_FILE;
 
-var UPDATE_KEY = "tb_file_hash";
+// Explicit build id, read from <meta name="app-version"> at the top of this file.
+// Replaces the old simpleHash(): that hashed only the first 5000 chars, which end
+// inside the <link> tags in <head> — so every build produced the same hash and the
+// banner never appeared. Bump the meta tag on every code change.
+var APP_VERSION = (function(){
+  var m = document.querySelector('meta[name="app-version"]');
+  return (m && m.getAttribute("content")) || "";
+})();
 
-function simpleHash(str) {
-  var h = 0;
-  for (var i = 0; i < Math.min(str.length, 5000); i++) {
-    h = ((h << 5) - h) + str.charCodeAt(i);
-    h |= 0;
-  }
-  return h.toString(36);
-}
+// Version the user explicitly dismissed (✕) — so we don't nag every check.
+var UPDATE_KEY = "tb_dismissed_version";
 
-function showUpdateBanner(newContent) {
+// How often to look for a new build, and how long to wait before giving up.
+// Was 5 minutes on the full ~950KB file — ~11MB/hour on cellular, all of it
+// stored by the Service Worker under a unique ?t= URL.
+var UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+var UPDATE_TIMEOUT_MS  = 10000;
+var VERSION_META_RE = /name=["']app-version["'][^>]*content=["']([^"']+)["']/i;
+
+function showUpdateBanner(remoteVersion) {
   var banner = document.getElementById("updateBanner");
   if (banner) return;
   banner = document.createElement("div");
@@ -2223,12 +2306,17 @@ function showUpdateBanner(newContent) {
   banner.innerHTML = '<span>✨ <strong>גרסה חדשה זמינה!</strong> נמצאו עדכונים לאפליקציה</span>'
     + '<div style="display:flex;gap:8px">'
     + '<button id="updateNowBtn" style="background:#C9A84C;color:#101A3A;border:none;border-radius:8px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇ עדכן עכשיו</button>'
-    + '<button onclick="document.getElementById(\'updateBanner\').remove()" style="background:rgba(255,255,255,0.15);color:#F5EDD6;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;">✕</button>'
+    + '<button id="updateDismissBtn" style="background:rgba(255,255,255,0.15);color:#F5EDD6;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;">✕</button>'
     + '</div>';
   document.body.prepend(banner);
+  document.getElementById("updateDismissBtn").onclick = function() {
+    // Dismissed → remember this version so the hourly check stays quiet about it.
+    if (remoteVersion) localStorage.setItem(UPDATE_KEY, remoteVersion);
+    banner.remove();
+  };
   document.getElementById("updateNowBtn").onclick = function() {
-    // Mark this version as seen so the banner doesn't reappear after reload.
-    localStorage.setItem(UPDATE_KEY, simpleHash(newContent));
+    // No hash to store any more: after the reload APP_VERSION equals the remote
+    // version, so the banner simply stops matching.
     // Reload through the normal load path (the Service Worker is network-first,
     // so this fetches the fresh file). We MUST NOT use document.write(newContent):
     // rewriting the document after load means DOMContentLoaded never re-fires, so
@@ -2275,28 +2363,39 @@ async function autoSyncData() {
 }
 
 function checkForUpdates() {
-  var currentHash = localStorage.getItem(UPDATE_KEY) || "";
-  fetch(RAW_URL + "?t=" + Date.now())
-    .then(function(r){ return r.text(); })
-    .then(function(text){
-      var remoteHash = simpleHash(text);
-      if (remoteHash !== currentHash) {
-        // First run or genuine update
-        if (currentHash === "") {
-          // First time - just save hash, no banner
-          localStorage.setItem(UPDATE_KEY, remoteHash);
-        } else {
-          showUpdateBanner(text);
-        }
-      }
+  if (!APP_VERSION) return;   // no local marker → nothing meaningful to compare against
+  var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
+  var timer = ctl ? setTimeout(function(){ ctl.abort(); }, UPDATE_TIMEOUT_MS) : null;
+  var done = function(){ if (timer) { clearTimeout(timer); timer = null; } };
+  fetch(RAW_URL, {
+    // Range: only the head of the file — the version meta lives in the first KB.
+    // A server that ignores Range just sends 200 with the whole file; still correct.
+    headers: { "Range": "bytes=0-4095" },
+    // no-store: this used to be a unique ?t= URL, so the SW kept a fresh ~950KB
+    // cache entry on every single check. (sw.js also skips these requests now.)
+    cache: "no-store",
+    signal: ctl ? ctl.signal : undefined
+  })
+    .then(function(r){
+      // 404/500 must never be treated as "the app" — it produced a bogus hash before.
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
     })
-    .catch(function(){ /* offline - silent */ });
+    .then(function(text){
+      var m = text.match(VERSION_META_RE);
+      if (!m) return;                                // unexpected body — never guess
+      var remoteVersion = m[1];
+      if (remoteVersion === APP_VERSION) return;     // up to date
+      if (localStorage.getItem(UPDATE_KEY) === remoteVersion) return;  // dismissed
+      showUpdateBanner(remoteVersion);
+    })
+    .then(done, function(){ done(); /* offline / timeout / 404 — silent */ });
 }
 
-// Check on load and every 5 minutes
+// Check shortly after load, then once an hour
 window.addEventListener("DOMContentLoaded", function() {
-  setTimeout(checkForUpdates, 2000);
-  setInterval(checkForUpdates, 5 * 60 * 1000);
+  setTimeout(checkForUpdates, 5000);
+  setInterval(checkForUpdates, UPDATE_INTERVAL_MS);
   // Auto-sync data from cloud every 60 seconds (silent, merges without UI)
   setInterval(autoSyncData, 3 * 1000); // polls only a timestamp — very lightweight
 });
@@ -2380,7 +2479,7 @@ function sendSignal(){
   if(!todayEntries.length){ showToast("אין רשומות לשיתוף להיום"); return; }
   showToast("מכין תמונה...");
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+    _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
       // Native Android WebView bridge → Signal (org.thoughtcrime.securesms)
       if (_androidShareImage(canvas, 'org.thoughtcrime.securesms')) return;
@@ -2395,7 +2494,7 @@ function sendSignal(){
         // Desktop / unsupported: download the image (no Signal deep-link exists)
         _waDownloadFallback(canvas, null);
       },'image/jpeg',0.95);
-    });
+    }).catch(function(e){ _reportError(div, e); });
   });
 }
 
@@ -2408,7 +2507,7 @@ window.exportJPEG = function(){
   var safeHeb=today.replace(/[׳״"']/g,'').trim();
   var fname='יומן עבודה '+safeHeb+' '+todayGreg+'.jpg';
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+    _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         var url=URL.createObjectURL(blob);
@@ -2416,7 +2515,7 @@ window.exportJPEG = function(){
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url);},1000);
       },'image/jpeg',0.95);
-    });
+    }).catch(function(e){ _reportError(div, e); });
   });
 };
 
@@ -2428,7 +2527,7 @@ window.exportJPEG=function(){
   var safeHeb=today.replace(/[^א-תװ-״ ]/g,'').trim();
   var fname='יומן עבודה '+safeHeb+' '+todayGreg+'.jpg';
   _buildReportDiv(function(div){
-    html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false}).then(function(canvas){
+    _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
       canvas.toBlob(function(blob){
         var url=URL.createObjectURL(blob);
@@ -2436,7 +2535,7 @@ window.exportJPEG=function(){
         document.body.appendChild(a);a.click();document.body.removeChild(a);
         setTimeout(function(){URL.revokeObjectURL(url);},1000);
       },'image/jpeg',0.95);
-    });
+    }).catch(function(e){ _reportError(div, e); });
   });
 };
 
