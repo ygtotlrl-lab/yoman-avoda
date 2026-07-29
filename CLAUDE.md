@@ -91,7 +91,7 @@ git push -u origin <שם-הענף>   # דחיפה לענף העבודה — לא
 - ארכיב ועריכה inline
 - Hebrew calendar עם leap year
 - Supabase sync (polling 3 שניות)
-- PWA מותקן (sw.js, `CACHE_NAME` נוכחי: `yoman-avoda-v9`; `app-version` נוכחי: `4-2026-07-29-1`)
+- PWA מותקן (sw.js, `CACHE_NAME` נוכחי: `yoman-avoda-v10`; `app-version` נוכחי: `4-2026-07-29-2`)
 - **סנכרון: מיזוג ברמת רשומה** (`updatedAt` + tombstones) — ראה סבב 3ב למטה
 
 ### סבב 4 (יולי 2026) — נכונות תאריכים ורב-דיירות, ענף `claude/yoman-avoda-dates-multitenancy-2olt3x`
@@ -107,7 +107,13 @@ git push -u origin <שם-הענף>   # דחיפה לענף העבודה — לא
 
 בדיקות: 82 טענות אוטומטיות ב-Chromium (hebcal אמיתי מ-npm, Supabase/html2canvas מדומים) — מעבר על כל ימות תשפ״ז/תשפ״ו, נרמול חודשים, `parseGregLike`, עליית שני המוסדות בלי שגיאות דף, הפרדת מספר הוואטסאפ כולל הגירה, ספירת ארכיון לפני/אחרי הניקוי (0 רשומות אבודות, אידמפוטנטי), התאמת סיכום הדוח לשורות, עריכת רשומה שקיימת רק ב-ENTRIES, וחמישה ערכי localStorage פגומים. וכן `node --check` על ה-JS המחולץ ועל `sw.js`.
 
-**ידוע ולא טופל (מחוץ להיקף):** ה-`<link>` לגופני Google ב-`index.html` (שורה ~123) וב-HTML של `exportPDF` (שורה ~1501) מכיל URL מרוקן (`href="   ;700;900&family=..."`) — נותן 404 והאפליקציה נופלת לגופני מערכת.
+### סבב 4ב (יולי 2026) — באנר עדכון יחיד + שחזור גופנים, אותו ענף
+9. **באנר עדכון כפול** — היו שני באנרים שהופיעו יחד: העליון ברוחב מלא (`id="updateBanner"`, מבדיקת הגרסה השעתית מול raw GitHub) והתחתון הקטן (`id="sw-update-banner"`, מ-`updatefound` של ה-service worker). עכשיו **ממשק אחד**: `window.showAppUpdateBanner(version)` מוגדר בסקריפט שבראש `index.html` (מחוץ לבדיקת `'serviceWorker' in navigator`, כדי שגם דפדפן בלי SW יקבל אותו), ושני מנגנוני הזיהוי מפעילים אותו. **בדיקת ה-raw השעתית נשמרה** — היא חיונית ל-APK. הבאנר העליון הוסר לגמרי (הפונקציה נמחקה, לא הושארה כקוד מת); `showUpdateBanner` היא כעת מעטפת דקה.
+   - **עותק אחד בלבד:** בדיקת `getElementById('sw-update-banner')` לפני יצירה. אם הבאנר כבר מוצג ורק אז נודעה הגרסה — היא נרשמת על האלמנט (`_updVersion`), כך שה-✕ עדיין שומר `tb_dismissed_version`.
+   - **"עדכן עכשיו" בשני המקרים:** יש `reg.waiting` → `postMessage({type:'SKIP_WAITING'})` + reload אחרי 1.5ש׳; אין (הזיהוי הגיע מבדיקת הגרסה) → `reg.update()` ואז reload, עם גיבוי קשיח של 3ש׳ כדי לא להיתקע על "מעדכן...". ה-SW הוא network-first, ולכן טעינה מחדש מביאה את הקובץ החדש גם בלי SW חדש.
+10. **קישור גופני Google** — ה-href היה מרוקן (66 רווחים במקום ה-URL) גם ב-`index.html` וגם ב-HTML של `exportPDF`, כך שהאפליקציה והדוחות נפלו לגופני מערכת. שוחזר: `https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600;700;800;900&display=swap` (המסך; ב-PDF משקלי Heebo 400;600;700;900), עם `preconnect` ל-googleapis/gstatic.
+
+בדיקות סבב 4ב: 29 טענות נוספות ב-Chromium — באנר יחיד משני הטריגרים, `✕` + `tb_dismissed_version` (כולל גרסה שנודעה אחרי שהבאנר כבר הוצג), "עדכן עכשיו" טוען מחדש בשני המסלולים, עדכון service worker אמיתי (דף מבוקר → הבאנר עולה מעצמו, ואין באנר כשאין שינוי), ה-URL של הגופנים נדרש בפועל ע"י הדפדפן בשתי הנקודות, ושני המוסדות עולים נקי בלי באנר. סה״כ הענף: **111 טענות עוברות**.
 
 ### סבב 3ב (יולי 2026) — מנוע מיזוג ברמת רשומה, ענף `claude/yoman-avoda-round-3a-fixes-f5cw9p`
 **הכלל היחיד שחשוב:** היעדר רשומה אצל מכשיר אינו מחיקה. מחיקה = `deleted:true` + `updatedAt` (tombstone).

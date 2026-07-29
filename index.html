@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="4-2026-07-29-1">
+<meta name="app-version" content="4-2026-07-29-2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,11 +16,86 @@
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    var userAccepted = false;
-    var reloaded = false;
+// ═══ באנר עדכון יחיד ═══
+// היו שני באנרים במקביל: זה (תחתון, קטן) מ-updatefound של ה-service worker,
+// והעליון ברוחב מלא (id="updateBanner") מבדיקת הגרסה השעתית מול raw GitHub —
+// ושניהם הופיעו יחד. עכשיו יש ממשק אחד, window.showAppUpdateBanner(version),
+// ושני מנגנוני הזיהוי מפעילים אותו. שניהם נשמרו: בדיקת ה-raw חיונית ל-APK.
+(function() {
+  var userAccepted = false;
+  var reloaded = false;
+  var swReg = null;                       // נקבע כשה-service worker נרשם (אם בכלל)
+  var DISMISS_KEY = 'tb_dismissed_version';
 
+  function doReload() {
+    if (reloaded) return;
+    reloaded = true;
+    location.reload();
+  }
+
+  // version — הגרסה המרוחקת מבדיקת ה-raw; חסר כשהזיהוי הגיע מה-service worker
+  // (ואז אין גרסה שאפשר לזכור ב-tb_dismissed_version).
+  window.showAppUpdateBanner = function(version) {
+    var exist = document.getElementById('sw-update-banner');
+    if (exist) {
+      // עותק אחד בלבד. אם הבאנר כבר מוצג ורק עכשיו נודעה הגרסה — לזכור אותה,
+      // כדי שה-✕ ישתיק את הבדיקה השעתית על הגרסה הזו.
+      if (version) exist._updVersion = version;
+      return;
+    }
+    if (!document.body) return;
+    var bar = document.createElement('div');
+    bar.id = 'sw-update-banner';
+    bar._updVersion = version || null;
+    bar.setAttribute('dir', 'rtl');
+    bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1E6FBF,#0D4A8A);color:#fff;padding:10px 16px;border-radius:26px;box-shadow:0 6px 24px rgba(0,0,0,.28);z-index:10001;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;max-width:92vw';
+    var txt = document.createElement('span');
+    txt.textContent = '🔄 גרסה חדשה זמינה';
+    var btn = document.createElement('button');
+    btn.textContent = 'עדכן עכשיו';
+    btn.style.cssText = 'background:#fff;color:#1E6FBF;border:none;border-radius:20px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
+    btn.onclick = function() {
+      userAccepted = true;
+      btn.disabled = true;
+      btn.textContent = 'מעדכן...';
+      // א. יש worker ממתין — לבקש ממנו להשתלט, ואז לטעון מחדש
+      if (swReg && swReg.waiting) {
+        swReg.waiting.postMessage({type: 'SKIP_WAITING'});
+        setTimeout(doReload, 1500);
+        return;
+      }
+      // ב. הזיהוי הגיע מבדיקת הגרסה — לבקש עדכון SW ולטעון מחדש בכל מקרה.
+      // ה-SW הוא network-first, ולכן הטעינה מביאה את הקובץ החדש גם בלי SW חדש.
+      if (swReg && typeof swReg.update === 'function') {
+        setTimeout(doReload, 3000);       // גיבוי קשיח — לא להישאר תקוע על "מעדכן..."
+        try {
+          swReg.update().then(function() {
+            if (swReg.waiting) swReg.waiting.postMessage({type: 'SKIP_WAITING'});
+            setTimeout(doReload, 800);
+          }, doReload);
+          return;
+        } catch (e) { /* נופלים ל-doReload שלמטה */ }
+      }
+      doReload();
+    };
+    var close = document.createElement('button');
+    close.textContent = '✕';
+    close.setAttribute('aria-label', 'סגור');
+    close.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;padding:0 2px;font-family:Heebo,sans-serif;line-height:1';
+    close.onclick = function() {
+      // dismiss — לזכור את הגרסה שנדחתה כדי לא להציק עליה שוב
+      if (bar._updVersion) {
+        try { localStorage.setItem(DISMISS_KEY, bar._updVersion); } catch (e) {}
+      }
+      if (bar.parentNode) bar.parentNode.removeChild(bar);
+    };
+    bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
+    document.body.appendChild(bar);
+  };
+
+  if (!('serviceWorker' in navigator)) return;   // בדיקת ה-raw עדיין עובדת
+
+  window.addEventListener('load', function() {
     // The SW's install handler calls skipWaiting() on its own, so controllerchange
     // fires on every update even without user consent — the guard below is what
     // prevents an automatic reload mid-work.
@@ -30,51 +105,18 @@ if ('serviceWorker' in navigator) {
       location.reload();
     });
 
-    function showSwUpdateBanner(reg) {
-      if (document.getElementById('sw-update-banner')) return;
-      var bar = document.createElement('div');
-      bar.id = 'sw-update-banner';
-      bar.setAttribute('dir', 'rtl');
-      bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1E6FBF,#0D4A8A);color:#fff;padding:10px 18px;border-radius:28px;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(30,111,191,0.4);direction:rtl;white-space:nowrap;max-width:calc(100vw - 24px)';
-      var txt = document.createElement('span');
-      txt.textContent = '🔄 גרסה חדשה זמינה';
-      var btn = document.createElement('button');
-      btn.textContent = 'עדכן עכשיו';
-      btn.style.cssText = 'background:#fff;color:#1E6FBF;border:none;border-radius:20px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
-      btn.onclick = function() {
-        userAccepted = true;
-        btn.disabled = true;
-        btn.textContent = 'מעדכן...';
-        if (reg.waiting) {
-          reg.waiting.postMessage({type: 'SKIP_WAITING'});
-          setTimeout(function() {
-            if (!reloaded) { reloaded = true; location.reload(); }
-          }, 1500);
-        } else {
-          reloaded = true;
-          location.reload();
-        }
-      };
-      var close = document.createElement('button');
-      close.textContent = '✕';
-      close.setAttribute('aria-label', 'סגור');
-      close.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;padding:0 2px;font-family:Heebo,sans-serif;line-height:1';
-      close.onclick = function() { if (bar.parentNode) bar.parentNode.removeChild(bar); };
-      bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
-      document.body.appendChild(bar);
-    }
-
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
       console.log('SW registered:', reg.scope);
+      swReg = reg;
 
-      if (reg.waiting && navigator.serviceWorker.controller) { showSwUpdateBanner(reg); }
+      if (reg.waiting && navigator.serviceWorker.controller) { window.showAppUpdateBanner(); }
 
       reg.addEventListener('updatefound', function() {
         var nw = reg.installing;
         if (!nw) return;
         nw.addEventListener('statechange', function() {
           if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            showSwUpdateBanner(reg);
+            window.showAppUpdateBanner();
           }
         });
       });
@@ -88,7 +130,7 @@ if ('serviceWorker' in navigator) {
       console.log('SW registration failed:', err);
     });
   });
-}
+})();
 
 // ============ BACKUP ============
 async function backupYoman(btn) {
@@ -120,7 +162,9 @@ async function backupYoman(btn) {
 }
 
 </script>
-<link href="                                                                  ;700;900&family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 
 :root {
@@ -1498,7 +1542,7 @@ function exportPDF() {
   var LOGO = document.getElementById("appLogo").src;
 
   var html = '<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
-    + '<link href="                                                                  ;700;900&family=Heebo:wght@400;700&display=swap" rel="stylesheet">'
+    + '<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">'
     + '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Heebo,sans-serif;direction:rtl;padding:20px}'
     + '.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:16px}'
     + '.hd img{width:55px;height:55px;object-fit:contain}'
@@ -2675,34 +2719,16 @@ var UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 var UPDATE_TIMEOUT_MS  = 10000;
 var VERSION_META_RE = /name=["']app-version["'][^>]*content=["']([^"']+)["']/i;
 
+// ממשק אחד לשני מנגנוני הזיהוי. הבאנר עצמו (התחתון, id="sw-update-banner")
+// מוגדר בסקריפט שבראש הקובץ יחד עם רישום ה-service worker — כך שגם לחיצה על
+// "עדכן עכשיו" מהזיהוי הזה יודעת לשחרר worker ממתין. הבאנר העליון ברוחב מלא
+// (id="updateBanner") בוטל: שני באנרים הופיעו יחד.
 function showUpdateBanner(remoteVersion) {
-  var banner = document.getElementById("updateBanner");
-  if (banner) return;
-  banner = document.createElement("div");
-  banner.id = "updateBanner";
-  banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1A2B5E,#2A3D80);color:#F5EDD6;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:Heebo,sans-serif;font-size:14px;direction:rtl;";
-  banner.innerHTML = '<span>✨ <strong>גרסה חדשה זמינה!</strong> נמצאו עדכונים לאפליקציה</span>'
-    + '<div style="display:flex;gap:8px">'
-    + '<button id="updateNowBtn" style="background:#C9A84C;color:#101A3A;border:none;border-radius:8px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">⬇ עדכן עכשיו</button>'
-    + '<button id="updateDismissBtn" style="background:rgba(255,255,255,0.15);color:#F5EDD6;border:none;border-radius:8px;padding:7px 12px;font-size:13px;cursor:pointer;">✕</button>'
-    + '</div>';
-  document.body.prepend(banner);
-  document.getElementById("updateDismissBtn").onclick = function() {
-    // Dismissed → remember this version so the hourly check stays quiet about it.
-    if (remoteVersion) localStorage.setItem(UPDATE_KEY, remoteVersion);
-    banner.remove();
-  };
-  document.getElementById("updateNowBtn").onclick = function() {
-    // No hash to store any more: after the reload APP_VERSION equals the remote
-    // version, so the banner simply stops matching.
-    // Reload through the normal load path (the Service Worker is network-first,
-    // so this fetches the fresh file). We MUST NOT use document.write(newContent):
-    // rewriting the document after load means DOMContentLoaded never re-fires, so
-    // initDate() and syncFromCloud() never run — the date/day disappear, new
-    // entries get an empty gdate (and don't archive), and cloud sync stops.
-    // localStorage (entries/cats/subs/archive) survives a reload, so no data loss.
-    location.reload();
-  };
+  if (typeof window.showAppUpdateBanner === "function") {
+    window.showAppUpdateBanner(remoteVersion);
+  } else {
+    console.warn("[update] הבאנר לא זמין — גרסה חדשה:", remoteVersion);
+  }
 }
 
 // Smart sync: poll timestamp every 3s (cheap), pull data only when changed
