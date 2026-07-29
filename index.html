@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="3a-2026-07-29-1">
+<meta name="app-version" content="3b-2026-07-29-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -506,14 +506,125 @@ async function sbGet(key) {
   return r.data;
 }
 
+// ============================================================
+// ===== RECORD-LEVEL MERGE ENGINE (סבב 3ב) =====
+// ============================================================
+// העיקרון (זהה ל-ysMergeRecords ב-hanhala-ruchanit): היעדר רשומה אצל מכשיר
+// אינו מחיקה. מחיקה היא אך ורק tombstone מפורש — deleted:true + updatedAt.
+// מכשיר לעולם לא מוחק רשומה שהוא פשוט לא מכיר.
+//
+// נתונים קיימים (legacy): בענן יש רשומות שנוצרו לפני הסבב הזה, בלי updatedAt.
+// recTs() מחזיר עבורן 0 — כלומר הן "ותיקות" ומפסידות לכל רשומה מתוארכת —
+// אבל הן לעולם לא נופלות מהמיזוג רק בגלל שהצד השני לא מכיר אותן. לכן המיזוג
+// הראשון אחרי השדרוג הוא איחוד מלא של מקומי + ענן, בלי אובדן נתונים.
+function recTs(r) {
+  return (r && typeof r === 'object' && typeof r.updatedAt === 'number') ? r.updatedAt : 0;
+}
+function recTouch(r, ts) {
+  if (r && typeof r === 'object') r.updatedAt = (typeof ts === 'number') ? ts : Date.now();
+  return r;
+}
+// מחיקה לוגית — במקום splice/filter פיזיים שנעלמים במיזוג
+function recDelete(r, ts) {
+  if (r && typeof r === 'object') { r.deleted = true; r.updatedAt = (typeof ts === 'number') ? ts : Date.now(); }
+  return r;
+}
+function isLive(r) { return !!r && !r.deleted; }
+function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); }
+
+// מיזוג ברמת רשומה. remote (הענן) קובע את סדר הבסיס ומנצח בשוויון — דטרמיניסטי.
+// mergePair (אופציונלי) — מיזוג מותאם כששני הצדדים מכירים את אותו מפתח.
+function mergeRecords(local, remote, getKey, mergePair) {
+  var L = Array.isArray(local) ? local : [];
+  var R = Array.isArray(remote) ? remote : [];
+  var map = {}, order = [];
+  R.forEach(function(r) {
+    if (!r) return;
+    var k = getKey(r); if (k == null) return; k = String(k);
+    if (!(k in map)) { order.push(k); map[k] = r; return; }
+    // כפילות בתוך אותו מערך (למשל שני סנאפשוטים לאותו gdate שנוצרו ע"י
+    // endDay + autoArchiveDay). דריסה עיוורת כאן הייתה מוחקת רשומות אמיתיות,
+    // ולכן גם כאן ממזגים.
+    map[k] = mergePair ? mergePair(map[k], r) : (recTs(r) >= recTs(map[k]) ? r : map[k]);
+  });
+  L.forEach(function(r) {
+    if (!r) return;
+    var k = getKey(r); if (k == null) return; k = String(k);
+    if (!(k in map)) {
+      // רשומה מקומית בלבד — תמיד שורדת, גם בלי updatedAt (נתוני legacy).
+      // היעדרות אצל הצד השני אינה מחיקה. המחיר: רשומה שנמחקה פיזית ע"י
+      // הקוד הישן במכשיר אחר עלולה לחזור פעם אחת — עדיף על אובדן נתונים.
+      order.push(k); map[k] = r;
+    } else if (mergePair) {
+      map[k] = mergePair(r, map[k]);
+    } else if (recTs(r) > recTs(map[k])) {
+      map[k] = r;   // שוויון (כולל 0 מול 0) → הענן מנצח
+    }
+  });
+  return order.map(function(k){ return map[k]; });
+}
+
+function entryKey(e) { return (e && e.id != null) ? e.id : null; }
+function mergeEntries(local, remote) { return mergeRecords(local, remote, entryKey); }
+
+// סנאפשוט ארכיון מזוהה לפי היום שלו (gdate); רק סנאפשוטים ישנים בלי gdate
+// נופלים חזרה ל-id. שני מכשירים שארכבו את אותו יום מייצרים id שונה — gdate
+// הוא מה שמונע כפילות.
+function archiveKey(s) {
+  if (!s) return null;
+  if (s.gdate) return 'g:' + s.gdate;
+  return (s.id != null) ? 'i:' + s.id : null;
+}
+// מיזוג ארכיון: מטא-דאטה של הסנאפשוט ב-LWW, אבל הרשומות שבתוכו ממוזגות
+// אחת-אחת — אחרת שני מכשירים שהוסיפו רשומות לאותו יום היו דורסים זה את זה.
+function mergeArchive(local, remote) {
+  return mergeRecords(local, remote, archiveKey, function(loc, rem) {
+    var base = (recTs(loc) > recTs(rem)) ? loc : rem;   // שוויון → הענן
+    var out = {};
+    Object.keys(base).forEach(function(k){ out[k] = base[k]; });
+    out.entries = mergeRecords(loc.entries, rem.entries, entryKey);
+    out.count = liveOnly(out.entries).length;
+    return out;
+  });
+}
+
+// קטגוריות: רשומה = קטגוריה (מפתח = אות). המשימות הן מחרוזות בלי מזהה, ולכן
+// הן נוסעות עם רשומת הקטגוריה — הוספה/מחיקה/שינוי סדר של משימה היא עדכון של
+// הקטגוריה (updatedAt), ולא היעלמות שקטה במיזוג.
+function catKey(c) { return (c && c.letter != null) ? c.letter : null; }
+function mergeCats(local, remote) { return mergeRecords(local, remote, catKey); }
+
+// תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}. הרשימה כולה היא הרשומה,
+// וה-updatedAt שלה נשמר במפה מקבילה (SUBS_META) — כך שגם למחיקת תת-משימה
+// יש חותמת שמנצחת במיזוג במקום להיעלם.
+function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
+  var Ls = (localSubs && typeof localSubs === 'object') ? localSubs : {};
+  var Rs = (remoteSubs && typeof remoteSubs === 'object') ? remoteSubs : {};
+  var Lm = (localMeta && typeof localMeta === 'object') ? localMeta : {};
+  var Rm = (remoteMeta && typeof remoteMeta === 'object') ? remoteMeta : {};
+  var subs = {}, meta = {};
+  Object.keys(Rs).forEach(function(k){ subs[k] = Rs[k]; meta[k] = Rm[k] || 0; });
+  Object.keys(Ls).forEach(function(k){
+    var lt = Lm[k] || 0;
+    if (!(k in subs)) { subs[k] = Ls[k]; meta[k] = lt; }   // מפתח מקומי בלבד — שורד
+    else if (lt > (meta[k] || 0)) { subs[k] = Ls[k]; meta[k] = lt; }   // שוויון → הענן
+  });
+  return { subs: subs, meta: meta };
+}
+
 // Save functions — write to both localStorage and Supabase
 function saveCats() {
   localStorage.setItem("tb_cats"+LS, JSON.stringify(CATS));
   sbSet("tb_cats", CATS);
 }
+// חותמות זמן פר-מפתח של SUBS (ראה mergeSubs). נטען ב-loadLocalData().
+var SUBS_META = {};
+function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
 function saveSubs() {
   localStorage.setItem("tb_subs"+LS, JSON.stringify(SUBS));
+  localStorage.setItem("tb_subs_meta"+LS, JSON.stringify(SUBS_META));
   sbSet("tb_subs", SUBS);
+  sbSet("tb_subs_meta", SUBS_META);
 }
 // Generate a unique key per (category index, task name) to avoid cross-category collisions
 function subKey(ci, taskName) { return ci + "::" + taskName; }
@@ -545,47 +656,55 @@ function arcCleanupCorrupted() {
 
   var changed = false;
   var misplaced = [];
+  var ts = Date.now();
 
-  // שלב א: נפה רשומות שה-gdate שלהן לא מתאים לסנאפשוט
-  ARCHIVE = ARCHIVE.map(function(snap) {
-    if (!snap.gdate || !Array.isArray(snap.entries) || !snap.entries.length) return snap;
-    var clean  = snap.entries.filter(function(e){ return e.gdate === snap.gdate; });
-    var wrong  = snap.entries.filter(function(e){ return e.gdate && e.gdate !== snap.gdate; });
-    if (!wrong.length) return snap;
+  // שלב א: סמן כמחוקות (tombstone) רשומות שה-gdate שלהן לא מתאים לסנאפשוט.
+  // אסור להסיר אותן פיזית: הסרה פיזית = היעדרות, והמיזוג היה מחזיר אותן מהענן
+  // בסנכרון הבא. הן ממשיכות לחיות בסנאפשוט הנכון (שלב ב) תחת אותו id.
+  ARCHIVE.forEach(function(snap) {
+    if (!snap.gdate || !Array.isArray(snap.entries) || !snap.entries.length) return;
+    var wrong = snap.entries.filter(function(e){ return isLive(e) && e.gdate && e.gdate !== snap.gdate; });
+    if (!wrong.length) return;
     changed = true;
-    misplaced = misplaced.concat(wrong);
+    misplaced = misplaced.concat(JSON.parse(JSON.stringify(wrong)));
+    wrong.forEach(function(e){ recDelete(e, ts); });
+    snap.count = liveOnly(snap.entries).length;
+    recTouch(snap, ts);
     console.log('[arcCleanup] סנאפשוט', snap.gdate,
-      '— הוסרו', wrong.length, 'רשומות שגויות:', wrong.map(function(e){return e.gdate;}).join(', '));
-    return Object.assign({}, snap, { entries: clean, count: clean.length });
+      '— סומנו כמחוקות', wrong.length, 'רשומות שגויות:', wrong.map(function(e){return e.gdate;}).join(', '));
   });
 
   // שלב ב: שלח רשומות פגומות לסנאפשוט הנכון (לפי gdate שלהן)
   misplaced.forEach(function(e) {
     var tg = e.gdate || '';
     if (!tg) return;
+    delete e.deleted;              // העותק שמועבר ליעד חי; רק המקור סומן כמחוק
+    recTouch(e, ts + 1);           // חותמת חדשה יותר מה-tombstone שנוצר בשלב א
     var idx = ARCHIVE.findIndex(function(a){ return a.gdate === tg; });
     if (idx >= 0) {
+      ARCHIVE[idx].entries = ARCHIVE[idx].entries || [];
       if (!ARCHIVE[idx].entries.find(function(x){ return x.id === e.id; })) {
         ARCHIVE[idx].entries.push(e);
-        ARCHIVE[idx].count = ARCHIVE[idx].entries.length;
+        ARCHIVE[idx].count = liveOnly(ARCHIVE[idx].entries).length;
+        recTouch(ARCHIVE[idx], ts + 1);
         console.log('[arcCleanup] הועבר לסנאפשוט קיים:', tg);
       }
     } else {
       // צור סנאפשוט חדש עבור תאריך זה
       ARCHIVE.push({ id: e.id, name: e.hdate || tg, hdate: e.hdate || '',
-        gdate: tg, day: e.day || '', date: tg, entries: [e], count: 1 });
+        gdate: tg, day: e.day || '', date: tg, entries: [e], count: 1, updatedAt: ts + 1 });
       console.log('[arcCleanup] נוצר סנאפשוט חדש:', tg);
       changed = true;
     }
   });
 
-  // שלב ג: הסר סנאפשוטים ריקים שנוצרו מהבאג (אין בהם רשומות אחרי הניקוי)
-  var before = ARCHIVE.length;
-  ARCHIVE = ARCHIVE.filter(function(snap){
-    return !snap.gdate || !Array.isArray(snap.entries) || snap.entries.length > 0;
+  // שלב ג: סמן כמחוקים סנאפשוטים שנותרו ריקים מהבאג (tombstone, לא הסרה)
+  var emptied = 0;
+  ARCHIVE.forEach(function(snap){
+    if (!isLive(snap) || !snap.gdate || !Array.isArray(snap.entries)) return;
+    if (snap.entries.length && !liveOnly(snap.entries).length) { recDelete(snap, ts); emptied++; }
   });
-  if (ARCHIVE.length < before)
-    console.log('[arcCleanup] הוסרו', before - ARCHIVE.length, 'סנאפשוטים ריקים');
+  if (emptied) console.log('[arcCleanup] סומנו כמחוקים', emptied, 'סנאפשוטים ריקים');
 
   if (!changed) { console.log('[arcCleanup] ✅ הארכיון תקין — אין צורך בניקוי'); return; }
   saveArchive();
@@ -606,52 +725,46 @@ async function syncFromCloud() {
     // Use sbGet which uses the Supabase client correctly
     // (previous version had a bug: getSB() returns client object, not API key string)
 
-    // CATS: always pull from cloud (cloud wins)
+    // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
+    // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
     if (cloudCats && cloudCats.length) {
-      CATS = cloudCats;
+      CATS = mergeCats(CATS, cloudCats);
       localStorage.setItem('tb_cats'+LS, JSON.stringify(CATS));
+      sbSet('tb_cats', CATS);
     }
 
-    // SUBS: always pull from cloud
+    // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
+    var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
     if (cloudSubs) {
-      SUBS = cloudSubs;
+      var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
+      SUBS = ms.subs; SUBS_META = ms.meta;
       localStorage.setItem('tb_subs'+LS, JSON.stringify(SUBS));
+      localStorage.setItem('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
+      sbSet('tb_subs', SUBS);
+      sbSet('tb_subs_meta', SUBS_META);
     }
 
-    // ENTRIES: merge cloud + local (union by id — no data loss)
+    // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones). קודם: איחוד לפי id
+    // בלבד — עדכון שנעשה במכשיר אחד לא ניצח את הגרסה הישנה של השני.
     var cloudEntries = await pull('tb_entries', 'רשומות');
     if (cloudEntries && cloudEntries.length) {
-      var mergedEntries = cloudEntries.slice();
-      ENTRIES.forEach(function(localEntry) {
-        if (!mergedEntries.find(function(e){ return e.id === localEntry.id; })) {
-          mergedEntries.push(localEntry);
-        }
-      });
+      ENTRIES = mergeEntries(ENTRIES, cloudEntries);
       // Sort by id descending (newest first)
-      mergedEntries.sort(function(a,b){ return b.id - a.id; });
-      ENTRIES = mergedEntries;
+      ENTRIES.sort(function(a,b){ return b.id - a.id; });
       localStorage.setItem('tb_entries'+LS, JSON.stringify(ENTRIES));
       sbSet('tb_entries', ENTRIES); // push merged back to cloud
     } else if (ENTRIES.length) {
       sbSet('tb_entries', ENTRIES); // cloud empty — push local up
     }
 
-    // ARCHIVE: merge cloud + local (cloud wins for same gdate)
+    // ARCHIVE: מיזוג סנאפשוטים לפי gdate + מיזוג הרשומות שבתוך כל סנאפשוט.
+    // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
+    // איבדו את הצד הקטן יותר.
     var cloudArchive = await pull('tb_archive', 'ארכיון');
     if (cloudArchive && cloudArchive.length) {
-      // Start from cloud archive as base
-      var merged = cloudArchive.slice();
-      // Add local entries that are NOT in cloud
-      ARCHIVE.forEach(function(localItem) {
-        var idx = merged.findIndex(function(a){ return a.gdate === localItem.gdate; });
-        if (idx < 0) {
-          merged.push(localItem);
-        } else if (localItem.entries && localItem.entries.length > merged[idx].entries.length) {
-          merged[idx] = localItem;
-        }
-      });
+      var merged = mergeArchive(ARCHIVE, cloudArchive);
       // Also keep ARCHIVE_SEED entries not in merged (Rishon only — seed is Rishon's history)
       if (YESHIVA === 'rishon' && typeof ARCHIVE_SEED !== 'undefined') {
         ARCHIVE_SEED.forEach(function(seed) {
@@ -679,7 +792,7 @@ async function syncFromCloud() {
     buildCatGrid();
     // Reconcile selCat after CATS replaced — old reference is no longer in new array
     if (selCat) {
-      selCat = CATS.find(function(c){ return c.letter === selCat.letter; }) || null;
+      selCat = CATS.find(function(c){ return c.letter === selCat.letter && isLive(c); }) || null;
     }
     buildTaskBtns();
     buildSubBtns();
@@ -816,23 +929,29 @@ function gregDateStr(jsDate) {
 function checkDayChange() {
   var lastDay = localStorage.getItem("tb_last_day"+LS) || "";
   var today = new Date().toDateString();
-  if (lastDay && lastDay !== today && ENTRIES.length > 0) {
+  if (lastDay && lastDay !== today && liveOnly(ENTRIES).length > 0) {
     // New day detected - archive locally only.
     // CRITICAL: do NOT push to cloud here — syncFromCloud() will run shortly
     // after and properly merge. Pushing empty ENTRIES to cloud would wipe
     // entries that another device already added for today.
     var hdate = hebrewDate(new Date(lastDay)) || lastDay;
+    // אותה חותמת לעותקים שבארכיון ול-tombstones (ראה endDay)
+    var ts = Date.now();
+    var carried = JSON.parse(JSON.stringify(liveOnly(ENTRIES)));
+    carried.forEach(function(e){ recTouch(e, ts); });
     var snapshot = {
-      id: Date.now(),
+      id: ts,
       name: "יום " + hdate + " (אוטומטי)",
       date: new Date(lastDay).toLocaleDateString("he-IL"),
-      entries: JSON.parse(JSON.stringify(ENTRIES)),
-      count: ENTRIES.length,
-      auto: true
+      entries: carried,
+      count: carried.length,
+      auto: true,
+      updatedAt: ts
     };
     ARCHIVE.unshift(snapshot);
     localStorage.setItem("tb_archive"+LS, JSON.stringify(ARCHIVE));
-    ENTRIES = [];
+    // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
+    ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     localStorage.setItem("tb_entries"+LS, JSON.stringify(ENTRIES));
     showToast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
   }
@@ -920,7 +1039,7 @@ function onGregDateChange() {
 function buildCatGrid() {
   var g = document.getElementById("catGrid");
   g.innerHTML = "";
-  CATS.forEach(function(cat) {
+  liveOnly(CATS).forEach(function(cat) {
     var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
     var btn = document.createElement("button");
     btn.className = "cat-btn";
@@ -997,20 +1116,33 @@ function pickSub(s) {
 function autoArchiveDay(dayKey, hdate, gdate) {
   // Filter by gdate (unique date string), NOT by day name — day names repeat every week
   // and would cause entries from different dates to be merged under the current date.
+  if (!gdate) return;   // בלי תאריך אין סנאפשוט — אחרת נוצר סנאפשוט זבל עם gdate ריק
+  // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
   var dayEntries = ENTRIES.filter(function(e){ return e.gdate === gdate; });
   if (!dayEntries.length) return;
-  var existIdx = ARCHIVE.findIndex(function(a){ return a.gdate === gdate; });
+  var existIdx = ARCHIVE.findIndex(function(a){ return a.gdate === gdate && isLive(a); });
+  var exist = existIdx >= 0 ? ARCHIVE[existIdx] : null;
+  // מיזוג ולא החלפה: הסנאפשוט הקיים הוא הצד ה"מרוחק" (מנצח בשוויון), הרשומות
+  // החיות הן הצד המקומי. כך רשומה שכבר אורכבה (endDay) לא נמחקת מהארכיון רק
+  // מפני שהעותק החי שלה הפך ל-tombstone, אבל מחיקה אמיתית (updatedAt חדש יותר)
+  // כן עוברת.
+  var mergedEntries = mergeRecords(
+    JSON.parse(JSON.stringify(dayEntries)),
+    exist ? (exist.entries || []) : [],
+    entryKey
+  );
   var snapshot = {
-    id: existIdx >= 0 ? ARCHIVE[existIdx].id : Date.now(),
-    name: hdate,
-    hdate: hdate,
+    id: exist ? exist.id : Date.now(),
+    name: hdate || (exist ? exist.name : "") || "",
+    hdate: hdate || (exist ? exist.hdate : "") || "",
     gdate: gdate,
-    day: dayKey,
+    day: dayKey || (exist ? exist.day : "") || "",
     date: gdate,
-    entries: JSON.parse(JSON.stringify(dayEntries)),
-    count: dayEntries.length
+    entries: mergedEntries,
+    count: liveOnly(mergedEntries).length,
+    updatedAt: Date.now()
   };
-  if (existIdx >= 0) {
+  if (exist) {
     ARCHIVE[existIdx] = snapshot;
   } else {
     ARCHIVE.unshift(snapshot);
@@ -1033,6 +1165,7 @@ function addEntry() {
     day: selDay, hdate: hdate, gdate: document.getElementById("gregDateInput").value.trim(),
     cat: selCat.letter, catName: selCat.name,
     task: task, sub: sub, notes: notes, count: count,
+    updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
     // time removed
   };
   ENTRIES.unshift(entry);
@@ -1060,7 +1193,7 @@ function renderLog() {
   var cnt  = document.getElementById("logCount");
   // Show only entries for current selected date
   var curKey = getCurrentDateKey();
-  var filtered = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var filtered = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   cnt.textContent = filtered.length;
   if (!filtered.length) {
     list.innerHTML = '<div class="empty">📋<br>אין רשומות לתאריך זה</div>';
@@ -1103,18 +1236,26 @@ function renderLog() {
 }
 
 function delEntry(id) {
-  var deleted = ENTRIES.find(function(e){ return e.id === id; });
-  ENTRIES = ENTRIES.filter(function(e){ return e.id !== id; });
+  // tombstone במקום הסרה פיזית: הסרה פיזית נראית למכשיר אחר כ"רשומה שאני לא
+  // מכיר" — הוא היה מחזיר אותה לחיים בסנכרון הבא.
+  var deleted = ENTRIES.find(function(e){ return e.id === id && isLive(e); });
+  if (!deleted) return;
+  recDelete(deleted);
   saveEntries();
-  if (deleted) autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
+  autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
   renderLog();
   scheduleSyncPush();
 }
 
 function clearAll() {
   showConfirm("🗑 מחיקת כל הרשומות", "האם למחוק את כל רשומות היום הנוכחי?", function() {
-    ENTRIES = ENTRIES.filter(function(e){ return e.gdate !== getCurrentDateKey(); });
+    var curKey = getCurrentDateKey();
+    var ts = Date.now();
+    var sample = ENTRIES.find(function(e){ return e.gdate === curKey; });
+    ENTRIES.forEach(function(e){ if (e.gdate === curKey && isLive(e)) recDelete(e, ts); });
     saveEntries(); renderLog();
+    // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
+    if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
     showToast("✓ הרשומות נמחקו");
     scheduleSyncPush();
   });
@@ -1139,9 +1280,9 @@ function showConfirm(title, msg, onOk) {
 
 // EXPORT TXT
 function exportTxt() {
-  if (!ENTRIES.length) { showToast("אין רשומות"); return; }
+  if (!liveOnly(ENTRIES).length) { showToast("אין רשומות"); return; }
   var lines = ['ב"ה, יחי המלך', '', 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון', 'יומן עבודה', '====================================', ''];
-  ENTRIES.forEach(function(e){
+  liveOnly(ENTRIES).forEach(function(e){
     var line = '[' + e.cat + '] ' + e.catName + ' | ' + e.task;
     if (e.sub) line += ' | ' + e.sub;
     if (e.notes) line += ' (' + e.notes + ')';
@@ -1160,7 +1301,7 @@ function exportTxt() {
 
 // EXPORT PDF
 function exportPDF() {
-  if (!ENTRIES.length) { showToast("אין רשומות"); return; }
+  if (!liveOnly(ENTRIES).length) { showToast("אין רשומות"); return; }
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var dayLabel = selDay || "";
@@ -1170,7 +1311,7 @@ function exportPDF() {
   // Sort entries by category/task order
   var catOrder2 = {};
   CATS.forEach(function(cat, ci) { catOrder2[cat.letter] = ci; });
-  var sortedPDF = ENTRIES.slice().sort(function(a, b) {
+  var sortedPDF = liveOnly(ENTRIES).sort(function(a, b) {
     var ca = catOrder2[a.cat] !== undefined ? catOrder2[a.cat] : 99;
     var cb = catOrder2[b.cat] !== undefined ? catOrder2[b.cat] : 99;
     if (ca !== cb) return ca - cb;
@@ -1255,7 +1396,7 @@ function exportPDF() {
     + '<div class="dt"><b>' + dayLabel + '</b>' + today + '<small style="color:#888;font-size:11px;display:block">' + todayGreg + '</small></div></div>'
     + '<table><thead><tr><th>קטגוריה</th><th>משימה</th><th>תת-משימה</th><th>הרחבה</th><th>כמות</th></tr></thead>'
     + '<tbody>' + rows + '</tbody></table>'
-    + '<div class="ft">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + ENTRIES.length + ' רשומות</div>'
+    + '<div class="ft">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + liveOnly(ENTRIES).length + ' רשומות</div>'
     + '<script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>'
     + '</body></html>';
 
@@ -1313,7 +1454,7 @@ function _buildReportDiv(cb){
   var logoUrl=logoEl?logoEl.src:'';
   var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
   var curKey = getCurrentDateKey();
-  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   var sortedPDF=todayEntries.slice().sort(function(a,b){
     var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;
     var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;
@@ -1365,12 +1506,12 @@ function _buildReportDiv(cb){
     +'<th style="padding:9px 10px;text-align:center;font-size:12px;">כמות</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">הרחבה</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>';
-    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + ENTRIES.length + ' רשומות</div>';
+    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + liveOnly(ENTRIES).length + ' רשומות</div>';
   div.style.left='0';cb(div);
 }
 function exportJPEG(){
   var curKey = getCurrentDateKey();
-  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   if(!todayEntries.length){showToast("אין רשומות להיום");return;}
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
@@ -1422,7 +1563,7 @@ function saveWAPhone() {
 
 function sendWhatsApp(){
   var curKey = getCurrentDateKey();
-  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   if(!todayEntries.length){showToast("אין רשומות לשיתוף להיום");return;}
   showToast("מכין תמונה...");
   // Get phone number from settings field, clean it
@@ -1518,6 +1659,7 @@ function taskDrop(e, ci, ti) {
   if (_dragKind !== "task" || _dragData.ci !== ci || _dragData.ti === ti) return;
   var moved = CATS[ci].tasks.splice(_dragData.ti, 1)[0];
   CATS[ci].tasks.splice(ti, 0, moved);
+  recTouch(CATS[ci]);   // סדר המשימות הוא חלק מרשומת הקטגוריה
   _dragKind = null;
   saveCats();
   renderSettings();
@@ -1557,6 +1699,7 @@ function subDrop(e, ci, ti, si) {
   if (!SUBS[sk]) { SUBS[sk] = SUBS[taskName] || []; }
   var moved = SUBS[sk].splice(_dragData.si, 1)[0];
   SUBS[sk].splice(si, 0, moved);
+  touchSubKey(sk);
   _dragKind = null;
   saveSubs();
   renderSettings();
@@ -1577,6 +1720,7 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
       var sk = subKey(ci, taskName);
       if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] || [];
       SUBS[sk][si] = newVal;
+      touchSubKey(sk);
       saveSubs();
     }
     renderSettings();
@@ -1588,6 +1732,7 @@ function removeSub(ci, taskName, si) {
   var sk = subKey(ci, taskName);
   if (!SUBS[sk]) { if (!SUBS[taskName]) return; SUBS[sk] = SUBS[taskName]; }
   SUBS[sk].splice(si, 1);
+  touchSubKey(sk);   // המחיקה מתועדת בחותמת של הרשימה — אחרת היא נעלמת במיזוג
   saveSubs();
   renderSettings();
 }
@@ -1601,6 +1746,7 @@ function addSub(ci, ti) {
   var sk = subKey(ci, taskName);
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   SUBS[sk].push(val);
+  touchSubKey(sk);
   inp.value = "";
   saveSubs();
   renderSettings();
@@ -1631,6 +1777,7 @@ function editTaskInline(ci, ti) {
         delete SUBS[oldVal];
       }
       CATS[ci].tasks[ti] = newVal;
+      recTouch(CATS[ci]); touchSubKey(newSk);
       saveCats(); saveSubs();
     }
     renderSettings(); buildCatGrid(); buildTaskBtns();
@@ -1643,6 +1790,7 @@ function renderSettings() {
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   CATS.forEach(function(cat, ci) {
+    if (!isLive(cat)) return;   // ci חייב להישאר האינדקס הגולמי — עליו בנויים מפתחות SUBS
     var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
     var div = document.createElement("div");
     div.className = "set-card";
@@ -1732,7 +1880,10 @@ function renderSettings() {
 }
 
 function removeTask(ci, ti) {
+  // משימה היא מחרוזת בלי מזהה — היא נוסעת עם רשומת הקטגוריה, ולכן ההסרה
+  // מתועדת כעדכון של הקטגוריה (updatedAt) ומנצחת במיזוג במקום להיעלם.
   CATS[ci].tasks.splice(ti, 1);
+  recTouch(CATS[ci]);
   saveCats();
   renderSettings();
 }
@@ -1741,6 +1892,7 @@ function addTask(ci) {
   var val = inp.value.trim();
   if (!val) return;
   CATS[ci].tasks.push(val);
+  recTouch(CATS[ci]);
   inp.value = "";
   saveCats();
   renderSettings();
@@ -1749,6 +1901,7 @@ function saveCatName(ci) {
   var inp = document.getElementById("sname-" + ci);
   if (inp && inp.value.trim()) {
     CATS[ci].name = inp.value.trim();
+    recTouch(CATS[ci]);
     saveCats();
   }
 }
@@ -1758,8 +1911,9 @@ function saveSettings() {
     if (inp) {
       var newName = inp.value.trim();
       if (newName && newName !== cat.name) {
-        if (SUBS[cat.name]) { SUBS[newName] = SUBS[cat.name]; delete SUBS[cat.name]; }
+        if (SUBS[cat.name]) { SUBS[newName] = SUBS[cat.name]; delete SUBS[cat.name]; touchSubKey(newName); }
         CATS[ci].name = newName;
+        recTouch(CATS[ci]);
       }
     }
   });
@@ -1776,28 +1930,45 @@ function showToast(msg) {
 
 // END OF DAY
 function endDay() {
-  if (!ENTRIES.length) { showToast("אין רשומות לשמירה"); return; }
+  if (!liveOnly(ENTRIES).length) { showToast("אין רשומות לשמירה"); return; }
   var hdate = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var gdate = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var dayName = selDay || "";
   var name = [dayName, hdate, gdate ? "| "+gdate : ""].filter(Boolean).join(" ");
-  if (!confirm("לסיים את יום " + name + " ולשמור " + ENTRIES.length + " רשומות לארכיון?")) return;
+  if (!confirm("לסיים את יום " + name + " ולשמור " + liveOnly(ENTRIES).length + " רשומות לארכיון?")) return;
   var curKey = getCurrentDateKey();
-  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   if (!todayEntries.length) { showToast("אין רשומות לתאריך זה"); return; }
+  // חותמת אחת לשני הצדדים: העותקים שנכנסים לארכיון מקבלים בדיוק את אותו
+  // updatedAt כמו ה-tombstones של העותקים החיים. בשוויון הסנאפשוט מנצח, ולכן
+  // "סיום יום" מעביר רשומות לארכיון במקום למחוק אותן משם.
+  var ts = Date.now();
+  var archivedCopies = JSON.parse(JSON.stringify(todayEntries));
+  archivedCopies.forEach(function(e){ recTouch(e, ts); });
   var snapshot = {
-    id: Date.now(),
+    id: ts,
     name: name,
     hdate: hdate,
     gdate: gdate,
     day: dayName,
     date: new Date().toLocaleDateString("he-IL"),
-    entries: JSON.parse(JSON.stringify(todayEntries)),
-    count: todayEntries.length
+    entries: archivedCopies,
+    count: archivedCopies.length,
+    updatedAt: ts
   };
-  ARCHIVE.unshift(snapshot);
+  var exIdx = ARCHIVE.findIndex(function(a){ return a.gdate && a.gdate === gdate; });
+  if (exIdx >= 0) {
+    // אותו יום כבר בארכיון (autoArchiveDay) — למזג, לא ליצור כפילות
+    var mergedE = mergeRecords(archivedCopies, ARCHIVE[exIdx].entries || [], entryKey);
+    ARCHIVE[exIdx] = Object.assign({}, ARCHIVE[exIdx], {
+      name: name, hdate: hdate, day: dayName,
+      entries: mergedE, count: liveOnly(mergedE).length, updatedAt: ts
+    });
+  } else {
+    ARCHIVE.unshift(snapshot);
+  }
   saveArchive();
-  ENTRIES = ENTRIES.filter(function(e){ return e.gdate !== curKey; });
+  ENTRIES.forEach(function(e){ if (e.gdate === curKey && isLive(e)) recDelete(e, ts); });
   saveEntries();
   selDay = "";
   selCat = null; selTask = null; selSub = null;
@@ -1814,7 +1985,8 @@ var ARCHIVE = [];
 // saveArchive defined above in Supabase layer
 
 function archiveCurrent() {
-  if (!ENTRIES.length) { showToast("אין רשומות לשמירה"); return; }
+  var liveE = liveOnly(ENTRIES);
+  if (!liveE.length) { showToast("אין רשומות לשמירה"); return; }
   var name = document.getElementById("archiveName").value.trim();
   if (!name) {
     var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
@@ -1825,8 +1997,9 @@ function archiveCurrent() {
     id: Date.now(),
     name: name,
     date: new Date().toLocaleDateString("he-IL"),
-    entries: JSON.parse(JSON.stringify(ENTRIES)),
-    count: ENTRIES.length
+    entries: JSON.parse(JSON.stringify(liveE)),
+    count: liveE.length,
+    updatedAt: Date.now()
   };
   ARCHIVE.unshift(snapshot);
   saveArchive();
@@ -1865,21 +2038,31 @@ function getAllArchiveDays() {
   var todayKey = getTodayKey();
   var days = {};
 
-  // From ARCHIVE snapshots
-  ARCHIVE.forEach(function(snap) {
+  // From ARCHIVE snapshots — סנאפשוט שנמחק (tombstone) ורשומות מחוקות בתוכו לא מוצגים
+  liveOnly(ARCHIVE).forEach(function(snap) {
     var k = snap.gdate || snap.id;
     if (!days[k]) days[k] = {gdate:snap.gdate||"", hdate:snap.hdate||"", day:snap.day||"",
-      name:snap.name, entries:[], snapId:snap.id};
+      name:snap.name, entries:[], seen:{}, snapId:snap.id};
     // merge entries from snapshot if not already there
-    (snap.entries||[]).forEach(function(e){ days[k].entries.push(e); });
+    (snap.entries||[]).forEach(function(e){
+      if (e && e.id != null) days[k].seen[String(e.id)] = true;   // כולל tombstones
+      if (isLive(e)) days[k].entries.push(e);
+    });
   });
 
-  // From live ENTRIES (including today — so current day is visible in archive)
+  // From live ENTRIES (including today — so current day is visible in archive).
+  // הסנאפשוט הוא המקור הקובע לרשומה שכבר נכנסה אליו: אחרי "סיום יום" העותק החי
+  // הוא tombstone, והרשומה עדיין שייכת לארכיון.
   ENTRIES.forEach(function(e) {
     var k = e.gdate || "";
-    if (!days[k]) days[k] = {gdate:e.gdate||"", hdate:e.hdate||"", day:e.day||"",
-      name:[e.day,e.hdate,e.gdate?"| "+e.gdate:""].filter(Boolean).join(" "), entries:[], snapId:null};
-    if(!days[k].entries.find(function(x){return x.id===e.id;})) days[k].entries.push(e);
+    if (!days[k]) {
+      if (!isLive(e)) return;   // אין יום כזה בארכיון ורשומה מחוקה — אין מה להציג
+      days[k] = {gdate:e.gdate||"", hdate:e.hdate||"", day:e.day||"",
+        name:[e.day,e.hdate,e.gdate?"| "+e.gdate:""].filter(Boolean).join(" "), entries:[], seen:{}, snapId:null};
+    }
+    if (days[k].seen[String(e.id)]) return;             // כבר טופל ע"י הסנאפשוט
+    days[k].seen[String(e.id)] = true;
+    if (isLive(e)) days[k].entries.push(e);
   });
 
   return days;
@@ -1909,6 +2092,7 @@ function getDaysInMonth(year, month) {
   var days = getAllArchiveDays();
   var result = [];
   Object.values(days).forEach(function(d) {
+    if (!d.entries.length) return;   // יום שכל רשומותיו נמחקו — לא מציגים כפתום ריק
     var ym = extractYM(d.hdate);
     if (ym.year === year && ym.month === month) result.push(d);
   });
@@ -2136,10 +2320,10 @@ function renderArcDetail() {
       '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
       '<select id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
-      CATS.map(function(cat){ return '<option value="'+cat.letter+'">'+cat.name+'</option>'; }).join("")+
+      liveOnly(CATS).map(function(cat){ return '<option value="'+cat.letter+'">'+cat.name+'</option>'; }).join("")+
       '</select>'+
       '<select id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
-      (CATS[0]?CATS[0].tasks.map(function(t){ return '<option>'+t+'</option>'; }).join(""):"")+
+      (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+t+'</option>'; }).join(""):"")+
       '</select>'+
       '<input id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
       '<button class="btn-mini" onclick="arcAddEntry()" style="white-space:nowrap">+ הוסף</button>'+
@@ -2167,14 +2351,15 @@ function arcToggleEdit() {
 }
 
 function arcDeleteEntry(gdateKey, entryId) {
-  // Remove from ARCHIVE snapshots
+  // tombstone בכל מקום שבו הרשומה מופיעה — בסנאפשוטים ובחי — עם אותה חותמת
+  var ts = Date.now();
   ARCHIVE.forEach(function(snap) {
-    snap.entries = (snap.entries||[]).filter(function(e){ return e.id !== entryId; });
-    snap.count = snap.entries.length;
+    var hit = false;
+    (snap.entries||[]).forEach(function(e){ if (e.id === entryId && isLive(e)) { recDelete(e, ts); hit = true; } });
+    if (hit) { snap.count = liveOnly(snap.entries).length; recTouch(snap, ts); }
   });
   saveArchive();
-  // Remove from live ENTRIES
-  ENTRIES = ENTRIES.filter(function(e){ return e.id !== entryId; });
+  ENTRIES.forEach(function(e){ if (e.id === entryId && isLive(e)) recDelete(e, ts); });
   saveEntries();
   renderArcDetail();
   renderArcBreadcrumb();
@@ -2195,13 +2380,16 @@ function arcAddEntry(gdateKey) {
     id: Date.now(),
     day: d.day, hdate: d.hdate, gdate: d.gdate,
     cat: letter, catName: cat.name,
-    task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: ""
+    task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
+    updatedAt: Date.now()
   };
   // Add to ARCHIVE snapshot if exists
-  var snap = ARCHIVE.find(function(s){ return s.gdate === d.gdate; });
+  var snap = ARCHIVE.find(function(s){ return s.gdate === d.gdate && isLive(s); });
   if (snap) {
+    snap.entries = snap.entries || [];
     snap.entries.unshift(newEntry);
-    snap.count = snap.entries.length;
+    snap.count = liveOnly(snap.entries).length;
+    recTouch(snap);
     saveArchive();
   } else {
     // Add to live ENTRIES
@@ -2239,17 +2427,32 @@ function renderArchive() {
 }
 
 function restoreArchive(id) {
-  var snap = ARCHIVE.find(function(s){ return s.id === id; });
+  var snap = ARCHIVE.find(function(s){ return s.id === id && isLive(s); });
   if (!snap) return;
   if (!confirm("לטעון את היומן \"" + snap.name + "\"? הרשומות הנוכחיות יוחלפו.")) return;
-  ENTRIES = JSON.parse(JSON.stringify(snap.entries));
+  var ts = Date.now();
+  // הרשומות החיות הנוכחיות מוחלפות → tombstone, לא הסרה שקטה (אחרת הן חוזרות מהענן)
+  ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
+  var restored = JSON.parse(JSON.stringify(liveOnly(snap.entries)));
+  // חותמת חדשה כדי שהשחזור ינצח tombstones ישנים של אותן רשומות
+  restored.forEach(function(e){ recTouch(e, ts + 1); });
+  var byId = {};
+  restored.forEach(function(e){ byId[String(e.id)] = true; });
+  ENTRIES = restored.concat(ENTRIES.filter(function(e){ return !byId[String(e.id)]; }));
   saveEntries();
+  renderLog();
   showToast("✓ יומן נטען!");
 }
 
 function deleteArchive(id) {
   if (!confirm("למחוק יומן זה מהארכיון?")) return;
-  ARCHIVE = ARCHIVE.filter(function(s){ return s.id !== id; });
+  var snap = ARCHIVE.find(function(s){ return s.id === id; });
+  if (!snap) return;
+  var ts = Date.now();
+  // tombstone לסנאפשוט וגם לרשומות שבתוכו — הסרה פיזית הייתה חוזרת מהענן,
+  // וסימון הסנאפשוט בלבד היה מחזיר את הרשומות אם אותו יום ייווצר מחדש
+  (snap.entries || []).forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
+  recDelete(snap, ts);
   saveArchive();
   renderArchive();
 }
@@ -2258,7 +2461,7 @@ function exportArchivePDF(id) {
   var snap = ARCHIVE.find(function(s){ return s.id === id; });
   if (!snap) return;
   var savedEntries = ENTRIES;
-  ENTRIES = snap.entries;
+  ENTRIES = liveOnly(snap.entries);
   var savedDay = selDay;
   selDay = snap.name;
   var origHeb = document.getElementById("hebDateInput").value;
@@ -2341,22 +2544,29 @@ async function autoSyncData() {
     _lastKnownTimestamp = remoteTs;
     console.log("[sync] pulling data...");
 
+    // מיזוג ברמת רשומה במקום החלפה מלאה. ההחלפה היא שגרמה לאובדן: מכשיר
+    // שדחף blob ישן עם חותמת חדשה יותר מחק כאן עבודה שמכשיר אחר הרגע הקליד.
     var res = await sb.from(KV_TABLE).select("value").eq("key","tb_entries").single();
     if (res.data) {
       var cloudEntries = JSON.parse(res.data.value);
       if (Array.isArray(cloudEntries)) {
-        ENTRIES = cloudEntries;
+        ENTRIES = mergeEntries(ENTRIES, cloudEntries);
+        ENTRIES.sort(function(a,b){ return b.id - a.id; });
         localStorage.setItem("tb_entries"+LS, JSON.stringify(ENTRIES));
         renderLog();
-        console.log("[sync] done, entries=" + ENTRIES.length);
+        console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
+                    " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
     }
     var resA = await sb.from(KV_TABLE).select("value").eq("key","tb_archive").single();
     if (resA.data) {
       var cloudArchive = JSON.parse(resA.data.value);
       if (Array.isArray(cloudArchive)) {
-        ARCHIVE = cloudArchive;
+        ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
         localStorage.setItem("tb_archive"+LS, JSON.stringify(ARCHIVE));
+        // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
+        var arcPanel = document.getElementById("panel-archive");
+        if (arcPanel && arcPanel.style.display !== "none" && arcSelDayKey) renderArcDetail();
       }
     }
   } catch(e) { console.error("[sync] error:", e); }
@@ -2425,6 +2635,9 @@ function startApp() {
 function loadLocalData() {
   CATS = JSON.parse(localStorage.getItem("tb_cats"+LS) || JSON.stringify(DEFAULT_CATS));
   SUBS = JSON.parse(localStorage.getItem("tb_subs"+LS) || JSON.stringify(DEFAULT_SUBS));
+  // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
+  // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
+  SUBS_META = JSON.parse(localStorage.getItem("tb_subs_meta"+LS) || "{}");
   ENTRIES = JSON.parse(localStorage.getItem("tb_entries"+LS) || "[]");
   var storedArc = localStorage.getItem("tb_archive"+LS);
   var seed = (YESHIVA === 'rishon' && typeof ARCHIVE_SEED !== 'undefined') ? ARCHIVE_SEED : [];
@@ -2475,7 +2688,7 @@ function selectYeshiva(y) {
 // (via #appLogo.src and _buildReportDiv's per-yeshiva instName). Desktop fallback: download image.
 function sendSignal(){
   var curKey = getCurrentDateKey();
-  var todayEntries = ENTRIES.filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   if(!todayEntries.length){ showToast("אין רשומות לשיתוף להיום"); return; }
   showToast("מכין תמונה...");
   _buildReportDiv(function(div){
@@ -2501,7 +2714,7 @@ function sendSignal(){
 
 // PATCH: fix exportJPEG filename using Blob URL + clean Hebrew name
 window.exportJPEG = function(){
-  if(!ENTRIES.length){showToast("אין רשומות");return;}
+  if(!liveOnly(ENTRIES).length){showToast("אין רשומות");return;}
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var safeHeb=today.replace(/[׳״"']/g,'').trim();
@@ -2521,7 +2734,7 @@ window.exportJPEG = function(){
 
 // FIX: exportJPEG with clean Hebrew filename (no geresh)
 window.exportJPEG=function(){
-  if(!ENTRIES.length){showToast("אין רשומות");return;}
+  if(!liveOnly(ENTRIES).length){showToast("אין רשומות");return;}
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var safeHeb=today.replace(/[^א-תװ-״ ]/g,'').trim();
@@ -2540,7 +2753,7 @@ window.exportJPEG=function(){
 };
 
 function editEntry(id) {
-  var e = ENTRIES.find(function(x){ return x.id === id; });
+  var e = ENTRIES.find(function(x){ return x.id === id && isLive(x); });
   if(!e) return;
   var row = document.querySelector('[onclick*="delEntry(' + id + ')"]');
   if(!row) { row = document.querySelector('[onclick*="editEntry(' + id + ')"]'); }
@@ -2567,14 +2780,17 @@ function editEntry(id) {
 }
 
 function saveEntry(id) {
-  var e = ENTRIES.find(function(x){ return x.id === id; });
+  var e = ENTRIES.find(function(x){ return x.id === id && isLive(x); });
   if(!e) return;
   e.task = document.getElementById('ei_task').value.trim() || e.task;
   e.sub = document.getElementById('ei_sub').value.trim();
   e.count = document.getElementById('ei_count').value.trim();
   e.notes = document.getElementById('ei_notes').value.trim();
+  recTouch(e);   // בלי זה העדכון מפסיד במיזוג מול העותק הישן שבענן
   saveEntries();
+  autoArchiveDay(e.day, e.hdate, e.gdate);   // שהעריכה תגיע גם לסנאפשוט של אותו יום
   renderLog();
+  scheduleSyncPush();
   showToast('נשמר!');
 }
 
@@ -2606,17 +2822,31 @@ function arcEditEntry(gdateKey, entryId) {
 }
 
 function arcSaveEntry(gdateKey, entryId) {
-  // Update in ARCHIVE
+  // Update in ARCHIVE (+ the live copy, if this day is still the open one)
+  var ts = Date.now();
+  var vals = {
+    task:  document.getElementById('aei_task').value.trim(),
+    sub:   document.getElementById('aei_sub').value.trim(),
+    count: document.getElementById('aei_count').value.trim(),
+    notes: document.getElementById('aei_notes').value.trim()
+  };
   ARCHIVE.forEach(function(snap) {
+    var hit = false;
     (snap.entries||[]).forEach(function(e) {
       if(e.id === entryId) {
-        e.task  = document.getElementById('aei_task').value.trim();
-        e.sub   = document.getElementById('aei_sub').value.trim();
-        e.count = document.getElementById('aei_count').value.trim();
-        e.notes = document.getElementById('aei_notes').value.trim();
+        e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
+        recTouch(e, ts); hit = true;
       }
     });
+    if (hit) recTouch(snap, ts);
   });
+  ENTRIES.forEach(function(e) {
+    if (e.id === entryId) {
+      e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
+      recTouch(e, ts);
+    }
+  });
+  saveEntries();
   saveArchive();
   renderArcDetail();
   showToast('נשמר!');
