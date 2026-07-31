@@ -1,4 +1,4 @@
-var CACHE_NAME = 'yoman-avoda-v10';
+var CACHE_NAME = 'yoman-avoda-v11';
 
 // App shell — must be cached for the app to work offline.
 var urlsToCache = [
@@ -13,10 +13,15 @@ var urlsToCache = [
 // Fetched with an explicit CORS request so the response is NOT opaque and can be
 // validated + stored. Without these cached, an offline launch loses the Hebrew
 // date and any report/image export.
+//
+// ⚠️ Versions are pinned exactly — never go back to a floating '@2' / '@4'.
+// A publisher-side release then breaks the app with no code change here, and
+// the break is unreproducible from the repo. Must stay identical to the tags
+// in index.html, or the SW caches a build the page never asks for.
 var CDN_ASSETS = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdn.jsdelivr.net/npm/@hebcal/core@4/dist/hdate-bundle.min.js'
+  'https://cdn.jsdelivr.net/npm/@hebcal/core@4.5.1/dist/hdate-bundle.min.js'
 ];
 
 // Supabase traffic must never be intercepted or cached — a stale cached read
