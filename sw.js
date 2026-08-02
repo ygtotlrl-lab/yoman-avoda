@@ -1,7 +1,7 @@
-var CACHE_NAME = 'yoman-avoda-v11';
+var CACHE_NAME = 'yoman-avoda-v12';
 
 // App shell — must be cached for the app to work offline.
-var urlsToCache = [
+var CORE = [
   './',
   './index.html',
   './manifest.json',
@@ -60,7 +60,7 @@ self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       console.log('[SW] Caching core assets');
-      return cache.addAll(urlsToCache).then(function() {
+      return cache.addAll(CORE).then(function() {
         // A CDN hiccup must not fail the whole install — those are cached again
         // on the first successful runtime fetch anyway.
         return Promise.all(CDN_ASSETS.map(function(url) {

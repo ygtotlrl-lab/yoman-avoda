@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="5-2026-07-31-1">
+<meta name="app-version" content="6-2026-08-02-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -476,6 +476,76 @@ var RAMATAVIV_LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAXcAAAFOCAYA
 
 var _sb = null;
 
+// ===== בריחת HTML — esc() (סבב 8, זהה לשלושת הפרויקטים) =====
+// כל ערך שמקורו בנתוני משתמש (משימה, תת-משימה, הרחבה, שם קטגוריה) ונכנס
+// ל-innerHTML חייב לעבור כאן. משימה עם '<' או '&' נכנסה עד היום גולמית.
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+// ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
+// **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
+// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
+var MSG_SAVED     = '✅ נשמר בהצלחה';
+var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
+
+// ===== עוזרי רשת משותפים לשלושת הפרויקטים (סבב 8) =====
+// אותם שמות ואותה התנהגות ב-hanhala-ruchanit, schar-limud ו-yoman-avoda:
+// isNetErr / withTimeout / guardOnline / errMsg. אין לתת להם קידומת פרויקט.
+function isNetErr(e) {
+  if (!navigator.onLine) return true;
+  var m = ((e && (e.message || e.details || '')) + '').toLowerCase();
+  return m.indexOf('fetch') !== -1 || m.indexOf('network') !== -1 ||
+         m.indexOf('failed to') !== -1 || m.indexOf('timeout') !== -1;
+}
+function guardOnline() {
+  if (!navigator.onLine) { toast(MSG_OFFLINE, 3000); return false; }
+  return true;
+}
+function errMsg(e) {
+  return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: ' + ((e && (e.message || e.code)) || e));
+}
+// supabase-js לא מטיל timeout משלו: ברשת "חצי מחוברת" ה-fetch לא מצליח ולא
+// נכשל, והממתין נתקע לנצח. sbSet/sbGetResult עוטפים בו כל קריאת ענן שהמשתמש
+// ממתין לה — הזריקה נתפסת ב-catch הקיים שלהן והופכת ל-{ok:false}.
+var NET_TIMEOUT_MS = 8000;
+function withTimeout(p, ms) {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise(function(_, reject) {
+      setTimeout(function(){ reject(new Error('timeout')); }, ms || NET_TIMEOUT_MS);
+    })
+  ]);
+}
+
+// ===== מזהה מכשיר יציב (סבב 8 — זהה בשלושת הפרויקטים) =====
+// localStorage זורק כשהאחסון חסום (WebView מוקשח / גלישה פרטית). בלי העטיפה
+// הזו כל קורא של getDeviceId מפיל את הפונקציה שקראה לו.
+var _deviceIdMem = null;
+function getDeviceId() {
+  try {
+    var id = localStorage.getItem('tb_device_id');
+    if (!id) {
+      id = _deviceIdMem || _randDeviceId();
+      localStorage.setItem('tb_device_id', id);
+    }
+    _deviceIdMem = id;
+    return id;
+  } catch (e) {
+    if (!_deviceIdMem) _deviceIdMem = _randDeviceId();
+    return _deviceIdMem;
+  }
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+
 function getSB() {
   if (!_sb) _sb = supabase.createClient(SB_URL, SB_KEY);
   return _sb;
@@ -488,7 +558,7 @@ function getSB() {
 async function sbSet(key, value) {
   try {
     var sb = getSB();
-    var res = await sb.from(KV_TABLE).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"});
+    var res = await withTimeout(sb.from(KV_TABLE).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"}));
     if (res.error) {
       console.error("sbSet error [" + key + "]:", res.error.message, res.error);
       return { ok: false, error: res.error.message || "שגיאת שרת" };
@@ -506,7 +576,7 @@ async function sbSet(key, value) {
 async function sbGetResult(key) {
   try {
     var sb = getSB();
-    var res = await sb.from(KV_TABLE).select("value").eq("key", key).single();
+    var res = await withTimeout(sb.from(KV_TABLE).select("value").eq("key", key).single());
     if (res.error) {
       var missing = res.error.code === "PGRST116";
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
@@ -847,7 +917,7 @@ function arcCleanupCorrupted() {
 
 // Load from Supabase on startup — always pull from cloud to sync across devices
 async function syncFromCloud() {
-  showToast("🔄 מסנכרן...", 3000);
+  toast("🔄 מסנכרן...", 3000);
   // Which pulls actually failed — the final message must describe what really happened.
   var failed = [];
   async function pull(key, label) {
@@ -941,15 +1011,15 @@ async function syncFromCloud() {
     renderLog();
     renderSettings();
     if (failed.length === 0) {
-      showToast("✓ מסונכרן!");
+      toast("✅ מסונכרן");
     } else if (failed.length >= 5) {
-      showToast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר");
+      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר");
     } else {
-      showToast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "));
+      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "));
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
-    showToast("⚠️ לא ניתן להתחבר לענן");
+    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר");
   }
 }
 // ═══════════════════════════════════════
@@ -1124,7 +1194,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     localStorage.setItem("tb_entries"+LS, JSON.stringify(ENTRIES));
-    showToast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
+    toast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
   }
   localStorage.setItem("tb_last_day"+LS, today);
 }
@@ -1217,7 +1287,7 @@ function buildCatGrid() {
     btn.style.borderColor = c.bg;
     btn.style.backgroundColor = (selCat && selCat.letter === cat.letter) ? c.bg : "";
     btn.style.color = (selCat && selCat.letter === cat.letter) ? c.fg : c.bg;
-    btn.innerHTML = "<span style=\"font-size:13px;font-weight:700\">" + cat.name + "</span>";
+    btn.innerHTML = "<span style=\"font-size:13px;font-weight:700\">" + esc(cat.name) + "</span>";
     btn.onclick = function() { pickCat(cat); };
     g.appendChild(btn);
   });
@@ -1328,8 +1398,8 @@ function addEntry() {
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
   var hdate = document.getElementById("hebDateInput").value.trim();
-  if (!selCat) { showToast("⚠️ יש לבחור קטגוריה"); return; }
-  if (!task)   { showToast("⚠️ יש להזין משימה"); return; }
+  if (!selCat) { toast("⚠️ יש לבחור קטגוריה"); return; }
+  if (!task)   { toast("⚠️ יש להזין משימה"); return; }
   var now = new Date();
   var entry = {
     id: now.getTime(),
@@ -1345,7 +1415,7 @@ function addEntry() {
   clearForm();
   // Local save is done at this point; the cloud push hasn't even started —
   // scheduleSyncPush() reports the real outcome when it finishes.
-  showToast("✓ נוסף — שומר בענן…");
+  toast("✅ נוסף — שומר בענן…");
   scheduleSyncPush();
 }
 
@@ -1396,9 +1466,9 @@ function renderLog() {
     return '<div class="entry-row" style="border-right:4px solid ' + c.bg + '">'
       + '<div class="entry-badge" style="background:' + c.bg + '"></div>'
       + '<div class="entry-body">'
-      + '<div class="e-main">' + e.catName + ' &larr; ' + e.task + (e.sub ? " &rarr; " + e.sub : "") + '</div>'
-      + (e.notes ? '<div class="e-sub">' + e.notes + '</div>' : '')
-      + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+e.count : "", ].filter(Boolean).join(" | ") + '</div>'
+      + '<div class="e-main">' + esc(e.catName) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + '</div>'
+      + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
+      + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
       + '<button class="edit-btn" onclick="editEntry(' + e.id + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
       + '<button class="del-btn" onclick="delEntry(' + e.id + ')">✕</button>'
@@ -1427,7 +1497,7 @@ function clearAll() {
     saveEntries(); renderLog();
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
-    showToast("✓ הרשומות נמחקו");
+    toast("✅ הרשומות נמחקו");
     scheduleSyncPush();
   });
 }
@@ -1464,7 +1534,7 @@ function instName() {
 
 // EXPORT PDF
 function exportPDF() {
-  if (!liveOnly(ENTRIES).length) { showToast("אין רשומות"); return; }
+  if (!liveOnly(ENTRIES).length) { toast("אין רשומות"); return; }
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var dayLabel = selDay || "";
@@ -1525,9 +1595,9 @@ function exportPDF() {
         if (ti === 0) {
           rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
         }
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.sub || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + (e.count || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + (e.notes || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + esc(e.sub || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + esc(e.count || '') + '</td>';
+        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + esc(e.notes || '') + '</td>';
         rows += '</tr>';
         catRowIdx++;
       });
@@ -1573,13 +1643,13 @@ function exportPDF() {
   var w = null;
   try { w = window.open("","_blank","width=900,height=700"); } catch(e) { w = null; }
   if (!w || !w.document) {
-    showToast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב");
+    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב");
     return;
   }
   w.document.write(html);
   w.document.close();
   setTimeout(function(){ try { w.document.title = fileTitle; } catch(e){} }, 80);
-  showToast("📄 PDF נפתח!");
+  toast("📄 PDF נפתח!");
 }
 // ── Report rendering safety net ──
 // #_rpDiv is a full-white position:fixed panel put on screen *before* rendering.
@@ -1591,7 +1661,7 @@ function _hideReportDiv(div){
 function _reportError(div, e){
   _hideReportDiv(div);
   console.error('[report] rendering failed:', e);
-  showToast(
+  toast(
     (typeof html2canvas === 'undefined')
       ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
       : "⚠️ יצירת התמונה נכשלה — נסה שוב"
@@ -1654,9 +1724,9 @@ function _buildReportDiv(cb){
         rows+='<tr>';
         if(cri===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:65px">'+data.name+'</td>';
         if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+(e.sub||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;text-align:center;background:'+bg+';">'+(e.count||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+(e.notes||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
         rows+='</tr>';cri++;
       });
     });
@@ -1693,13 +1763,13 @@ function scheduleSyncPush() {
     if (!rEntries.ok || !rArchive.ok) {
       // Don't stamp tb_last_changed for data that never arrived — other devices
       // would pull the stale cloud copy over their own newer entries.
-      showToast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן");
+      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן");
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
     var rTs = await sbSet("tb_last_changed", Date.now());
-    if (!rTs.ok) { showToast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
-    showToast("✓ נשמר בענן");
+    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
+    toast("✅ נשמר בענן");
   }, 500);
 }
 
@@ -1737,8 +1807,8 @@ function saveWAPhone() {
 function sendWhatsApp(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){showToast("אין רשומות לשיתוף להיום");return;}
-  showToast("מכין תמונה...");
+  if(!todayEntries.length){toast("אין רשומות לשיתוף להיום");return;}
+  toast("מכין תמונה...");
   // Get phone number from settings field, clean it
   var rawPhone = ((document.getElementById('waPhone')||{}).value || '').trim() || getWAPhone();
   var phone = rawPhone.replace(/[^0-9+]/g,'');
@@ -1993,7 +2063,7 @@ function renderSettings() {
     var hdr = '<div class="set-hdr">'
       + '<span class="drag-handle">⠿</span>'
       + '<div class="set-badge" style="background:' + c.bg + '"></div>'
-      + '<input class="set-name-inp" id="sname-' + ci + '" value="' + cat.name + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
+      + '<input class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
@@ -2012,7 +2082,7 @@ function renderSettings() {
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
-                    + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+s+'</span>'
+                    + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
                     + '<button onclick="removeSub('+ci+',\''+safeT+'\','+si+')">×</button>'
                     + '</div>';
@@ -2031,7 +2101,7 @@ function renderSettings() {
             + 'ondragend="taskDragEnd(event)">'
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
-            + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+t+'</span>'
+            + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
             + '<button onclick="editTaskInline('+ci+','+ti+');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
             + '<button onclick="removeTask('+ci+','+ti+')" class="task-del-btn">×</button>'
             + '</div>'
@@ -2091,14 +2161,18 @@ function saveSettings() {
     }
   });
   saveCats(); saveSubs(); buildCatGrid();
-  showToast("✓ נשמר!");
+  toast(MSG_SAVED);
 }
 
-// TOAST
-function showToast(msg) {
+// TOAST — חתימה משותפת לשלושת הפרויקטים (סבב 8): toast(msg, dur).
+// dur באלפיות שנייה, אופציונלי; ברירת המחדל נשארת 2500 כמו שהיה. קודם הפרמטר
+// השני פשוט נבלע — ארבעה קוראים העבירו משך והוא לא כובד.
+var _toastTid;
+function toast(msg, dur) {
   var t = document.getElementById("toast");
   t.textContent = msg; t.className = "toast show";
-  setTimeout(function(){ t.className = "toast"; }, 2500);
+  clearTimeout(_toastTid);
+  _toastTid = setTimeout(function(){ t.className = "toast"; }, dur || 2500);
 }
 
 
@@ -2425,12 +2499,12 @@ function renderArcDetail() {
         (arcEditMode ? '<button class="arc-entry-edit" onclick="arcEditEntry(\''+jsQ(arcSelDayKey)+'\','+e.id+')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+jsQ(arcSelDayKey)+'\','+e.id+')">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
-        '<span style="color:var(--textmid);font-size:11px">'+e.catName+'</span>'+
+        '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
         '<span style="color:#bbb">←</span>'+
-        '<span style="font-weight:700;color:var(--text)">'+e.task+'</span>'+
-        (e.sub ? '<span style="color:#bbb">→</span><span style="color:#888">'+e.sub+'</span>' : '')+
-        (e.notes ? '<span style="color:#aaa;font-size:10px;flex:1;text-align:left"> · '+e.notes+'</span>' : '<span style="flex:1"></span>')+
-        (e.count ? '<span style="color:var(--accent);font-size:10px;font-weight:700">×'+e.count+'</span>' : '')+
+        '<span style="font-weight:700;color:var(--text)">'+esc(e.task)+'</span>'+
+        (e.sub ? '<span style="color:#bbb">→</span><span style="color:#888">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span style="color:#aaa;font-size:10px;flex:1;text-align:left"> · '+esc(e.notes)+'</span>' : '<span style="flex:1"></span>')+
+        (e.count ? '<span style="color:var(--accent);font-size:10px;font-weight:700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
   }
@@ -2441,10 +2515,10 @@ function renderArcDetail() {
       '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
       '<select id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
-      liveOnly(CATS).map(function(cat){ return '<option value="'+cat.letter+'">'+cat.name+'</option>'; }).join("")+
+      liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
       '<select id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
-      (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+t+'</option>'; }).join(""):"")+
+      (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
       '<input id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
       '<button class="btn-mini" onclick="arcAddEntry()" style="white-space:nowrap">+ הוסף</button>'+
@@ -2461,7 +2535,7 @@ function renderArcDetail() {
       var letter = catSel.value;
       var cat = CATS.find(function(c){ return c.letter === letter; });
       var taskSel = document.getElementById("arc-add-task");
-      if (cat && taskSel) taskSel.innerHTML = cat.tasks.map(function(t){ return '<option>'+t+'</option>'; }).join("");
+      if (cat && taskSel) taskSel.innerHTML = cat.tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join("");
     });
   }
 }
@@ -2701,7 +2775,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      showToast("⚠️ לא הצליח לטעון סנכרון", 2000);
+      toast("⚠️ לא הצליח לטעון סנכרון", 2000);
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -2800,7 +2874,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[startApp] נכשל', e);
-    showToast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן");
+    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן");
   }
 }
 
@@ -2811,8 +2885,8 @@ function selectYeshiva(y) {
 function sendSignal(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){ showToast("אין רשומות לשיתוף להיום"); return; }
-  showToast("מכין תמונה...");
+  if(!todayEntries.length){ toast("אין רשומות לשיתוף להיום"); return; }
+  toast("מכין תמונה...");
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
@@ -2842,7 +2916,6 @@ function editEntry(id) {
   if(!row) return;
   var container = row.closest('.entry-row');
   if(!container) return;
-  function esc(v){ return (v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
   div.innerHTML =
@@ -2873,7 +2946,7 @@ function saveEntry(id) {
   autoArchiveDay(e.day, e.hdate, e.gdate);   // שהעריכה תגיע גם לסנאפשוט של אותו יום
   renderLog();
   scheduleSyncPush();
-  showToast('נשמר!');
+  toast(MSG_SAVED);
 }
 
 function arcEditEntry(gdateKey, entryId) {
@@ -2895,10 +2968,10 @@ function arcEditEntry(gdateKey, entryId) {
   if(!target) return;
   target.innerHTML =
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
-    '<input id="aei_task" value="' + (e.task||'').replace(/"/g,'&quot;') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input id="aei_sub" value="' + (e.sub||'').replace(/"/g,'&quot;') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input id="aei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input id="aei_notes" value="' + (e.notes||'').replace(/"/g,'&quot;') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<button onclick="arcSaveEntry(\'' + qk + '\',' + entryId + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
@@ -2910,7 +2983,7 @@ function arcSaveEntry(gdateKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { showToast('⚠️ טופס העריכה נסגר — נסה שוב'); return; }
+  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -2930,14 +3003,14 @@ function arcSaveEntry(gdateKey, entryId) {
     // אין מה לשמור — לא לשקר למשתמש
     console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
-    showToast('⚠️ הרשומה לא נמצאה — לא נשמר');
+    toast('⚠️ הרשומה לא נמצאה — לא נשמר');
     return;
   }
   saveEntries();
   saveArchive();
   renderArcDetail();
   renderLog();
-  showToast('נשמר!');
+  toast(MSG_SAVED);
 }
 
 // Enter key support for entry and edit tabs
