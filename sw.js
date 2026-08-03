@@ -1,4 +1,4 @@
-var CACHE_NAME = 'yoman-avoda-v12';
+var CACHE_NAME = 'yoman-avoda-v13';
 
 // App shell — must be cached for the app to work offline.
 var CORE = [
@@ -55,14 +55,39 @@ function offlineResponse() {
   });
 }
 
+// CDN cache self-healing. A CDN script missing from the cache (deleted by a
+// sibling app before the activate prefix fix, or a transient network failure
+// during install) was never re-added: at runtime the page loads it as a no-cors
+// request, the response is opaque, and networkFirst refuses to store it. Runs
+// on activate and once per SW startup, fetches only what's missing, and any
+// failure is silent — so damaged devices heal on their own, without waiting
+// for a new version.
+function ensureCdnCached() {
+  return caches.open(CACHE_NAME).then(function(cache) {
+    return Promise.all(CDN_ASSETS.map(function(url) {
+      return cache.match(url, { ignoreVary: true }).then(function(hit) {
+        if (hit) return;
+        return fetch(new Request(url, { mode: 'cors', credentials: 'omit' }))
+          .then(function(res) {
+            if (res && res.ok && res.type !== 'opaque') {
+              console.log('[SW] healed CDN asset:', url);
+              return cache.put(url, res);
+            }
+          });
+      }).catch(function() {});
+    }));
+  }).catch(function() {});
+}
+ensureCdnCached(); // top-level = runs once every time the SW wakes up
+
 // Install - cache the app shell (required) and the CDN scripts (best effort)
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       console.log('[SW] Caching core assets');
       return cache.addAll(CORE).then(function() {
-        // A CDN hiccup must not fail the whole install — those are cached again
-        // on the first successful runtime fetch anyway.
+        // A CDN hiccup must not fail the whole install — ensureCdnCached()
+        // fills in whatever is missing on activate / the next SW startup.
         return Promise.all(CDN_ASSETS.map(function(url) {
           return fetch(new Request(url, { mode: 'cors', credentials: 'omit' }))
             .then(function(res) {
@@ -88,16 +113,22 @@ self.addEventListener('activate', function(event) {
           console.warn('[SW] index.html missing from ' + CACHE_NAME + ' — old caches kept');
           return;
         }
+        // ⚠️ All three apps live on the same origin (ygtotlrl-lab.github.io) and
+        // share one CacheStorage. Delete ONLY this app's caches (prefix
+        // 'yoman-avoda-') — deleting "everything that isn't CACHE_NAME" wiped
+        // the caches of schar-limud and hanhala-ruchanit and broke their
+        // offline support. Never remove this filter.
         return caches.keys().then(function(cacheNames) {
           return Promise.all(
             cacheNames.filter(function(name) {
-              return name !== CACHE_NAME;
+              return name.indexOf('yoman-avoda-') === 0 && name !== CACHE_NAME;
             }).map(function(name) {
               return caches.delete(name);
             })
           );
         });
       })
+      .then(function() { return ensureCdnCached(); })
       .then(function() { return self.clients.claim(); })
   );
 });
