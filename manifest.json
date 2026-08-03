@@ -3,12 +3,13 @@
   "short_name": "יומן עבודה",
   "description": "אפליקציית יומן עבודה לניהול שעות ומשימות",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#F0F4FA",
   "theme_color": "#1E6FBF",
-  "dir": "rtl",
   "lang": "he",
+  "dir": "rtl",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icons/icon-192.png",
