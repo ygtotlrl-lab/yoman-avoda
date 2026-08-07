@@ -1,8 +1,20 @@
 # yoman-avoda — Native WebView APK
 
 A native Android **WebView** shell (not a TWA) that loads the app from bundled
-assets: `file:///android_asset/index.html`. Replaces the PWABuilder TWA so that
-image sharing attaches the file via a native bridge.
+assets: `file:///android_asset/index.html`. It replaces the PWABuilder TWA so
+that image sharing can attach the file via a native bridge.
+
+## Why WebView and never a TWA
+
+**Do not rebuild this as a TWA, and do not use PWABuilder** (it only produces
+TWAs). A TWA is not a standalone component — it runs the site *inside Chrome*
+and merely hides the address bar. The content filtering installed on the users'
+devices blocks Chrome, so a TWA build never opens at all. A WebView renders
+in-process and never goes through Chrome, so the filter does not touch it.
+
+This is measured, not theoretical: gius shipped a PWABuilder TWA and did not
+open on the users' devices, while this app and hanhala — both WebView — work.
+gius has since been converted to a WebView shell built the same way.
 
 - **Package ID:** `com.yoman.avoda`
 - **Loads:** `file:///android_asset/index.html` (offline-bundled; Supabase sync still uses the network)
