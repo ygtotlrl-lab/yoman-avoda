@@ -1,4 +1,4 @@
-var CACHE_NAME = 'yoman-avoda-v14';
+var CACHE_NAME = 'yoman-avoda-v15';
 
 // App shell — must be cached for the app to work offline.
 var CORE = [
