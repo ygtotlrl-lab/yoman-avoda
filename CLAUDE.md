@@ -57,8 +57,9 @@ git push -u origin <שם-הענף>   # דחיפה לענף העבודה — לא
 2. **קידום `CACHE_NAME` ב-`sw.js` וגם `<meta name="app-version">` ב-`index.html` בכל שינוי קוד** (הסעיף למעלה) — בלי זה העדכון לא מגיע למשתמשים.
 3. **smali בלבד** לתיקון URLs ב-APK
 4. **cache APK** — תמיד `TS=$(date +%s)` בשם
-5. **מקור אמת יחיד = `index.html`** — זה הקובץ שמעטפת ה-APK טוענת (Pages: `.../yoman-avoda/index.html`), שאליו מצביע `start_url` במניפסט, וגם היעד של מנגנון האוטו-אפדייט הפנימי. כל עדכון קוד נכנס לכאן בלבד. **אסור ליצור קבצי HTML כפולים** (בעבר היה `יומן עבודה.html` — שונה ל-`index.html`). **`GITHUB_FILE` במנגנון האוטו-אפדייט חייב להתאים לשם הקובץ האמיתי בריפו** (`index.html`) — אם הוא מצביע על שם אחר, `RAW_URL` מקבל 404, האפליקציה לא מזהה גרסה חדשה, ועדכונים לא מגיעים למכשירים מותקנים.
+5. **מקור אמת יחיד = `index.html`** — זה הקובץ שמעטפת ה-APK מטמיעה ב-`assets/` וטוענת (דרך `android/copy-assets.sh`), שאליו מצביע `start_url` במניפסט, וגם היעד של מנגנון האוטו-אפדייט הפנימי (Pages: `.../yoman-avoda/index.html`). כל עדכון קוד נכנס לכאן בלבד. **אסור ליצור קבצי HTML כפולים** (בעבר היה `יומן עבודה.html` — שונה ל-`index.html`). **`GITHUB_FILE` במנגנון האוטו-אפדייט חייב להתאים לשם הקובץ האמיתי בריפו** (`index.html`) — אם הוא מצביע על שם אחר, `RAW_URL` מקבל 404, האפליקציה לא מזהה גרסה חדשה, ועדכונים לא מגיעים למכשירים מותקנים.
 6. **חתימת APK: רק עם `signing/yoman.keystore` (alias `yoman`, pass `yoman123`)** — המפתח הקבוע. לעולם לא ליצור keystore חדש, אחרת APK עתידי לא יתקין מעל הקיים.
+7. **המעטפת היא WebView מקורי (`android/`) — לעולם לא TWA ולא PWABuilder.** TWA מריץ את האתר בתוך כרום, וסינון התוכן במכשירים של המשתמשים חוסם את כרום. ר' הפרק "APK — מעטפת WebView מקורית".
 
 ## חתימת APK — מפתח קבוע (לעולם לא משתנה!)
 - **Keystore בריפו:** `signing/yoman.keystore` (PKCS12, RSA 2048, תקף עד 2053)
@@ -77,14 +78,44 @@ git push -u origin <שם-הענף>   # דחיפה לענף העבודה — לא
   ```
 - **שים לב:** המפתח הקודם (`/tmp/yoman.keystore`) אבד; המפתח הקבוע החדש מחליף אותו. ההתקנה הראשונה של APK חתום במפתח החדש דורשת **הסרה חד-פעמית** של האפליקציה הישנה (אי-התאמת חתימה); מאז — קבוע לתמיד.
 
-## APK — מעטפת ושיתוף קבצים
-- אייקון: `assets/icons/icon-512.png` (לוח משימות + גרף)
-- URL שהמעטפת טוענת: `https://ygtotlrl-lab.github.io/yoman-avoda/index.html`
-- תיקוני URL ב-APK קיים: smali בלבד, לא binary patch
-- **לתמיכת `navigator.share({files})`** (צירוף תמונה לוואטסאפ/סיגנל): מומלץ **TWA דרך PWABuilder** (Chrome אמיתי — תומך מובנה ב-Web Share עם קבצים), ולחתום עם ה-keystore הקבוע למעלה. WebView פשוט (`com.yoman.avoda.MainActivity`) דורש גישור מקורי (WebChromeClient.onShowFileChooser + Intent ACTION_SEND/FileProvider) וקומפילציה.
+## APK — מעטפת WebView מקורית (⛔ לא TWA)
+המעטפת היא פרויקט אנדרואיד מקורי ב-`android/` — `Activity` יחידה עם `WebView`
+(`com.yoman.avoda.MainActivity`). תיעוד מלא ב-`android/README.md`.
+
+### ⛔ אין להחליף ל-TWA ואין לבנות מחדש ב-PWABuilder
+TWA (Trusted Web Activity) אינו רכיב עצמאי — הוא מריץ את האתר **בתוך כרום**
+ורק מסתיר את שורת הכתובת. **סינון התוכן שמותקן במכשירים של המשתמשים חוסם את
+כרום**, ואיתו נופל כל TWA. `WebView` הוא מנוע רינדור שרץ בתוך תהליך האפליקציה
+ואינו עובר דרך כרום, ולכן הסינון לא נוגע בו.
+
+זה לא תיאורטי: gius נבנתה ב-PWABuilder כ-TWA ופשוט **לא נפתחה** אצל המשתמשים,
+בעוד yoman ו-hanhala (שתיהן WebView) עובדות. גם gius הומרה מאז ל-WebView.
+**PWABuilder יודע לייצר רק TWA** — הבנייה היא מ-`android/`, דרך
+`.github/workflows/build-apk.yml` או Gradle מקומי.
+
+> תיעוד קודם כאן המליץ על "TWA דרך PWABuilder" בשביל `navigator.share({files})`.
+> **ההמלצה הזו שגויה ובוטלה** — היא הייתה מחליפה מעטפת עובדת במעטפת חסומה.
+> השיתוף פתור ממילא בגשר מקורי, ולא דרך `navigator.share`.
+
+### פרטי המעטפת
+- אייקון: `res/mipmap-*/ic_launcher.png` (לוח משימות + גרף, מ-`icons/icon-512.png`)
+- **מה המעטפת טוענת:** `file:///android_asset/index.html` — עותק מוטבע של
+  `index.html` שמועתק ע"י `android/copy-assets.sh`. לכן **כל שחרור קוד מצריך
+  בנייה מחדש של ה-APK**; מנגנון האוטו-אפדייט מול raw GitHub מזהה גרסה חדשה,
+  אבל `location.reload()` ב-`file://` טוען שוב את העותק המוטבע.
+  (gius, לשם השוואה, טוענת את כתובת ה-Pages החיה ולכן לא צריכה APK חדש בכל שחרור.)
+- **שיתוף תמונות:** גשר `window.AndroidShare.shareImage(base64, mime, appPackage)` —
+  כותב קובץ ל-cache, חושף אותו דרך `FileProvider` ויורה `ACTION_SEND`.
+  `sendWhatsApp()`/`sendSignal()` קוראות לו, עם נפילה-חזרה לדפדפן כשאין גשר.
+- בורר קבצים: `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>`.
+- תיקוני URL ב-APK **קיים ובנוי** (בלי מקור): smali בלבד, לא binary patch.
 
 ## בנייה — דורש כלים שאינם זמינים בכל סביבה
-לבניית/חתימת APK צריך Android SDK (`aapt2`, `d8`, `apksigner`/`zipalign`) או Bubblewrap+Node. אם הם חסרים — השתמש ב-PWABuilder ואז חתום עם `signing/yoman.keystore`.
+לבנייה מקומית צריך Android SDK (`aapt2`, `d8`, `apksigner`/`zipalign`).
+בסביבת הענן הם אינם מותקנים, ו-`dl.google.com` חסום — לכן הדרך המעשית היא
+**`.github/workflows/build-apk.yml`**: Actions → Build Signed APK → Run workflow.
+ה-workflow מעתיק את הנכסים, בונה, וחותם עם `signing/yoman.keystore`.
+**לא להשתמש ב-PWABuilder** — הוא מייצר TWA (ר' האזהרה למעלה).
 
 ## מצב נוכחי
 - ייצוא PDF ושיתוף וואטסאפ (השיתוף מייצר JPEG דרך `_buildReportDiv`/`_renderReport`).
