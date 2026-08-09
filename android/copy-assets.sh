@@ -1,17 +1,24 @@
 #!/bin/bash
-# Copy the live web app into the APK's assets/ (single source of truth = repo root).
-# Run from the repo root (or anywhere): it resolves paths relative to this script.
+# ⛔ הוצא משימוש — המעטפת אינה טוענת נכסים מוטבעים.
+#
+# עד גרסה 1 המעטפת טענה `file:///android_asset/index.html`, והסקריפט הזה העתיק
+# לשם את `index.html`/`manifest.json`/`sw.js`/`icons` מהריפו. מגרסה 2 המעטפת
+# טוענת את האתר החי:
+#
+#     https://ygtotlrl-lab.github.io/yoman-avoda/
+#
+# ולכן אין מה להעתיק, ו**אין להחזיר את ההעתקה**. שתי סיבות, והשנייה היא
+# המכרעת:
+#
+#   1. עותק מוטבע הוא מקור אמת שני שרק מתיישן — בניגוד לכלל קריטי 5.
+#   2. ⛔ עותק file:// חי ב-**origin אחסון אחר** מהאתר ב-https. localStorage
+#      של `file://` ושל `https://ygtotlrl-lab.github.io` הם שתי מחיצות נפרדות
+#      לגמרי. רשומה שנרשמה בעלייה ראשונה בלי רשת לתוך העותק המוטבע לא
+#      הייתה נראית לאפליקציה האמיתית לעולם — אובדן נתונים שקט באפליקציה
+#      שכל תפקידה הוא רישום.
+#
+# ר' `android/README.md`, הפרק «למה אין יותר נכסים מוטבעים».
 set -e
-HERE="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$HERE/.." && pwd)"
-ASSETS="$HERE/app/src/main/assets"
-
-rm -rf "$ASSETS"
-mkdir -p "$ASSETS/icons"
-cp "$ROOT/index.html"     "$ASSETS/index.html"
-cp "$ROOT/manifest.json"  "$ASSETS/manifest.json"
-cp "$ROOT/sw.js"          "$ASSETS/sw.js"
-cp "$ROOT/icons/"*        "$ASSETS/icons/" 2>/dev/null || true
-
-echo "Copied web assets -> $ASSETS"
-ls -la "$ASSETS"
+echo "copy-assets.sh הוצא משימוש — המעטפת טוענת את האתר מהרשת ואין נכסים להעתיק."
+echo "ראה android/README.md."
+exit 0

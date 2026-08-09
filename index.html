@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="10-2026-08-09-1">
+<meta name="app-version" content="11-2026-08-09-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2682,11 +2682,32 @@ function sendWhatsApp(){
   });
 }
 
-// Native share bridge: in the WebView APK, window.AndroidShare.shareImage(base64, mime, pkg)
-// decodes the image to a cache file (FileProvider) and fires ACTION_SEND to the target app.
+// Native share bridge: in the WebView APK the shell decodes the image to a cache file
+// (FileProvider) and fires ACTION_SEND to the target app.
 // Returns true if the native bridge handled it; false in a plain browser (use Web Share / fallback).
+//
+// ⚠️ שני גשרים, ולא במקרה. מאז שהמעטפת טוענת את האתר **מהרשת** ולא מנכסים
+// מוטבעים, גשר מקורי הוא הרשאה שניתנת לדף שמגיע מהרשת — ולכן הוא חייב להיות
+// מוגבל לדומיין שלנו:
+//   • `AndroidShareBridge.postMessage` — `WebViewCompat.addWebMessageListener`,
+//     שבו **WebView עצמו** בודק את רשימת המקורות המותרים, פר-frame, לפני
+//     שההודעה נמסרת. זה המסלול המועדף ולכן הוא נוסה ראשון.
+//   • `AndroidShare.shareImage` — הגשר הישן (`addJavascriptInterface`), למכשירים
+//     עם WebView ישן מ-88. שם ההגבלה נאכפת בצד הג'אווה: המעטפת מחברת אותו רק
+//     כשהיא על הדומיין שלנו, ובכל קריאה מאמתת מחדש את מקור הדף.
+// **אין להסיר את סדר הניסיון הזה** — נפילה-חזרה לגשר הישן כשהחדש קיים היא
+// ויתור על האכיפה שהפלטפורמה נותנת בחינם.
 function _androidShareImage(canvas, appPackage){
   try {
+    var br = window.AndroidShareBridge;
+    if (br && typeof br.postMessage === 'function') {
+      br.postMessage(JSON.stringify({
+        data: canvas.toDataURL('image/jpeg',0.95).split(',')[1],
+        mime: 'image/jpeg',
+        pkg:  appPackage || ''
+      }));
+      return true;
+    }
     if (window.AndroidShare && typeof window.AndroidShare.shareImage === 'function') {
       var b64 = canvas.toDataURL('image/jpeg',0.95).split(',')[1];
       window.AndroidShare.shareImage(b64, 'image/jpeg', appPackage || '');
@@ -3691,6 +3712,110 @@ function loadLocalData() {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   הגירה חד-פעמית: מפתחות שריד מלפני הרב-דיירות
+   ──────────────────────────────────────────────────────────────────────────
+   **הבעיה שנמדדה** (אוגוסט 2026, בדפדפן אמיתי): הדומיין תפס 4.31MB מתוך
+   ~5MB (86%), ויומן עבודה לבדה 3.52MB. הסיבה — ארבעה מפתחות **כפולים**:
+
+       tb_archive = 157 פריטים   ·   tb_archive_rishon = 167
+       tb_entries = 310 פריטים   ·   tb_entries_rishon = 451
+
+   המפתחות **בלי הסיומת** הם שריד: `LS` מתחיל כמחרוזת ריקה והופך ל-`'_rishon'`
+   רק אחרי בחירת הישיבה, ולכן קוד שקדם לרב-דיירות כתב אליהם. מאז אף אחד לא
+   קורא ולא כותב אליהם — הם פשוט תופסים ~1.5MB מהמכסה **המשותפת לארבע
+   האפליקציות**. זו הצרכנית הגדולה בדומיין, ולכן זה לא נזק תיאורטי.
+
+   ⛔ **מחיקה עיוורת אסורה.** 157 פריטים בשריד מול 167 בסיומת אינם בהכרח
+   תת-קבוצה: ייתכן פריט שנכתב לשריד ומעולם לא הגיע ליעד. לכן ההגירה בנויה
+   כשרשרת שערים, ומחיקה היא **הצעד האחרון** ורק אחרי אימות:
+
+     1. **מיזוג אמיתי, לא השוואת אורכים.** משתמשים במנוע המיזוג הקיים
+        (`mergeEntries`/`mergeArchive`) כשהצד עם הסיומת הוא ה"מרוחק" — ולכן
+        הוא מנצח בשוויון, ו**tombstone שלו גובר על רשומת שריד חסרת חותמת**.
+        זה מה שמונע מרשומה שנמחקה מאז לקום לתחייה.
+     2. **אימות פריט-פריט.** כל פריט שריד חייב להיות מיוצג בתוצאה. פריט
+        אחד שאינו — ההגירה **מתבטלת כולה** לאותו מפתח, והשריד נשאר.
+     3. **כותבים לפני שמוחקים**, ורק כתיבה שהחזירה `true` מתירה מחיקה
+        (כלל ברזל 2 — אין כישלון שקט).
+     4. **אידמפוטנטי:** אין שריד ⇒ הפונקציה יוצאת מיד. הרצה שנייה היא no-op.
+
+   ⛔ **רק ראשון לציון.** המפתחות חסרי הסיומת קדמו לרב-דיירות, כלומר כל
+   תוכנם שייך לראשון לציון. מיזוג שלהם לתוך רמת אביב היה **דליפה בין
+   מוסדות** — בדיוק מה שסיומת ה-`LS` באה למנוע.
+
+   **הפינוי אינו בלתי נראה:** כל הגירה, וכל **דילוג** על הגירה, נרשמים ביומן
+   הפינוי (`LS_CFG.logKey`) ומוצגים בהגדרות ← 💾 אחסון מקומי.
+   ══════════════════════════════════════════════════════════════════════════ */
+var TB_LEGACY_SPECS = [
+  { legacy: 'tb_entries', suffix: '_rishon', label: 'רשומות היומן',
+    keyOf: function (r) { return entryKey(r); },
+    merge: function (l, r) { return mergeEntries(l, r); } },
+  { legacy: 'tb_archive', suffix: '_rishon', label: 'ארכיון ימים',
+    keyOf: function (r) { return archiveKey(r); },
+    merge: function (l, r) { return mergeArchive(l, r); } }
+];
+function migrateLegacyLsKeys() {
+  var report = { ran: false, cleared: [], merged: 0, freed: 0, skipped: [] };
+  if (YESHIVA !== 'rishon') return report;   // ⛔ ר' ההערה — דליפה בין מוסדות
+  report.ran = true;
+
+  TB_LEGACY_SPECS.forEach(function (sp) {
+    var raw = null;
+    try { raw = localStorage.getItem(sp.legacy); } catch (e) { raw = null; }
+    if (raw == null) return;                 // אין שריד — אידמפוטנטי
+    var bytes = (sp.legacy.length + raw.length) * 2;
+
+    var legacy = null;
+    try { legacy = JSON.parse(raw); } catch (e) { legacy = null; }
+    if (!Array.isArray(legacy)) {
+      // ערך פגום: אי אפשר לאמת שלא נאבד ממנו כלום, ולכן לא נוגעים בו.
+      lsLog('שריד לא תקין — לא נמחק', sp.legacy, 0);
+      report.skipped.push(sp.legacy); return;
+    }
+
+    var target = sp.legacy + sp.suffix;
+    var cur = lsRead(target, [], 'array') || [];
+    var merged = sp.merge(legacy, cur);      // השריד = מקומי, היעד = "מרוחק"
+
+    // ── שער האימות: כל פריט שריד חייב להיות מיוצג בתוצאה ──
+    var inMerged = {}, inTarget = {};
+    merged.forEach(function (r) { var k = sp.keyOf(r); if (k != null) inMerged[String(k)] = 1; });
+    cur.forEach(function (r) { var k = sp.keyOf(r); if (k != null) inTarget[String(k)] = 1; });
+    var added = 0, lost = 0, unkeyed = 0;
+    legacy.forEach(function (r) {
+      if (!r || typeof r !== 'object') return;          // זבל — לא פריט נתונים
+      var k = sp.keyOf(r);
+      if (k == null) { unkeyed++; return; }             // אובייקט בלי מזהה: לא ניתן לאימות
+      k = String(k);
+      if (!inMerged[k]) lost++;
+      else if (!inTarget[k]) added++;
+    });
+    if (lost || unkeyed) {
+      lsLog('הגירת שריד בוטלה', sp.legacy + ' — ' + (lost + unkeyed) + ' פריטים לא אומתו', 0);
+      report.skipped.push(sp.legacy); return;
+    }
+
+    // ── כותבים לפני שמוחקים, ורק כתיבה שהצליחה מתירה מחיקה ──
+    if (added && !lsSetArray(target, merged, _tbRecTs)) {
+      lsLog('הגירת שריד נדחתה', sp.legacy + ' — הכתיבה ל-' + target + ' נכשלה', 0);
+      report.skipped.push(sp.legacy); return;
+    }
+
+    lsRemove(sp.legacy);
+    report.cleared.push(sp.legacy);
+    report.merged += added;
+    report.freed += bytes;
+    lsLog('שריד נוקה', sp.label + ': ' + added + ' פריטים מוזגו ל-' + target, bytes);
+  });
+
+  if (report.cleared.length) {
+    console.log('[legacy] נוקו ' + report.cleared.length + ' מפתחות שריד (' +
+      lsFmtBytes(report.freed) + ' פונו), ' + report.merged + ' פריטים מוזגו פנימה');
+  }
+  return report;
+}
+
 function selectYeshiva(y) {
   YESHIVA  = y;
   KV_TABLE = (y === 'ramataviv') ? 'kv_ramataviv' : 'kv_rishon';
@@ -3719,7 +3844,11 @@ function selectYeshiva(y) {
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
   // עכשיו — ומיד אחריה המדידה והפינוי היזום, **לפני** loadLocalData, כדי
   // שהטעינה והמיזוג שאחריה כבר יכתבו לאחסון שיש בו מקום.
-  try { lsRebuildPolicy(); lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
+  // ⚠️ ההגירה רצה **בין** בניית המדיניות למדידה: היא מפנה ~1.5MB, ולכן
+  // `lsBoot` שאחריה רואה את הניצולת האמיתית ולא מפנה ארכיון שאין צורך
+  // לפנות. היא חייבת לרוץ גם **לפני** `loadLocalData`, כדי שהטעינה תראה
+  // את המערך הממוזג ולא את זה שלפני ההגירה.
+  try { lsRebuildPolicy(); migrateLegacyLsKeys(); lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
   // סימוני "ממתין לסנכרון" (סבב 12). **pendReload ולא pendBoot בלבד** —
   // מפתח הסימונים נושא סיומת מוסד, וסימון של ראשון לציון אינו תקף לרמת אביב.
   try { pendReload(); pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }

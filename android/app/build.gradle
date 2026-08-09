@@ -10,8 +10,11 @@ android {
         applicationId "com.yoman.avoda"   // same ID as the existing app
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        // 1 = the shell that loaded file:///android_asset/index.html.
+        // 2 = loads the live site (https://ygtotlrl-lab.github.io/yoman-avoda/).
+        // Anything installing over an earlier build has to be higher.
+        versionCode 2
+        versionName "2.0"
     }
 
     buildTypes {
@@ -28,4 +31,7 @@ android {
 
 dependencies {
     implementation 'androidx.core:core:1.13.1'
+    // WebViewCompat.addWebMessageListener — the origin allow-list for the share bridge
+    // is enforced by WebView itself, per frame. See MainActivity#installShareBridge.
+    implementation 'androidx.webkit:webkit:1.11.0'
 }
