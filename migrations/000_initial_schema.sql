@@ -67,13 +67,20 @@ alter table public.kv_rishon enable row level security;
 drop policy if exists kv_rishon_all on public.kv_rishon;
 create policy kv_rishon_all on public.kv_rishon using (true) with check (true);
 
--- ⚠️ ההרשאות משקפות את **המצב שנמדד במסד החי**, ולא המלצה: ל-`anon` יש בפועל
---    גם `delete` ו-`truncate` — ירושה מברירות המחדל של פרויקט Supabase
---    סטנדרטי, שאיש לא הסיר. האפליקציה אינה משתמשת בהן (כל כתיבה היא
---    `upsert`). ⛔ צמצומן הוא שינוי מודל אבטחה, כלומר החלטת המנהל ולא של
---    הסשן (כלל ברזל 9); השורה המצמצמת יושבת מוערת בסוף הקובץ.
+-- ⚠️ ההרשאות של `anon` צומצמו בסבב 29, בהחלטת המנהל (`migrations/001`).
+--    ⛔ **`revoke` לפני `grant`, ואין לקצר לשורת `grant` אחת:** פרויקט
+--    Supabase סטנדרטי מגיע עם `alter default privileges … grant all`, ולכן
+--    הטבלה **נולדת** עם `delete` ו-`truncate` ל-anon — ו-GRANT הוא אדיטיבי
+--    בלבד ואינו מסיר אותם. השורה הזו היא גם שורת ההתכנסות להתקנה שנוצרה
+--    לפני סבב 29.
+-- ⛔ אין להחזיר ל-anon את `delete`/`truncate` (סבב 29) — האפליקציה אינה
+--    מוחקת שורות בשום מסלול (`sbSet` הוא `upsert`, ומחיקת רשומה היא
+--    tombstone בתוך הערך), ולכן ההרשאה מיותרת ורק פותחת ריקון של מוסד שלם
+--    למי שמחזיק את המפתח הציבורי.
+revoke delete, truncate, references, trigger on public.kv_rishon from anon, authenticated;
+grant select, insert, update on public.kv_rishon to anon, authenticated;
 grant select, insert, update, delete, truncate, references, trigger
-  on public.kv_rishon to anon, authenticated, service_role;
+  on public.kv_rishon to service_role;
 
 
 -- ── רמת אביב ────────────────────────────────────────────────────────────────
@@ -86,8 +93,11 @@ alter table public.kv_ramataviv enable row level security;
 drop policy if exists kv_ramataviv_all on public.kv_ramataviv;
 create policy kv_ramataviv_all on public.kv_ramataviv using (true) with check (true);
 
+-- ⚠️ אותו דפוס כמו ב-`kv_rishon` שלמעלה, ומאותה סיבה — ר' ההסבר שם.
+revoke delete, truncate, references, trigger on public.kv_ramataviv from anon, authenticated;
+grant select, insert, update on public.kv_ramataviv to anon, authenticated;
 grant select, insert, update, delete, truncate, references, trigger
-  on public.kv_ramataviv to anon, authenticated, service_role;
+  on public.kv_ramataviv to service_role;
 
 
 -- ============================================================================
@@ -103,11 +113,24 @@ grant select, insert, update, delete, truncate, references, trigger
 
 
 -- ============================================================================
--- ⚠️ הצעה שלא בוצעה — הקשחת ההרשאות
+-- ✅ ההצעה מסבב 28 — בוצעה בסבב 29
 -- ============================================================================
--- ⛔ **השורות הבאות אינן מופעלות** — ר' הנימוק למעלה (החלטת מנהל):
+-- בסוף הקובץ הזה ישבה עד סבב 28 הצעה מוערת לצמצם את `delete`/`truncate`
+-- של `anon` על שתי הטבלאות. **המנהל אישר, והיא מיושמת** — גם כאן (השורות
+-- שליד כל טבלה) וגם ב-`migrations/001_revoke_delete_anon.sql` להתקנה
+-- קיימת. מה שנמדד לפני הביצוע: **אפס** קריאות `.delete()` ל-PostgREST
+-- בכל הריפו.
 --
---   revoke delete, truncate on public.kv_rishon    from anon;
---   revoke delete, truncate on public.kv_ramataviv from anon;
+-- ⚠️ **`authenticated` צומצם יחד עם `anon`**, בהחלטת המנהל: לתפקיד היו
+-- בדיוק אותן הרשאות מלאות, מאותה ירושה, ופתיחת signup או Auth בעתיד הייתה
+-- פוערת את ההגנה בשקט. זהו גם **יישור ל-gius**, שמיגרציה 0002 שלה כבר
+-- צמצמה את שניהם.
+-- ⚠️ **הצמצום נעשה כשאין משתמשי Auth כלל** (`auth.users` ריקה), ולכן הוא
+-- **אינו נבדק מול מסלול חי**. אם ייפתח Auth בעתיד — יש לוודא
+-- ש-`select, insert, update` מספיקים למסלול שייבנה.
+-- ⛔ `service_role` לא נגע — הוא תפקיד השרת.
 --
--- ⚠️ לפני הפעלה — לוודא שאין מסלול כתיבה חדש שנשען עליהן.
+-- ⛔ **ובפרויקט המשותף יש שתי טבלאות שאין לגעת בהן:** `sync_log`
+-- ו-`kv_backup` (של האחיות) מקבלות `insert`+`select` בלבד ל-anon —
+-- **בלי `update`** — כדי שלא ניתן יהיה לזייף רישום ביומן ראיות.
+-- ר' כלל ברזל 10 סעיף 9.
