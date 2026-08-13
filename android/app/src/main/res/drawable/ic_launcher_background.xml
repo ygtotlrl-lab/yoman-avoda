@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- רקע ה-adaptive-icon. תואם למדרג של icons/icon.svg (סבב 22, עיצוב "שכבות"). -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#0A4DAC"/>
+    <gradient
+        android:type="linear"
+        android:angle="315"
+        android:startColor="#2A4E8C"
+        android:endColor="#0E2145"/>
 </shape>

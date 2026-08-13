@@ -12,9 +12,10 @@ android {
         targetSdk 34
         // 1 = the shell that loaded file:///android_asset/index.html.
         // 2 = loads the live site (https://ygtotlrl-lab.github.io/yoman-avoda/).
+        // 3 = new launcher icon ("שכבות", round 22). Shell behaviour unchanged.
         // Anything installing over an earlier build has to be higher.
-        versionCode 2
-        versionName "2.0"
+        versionCode 3
+        versionName "2.1"
     }
 
     buildTypes {
