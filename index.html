@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="18-2026-08-14-2">
+<meta name="app-version" content="19-2026-08-14-3">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2359,6 +2359,53 @@ function tbRowOf(kvKey, rec) {
   if (kvKey === 'tb_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
   return row;
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   סדר טעינה יציב לשורות הענן (סבב 31)
+   ══════════════════════════════════════════════════════════════════════════
+   עד סבב 30 הנתונים נטענו כמערך יחיד מ-`kv`, ולכן הם הגיעו **בסדר שבו נשמרו**.
+   שכבת השורות החליפה את זה בשאילתה בלי `ORDER BY` — ו-Postgres אינו מבטיח סדר
+   בלעדיה. הסדר נקבע לפי תוכנית הריצה ומשתנה בין טעינה לטעינה.
+
+   ⚠️ וזה **לא** רק עניין של אסתטיקה: `getAllArchiveDays` ממפתחת יום לפי `gdate`,
+      ומטא-הדאטה נלקחת מהסנאפשוט ה**ראשון** שנתקלים בו. כשקיימים שני סנאפשוטים
+      לאותו יום — וקיימים, ר' `checkDayChange` — התאריך העברי של אותו יום התחלף
+      בין טעינה לטעינה. נמדד ברמת אביב: «11 אוגוסט 2026» הופיע פעם כ«כ״ח אב»
+      ופעם כ«כ״ט אב», משני סנאפשוטים מתחרים.
+
+   ⛔ אין להסיר את הסדר משני המקומות (סבב 31) — `order()` בשאילתה נותן דטרמיניזם
+      ברמת המסד, ו-`tbSortRows` נותן את הסדר ה**סמנטי** שהיה לפני המעבר: ארכיון
+      מהיום החדש לישן (כמו `ARCHIVE.unshift`), רשומות לפי `id` יורד (כמו המיון
+      שכבר רץ אחרי המיזוג). שאילתה לבדה אינה מספיקה — `rec_key` הוא מחרוזת,
+      ומיון לקסיקוגרפי שלה אינו סדר תאריכים.
+
+   ⚠️ הסדר המקורי של מערך ה-`kv` הוא סדר **הכנסה** היסטורי ואינו נגזר מהשורות
+      עצמן (נמדד: אינו מונוטוני לא בחותמת ולא בתאריך). מה שנשמר כאן הוא הסדר
+      הסמנטי ו**התוצאה המוצגת**, לא רצף ההכנסה — ר' `tools/test_round31_archive.mjs`.
+   ══════════════════════════════════════════════════════════════════════════ */
+function gdateOrderTs(g) {
+  var p = parseGregLike(g);
+  if (!p) return -1;
+  return Date.UTC(p.y, p.m - 1, p.d);
+}
+function tbSortRows(kvKey, arr) {
+  var a = (Array.isArray(arr) ? arr : []).slice();
+  if (kvKey === 'tb_archive') {
+    a.sort(function (x, y) {
+      var tx = gdateOrderTs(x && x.gdate), ty = gdateOrderTs(y && y.gdate);
+      if (tx !== ty) return ty - tx;                       // יום חדש קודם
+      var ix = Number(x && x.id) || 0, iy = Number(y && y.id) || 0;
+      if (ix !== iy) return iy - ix;
+      return String(archiveKey(x)) < String(archiveKey(y)) ? -1 : 1;   // שובר שוויון יציב
+    });
+  } else {
+    a.sort(function (x, y) {
+      var ix = Number(x && x.id) || 0, iy = Number(y && y.id) || 0;
+      if (ix !== iy) return iy - ix;
+      return String(entryKey(x)) < String(entryKey(y)) ? -1 : 1;
+    });
+  }
+  return a;
+}
 // משיכה. מחזירה `{ok, data}` — `ok:false` פירושו «אין ראיה», וכל אתר קריאה
 // נופל-חזרה לבלוק ה-kv. ⛔ אין להחזיר `ok:true` על תשובה שאינה מערך (סבב 30):
 // טבלה חסרה מחזירה שגיאה, ו-`ok` על מערך ריק היה נקרא כ«הענן ריק» ומוחק.
@@ -2368,7 +2415,8 @@ async function tbRowsGet(kvKey) {
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    var res = await withTimeout(sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA));
+    var res = await withTimeout(sb.from(t).select('rec_key,updated_at,data')
+      .eq('yeshiva', YESHIVA).order('rec_key', { ascending: true }));
     if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
     var map = {}, out = [];
     res.data.forEach(function (r) {
@@ -2377,7 +2425,7 @@ async function tbRowsGet(kvKey) {
       out.push(r.data);
     });
     _tbRemote[kvKey] = map;
-    return { ok: true, data: out };
+    return { ok: true, data: tbSortRows(kvKey, out) };
   } catch (e) { return { ok: false, data: null }; }
 }
 // בחירת מה לדחוף. רשומה מסומנת ⏳ נחשבת תמיד «לדחיפה».
@@ -2891,22 +2939,28 @@ function checkDayChange() {
     // CRITICAL: do NOT push to cloud here — syncFromCloud() will run shortly
     // after and properly merge. Pushing empty ENTRIES to cloud would wipe
     // entries that another device already added for today.
-    var hdate = hebrewDate(new Date(lastDay)) || lastDay;
+    var prev = new Date(lastDay);
+    var live = liveOnly(ENTRIES);
+    // ⭐ שדות היום נגזרים מהרשומות עצמן קודם כול (סבב 31) — הן נכתבו עם התאריך
+    //    שהמשתמש באמת עבד בו, וזה בדיוק מה ש-`autoArchiveDay` מקבל במסלול הידני.
+    //    השעון הוא נפילה-חזרה, לא מקור ראשון.
+    var withG = live.find(function(e){ return e && e.gdate; });
+    var withH = live.find(function(e){ return e && hasHebMonth(e.hdate); });
+    var withD = live.find(function(e){ return e && e.day; });
+    var gdate = (withG && withG.gdate) || gregDateStr(prev);
+    // ⛔ נפילה-חזרה מפורשת ולא שדה ריק בשקט (סבב 31) — `hebrewDate` מחזירה ""
+    //    כשספריית hebcal טרם נטענה, ו-hdate ריק הוא בדיוק מה שהעיף סנאפשוטים
+    //    לדלי «לא ידוע». בהיעדר שניהם נשמר לפחות `name` שממנו `snapHDate` גוזרת.
+    var hdate = (withH && withH.hdate) || hebrewDate(prev) || "";
+    var dayKey = (withD && withD.day) || DAY_VALUE_MAP[prev.getDay()] || "";
     // אותה חותמת לעותקים שבארכיון ול-tombstones — בשוויון הסנאפשוט מנצח,
     // ולכן ארכוב אינו מחיקה מהארכיון
     var ts = Date.now();
-    var carried = JSON.parse(JSON.stringify(liveOnly(ENTRIES)));
+    var carried = JSON.parse(JSON.stringify(live));
     carried.forEach(function(e){ recTouch(e, ts); });
-    var snapshot = {
-      id: ts,
-      name: "יום " + hdate + " (אוטומטי)",
-      date: new Date(lastDay).toLocaleDateString("he-IL"),
-      entries: carried,
-      count: carried.length,
-      auto: true,
-      updatedAt: ts
-    };
-    ARCHIVE.unshift(snapshot);
+    // ⛔ אותו בונה בדיוק כמו המסלול הידני (סבב 31) — `auto` הוא סימון מקור
+    //    ותו לא, ואינו מחליף שדה. ר' הבלוק שמעל `arcPutSnapshot`.
+    arcPutSnapshot(dayKey, hdate, gdate, carried, ts, { auto: true });
     lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
@@ -3071,13 +3125,25 @@ function pickSub(s) {
 
 
 // AUTO ARCHIVE - called after every addEntry / deleteEntry
-function autoArchiveDay(dayKey, hdate, gdate) {
-  // Filter by gdate (unique date string), NOT by day name — day names repeat every week
-  // and would cause entries from different dates to be merged under the current date.
-  if (!gdate) return;   // בלי תאריך אין סנאפשוט — אחרת נוצר סנאפשוט זבל עם gdate ריק
-  // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
-  var dayEntries = ENTRIES.filter(function(e){ return e.gdate === gdate; });
-  if (!dayEntries.length) return;
+/* ══════════════════════════════════════════════════════════════════════════
+   בניית סנאפשוט ארכיון — מסלול אחד לידני ולאוטומטי (סבב 31)
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ עד סבב 31 היו כאן **שני** מסלולי יצירה עם שדות שונים: `autoArchiveDay`
+      (נקרא מהוספה/מחיקה/עריכה) מילא `hdate`, `gdate`, `day`, `date` ו-`name`,
+      ואילו `checkDayChange` (מעבר יום) מילא `name` ו-`date` בלבד — בלי `gdate`,
+      בלי `hdate` ובלי `day`. זה שורש שתי תקלות שנמדדו:
+      • הסנאפשוט נפל לדלי «לא ידוע» בארכיון, כי אין ממה לגזור חודש ושנה.
+      • `archiveKey` נפל ל-`i:<id>` במקום ל-`g:<gdate>`, ולכן אותו יום הופיע
+        כשתי שורות מתחרות בענן (נמדד ברמת אביב: «11 אוגוסט 2026»).
+
+   ⛔ אין להחזיר מסלול יצירה שני (סבב 31) — רשומה אוטומטית חייבת להיות זהה
+      בשדותיה לרשומה ידנית, ושדה שנשאר ריק בשקט הוא בדיוק מה שייצר את
+      «לא ידוע». `tools/test_round31_archive.mjs` נכשל על כל שדה שחסר.
+   ⚠️ `arcPutSnapshot` **אינה** כותבת לענן — הקורא מחליט. זה מכוון:
+      `checkDayChange` חייבת להישאר מקומית (ר' ההערה שם).
+   ══════════════════════════════════════════════════════════════════════════ */
+function arcPutSnapshot(dayKey, hdate, gdate, dayEntries, ts, extra) {
+  if (!gdate) return null;   // בלי תאריך אין סנאפשוט — אחרת נוצר סנאפשוט זבל עם gdate ריק
   var existIdx = ARCHIVE.findIndex(function(a){ return a.gdate === gdate && isLive(a); });
   var exist = existIdx >= 0 ? ARCHIVE[existIdx] : null;
   // מיזוג ולא החלפה: הסנאפשוט הקיים הוא הצד ה"מרוחק" (מנצח בשוויון), הרשומות
@@ -3090,7 +3156,7 @@ function autoArchiveDay(dayKey, hdate, gdate) {
     entryKey
   );
   var snapshot = {
-    id: exist ? exist.id : Date.now(),
+    id: exist ? exist.id : ts,
     name: hdate || (exist ? exist.name : "") || "",
     hdate: hdate || (exist ? exist.hdate : "") || "",
     gdate: gdate,
@@ -3098,14 +3164,21 @@ function autoArchiveDay(dayKey, hdate, gdate) {
     date: gdate,
     entries: mergedEntries,
     count: liveOnly(mergedEntries).length,
-    updatedAt: Date.now()
+    updatedAt: ts
   };
-  if (exist) {
-    ARCHIVE[existIdx] = snapshot;
-  } else {
-    ARCHIVE.unshift(snapshot);
-  }
-  saveArchive();
+  if (extra) Object.keys(extra).forEach(function(k){ snapshot[k] = extra[k]; });
+  if (exist) ARCHIVE[existIdx] = snapshot; else ARCHIVE.unshift(snapshot);
+  return snapshot;
+}
+
+function autoArchiveDay(dayKey, hdate, gdate) {
+  // Filter by gdate (unique date string), NOT by day name — day names repeat every week
+  // and would cause entries from different dates to be merged under the current date.
+  if (!gdate) return;
+  // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
+  var dayEntries = ENTRIES.filter(function(e){ return e.gdate === gdate; });
+  if (!dayEntries.length) return;
+  if (arcPutSnapshot(dayKey, hdate, gdate, dayEntries, Date.now(), null)) saveArchive();
 }
 
 // ADD ENTRY
@@ -4006,6 +4079,47 @@ function extractYM(hdate) {
   return {year: year, month: month, order: HMO.indexOf(month)};
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   שחזור התאריך העברי — hdate ואם אין, מתוך שם היום (סבב 31)
+   ══════════════════════════════════════════════════════════════════════════
+   הקיבוץ בארכיון נשען על `extractYM(hdate)`. סנאפשוט בלי `hdate` נפל ל-HUNKNOWN
+   («לא ידוע») — גם כשהתאריך העברי המלא יושב בשדה `name`. נמדד בשני המוסדות:
+   13 סנאפשוטים (6 בראשון לציון, 7 ברמת אביב) עם `name` בצורת
+   «יום כ״ט אב ה׳תשפ״ו (אוטומטי)» ובלי `hdate` כלל — כולם נערמו תחת «לא ידוע».
+
+   סדר הנפילה-חזרה: `hdate` תקין ⇐ חילוץ מתוך `name` ⇐ ורק אז HUNKNOWN.
+
+   ⛔ `snapHDate` טהורה ואינה נוגעת בסנאפשוט (סבב 31) — זהו תיקון **תצוגה**,
+      והמפתחות הישנים ב-`kv` הם נתיב החזרה. כתיבה כאן הייתה משנה נתונים
+      קיימים בלי שהמנהל ביקש, ומקדמת את `updatedAt` של 13 סנאפשוטים בבת אחת.
+   ⛔ החיתוך הוא אחרי אסימון השנה, ואז השלת אסימונים מ**שמאל** (סבב 31) —
+      `extractYM` קוראת את החודש כ-`hebrewParts.slice(1)`, ולכן כל תחילית
+      («יום», «יום רביעי», «מוצאי שבת») וכל זנב אחרי השנה («(אוטומטי)»,
+      «| 11 אפריל 2026») מזיזים אותה לאסימון הלא נכון. השלה גנרית מכסה את כל
+      הצורות בלי רשימת תחיליות שתתיישן.
+   ══════════════════════════════════════════════════════════════════════════ */
+function hebFromText(txt) {
+  var t = normHDate(String(txt == null ? "" : txt))
+            .replace(/\([^)]*\)/g, " ").replace(/\|/g, " ")
+            .replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  var p = t.split(" ");
+  for (var j = 0; j < p.length; j++) {
+    if (/ה׳תש/.test(p[j])) { p = p.slice(0, j + 1); break; }   // hdate תקין נגמר בשנה
+  }
+  for (var i = 0; i < p.length; i++) {
+    var cand = p.slice(i).join(" ");
+    if (extractYM(cand).year !== HUNKNOWN) return cand;
+  }
+  return "";
+}
+// התאריך העברי של סנאפשוט/רשומה לצורך תצוגה וקיבוץ, עם נפילה-חזרה ל-`name`.
+function snapHDate(rec) {
+  var h = normHDate((rec && rec.hdate) || "");
+  if (extractYM(h).year !== HUNKNOWN) return h;
+  return hebFromText(rec && rec.name) || h;
+}
+
 // Get all days (from ARCHIVE snapshots + live non-today ENTRIES)
 function getAllArchiveDays() {
   var todayKey = getTodayKey();
@@ -4016,11 +4130,18 @@ function getAllArchiveDays() {
     var k = String(snap.gdate || snap.id);
     // key — המפתח האמיתי במפה. סנאפשוט ישן בלי gdate ממופתח לפי id, ובלי לשמור
     // אותו הכפתור בארכיון היה שולח arcGoDetail('') ופותח את היום הלא נכון.
-    if (!days[k]) days[k] = {key:k, gdate:snap.gdate||"", hdate:normHDate(snap.hdate||""), day:snap.day||"",
+    if (!days[k]) days[k] = {key:k, gdate:snap.gdate||"", hdate:snapHDate(snap), day:snap.day||"",
       name:normHDate(snap.name||""), entries:[], seen:{}, snapId:snap.id};
     // merge entries from snapshot if not already there
+    // ⛔ הבדיקה מול `seen` נדרשת גם כאן ולא רק בלולאת ENTRIES (סבב 31) — כששני
+    //    סנאפשוטים ממופתחים לאותו יום, הרשומה המשותפת נדחפה פעמיים ונספרה
+    //    פעמיים בכפתור היום. נמדד ברמת אביב: «11 אוגוסט 2026» הציג 6 רשומות
+    //    במקום 5. ה-`seen` כבר נכתב כאן מאז ומעולם — רק אף אחד לא קרא אותו.
     (snap.entries||[]).forEach(function(e){
-      if (e && e.id != null) days[k].seen[String(e.id)] = true;   // כולל tombstones
+      if (e && e.id != null) {
+        if (days[k].seen[String(e.id)]) return;                   // כבר נכנסה מסנאפשוט אחר
+        days[k].seen[String(e.id)] = true;                        // כולל tombstones
+      }
       if (isLive(e)) days[k].entries.push(e);
     });
   });
@@ -4032,7 +4153,7 @@ function getAllArchiveDays() {
     var k = String(e.gdate || "");
     if (!days[k]) {
       if (!isLive(e)) return;   // אין יום כזה בארכיון ורשומה מחוקה — אין מה להציג
-      days[k] = {key:k, gdate:e.gdate||"", hdate:normHDate(e.hdate||""), day:e.day||"",
+      days[k] = {key:k, gdate:e.gdate||"", hdate:snapHDate(e), day:e.day||"",
         name:normHDate([e.day,e.hdate,e.gdate?"| "+e.gdate:""].filter(Boolean).join(" ")), entries:[], seen:{}, snapId:null};
     }
     if (days[k].seen[String(e.id)]) return;             // כבר טופל ע"י הסנאפשוט
