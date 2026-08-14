@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="16-2026-08-13-1">
+<meta name="app-version" content="18-2026-08-14-2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -626,9 +626,15 @@ function lsRebuildPolicy() {
    כשל רשת או timeout ⇒ `ok:false` ⇒ לא מפנים דבר. */
 function _tbVerify(kvKey) {
   return function () {
-    return sbGetResult(kvKey).then(function (r) {
-      return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data } : { ok: false, rows: [] };
-    });
+    // ⭐ מסבב 30 העדות היא **הטבלה** ולא הבלוק: שם יושבת האמת פר-רשומה.
+    //    ⛔ והנפילה-חזרה לבלוק נשארת (סבב 30) — לפני שהמיגרציה רצה הטבלה
+    //    אינה קיימת, ואימות שהיה נכשל שם היה מפסיק את הפינוי בלי סיבה.
+    return tbRowsGet(kvKey).then(function (rr) {
+      if (rr && rr.ok && Array.isArray(rr.data)) return { ok: true, rows: rr.data };
+      return sbGetResult(kvKey).then(function (r) {
+        return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data } : { ok: false, rows: [] };
+      });
+    }, function () { return { ok: false, rows: [] }; });
   };
 }
 // מתאם הטוסט — החתימה כאן היא toast(msg, dur).
@@ -1441,6 +1447,285 @@ window.syncStatusMount = syncStatusMount;
 window.syncNowFromStatus = syncNowFromStatus;
 window.statusAreaMount = statusAreaMount;
 /* ═══ סוף בלוק "☁️ סנכרון" ═══════════════════════════════════════════════ */
+
+/* ── BK_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
+/* ⚠️ כאן הכל **פר-מוסד**, ובשלוש שכבות שאין לערבב (סבב 30): הטבלה בענן היא
+   `KV_TABLE` (`kv_rishon`/`kv_ramataviv`), הדגל המקומי נושא את סיומת ה-`LS`,
+   ומפתח הגיבוי נושא קידומת `<מוסד>_` — אחרת שני המוסדות היו כותבים ל-
+   `kv_backup` תחת אותו מפתח, וגיבוי של האחד היה נראה כגיבוי של השני.
+   ⛔ `sources` מחזירה ריק לפני בחירת מוסד (סבב 30) — `KV_TABLE` הוא `null`
+   עד `selectYeshiva`, וגיבוי שהיה רץ לפניו היה פונה לטבלה שאינה קיימת.
+   ⚠️ אין כאן טבלת משתמשים ואין סוד — ולכן, בשונה משלוש האחיות, אין מקור
+   שצריך להחריג מהגיבוי. */
+var BK_CFG = {
+  client: function () { return getSB(); },
+  flagKey: function () { return 'tb_last_backup' + LS; },
+  atKey: function () { return 'tb_last_backup_at' + LS; },
+  logQueueKey: function () { return 'tb_log_queue' + LS; },
+  prefix: function () { return (YESHIVA || 'unknown') + '_'; },
+  device: function () { try { return getDeviceId(); } catch (e) { return null; } },
+  user: function () { return null; },
+  sources: function () {
+    if (!KV_TABLE) return [];
+    return ['tb_entries', 'tb_archive', 'tb_cats', 'tb_subs', 'tb_subs_meta',
+            'tb_wa_phone'].map(function (k) {
+      return { kind: 'kv', table: KV_TABLE, name: k };
+    });
+  }
+};
+
+/* ═══ גיבוי יומי ויומן פעולות — מודול משותף (סבב 30) ══════════════════════
+   עד הסבב הזה גיבו רק hanhala-ruchanit ו-schar-limud, כל אחת במימוש משלה,
+   ויומן פעולות היה רק בהנהלה. שני המימושים היו כמעט זהים — אותה נעילת
+   ריצה, אותו דגל-יומי שנכתב אחרי הצלחה, אותה בדיקת error מפורשת — ולכן
+   הליבה חולצה לכאן והוחלה בארבע האפליקציות. **הבלוק זהה בית-לבית
+   בארבעתן**, וכל שינוי בו נעשה בארבע באותו סבב (כלל ברזל 7).
+   מעליו יושבת `BK_CFG` — הדבר היחיד שנבדל בין האפליקציות.
+
+   ⛔ הדגל היומי נכתב **אחרי** ההצלחה ולא לפניה (נרשם בסבב 6 בהנהלה) —
+      כתיבה-מראש הפכה כל כישלון (רשת, הרשאה, טבלה חסרה) לדילוג שקט על
+      יממה שלמה. תפקיד הנעילה שהיא מילאה עבר ל-`_bkRunning`.
+   ⛔ הגיבוי אינו חוסם ואינו מפיל שום מסלול (נרשם בסבב 6 בהנהלה) — הוא
+      נקרא בלי `await`, כל גופו בתוך `try`, וכשל רשת נבלע בשקט.
+   ⛔ כל תשובה נבדקת ב-`error` מפורש (נרשם בסבב 6 בהנהלה) — supabase-js
+      אינו זורק, ולכן `try/catch` לבדו היה מדווח הצלחה על כישלון.
+   ⚠️ התאריך הוא UTC (`toISOString`) — כך היה בשני המימושים הקודמים,
+      והוא זהה בכל המכשירים ללא תלות באזור הזמן שלהם.
+
+   ⭐ גיבוי דיפרנציאלי: ערך שלא השתנה מאז הגיבוי האחרון אינו נכתב שוב.
+      ⚠️ זה אינו קיצור דרך אלא תנאי לכך שהגיבוי יהיה בר-קיימא: הערך הגדול
+      בארגון (`tb_archive` של ראשון לציון) הוא 1.2MB, וכתיבה יומית שלו
+      הייתה מוסיפה ~36MB בחודש ל-`kv_backup` המשותפת. ההשוואה היא מול
+      חתימה מקומית (אורך + FNV-1a), ולכן היא אינה מושכת דבר מהרשת.
+      ⛔ בספק — כותבים: חתימה חסרה, מכשיר חדש או ערך שלא ניתן לחישוב
+      מביאים לכתיבה מלאה (סבב 30) — גיבוי חסר גרוע מגיבוי כפול.
+
+   ⛔ אין מסלול מחיקה ואין `update` (סבב 29) — `kv_backup` ו-`sync_log` הן
+      יומני ראיות, ולשני התפקידים יש בהן `insert`+`select` בלבד. המודול
+      הזה אינו מנסה לעדכן או למחוק שורה, וגריעה שלהן היא החלטת המנהל.
+
+   ⭐ נקודת הפעלה אחת ויחידה — `bkBoot()` (סבב 30, השלמה). כלל ברזל 12:
+      יכולת משותפת נמדדת גם בנקודת ההפעלה שלה, לא רק בליבה. הליבה כאן
+      הייתה זהה בין הנהלה ל-schar מרגע שחולצה — ובכל זאת הגיבוי של הנהלה
+      **הפסיק לרוץ 25 יום** ואיש לא ידע, מפני שהיא הפעילה אותו **מתוך
+      מסלול הדחיפה**: כשהנתונים סטטיים (חופשה) אין דחיפה, ולכן אין גיבוי —
+      בדיוק בתקופה שבה תקלה עוברת בלי שיבחינו בה.
+      ⛔ אין לקרוא ל-`bkMaybeDaily` ישירות מקוד האפליקציה (סבב 30, השלמה) —
+      הקריאה היחידה אליה היא `bkBoot()`, מפונקציית העלייה של האפליקציה,
+      זו שקוראת גם ל-`lsBoot()` ול-`pendBoot()`. מנגנון בטיחות שתלוי
+      בפעילות רגילה אינו מנגנון בטיחות, ו-`check-capabilities.mjs` נכשל
+      על נקודת הפעלה שנודדת.
+      ⚠️ `logFlush` היא **כן** ניתנת לקריאה נוספת (חזרת רשת, כניסה
+      מוצלחת): היא ריקון תור חוזר ולא מנגנון יומי, וריקון תכוף יותר הוא
+      שיפור ולא סחיפה. נקודת ה**עלייה** שלה, לעומת זאת, היא `bkBoot`
+      בלבד — כך שגם מכשיר שלא עשה דבר מרוקן את התור בפתיחה.
+
+   ⭐ התרעת גיבוי מיושן — `BK_STALE_DAYS` (סבב 30, השלמה). זה מה שהיה
+      חושף את 25 הימים ביום הרביעי. ⛔ ולא התראה קופצת (סבב 15) — שקט הוא
+      ברירת המחדל, וההתרעה היא שורה ב«מידע טכני» לצד «גובה לאחרונה».
+      ⚠️ הסף הוא **שלושה ימים** ולא יום אחד: הדגל יומי, ולכן פספוס בודד
+      הוא רעש לגיטימי (מכשיר אופליין, סוף שבוע), ושלושה הם דפוס.
+
+   ה-API: `bkBoot` · `bkMaybeDaily` · `bkLastAt`/`bkStale` ·
+   `bkStatusHTML`/`bkStatusMount` · `logAction`/`logFlush` ·
+   `bkToday`/`bkSig`.
+   ══════════════════════════════════════════════════════════════════════ */
+var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
+var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
+var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
+var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
+var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
+
+function _bkVal(v) { return (typeof v === 'function') ? v() : v; }
+function _bkCfg(name, dflt) {
+  try {
+    if (typeof BK_CFG === 'undefined' || BK_CFG[name] === undefined) return dflt;
+    return _bkVal(BK_CFG[name]);
+  } catch (e) { return dflt; }
+}
+function _bkClient() { try { return BK_CFG.client(); } catch (e) { return null; } }
+
+function bkToday() { return new Date().toISOString().slice(0, 10); }
+
+// חתימת תוכן לגיבוי הדיפרנציאלי — אורך + FNV-1a. אינה סוד ואינה אימות,
+// רק "האם זה אותו ערך בדיוק".
+function bkSig(s) {
+  var str = String(s == null ? '' : s), h = 0x811c9dc5;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return str.length + ':' + h.toString(16);
+}
+
+/* ── יומן הפעולות ──────────────────────────────────────────────────────── */
+function _bkLogRow(action, key, count, details) {
+  return {
+    device_id: _bkCfg('device', null),
+    user_name: _bkCfg('user', null),
+    action: action,
+    key: key || null,
+    record_count: (count === undefined || count === null) ? null : count,
+    details: details || null
+  };
+}
+function _bkLogQueue(row) {
+  try {
+    var qk = _bkVal(BK_CFG.logQueueKey);
+    var q = JSON.parse(lsGet(qk, '[]') || '[]');
+    if (!Array.isArray(q)) q = [];
+    q.push(row);
+    if (q.length > BK_LOG_MAX) q = q.slice(-BK_LOG_MAX);
+    lsSet(qk, JSON.stringify(q));
+  } catch (e) { }
+}
+// רישום fire-and-forget. ⛔ לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו
+// (נרשם בסבב 6 בהנהלה) — תיעוד אבחון שמפיל כניסה או שמירה גרוע מהיעדרו.
+function logAction(action, key, count, details) {
+  var row = null;
+  try {
+    row = _bkLogRow(action, key, count, details);
+    var c = _bkClient();
+    if (!c) { _bkLogQueue(row); return; }
+    c.from(BK_LOG_TABLE).insert(row).then(
+      function (r) { if (r && r.error) _bkLogQueue(row); },
+      function () { _bkLogQueue(row); }
+    );
+  } catch (e) { if (row) _bkLogQueue(row); }
+}
+// שליחת מה שהצטבר באופליין. נקראת כשיש ראיה שהרשת עובדת.
+async function logFlush() {
+  var qk, q;
+  try { qk = _bkVal(BK_CFG.logQueueKey); q = JSON.parse(lsGet(qk, '[]') || '[]'); } catch (e) { return 0; }
+  if (!Array.isArray(q) || !q.length) return 0;
+  var c = _bkClient();
+  if (!c) return 0;
+  lsSet(qk, '[]');
+  var failed = [], sent = 0;
+  for (var i = 0; i < q.length; i++) {
+    try {
+      var r = await c.from(BK_LOG_TABLE).insert(q[i]);
+      if (r && r.error) failed.push(q[i]); else sent++;
+    } catch (e2) { failed.push(q[i]); }
+  }
+  if (failed.length) {
+    try {
+      var q2 = JSON.parse(lsGet(qk, '[]') || '[]');
+      if (!Array.isArray(q2)) q2 = [];
+      lsSet(qk, JSON.stringify(q2.concat(failed).slice(-BK_LOG_MAX)));
+    } catch (e3) { }
+  }
+  return sent;
+}
+
+/* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
+// מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
+async function bkMaybeDaily() {
+  if (_bkRunning) return false;
+  var c = _bkClient();
+  if (!c) return false;
+  var flag = _bkCfg('flagKey', null);
+  if (!flag) return false;
+  var today = bkToday();
+  if (lsGet(flag, '') === today) return false;
+  var src = _bkCfg('sources', []) || [];
+  if (!src.length) return false;
+  _bkRunning = true;
+  var ok = true, wrote = 0, same = 0;
+  try {
+    var pre = _bkCfg('prefix', '') || '';
+    for (var i = 0; i < src.length; i++) {
+      var s = src[i], val = null;
+      if (s.kind === 'kv') {
+        var res = await c.from(s.table).select('value').eq('key', s.name).maybeSingle();
+        if (!res || res.error) { ok = false; continue; }
+        val = (res.data && res.data.value != null) ? String(res.data.value) : null;
+      } else {
+        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
+        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
+        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
+        var rt = await c.from(s.name).select(s.cols || '*');
+        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
+        val = JSON.stringify(rt.data);
+      }
+      // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
+      if (val == null) continue;
+      var bkey = pre + s.name;
+      var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
+      if (lsGet(sigKey, '') === sig) { same++; continue; }
+      var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
+      if (!ins || ins.error) { ok = false; continue; }
+      lsSet(sigKey, sig);
+      wrote++;
+    }
+    if (ok) {
+      lsSet(flag, today);
+      lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
+      logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
+    } else {
+      // ⛔ בלי כתיבת הדגל — ההזדמנות הבאה באותו יום תנסה שוב (נרשם בסבב 6
+      //    בהנהלה): גיבוי שנכשל ודילג על יממה שלמה הוא בדיוק מה שהדגל
+      //    שנכתב-מראש גרם.
+      logAction('backup_fail', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
+      console.warn('[backup] הגיבוי היומי נכשל — יינסה שוב בהזדמנות הבאה');
+    }
+  } catch (e) { ok = false; }
+  _bkRunning = false;
+  return ok;
+}
+
+/* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */
+// ⛔ הרכיב נתלה **אחרי** הבלוק הקפוא ואינו עורך אותו (סבב 30) — «מידע
+//    טכני» חתום ב-`check-status-area.mjs`, ועריכתו הייתה מחייבת שינוי
+//    בארבעת הריפו ובחתימות עבור שורת תצוגה אחת.
+function bkLastAt() {
+  var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
+  return isFinite(v) ? v : 0;
+}
+// ⚠️ מחזירה את מספר הימים רק כשהוא חצה את הסף, ו-0 אחרת — כדי שאתר
+//    הקריאה יהיה `if (bkStale())` ולא השוואה שמשוכפלת בכל מקום.
+//    מכשיר שטרם גיבה בכלל מחזיר 0: «— טרם גובה —» כבר אומר את זה, והתרעה
+//    בנוסף לו הייתה רעש בעלייה הראשונה.
+function bkStale() {
+  var t = bkLastAt();
+  if (!t) return 0;
+  var d = Math.floor((Date.now() - t) / 86400000);
+  return (d >= BK_STALE_DAYS) ? d : 0;
+}
+function bkStatusHTML() {
+  var t = bkLastAt(), st = bkStale();
+  return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
+    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
+    (st ? '<div class="bk-stale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
+    '</div>';
+}
+function bkStatusMount() {
+  var box = document.getElementById('tech-info-box');
+  if (!box) return;
+  var d = box.querySelector('details.tech-info');
+  if (!d) return;
+  var prev = d.querySelector('.bk-line');
+  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+  var wrap = document.createElement('div');
+  wrap.innerHTML = bkStatusHTML();
+  var node = wrap.firstChild;
+  if (node) d.appendChild(node);
+}
+window.bkStatusMount = bkStatusMount;
+
+/* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
+// ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול (סבב 30, השלמה) — היא
+//    יושבת בפונקציית העלייה, לצד `lsBoot()` ו-`pendBoot()`, ולעולם לא
+//    במסלול דחיפה/סנכרון. ר' הנימוק המלא בכותרת הבלוק.
+// ⚠️ שתי הקריאות אינן ב-`await` ואינן חוסמות: העלייה אינה ממתינה לרשת,
+//    וכל כשל נבלע בשקט בתוך המודול.
+function bkBoot() {
+  try { bkMaybeDaily(); } catch (e) { }
+  try { logFlush(); } catch (e) { }
+}
+window.bkBoot = bkBoot;
+/* ═══════════════ סוף מודול הגיבוי היומי ═══════════════════════════════ */
+
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 // המפתח הוא **פונקציה**: שני המוסדות חיים באותו דומיין ובאותו localStorage,
 // וסימון "ממתין" של ראשון לציון אינו תקף לרמת אביב. `selectYeshiva` קוראת
@@ -2018,6 +2303,118 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
   return { subs: subs, meta: meta };
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   שכבת השורות בענן — tb_entries / tb_archive (סבב 30, שלב ב)
+   ══════════════════════════════════════════════════════════════════════════
+   עד הסבב הזה נתוני היומן ישבו בענן כ**ערך יחיד** לכל מפתח kv: כל עריכה
+   דרסה את מלוא הערך (`tb_archive` של ראשון לציון — 1.2MB), המיזוג בענן היה
+   ברמת קובץ, ולא היה פינוי סלקטיבי. מעכשיו כל רשומה היא שורה.
+
+   ⭐ **הצד המקומי לא נגע.** localStorage ממשיך להחזיק את אותם מערכים באותם
+      מפתחות (`tb_entries`+LS / `tb_archive`+LS), ולכן מודול האחסון הקפוא,
+      מודול ה-⏳ ומדיניות הפינוי אינם מושפעים. מה שהשתנה הוא **הייצוג
+      בענן** בלבד, וזה מה שמצמצם את השינוי לשכבה אחת.
+
+   ⭐ **כתיבה כפולה, ובכוונה.** הרשומות נכתבות גם לטבלאות וגם לבלוק ה-kv
+      הישן. הבלוק הוא נקודת החזרה, וכל עוד הוא מתעדכן החזרה היא **החלפת
+      דגל אחד** ולא שחזור נתונים.
+      ⚠️ המחיר המודע: כתיבת ה-1.2MB לא נעלמה בסבב הזה — היא נעלמת בסבב
+      שיפסיק את הכתיבה הכפולה, וזה הטריגר שרשום ב-`migrations/003`.
+      מה שכן הושג כבר עכשיו: המשיכה והמיזוג בענן הם פר-רשומה.
+
+   ⭐ **בטוח לפרוס לפני שהמיגרציה רצה.** `tbRowsGet` מחזירה `ok:false`
+      כשהטבלה חסרה או שהמשיכה נכשלה, וכל אתר קריאה נופל-חזרה לבלוק ה-kv —
+      כלומר בדיוק ההתנהגות שלפני הסבב. זה מה שמאפשר את הסדר שהסבב מחייב:
+      קוד קודם, מיגרציה אחרי שהגיבוי אומת.
+
+   ⛔ `TB_ROWS = false` הוא נתיב החזרה המלא (סבב 30) — הקריאה חוזרת ל-kv,
+      הכתיבה ממשיכה לשם ממילא, ואין מה לשחזר במסד. ר' `migrations/003`.
+   ⛔ `client_id` נגזר ממפתח המיזוג ואינו uuid חדש (סבב 30) — לרשומה כאן
+      כבר יש זהות שנוצרה במכשיר (`id`/`gdate`), ומזהה שני ועצמאי היה מאפשר
+      לאותה רשומה לוגית להתקיים פעמיים. הנוסחה זהה לזו שב-`migrations/002`,
+      ו⛔ אין לשנות אחד מהם בלי השני.
+   ══════════════════════════════════════════════════════════════════════════ */
+var TB_ROWS = true;
+var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
+// מפת חותמות הענן פר-מפתח, בזיכרון בלבד. ⛔ `null` פירושו «טרם נמשך», והוא
+// גורם לדחיפה של הכל (סבב 30) — בספק דוחפים, כי רשומה שלא נדחפה נעלמת
+// מהענן בשקט בעוד שדחיפה מיותרת רק עולה בתעבורה.
+var _tbRemote = { tb_entries: null, tb_archive: null };
+
+function tbRecKey(kvKey, rec) {
+  return (kvKey === 'tb_archive') ? archiveKey(rec) : entryKey(rec);
+}
+function tbPendPrefix(kvKey) { return (kvKey === 'tb_archive') ? PK_ARC : PK_ENTRY; }
+function tbRowOf(kvKey, rec) {
+  var k = tbRecKey(kvKey, rec);
+  if (k == null) return null;
+  var row = {
+    client_id: YESHIVA + ':' + k,
+    yeshiva: YESHIVA,
+    rec_key: String(k),
+    updated_at: Math.round(Number(recTs(rec)) || 0),
+    deleted: !!(rec && rec.deleted),
+    data: rec
+  };
+  if (kvKey === 'tb_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
+  return row;
+}
+// משיכה. מחזירה `{ok, data}` — `ok:false` פירושו «אין ראיה», וכל אתר קריאה
+// נופל-חזרה לבלוק ה-kv. ⛔ אין להחזיר `ok:true` על תשובה שאינה מערך (סבב 30):
+// טבלה חסרה מחזירה שגיאה, ו-`ok` על מערך ריק היה נקרא כ«הענן ריק» ומוחק.
+async function tbRowsGet(kvKey) {
+  var t = TB_ROW_TABLES[kvKey];
+  if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
+  try {
+    var sb = getSB();
+    if (!sb) return { ok: false, data: null };
+    var res = await withTimeout(sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA));
+    if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
+    var map = {}, out = [];
+    res.data.forEach(function (r) {
+      if (!r || !r.data) return;
+      map[String(r.rec_key)] = Number(r.updated_at) || 0;
+      out.push(r.data);
+    });
+    _tbRemote[kvKey] = map;
+    return { ok: true, data: out };
+  } catch (e) { return { ok: false, data: null }; }
+}
+// בחירת מה לדחוף. רשומה מסומנת ⏳ נחשבת תמיד «לדחיפה».
+// ⛔ אין להסיר את בדיקת ה-⏳ מכאן (סבב 12 שלב 4, כלל ברזל 6) — בלעדיה
+//    רשומה מסומנת נשארת מסומנת לנצח ולעולם אינה נדחפת.
+function tbDirtyRows(kvKey, arr) {
+  var map = _tbRemote[kvKey], pre = tbPendPrefix(kvKey), out = [];
+  (Array.isArray(arr) ? arr : []).forEach(function (rec) {
+    var k = tbRecKey(kvKey, rec);
+    if (k == null) return;
+    var ts = Math.round(Number(recTs(rec)) || 0);
+    var known = map ? map[String(k)] : undefined;
+    if (map === null || known === undefined || ts > known || pendHas(pre + k)) {
+      var row = tbRowOf(kvKey, rec);
+      if (row) out.push(row);
+    }
+  });
+  return out;
+}
+// דחיפה. ⚠️ `onConflict: 'client_id'` ולא `insert` — ניסיון חוזר אחרי תשובה
+// שאבדה ברשת חייב להיות אידמפוטנטי (כלל ברזל 6, «מזהים»).
+async function tbRowsPush(kvKey, arr) {
+  var t = TB_ROW_TABLES[kvKey];
+  if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, n: 0 };
+  var rows = tbDirtyRows(kvKey, arr);
+  if (!rows.length) return { ok: true, n: 0 };
+  try {
+    var sb = getSB();
+    if (!sb) return { ok: false, n: 0 };
+    var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
+    if (!res || res.error) return { ok: false, n: 0 };
+    var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
+    rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
+    return { ok: true, n: rows.length };
+  } catch (e) { return { ok: false, n: 0 }; }
+}
+
 // Save functions — write to both localStorage and Supabase
 function saveCats() {
   lsSet("tb_cats"+LS, JSON.stringify(CATS));
@@ -2039,9 +2436,16 @@ function saveEntries() {
   var _t0 = Date.now();
   lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
   (async function(){
+    // ⚠️ כתיבה כפולה: שורות **וגם** הבלוק הישן (סבב 30). הבלוק הוא נקודת
+    //    החזרה, ולכן הוא ממשיך להיכתב כל עוד הוא לא נמחק.
+    // ⛔ עֵד הפינוי והאישור של ⏳ דורשים ש**שתי** הכתיבות יצליחו (סבב 30) —
+    //    ראיה חלקית היא בדיוק מה שמאפשר לפינוי למחוק מהדיסק רשומה שאין לה
+    //    עותק שלם בענן, ולנתיב החזרה לאבד אותה.
+    var _rows = await tbRowsPush('tb_entries', ENTRIES);
     var _r = await sbSet("tb_entries", ENTRIES);
-    if (_r && _r.ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
-    if (_r && _r.ok) pendConfirmPush(PK_ENTRY, _t0);
+    var _ok = !!(_r && _r.ok) && (!TB_ROWS || _rows.ok);
+    if (_ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
+    if (_ok) pendConfirmPush(PK_ENTRY, _t0);
     var ts = Date.now();
     await sbSet("tb_last_changed", ts);
     // Update local timestamp so THIS device doesn't re-pull its own push
@@ -2052,9 +2456,12 @@ function saveArchive() {
   var _t0 = Date.now();
   lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
   (async function(){
+    // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
+    var _rows = await tbRowsPush('tb_archive', ARCHIVE);
     var _r = await sbSet("tb_archive", ARCHIVE);
-    if (_r && _r.ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
-    if (_r && _r.ok) pendConfirmPush(PK_ARC, _t0);
+    var _ok = !!(_r && _r.ok) && (!TB_ROWS || _rows.ok);
+    if (_ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
+    if (_ok) pendConfirmPush(PK_ARC, _t0);
     var ts = Date.now();
     await sbSet("tb_last_changed", ts);
     _lastKnownTimestamp = ts;
@@ -2245,7 +2652,10 @@ async function syncFromCloud() {
 
     // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones). קודם: איחוד לפי id
     // בלבד — עדכון שנעשה במכשיר אחד לא ניצח את הגרסה הישנה של השני.
-    var cloudEntries = await pull('tb_entries', 'רשומות');
+    // ⭐ שורות תחילה, ונפילה-חזרה לבלוק (סבב 30): טבלה שטרם נוצרה או משיכה
+    //    שנכשלה מחזירות ok:false, והמסלול הישן ממשיך לעבוד בדיוק כשהיה.
+    var _rowsE = await tbRowsGet('tb_entries');
+    var cloudEntries = _rowsE.ok ? _rowsE.data : await pull('tb_entries', 'רשומות');
     if (cloudEntries && cloudEntries.length) {
       ENTRIES = mergeEntries(ENTRIES, cloudEntries);
       // גריעת ה-tombstones הישנים שהוזמנה בטעינה — פעם אחת, על התוצאה
@@ -2254,8 +2664,10 @@ async function syncFromCloud() {
       // Sort by id descending (newest first)
       ENTRIES.sort(function(a,b){ return b.id - a.id; });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
+      tbRowsPush('tb_entries', ENTRIES);
       sbSet('tb_entries', ENTRIES).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_entries'); });
     } else if (ENTRIES.length) {
+      tbRowsPush('tb_entries', ENTRIES);
       sbSet('tb_entries', ENTRIES); // cloud empty — push local up
       // אין מה למזג — הגריעה של הטעינה כבר שלמה, מכבים את הדגל כדי שלא
       // יישאר תלוי ויופעל במיזוג מאוחר ולא צפוי.
@@ -2265,7 +2677,8 @@ async function syncFromCloud() {
     // ARCHIVE: מיזוג סנאפשוטים לפי gdate + מיזוג הרשומות שבתוך כל סנאפשוט.
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
-    var cloudArchive = await pull('tb_archive', 'ארכיון');
+    var _rowsA = await tbRowsGet('tb_archive');
+    var cloudArchive = _rowsA.ok ? _rowsA.data : await pull('tb_archive', 'ארכיון');
     if (cloudArchive && cloudArchive.length) {
       var merged = mergeArchive(ARCHIVE, cloudArchive);
       // Also keep ARCHIVE_SEED entries not in merged (Rishon only — seed is Rishon's history)
@@ -2277,9 +2690,11 @@ async function syncFromCloud() {
       ARCHIVE = merged;
       lsSetArray('tb_archive'+LS, ARCHIVE, _tbRecTs);
       // Push merged archive back to cloud so all devices stay in sync
+      tbRowsPush('tb_archive', ARCHIVE);
       sbSet('tb_archive', ARCHIVE).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_archive'); });
     } else if (ARCHIVE.length) {
       // Cloud is empty but local has data — push to cloud
+      tbRowsPush('tb_archive', ARCHIVE);
       sbSet('tb_archive', ARCHIVE);
     }
 
@@ -3397,6 +3812,7 @@ function editTaskInline(ci, ti) {
    ═════════════════════════════════════════════════════════════════════ */
 function renderSettings() {
   statusAreaMount();
+  bkStatusMount();
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   CATS.forEach(function(cat, ci) {
@@ -4069,6 +4485,11 @@ function _tbMarkSynced() {
   // הכישלון עצמו נשאר שקט כאן (הפולינג הוא כל 3 שניות — טוסט על כל מחזור
   // היה רעש), אבל **החזרה** כן נאמרת: היא הרגע שבו מה שהמתין מתחיל לעלות.
   if (_tbNetWarned) { _tbNetWarned = false; toast(MSG_SYNC_BACK); }
+  // ⛔ הגיבוי והיומן **אינם** נתלים כאן (סבב 30, השלמה) — הניסוח הראשון
+  //    תלה אותם בשיחה מוצלחת עם הענן, כלומר בפעילות סנכרון. זו בדיוק
+  //    הצורה שהשביתה את הגיבוי של הנהלה ל-25 יום בלי שאיש ידע: מנגנון
+  //    בטיחות שרץ רק כשמשהו אחר רץ. נקודת ההפעלה היא `bkBoot()`
+  //    ב-`selectYeshiva`, לצד `lsBoot()` ו-`pendBoot()`.
 }
 async function autoSyncData() {
   if (!YESHIVA) return;   // no yeshiva chosen yet → don't touch any tenant's data
@@ -4085,9 +4506,11 @@ async function autoSyncData() {
 
     // מיזוג ברמת רשומה במקום החלפה מלאה. ההחלפה היא שגרמה לאובדן: מכשיר
     // שדחף blob ישן עם חותמת חדשה יותר מחק כאן עבודה שמכשיר אחר הרגע הקליד.
-    var res = await sb.from(KV_TABLE).select("value").eq("key","tb_entries").single();
-    if (res.data) {
-      var cloudEntries = JSON.parse(res.data.value);
+    // ⭐ שורות תחילה, ונפילה-חזרה לבלוק (סבב 30) — אותו דפוס כמו ב-syncFromCloud.
+    var _rowsE = await tbRowsGet('tb_entries');
+    var res = _rowsE.ok ? null : await sb.from(KV_TABLE).select("value").eq("key","tb_entries").single();
+    if (_rowsE.ok || (res && res.data)) {
+      var cloudEntries = _rowsE.ok ? _rowsE.data : JSON.parse(res.data.value);
       if (Array.isArray(cloudEntries)) {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return b.id - a.id; });
@@ -4097,9 +4520,10 @@ async function autoSyncData() {
                     " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
     }
-    var resA = await sb.from(KV_TABLE).select("value").eq("key","tb_archive").single();
-    if (resA.data) {
-      var cloudArchive = JSON.parse(resA.data.value);
+    var _rowsA = await tbRowsGet('tb_archive');
+    var resA = _rowsA.ok ? null : await sb.from(KV_TABLE).select("value").eq("key","tb_archive").single();
+    if (_rowsA.ok || (resA && resA.data)) {
+      var cloudArchive = _rowsA.ok ? _rowsA.data : JSON.parse(resA.data.value);
       if (Array.isArray(cloudArchive)) {
         ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
         lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
@@ -4373,6 +4797,11 @@ function selectYeshiva(y) {
   // סימוני "ממתין לסנכרון" (סבב 12). **pendReload ולא pendBoot בלבד** —
   // מפתח הסימונים נושא סיומת מוסד, וסימון של ראשון לציון אינו תקף לרמת אביב.
   try { pendReload(); pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
+  // ⚠️ כאן ולא מוקדם יותר, וזה פרטי ליומן: `BK_CFG.sources` נשענת על
+  //    `KV_TABLE`, שהוא `null` עד שנבחר מוסד. ⛔ אין להזיז את הקריאה
+  //    למסלול סנכרון (סבב 30, השלמה) — ר' ההערה ב-`_tbMarkSynced`.
+  try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
   loadLocalData();
   var ov = document.getElementById('yeshivaSelect');
   if (ov) ov.style.display = 'none';
