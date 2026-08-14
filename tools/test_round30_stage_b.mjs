@@ -47,18 +47,24 @@ function cutVar(decl) {
 
 const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbRowOf',
+  // ⚠️ נוספו בסבב 31 — `tbRowsGet` ממיינת את מה שנמשך, ובלעדיהן היא זורקת
+  //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
+  'parseGregLike', 'gdateOrderTs', 'tbSortRows',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
 
 function makeEnv(opts = {}) {
   const env = { rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [] };
   const client = {
     from(t) {
-      const q = { t, cols: null, y: null };
+      const q = { t, cols: null, y: null, order: null };
       const api = {
         select(c) { q.cols = c; return api; },
         eq(c, v) { if (c === 'yeshiva') q.y = v; return api; },
+        // ⚠️ נוסף בסבב 31 — המשיכה מבקשת סדר מפורש מהמסד. מוק בלי `order`
+        //    היה זורק, ובדיקה שנופלת על המוק אינה בודקת את הקוד.
+        order(c, o) { q.order = { col: c, opts: o }; return api; },
         then(res, rej) {
-          env.selects.push({ table: q.t, cols: q.cols, yeshiva: q.y });
+          env.selects.push({ table: q.t, cols: q.cols, yeshiva: q.y, order: q.order });
           const rows = env.rows.filter((r) => r._t === q.t && r.yeshiva === q.y);
           const out = env.net
             ? { data: rows, error: null }
@@ -90,6 +96,7 @@ function makeEnv(opts = {}) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);   // דרוש ל-parseGregLike (סבב 31)
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
@@ -296,7 +303,12 @@ async function t7() {
   eq(g.data.length, 2, '7ב · ⛔ רק שורות המוסד הפעיל — אין דליפה בין מוסדות');
   eq(env.selects[0].yeshiva, 'rishon', '7ג · והסינון נעשה בשאילתה עצמה');
   eq(env.sb._tbRemote.tb_entries['2'], 200, '7ד · מפת החותמות נבנתה מהמשיכה');
-  eq(g.data[0].id, 1, '7ה · והנתונים הם גוף הרשומה');
+  // ⚠️ מסבב 31 המשיכה מחזירה **ממוין** — רשומות לפי id יורד — ולכן הראשון
+  //    הוא 2 ולא 1. הטענה בודקת שהנתונים הם גוף הרשומה, ועכשיו גם את הסדר.
+  eq(g.data[0].id, 2, '7ה · והנתונים הם גוף הרשומה, בסדר יורד לפי id');
+  eq(g.data[1].id, 1, '7ו · והרשומה השנייה אחריה');
+  eq(env.selects[0].order && env.selects[0].order.col, 'rec_key',
+    '7ז · ⛔ הסדר נדרש מהמסד עצמו ולא רק בקוד (סבב 31)');
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
