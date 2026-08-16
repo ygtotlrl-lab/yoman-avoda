@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="19-2026-08-14-3">
+<meta name="app-version" content="20-2026-08-16-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2334,8 +2334,49 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
       לאותה רשומה לוגית להתקיים פעמיים. הנוסחה זהה לזו שב-`migrations/002`,
       ו⛔ אין לשנות אחד מהם בלי השני.
    ══════════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   ⭐ איחוד הארכיון — טבלה אחת ודגל `archived` (סבב 32)
+   ══════════════════════════════════════════════════════════════════════════
+   סבב 30 יצר **שתי** טבלאות לאותו סוג נתונים, `tb_entries` ו-`tb_archive`,
+   מפני שכך הן ישבו ב-`kv`. וב-`kv` הפיצול היה **מנגנון פיצוי**: כל המפתח
+   נמשך כערך יחיד, ולכן הדרך היחידה למנוע מהיומן להיטען בשלמותו בכל פתיחה
+   הייתה להעביר את הישן הצידה. ⭐ הטבלאות המובנות ביטלו את הסיבה — יש
+   אינדקס, ואפשר לשלוף **רק את מה שמוצג** — ולכן הפיצול נשאר בלי מה שהוליד
+   אותו. ר' כלל ברזל 12: מנגנון פיצוי ששרד את הסיבה לו הוא חוב טכני שנראה
+   כמו ארכיטקטורה.
+
+   מעכשיו שני סוגי הרשומות יושבים ב-`tb_entries`, ומה שמפריד ביניהם הוא
+   **עמודת `archived`** — כלומר «העברה לארכיון» היא עדכון דגל ולא העברה בין
+   מקומות. השליפה מסננת עליו (`.eq('archived', …)`), וזו בדיוק ה«שליפה רק של
+   מה שמוצג» שהמנגנון הישן חיקה ביד.
+
+   ⚠️ **מה **לא** השתנה, ובכוונה:** הסנאפשוט נשאר יחידת הארכיון — שורה ליום
+      ולא שורה לרשומה שבתוכו. הנימוק המלא בראש `migrations/002` ועומד בעינו:
+      הסנאפשוט הוא היחידה שמנוע המיזוג מכיר (`archiveKey`), יש לו מטא-דאטה
+      ו-tombstone משלו, ובתוכו כבר רץ מיזוג פר-רשומה. הסבב הזה מאחד **טבלאות**,
+      לא ממוסס סנאפשוטים. ⛔ ואין לפרק אותם כתופעת לוואי של הסבב הזה — זה
+      מנוע מיזוג אחר, והוא נרשם כפער עם טריגר ב-CLAUDE.md.
+   ⚠️ **והצד המקומי לא נגע:** localStorage מחזיק את אותם שני מפתחות
+      (`tb_entries`+LS / `tb_archive`+LS) ואת אותם שני מערכים, ולכן מודול
+      האחסון הקפוא, מודול ה-⏳ ומדיניות הפינוי אינם מושפעים כלל.
+
+   ⛔ `TB_ARC_UNIFIED = false` הוא נתיב החזרה (סבב 32) — הקריאה והכתיבה
+      חוזרות ל-`tb_archive`, שממשיכה להתעדכן כל עוד `TB_ARC_LEGACY_WRITE`
+      דולק. זו הסיבה שהכתיבה הכפולה קיימת, וזה מה שהופך את החזרה להחלפת דגל
+      במקום שחזור נתונים — בדיוק כמו הכתיבה הכפולה ל-`kv` בסבב 30.
+   ⛔ אין למחוק את `tb_archive` בסבב הזה (סבב 32) — הטריגר הוא שבועיים של
+      עבודה תקינה על הטבלה המאוחדת, וגם אז מפסיקים קודם את הכתיבה הכפולה
+      ורק בסבב שאחריו מוחקים. ר' `migrations/005`.
+   ══════════════════════════════════════════════════════════════════════════ */
 var TB_ROWS = true;
+var TB_ARC_UNIFIED = true;
+var TB_ARC_LEGACY_WRITE = true;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
+// הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
+function tbTableOf(kvKey) {
+  return (TB_ARC_UNIFIED && kvKey === 'tb_archive') ? 'tb_entries' : TB_ROW_TABLES[kvKey];
+}
+function tbArchivedFlag(kvKey) { return kvKey === 'tb_archive'; }
 // מפת חותמות הענן פר-מפתח, בזיכרון בלבד. ⛔ `null` פירושו «טרם נמשך», והוא
 // גורם לדחיפה של הכל (סבב 30) — בספק דוחפים, כי רשומה שלא נדחפה נעלמת
 // מהענן בשקט בעוד שדחיפה מיותרת רק עולה בתעבורה.
@@ -2345,9 +2386,13 @@ function tbRecKey(kvKey, rec) {
   return (kvKey === 'tb_archive') ? archiveKey(rec) : entryKey(rec);
 }
 function tbPendPrefix(kvKey) { return (kvKey === 'tb_archive') ? PK_ARC : PK_ENTRY; }
-function tbRowOf(kvKey, rec) {
+// `tbl` אופציונלי — הטבלה שאליה השורה נועדה. ⛔ `archived` נכתב רק כשהיעד
+// הוא `tb_entries` (סבב 32) — ל-`tb_archive` אין את העמודה, ושדה עודף
+// ב-`upsert` מפיל את הכתיבה כולה ומחזיר `ok:false`.
+function tbRowOf(kvKey, rec, tbl) {
   var k = tbRecKey(kvKey, rec);
   if (k == null) return null;
+  var target = tbl || tbTableOf(kvKey);
   var row = {
     client_id: YESHIVA + ':' + k,
     yeshiva: YESHIVA,
@@ -2356,7 +2401,11 @@ function tbRowOf(kvKey, rec) {
     deleted: !!(rec && rec.deleted),
     data: rec
   };
+  // ⚠️ `gdate` נשמר גם בטבלה המאוחדת (סבב 32) — הוא היה עמודה של
+  //    `tb_archive`, והשמטתו הייתה הופכת את ההעברה לחלקית ואת נתיב החזרה
+  //    למשוחזר-מהנתונים במקום למועתק. הוא נשאר `null` לרשומות יומן.
   if (kvKey === 'tb_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
+  if (target === 'tb_entries') row.archived = tbArchivedFlag(kvKey);
   return row;
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -2410,13 +2459,17 @@ function tbSortRows(kvKey, arr) {
 // נופל-חזרה לבלוק ה-kv. ⛔ אין להחזיר `ok:true` על תשובה שאינה מערך (סבב 30):
 // טבלה חסרה מחזירה שגיאה, ו-`ok` על מערך ריק היה נקרא כ«הענן ריק» ומוחק.
 async function tbRowsGet(kvKey) {
-  var t = TB_ROW_TABLES[kvKey];
+  var t = tbTableOf(kvKey);
   if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    var res = await withTimeout(sb.from(t).select('rec_key,updated_at,data')
-      .eq('yeshiva', YESHIVA).order('rec_key', { ascending: true }));
+    var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA);
+    // ⭐ השליפה המסוננת (סבב 32) — זו היכולת שהחליפה את מנגנון הארכוב: במקום
+    //    להעביר את הישן לטבלה אחרת כדי לא למשוך אותו, מושכים רק את הצד הנכון
+    //    של הדגל. ⛔ ובטבלה הישנה אין עמודת `archived`, ולכן התנאי מותנה ביעד.
+    if (t === 'tb_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
+    var res = await withTimeout(q.order('rec_key', { ascending: true }));
     if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
     var map = {}, out = [];
     res.data.forEach(function (r) {
@@ -2448,7 +2501,7 @@ function tbDirtyRows(kvKey, arr) {
 // דחיפה. ⚠️ `onConflict: 'client_id'` ולא `insert` — ניסיון חוזר אחרי תשובה
 // שאבדה ברשת חייב להיות אידמפוטנטי (כלל ברזל 6, «מזהים»).
 async function tbRowsPush(kvKey, arr) {
-  var t = TB_ROW_TABLES[kvKey];
+  var t = tbTableOf(kvKey);
   if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, n: 0 };
   var rows = tbDirtyRows(kvKey, arr);
   if (!rows.length) return { ok: true, n: 0 };
@@ -2457,6 +2510,18 @@ async function tbRowsPush(kvKey, arr) {
     if (!sb) return { ok: false, n: 0 };
     var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
     if (!res || res.error) return { ok: false, n: 0 };
+    // ⚠️ כתיבה כפולה לטבלה הישנה — נתיב החזרה בלבד (סבב 32). היא **אינה**
+    //    קובעת את `ok`: אילו הייתה, טבלה ישנה שכבר נמחקה הייתה מפילה את
+    //    עֵד הפינוי ואת אישור ה-⏳ על כתיבה שהצליחה במלואה. הראיה שנדרשת
+    //    לשניהם היא הטבלה המאוחדת ובלוק ה-`kv`, ושתיהן נבדקות במקומן.
+    if (TB_ARC_UNIFIED && TB_ARC_LEGACY_WRITE && kvKey === 'tb_archive') {
+      var legacy = rows.map(function (r) {
+        var c = {};
+        Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
+        return c;
+      });
+      try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); } catch (e2) {}
+    }
     var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
     rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
     return { ok: true, n: rows.length };
@@ -2505,6 +2570,9 @@ function saveArchive() {
   lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
+    // ⭐ מסבב 32 הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר
+    //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. `tbRowsPush`
+    //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
     var _rows = await tbRowsPush('tb_archive', ARCHIVE);
     var _r = await sbSet("tb_archive", ARCHIVE);
     var _ok = !!(_r && _r.ok) && (!TB_ROWS || _rows.ok);

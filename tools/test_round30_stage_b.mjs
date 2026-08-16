@@ -50,22 +50,26 @@ const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey', 'merge
   // ⚠️ נוספו בסבב 31 — `tbRowsGet` ממיינת את מה שנמשך, ובלעדיהן היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
   'parseGregLike', 'gdateOrderTs', 'tbSortRows',
+  // ⚠️ נוספו בסבב 32 — `tbRowsGet`/`tbRowsPush` פונות דרכן לטבלה המאוחדת.
+  'tbTableOf', 'tbArchivedFlag',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
 
 function makeEnv(opts = {}) {
   const env = { rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [] };
   const client = {
     from(t) {
-      const q = { t, cols: null, y: null, order: null };
+      const q = { t, cols: null, y: null, arch: null, order: null };
       const api = {
         select(c) { q.cols = c; return api; },
-        eq(c, v) { if (c === 'yeshiva') q.y = v; return api; },
+        // ⚠️ `archived` נוסף בסבב 32 — השליפה המסוננת של הטבלה המאוחדת.
+        eq(c, v) { if (c === 'yeshiva') q.y = v; if (c === 'archived') q.arch = v; return api; },
         // ⚠️ נוסף בסבב 31 — המשיכה מבקשת סדר מפורש מהמסד. מוק בלי `order`
         //    היה זורק, ובדיקה שנופלת על המוק אינה בודקת את הקוד.
         order(c, o) { q.order = { col: c, opts: o }; return api; },
         then(res, rej) {
-          env.selects.push({ table: q.t, cols: q.cols, yeshiva: q.y, order: q.order });
-          const rows = env.rows.filter((r) => r._t === q.t && r.yeshiva === q.y);
+          env.selects.push({ table: q.t, cols: q.cols, yeshiva: q.y, archived: q.arch, order: q.order });
+          const rows = env.rows.filter((r) => r._t === q.t && r.yeshiva === q.y
+            && (q.arch === null || !!r.archived === q.arch));
           const out = env.net
             ? { data: rows, error: null }
             // ⚠️ `errWithData` מדמה תשובה שיש בה **גם** `error` וגם מערך — זו
@@ -98,6 +102,8 @@ function makeEnv(opts = {}) {
   vm.createContext(sandbox);
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);   // דרוש ל-parseGregLike (סבב 31)
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
+  vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
+  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = true;'), sandbox);
   vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
   if (opts.tbRows === false) sandbox.TB_ROWS = false;
