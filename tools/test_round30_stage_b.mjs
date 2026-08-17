@@ -103,7 +103,7 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);   // דרוש ל-parseGregLike (סבב 31)
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
-  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = true;'), sandbox);
+  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
   vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
   if (opts.tbRows === false) sandbox.TB_ROWS = false;

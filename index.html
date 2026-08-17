@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="20-2026-08-16-1">
+<meta name="app-version" content="21-2026-08-17-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -594,9 +594,13 @@ function _tbRecTs(r) {
 // gdate נשמר בצורה "3/09/2025" (d/mm/yyyy) — לא ISO. עוגן בצהריים מקומיים,
 // כמו כל חישוב תאריך בפרויקטים האלה.
 function _tbGdateTs(g) {
-  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(g || ''));
-  if (!m) return 0;
-  var d = new Date(+m[3], +m[2] - 1, +m[1], 12, 0, 0);
+  // ⭐ מסבב 35 הפענוח הוא דרך `parseGregLike` (סבב 35) — היא מכירה גם את
+  //    הצורה «19 יולי 2026» שמייצרת `gregDateStr`, שקודם החזירה כאן 0
+  //    ועיוותה את גיל הרשומה לצורך הפינוי (הפער שנרשם בסבב 31). העוגן
+  //    בצהריים מקומיים — כמו כל חישוב תאריך בפרויקטים האלה.
+  var p = parseGregLike(g);
+  if (!p) return 0;
+  var d = new Date(p.y, p.m - 1, p.d, 12, 0, 0);
   var t = d.getTime();
   return isFinite(t) ? t : 0;
 }
@@ -1467,10 +1471,15 @@ var BK_CFG = {
   user: function () { return null; },
   sources: function () {
     if (!KV_TABLE) return [];
-    return ['tb_entries', 'tb_archive', 'tb_cats', 'tb_subs', 'tb_subs_meta',
-            'tb_wa_phone'].map(function (k) {
-      return { kind: 'kv', table: KV_TABLE, name: k };
-    });
+    /* ⭐ מסבב 35 היומן והארכיון מגובים מטבלת השורות המאוחדת (סבב 35) —
+       הכתיבה הכפולה ל-kv כובתה, ערכי ה-kv שלהם קפאו, וגיבוי שלהם היה
+       מגבה עבר. הדפוס הוא של schar-limud: סריאליזציית שורות הטבלה
+       ל-`kv_backup`, כולל השורות המדוגלות `archived`. שאר המפתחות
+       נשארים מקורות `kv` — זה ביתם היחיד בענן. */
+    var out = [{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',
+                 eq: ['yeshiva', YESHIVA], order: 'rec_key' }];
+    return out.concat(['tb_cats', 'tb_subs', 'tb_subs_meta', 'tb_wa_phone']
+      .map(function (k) { return { kind: 'kv', table: KV_TABLE, name: k }; }));
   }
 };
 
@@ -1644,13 +1653,20 @@ async function bkMaybeDaily() {
         // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
         //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
         //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var rt = await c.from(s.name).select(s.cols || '*');
+        var q = c.from(s.name).select(s.cols || '*');
+        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
+        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
+        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+        if (s.order) q = q.order(s.order);
+        var rt = await q;
         if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; continue; }
         val = JSON.stringify(rt.data);
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
-      var bkey = pre + s.name;
+      // ⭐ `key` פר-מקור (סבב 35) — מקור-טבלה שמפתחו היה מתנגש במקור
+      //    ה-kv ההיסטורי באותו שם מקבל מפתח גיבוי משלו.
+      var bkey = pre + (s.key || s.name);
       var sig = bkSig(val), sigKey = 'bk_sig_' + bkey;
       if (lsGet(sigKey, '') === sig) { same++; continue; }
       var ins = await c.from(BK_TABLE).insert({ key: bkey, value: val });
@@ -2067,6 +2083,255 @@ function pendBoot() {
 }
 /* ═══════════════ סוף מודול "ממתין לסנכרון" ═════════════════════════════ */
 
+/* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
+/* ⭐ ביומן החלון החם הוא `archived=false` (סבב 35) — מנגנון הארכוב הקיים
+   מתיישר כמקרה פרטי של המודול: רשומות היומן החיות תמיד חמות, וסנאפשוט
+   ארכיון שאינו ⏳ ושאומת בענן מתפנה מהמכשיר. «מסך העבר» הוא לשונית
+   הארכיון עצמה — משיכת הסנכרון מחזירה את הסנאפשוטים לזיכרון כשיש רשת,
+   והדיסק נשאר חם בלבד.
+   ⚠️ אין כאן משתמשים ואין תפקידים (מטריצה שורה 3) — המכשיר הוא של
+   המנהל, ולכן `admin` מחזירה תמיד אמת. */
+var HW_CFG = {
+  enabled: true,
+  admin: function () { return true; },
+  specs: [{
+    key: function () { return 'tb_archive' + LS; },
+    label: 'ארכיון ימים',
+    inWindow: function () { return false; },
+    idOf: function (r) { return archiveKey(r); },
+    ts: function (r) { return _tbRecTs(r); },
+    isPending: function (r) { return pendHas(PK_ARC + archiveKey(r)); },
+    fetch: async function () {
+      var r = await tbRowsGet('tb_archive');
+      return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data }
+                                                  : { ok: false, rows: [] };
+    },
+    rows: function () { return ARCHIVE; },
+    apply: function (kept) { return lsSetArray('tb_archive' + LS, kept, _tbRecTs); }
+  }]
+};
+/* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35) ════════════════════════
+   המכשיר מחזיק דרך קבע רק את «החלון החם» — התקופה הפעילה — וההיסטוריה
+   חיה בענן ונמשכת לפי דרישה לקריאה. זו הכללה של שני דפוסים שכבר הוכחו:
+   אופק הפינוי של סבב 11 (רק העותק שעל הדיסק מצטמצם; הזיכרון והענן לא
+   נוגעים) והארכוב של יומן-עבודה (הישן מדוגל, ונשלף רק כשמבקשים אותו).
+
+   ⛔ שני תנאים יחד, ללא יוצא מן הכלל (סבב 35) — רשומה מתפנה מהמכשיר רק
+      כשהיא גם מחוץ לחלון וגם מסונכרנת במלואה: אינה מסומנת ⏳, והעותק
+      הענני שלה נראה בפועל עם חותמת שאינה ישנה מהמקומית. ספק ⇐ נשארת.
+   ⛔ נכשל סגור (סבב 35) — אין רשת, המשיכה נכשלה או החזירה לא-מערך ⇒ לא
+      מפנים דבר. היעדר ראיה אינו ראיה — בדיוק הכלל של סבב 14.
+   ⛔ יש משהו שטרם עלה לענן ⇒ הפינוי מדולג כולו (סבב 35) — אותה הגנה של
+      `LS_CFG.pending()` שחלה על שלב ב של הפינוי, ובנוסף לבדיקה
+      הפר-רשומתית. שתי שכבות, לא אחת.
+   ⚠️ הפינוי רץ בעליית האפליקציה (מושהה — הוא דורש רשת), ושער הדיסק
+      (`hwDiskFilter`) שומר שהוא לא יתבטל: משיכה מהענן ממזגת את הישן
+      חזרה לזיכרון — וזה רצוי, המסך מציג הכול כשיש רשת — אבל בכתיבה
+      לדיסק, רשומה שמחוץ לחלון ושראייתה העננית בידינו אינה נכתבת שוב.
+      הראיה חיה בזיכרון בלבד (`_hwCloudSeen`): אחרי טעינה מחדש אין
+      ראיה, ולכן אין סינון — עד למשיכה המוצלחת הבאה.
+   ⚠️ «מסך העבר» הוא קריאה בלבד: `hwPastLoad` מושך מהענן לפי דרישה,
+      מסנן לרשומות החיות שמחוץ לחלון, ואינו שומר דבר דרך קבע.
+   ⭐ כפתור השחזור («שחזר הכול מהענן») קורא ל-`lsRestoreAll` שבמודול
+      האחסון הקפוא — בלי לערוך אותו — עם אישור דו-שלבי, למנהל בלבד
+      (`HW_CFG.admin`). הוא פעיל גם כשהחלון החם רדום.
+
+   מעל הבלוק יושבת `HW_CFG` — הדבר היחיד שנבדל בין האפליקציות: הפעלה,
+   שער המנהל, ומפרטי החלון (מפתח, חלון, זהות, חותמת, ⏳, משיכה, כתיבה).
+   ה-API: `hwBoot` · `hwSweep` · `hwNoteCloud` · `hwDiskFilter` ·
+   `hwPastLoad` · `hwRestoreMount` · `hwEnabled`.
+   ══════════════════════════════════════════════════════════════════════ */
+var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה של סבב 14 — רשת אחרי עלייה
+var HW_RESTORE_ARM_MS = 8000;     // חלון האישור הדו-שלבי של כפתור השחזור
+var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
+var _hwSweepBusy = false;
+var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
+
+function _hwVal(v) { return (typeof v === 'function') ? v() : v; }
+function hwEnabled() {
+  try { return !!(typeof HW_CFG !== 'undefined' && HW_CFG && HW_CFG.enabled); }
+  catch (e) { return false; }
+}
+function _hwSpecs() {
+  try { return (typeof HW_CFG !== 'undefined' && HW_CFG && HW_CFG.specs) || []; }
+  catch (e) { return []; }
+}
+function _hwSpecFor(key) {
+  var specs = _hwSpecs();
+  for (var i = 0; i < specs.length; i++) {
+    try { if (_hwVal(specs[i].key) === key) return specs[i]; } catch (e) { }
+  }
+  return null;
+}
+function _hwLive(spec, rec) {
+  try { return spec.isLive ? !!spec.isLive(rec) : !(rec && rec.deleted); }
+  catch (e) { return true; }
+}
+
+// רישום הראיה העננית — כל משיכה מוצלחת מוסיפה ומעדכנת חותמות פר-מזהה.
+function hwNoteCloud(key, rows) {
+  if (!hwEnabled() || !Array.isArray(rows)) return;
+  var spec = _hwSpecFor(key);
+  if (!spec) return;
+  var idx = _hwCloudSeen[key] || (_hwCloudSeen[key] = {});
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], id, t;
+    try { id = spec.idOf(r); t = Number(spec.ts(r)) || 0; } catch (e) { continue; }
+    if (id == null) continue;
+    id = String(id);
+    if (!(idx[id] >= t)) idx[id] = t;
+  }
+}
+
+// שער הדיסק. ⛔ כל ספק משאיר את הרשומה (סבב 35) — רשומה בלי ראיה עננית
+// עדכנית לה-עצמה נכתבת לדיסק כרגיל; רק ודאות מפנה.
+function hwDiskFilter(key, rows) {
+  if (!hwEnabled() || !Array.isArray(rows)) return rows;
+  var spec = _hwSpecFor(key);
+  if (!spec) return rows;
+  var idx = _hwCloudSeen[key];
+  if (!idx) return rows;
+  var kept = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i], drop = false;
+    try {
+      if (!spec.inWindow(r)) {
+        var pend = true;
+        try { pend = !!spec.isPending(r); } catch (e1) { pend = true; }
+        if (!pend) {
+          var id = spec.idOf(r);
+          if (id != null) {
+            var ct = idx[String(id)];
+            var lt = Number(spec.ts(r)) || 0;
+            if (ct !== undefined && ct >= lt) drop = true;
+          }
+        }
+      }
+    } catch (e) { drop = false; }
+    if (!drop) kept.push(r);
+  }
+  return kept;
+}
+
+// הפינוי עצמו — מושך את העותק הענני של כל מפרט, ואז כותב לדיסק את הנשאר.
+async function hwSweep() {
+  if (!hwEnabled() || _hwSweepBusy) return { swept: 0 };
+  try {
+    if (typeof LS_CFG !== 'undefined' && LS_CFG &&
+        typeof LS_CFG.pending === 'function' && LS_CFG.pending()) {
+      try { lsLog('hw-skip', 'תור יוצא לא ריק'); } catch (e0) { }
+      return { swept: 0 };
+    }
+  } catch (e) { return { swept: 0 }; }
+  _hwSweepBusy = true;
+  var swept = 0;
+  try {
+    var specs = _hwSpecs();
+    for (var i = 0; i < specs.length; i++) {
+      var s = specs[i], key;
+      try { key = _hwVal(s.key); } catch (e1) { continue; }
+      var res = null;
+      try { res = await s.fetch(); } catch (e2) { res = null; }
+      if (!res || res.ok !== true || !Array.isArray(res.rows)) continue;
+      hwNoteCloud(key, res.rows);
+      var cur = null;
+      try { cur = s.rows(); } catch (e3) { cur = null; }
+      if (!Array.isArray(cur)) continue;
+      var kept = hwDiskFilter(key, cur);
+      if (kept.length === cur.length) continue;
+      var okW = false;
+      try { okW = !!s.apply(kept); } catch (e4) { okW = false; }
+      if (okW) {
+        var n = cur.length - kept.length;
+        swept += n;
+        try { lsLog('hw-sweep', (s.label || key) + ' −' + n); } catch (e5) { }
+      }
+    }
+  } catch (e6) { }
+  _hwSwept = swept;
+  _hwSweepBusy = false;
+  return { swept: swept };
+}
+
+// מסך העבר — קריאה בלבד. מחזיר מהענן את הרשומות החיות שמחוץ לחלון,
+// מהחדשה לישנה, בלי לגעת בדיסק ובלי לגעת בזיכרון האפליקציה.
+async function hwPastLoad(key, filter) {
+  var spec = _hwSpecFor(key);
+  if (!spec) return { ok: false, rows: [] };
+  var res = null;
+  try { res = await spec.fetch(); } catch (e) { res = null; }
+  if (!res || res.ok !== true || !Array.isArray(res.rows)) return { ok: false, rows: [] };
+  hwNoteCloud(key, res.rows);
+  var out = [];
+  for (var i = 0; i < res.rows.length; i++) {
+    var r = res.rows[i];
+    var inW = true;
+    try { inW = !!spec.inWindow(r); } catch (e1) { }
+    if (inW || !_hwLive(spec, r)) continue;
+    if (filter) { try { if (!filter(r)) continue; } catch (e2) { continue; } }
+    out.push(r);
+  }
+  out.sort(function (a, b) {
+    var ta = 0, tb = 0;
+    try { ta = Number(spec.ts(a)) || 0; tb = Number(spec.ts(b)) || 0; } catch (e3) { }
+    return tb - ta;
+  });
+  return { ok: true, rows: out };
+}
+
+/* ── כפתור השחזור — נגישות ל-`lsRestoreAll` ────────────────────────────── */
+// ⛔ הרכיב נתלה אחרי הבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה טכניקה
+//    של `bkStatusMount`: «מידע טכני» חתום ב-`check-status-area.mjs`,
+//    והכפתור מצטרף אליו מבחוץ.
+var _hwRestoreArmed = 0;
+function hwRestoreHTML() {
+  return '<div class="sync-line hw-restore-line"><button type="button" ' +
+    'onclick="window.hwRestoreClick&&window.hwRestoreClick(this)">' +
+    '☁️ שחזר הכול מהענן</button></div>';
+}
+function hwRestoreMount() {
+  try {
+    if (!(typeof HW_CFG !== 'undefined' && HW_CFG &&
+          typeof HW_CFG.admin === 'function' && HW_CFG.admin())) return;
+  } catch (e) { return; }
+  var box = document.getElementById('tech-info-box');
+  if (!box) return;
+  var d = box.querySelector('details.tech-info');
+  if (!d) return;
+  var prev = d.querySelector('.hw-restore-line');
+  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+  var wrap = document.createElement('div');
+  wrap.innerHTML = hwRestoreHTML();
+  var node = wrap.firstChild;
+  if (node) d.appendChild(node);
+}
+// אישור דו-שלבי: הלחיצה הראשונה חומשת לחלון קצר, השנייה מבצעת.
+function hwRestoreClick(btn) {
+  var now = Date.now();
+  if (!_hwRestoreArmed || (now - _hwRestoreArmed) > HW_RESTORE_ARM_MS) {
+    _hwRestoreArmed = now;
+    if (btn) btn.textContent = '⚠️ בטוח? לחיצה נוספת משחזרת הכול';
+    return;
+  }
+  _hwRestoreArmed = 0;
+  try { lsRestoreAll(); } catch (e) { }
+  if (btn) btn.textContent = '☁️ שחזר הכול מהענן';
+}
+window.hwRestoreClick = hwRestoreClick;
+window.hwRestoreMount = hwRestoreMount;
+
+/* ── נקודת ההפעלה ──────────────────────────────────────────────────────── */
+// ⛔ נקודת ההפעלה היחידה היא `hwBoot()` מפונקציית העלייה (סבב 35, כלל
+//    ברזל 12) — הפינוי מושהה מפני שהוא דורש רשת, בדיוק כמו הפינוי הנדחה
+//    של סבב 14. כשהמודול רדום (`HW_CFG.enabled` כבוי) היציאה מיידית,
+//    וכפתור השחזור נשאר פעיל בנפרד.
+function hwBoot() {
+  if (!hwEnabled()) return;
+  try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
+}
+window.hwBoot = hwBoot;
+/* ═══════════════ סוף מודול החלון החם ══════════════════════════════════ */
+
 /* ── חיבור yoman-avoda למודול ─────────────────────────────────────────────
    דחיפת-מצב מלא: `saveEntries`/`saveArchive` שולחות את **כל** המערך בכל
    שמירה, ולכן `sbSet` שהחזירה `ok` היא אישור לכל רשומה שסומנה לפני שהצילום
@@ -2370,7 +2635,15 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
    ══════════════════════════════════════════════════════════════════════════ */
 var TB_ROWS = true;
 var TB_ARC_UNIFIED = true;
-var TB_ARC_LEGACY_WRITE = true;
+/* ⭐ סבב 35 — הטבלאות הן המאסטר, והכתיבה הכפולה כובתה: `TB_ARC_LEGACY_WRITE`
+   (הטבלה הישנה `tb_archive`) ו-`TB_KV_LEGACY_WRITE` (מפתחות ה-`kv`
+   `tb_entries`/`tb_archive`) כבויים. השקילות אומתה ב-17.8 (720/171, אפס
+   אי-התאמות). ⛔ המחיקה עצמה ב-30.8, פעולת מנהל — לא כאן (סבב 35) — חלון
+   שבועיים בין כיבוי למחיקה הוא מה שמאפשר לגלות טעות בזמן.
+   ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta`/`tb_wa_phone` אינם חלק מהכיבוי —
+   ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
+var TB_ARC_LEGACY_WRITE = false;
+var TB_KV_LEGACY_WRITE = false;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
 function tbTableOf(kvKey) {
@@ -2549,16 +2822,15 @@ function saveEntries() {
   var _t0 = Date.now();
   lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
   (async function(){
-    // ⚠️ כתיבה כפולה: שורות **וגם** הבלוק הישן (סבב 30). הבלוק הוא נקודת
-    //    החזרה, ולכן הוא ממשיך להיכתב כל עוד הוא לא נמחק.
-    // ⛔ עֵד הפינוי והאישור של ⏳ דורשים ש**שתי** הכתיבות יצליחו (סבב 30) —
-    //    ראיה חלקית היא בדיוק מה שמאפשר לפינוי למחוק מהדיסק רשומה שאין לה
-    //    עותק שלם בענן, ולנתיב החזרה לאבד אותה.
+    // ⭐ הטבלאות הן המאסטר (סבב 35) — הכתיבה הכפולה לבלוק ה-kv כובתה,
+    //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
+    //    `TB_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
     var _rows = await tbRowsPush('tb_entries', ENTRIES);
-    var _r = await sbSet("tb_entries", ENTRIES);
-    var _ok = !!(_r && _r.ok) && (!TB_ROWS || _rows.ok);
+    var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_entries", ENTRIES) : null;
+    var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
+    if (_ok && _rows.n) tbSyncLog('push', 'tb_entries', _rows.n);
     var ts = Date.now();
     await sbSet("tb_last_changed", ts);
     // Update local timestamp so THIS device doesn't re-pull its own push
@@ -2567,17 +2839,18 @@ function saveEntries() {
 }
 function saveArchive() {
   var _t0 = Date.now();
-  lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
+  lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
     // ⭐ מסבב 32 הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר
     //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. `tbRowsPush`
     //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
     var _rows = await tbRowsPush('tb_archive', ARCHIVE);
-    var _r = await sbSet("tb_archive", ARCHIVE);
-    var _ok = !!(_r && _r.ok) && (!TB_ROWS || _rows.ok);
+    var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;
+    var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ARC, _t0);
+    if (_ok && _rows.n) tbSyncLog('push', 'tb_archive', _rows.n);
     var ts = Date.now();
     await sbSet("tb_last_changed", ts);
     _lastKnownTimestamp = ts;
@@ -2732,6 +3005,16 @@ function arcCleanupCorrupted() {
 }
 
 // Load from Supabase on startup — always pull from cloud to sync across devices
+/* ⭐ יומן הפעולות של הסנכרון — הדפוס של hanhala-ruchanit (סבב 35): דחיפה
+   שהצליחה נרשמת עם מספר השורות, ומשיכה מלאה נרשמת פעם אחת בסשן. הרישום
+   דרך `logAction` שבמודול הגיבוי — fire-and-forget, לעולם אינו חוסם.
+   ⛔ אין לרשום את הפולינג של `autoSyncData` (סבב 35) — הוא רץ כל 3 שניות,
+   ו-`sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
+function tbSyncLog(action, key, recordCount, details) {
+  try { logAction(action, key, recordCount, details); } catch (e) { }
+}
+var _tbPullLogged = false;
+
 async function syncFromCloud() {
   toast("🔄 מסנכרן...", 3000);
   // Which pulls actually failed — the final message must describe what really happened.
@@ -2780,11 +3063,11 @@ async function syncFromCloud() {
       // Sort by id descending (newest first)
       ENTRIES.sort(function(a,b){ return b.id - a.id; });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
-      tbRowsPush('tb_entries', ENTRIES);
-      sbSet('tb_entries', ENTRIES).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_entries'); });
+      tbRowsPush('tb_entries', ENTRIES).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_entries'); });
+      if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES);
     } else if (ENTRIES.length) {
       tbRowsPush('tb_entries', ENTRIES);
-      sbSet('tb_entries', ENTRIES); // cloud empty — push local up
+      if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES); // cloud empty — push local up
       // אין מה למזג — הגריעה של הטעינה כבר שלמה, מכבים את הדגל כדי שלא
       // יישאר תלוי ויופעל במיזוג מאוחר ולא צפוי.
       _tombPrunePending = false;
@@ -2794,6 +3077,7 @@ async function syncFromCloud() {
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
     var _rowsA = await tbRowsGet('tb_archive');
+    if (_rowsA.ok) hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
     var cloudArchive = _rowsA.ok ? _rowsA.data : await pull('tb_archive', 'ארכיון');
     if (cloudArchive && cloudArchive.length) {
       var merged = mergeArchive(ARCHIVE, cloudArchive);
@@ -2804,14 +3088,14 @@ async function syncFromCloud() {
         });
       }
       ARCHIVE = merged;
-      lsSetArray('tb_archive'+LS, ARCHIVE, _tbRecTs);
+      lsSetArray('tb_archive'+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
       // Push merged archive back to cloud so all devices stay in sync
-      tbRowsPush('tb_archive', ARCHIVE);
-      sbSet('tb_archive', ARCHIVE).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_archive'); });
+      tbRowsPush('tb_archive', ARCHIVE).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_archive'); });
+      if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // Cloud is empty but local has data — push to cloud
       tbRowsPush('tb_archive', ARCHIVE);
-      sbSet('tb_archive', ARCHIVE);
+      if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
     }
 
     // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
@@ -2836,6 +3120,7 @@ async function syncFromCloud() {
     // הסימון לפני הרינדור — שורת המצב שבאזור המצב נבנית בתוך renderSettings.
     if (failed.length === 0) _tbMarkSynced();
     renderSettings();
+    if (failed.length === 0 && !_tbPullLogged) { _tbPullLogged = true; tbSyncLog('pull', null, null); }
     if (failed.length === 0) {
       toast("✅ מסונכרן");
     } else if (failed.length >= 5) {
@@ -3029,7 +3314,7 @@ function checkDayChange() {
     // ⛔ אותו בונה בדיוק כמו המסלול הידני (סבב 31) — `auto` הוא סימון מקור
     //    ותו לא, ואינו מחליף שדה. ר' הבלוק שמעל `arcPutSnapshot`.
     arcPutSnapshot(dayKey, hdate, gdate, carried, ts, { auto: true });
-    lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
+    lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
@@ -3625,8 +3910,12 @@ var _syncPushTimer = null;
 function scheduleSyncPush() {
   if (_syncPushTimer) clearTimeout(_syncPushTimer);
   _syncPushTimer = setTimeout(async function() {
-    var rEntries = await sbSet("tb_entries", ENTRIES);
-    var rArchive = await sbSet("tb_archive", ARCHIVE);
+    // ⭐ מסבב 35 הדחיפה כאן היא שורות (סבב 35) — קודם המסלול הזה דחף את
+    //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
+    //    יחד עם כיבוי הכתיבה הכפולה.
+    var rEntries = await tbRowsPush("tb_entries", ENTRIES);
+    var rArchive = await tbRowsPush("tb_archive", ARCHIVE);
+    if (TB_KV_LEGACY_WRITE) { await sbSet("tb_entries", ENTRIES); await sbSet("tb_archive", ARCHIVE); }
     if (!rEntries.ok || !rArchive.ok) {
       // Don't stamp tb_last_changed for data that never arrived — other devices
       // would pull the stale cloud copy over their own newer entries.
@@ -3954,6 +4243,7 @@ function editTaskInline(ci, ti) {
 function renderSettings() {
   statusAreaMount();
   bkStatusMount();
+  hwRestoreMount();
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   CATS.forEach(function(cat, ci) {
@@ -4710,12 +5000,13 @@ async function autoSyncData() {
       }
     }
     var _rowsA = await tbRowsGet('tb_archive');
+    if (_rowsA.ok) hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
     var resA = _rowsA.ok ? null : await sb.from(KV_TABLE).select("value").eq("key","tb_archive").single();
     if (_rowsA.ok || (resA && resA.data)) {
       var cloudArchive = _rowsA.ok ? _rowsA.data : JSON.parse(resA.data.value);
       if (Array.isArray(cloudArchive)) {
         ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
-        lsSetArray("tb_archive"+LS, ARCHIVE, _tbRecTs);
+        lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
         if (arcPanel && arcPanel.style.display !== "none" && arcSelDayKey) renderArcDetail();
@@ -4991,6 +5282,7 @@ function selectYeshiva(y) {
   //    `KV_TABLE`, שהוא `null` עד שנבחר מוסד. ⛔ אין להזיז את הקריאה
   //    למסלול סנכרון (סבב 30, השלמה) — ר' ההערה ב-`_tbMarkSynced`.
   try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
+  try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   loadLocalData();
   var ov = document.getElementById('yeshivaSelect');
   if (ov) ov.style.display = 'none';

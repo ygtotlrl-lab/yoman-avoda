@@ -79,6 +79,10 @@ function makeCtx() {
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } },
     LS: '_test',
     _tbRecTs: (r) => (r && Number(r.updatedAt)) || 0,
+    // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות הארכיון — כאן הוא
+    //    שקוף בכוונה, הבדיקות של החלון עצמו יושבות ב-test_round35_hotwin.
+    hwDiskFilter: (k, rows) => rows,
+    hwNoteCloud: () => {},
     // hebcal אינו נטען כאן; `hebrewDate` נשלטת פר-בדיקה.
     hebrewDate: () => '',
     _store: store,
