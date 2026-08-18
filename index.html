@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="24-2026-08-18-1">
+<meta name="app-version" content="25-2026-08-18-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2631,6 +2631,49 @@ function mergeRecords(local, remote, getKey, mergePair, isPending) {
   return order.map(function(k){ return map[k]; });
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   זהות רשומת יומן — השוואה, סדר וציטוט
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ מסבב 38 מזהה רשומה חדשה הוא **uuid** (`newClientId()`), ומזהי העבר הם
+   **מספרים** (`Date.now()` בשעת היצירה). ⛔ מזהים קיימים אינם מומרים לעולם
+   (סבב 38) — מזהה הוא מפתח המיזוג, והמרתו הייתה מפצלת רשומה אחת לשתיים
+   בכל מכשיר שטרם קיבל את ההמרה. כלומר **הקוד חייב לסבול את שני הסוגים
+   לנצח**, ושלושת העוזרים כאן הם שלוש הנקודות שבהן זה נשבר בלי טיפול.
+   ⛔ ואין להחזיר השוואה או מיון מספריים על מזהה (סבב 38) — `===` מול מספר
+   נכשל על uuid, ו-`b.id - a.id` מחזיר `NaN` ומשאיר את הרשימה בסדר שרירותי.
+   ══════════════════════════════════════════════════════════════════════════ */
+// השוואת זהות — תמיד כמחרוזת. עובדת על מזהה ישן (מספר) ועל חדש (uuid)
+// באותה מידה, ⛔ וגם על התאמה חוצת-סוגים שנוצרת כשמזהה עובר דרך מאפיין
+// HTML וחוזר כמחרוזת (סבב 38).
+function idEq(a, b) {
+  if (a == null || b == null) return false;
+  return String(a) === String(b);
+}
+// מפתח הסדר של רשומת יומן. ⚠️ **`createdAt` ולא `id`** (סבב 38) — מזהה אינו
+// מפתח סדר, ו-uuid אינו ניתן להשוואה מספרית.
+// ⚠️ ורשומות העבר: אצלן ה-`id` **הוא** חותמת היצירה (`Date.now()`), והוא
+//    מקור הזמן היחיד שיש להן. לכן הוא נשאר כנפילה-חזרה — בלעדיו כל
+//    ההיסטוריה הייתה מתמוטטת ל-0 ומאבדת את סדרה. `updatedAt` הוא הנפילה
+//    האחרונה, ורק כשאין אף אחד מהשניים.
+function entryOrderTs(e) {
+  if (!e) return 0;
+  var c = Number(e.createdAt);
+  if (isFinite(c) && c > 0) return c;
+  var i = Number(e.id);
+  if (isFinite(i) && i > 0) return i;
+  var u = Number(e.updatedAt);
+  return (isFinite(u) && u > 0) ? u : 0;
+}
+// מזהה כארגומנט למאפיין `onclick`. ⛔ **מצוטט תמיד** (סבב 38) — uuid בלי
+// מרכאות הוא שם משתנה שאינו קיים, וכל כפתורי העריכה והמחיקה היו מתים.
+// ⛔ והסינון הוא **רשימת-היתר של תווים** ולא בריחה (סבב 38): ערך המאפיין
+//    עובר פענוח-ישויות לפני שהוא נקרא כ-JS, ולכן `&#39;` שנוצר ע"י `esc`
+//    היה חוזר להיות גרש וסוגר את המחרוזת. מזהה חוקי כאן הוא ספרות, אותיות
+//    לטיניות, מקף וקו תחתון בלבד — כל השאר נחתך.
+function idArg(v) {
+  return "'" + String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '') + "'";
+}
+
 function entryKey(e) { return (e && e.id != null) ? e.id : null; }
 // ⚠️ שני הפרדיקטים האלה הם **אותם מפתחות בדיוק** שבהם משתמשים `tbDirtyRows`
 //    (בחירת מה לדחוף) ו-`HW_CFG.specs[].isPending` (שער הפינוי) — קידומת
@@ -2837,7 +2880,10 @@ function tbSortRows(kvKey, arr) {
     });
   } else {
     a.sort(function (x, y) {
-      var ix = Number(x && x.id) || 0, iy = Number(y && y.id) || 0;
+      // ⭐ סבב 38 — `entryOrderTs` ולא `Number(id)`: מזהה רשומה הוא uuid
+      //    מסבב 38, ו-`Number` עליו הוא `NaN`. הסדר הסמנטי לא השתנה —
+      //    לרשומות העבר ה-`id` הוא עצמו חותמת היצירה.
+      var ix = entryOrderTs(x), iy = entryOrderTs(y);
       if (ix !== iy) return iy - ix;
       return String(entryKey(x)) < String(entryKey(y)) ? -1 : 1;
     });
@@ -3092,7 +3138,7 @@ function arcCleanupCorrupted() {
     var idx = ARCHIVE.findIndex(function(a){ return a.gdate === tg; });
     if (idx >= 0) {
       ARCHIVE[idx].entries = ARCHIVE[idx].entries || [];
-      if (!ARCHIVE[idx].entries.find(function(x){ return x.id === e.id; })) {
+      if (!ARCHIVE[idx].entries.find(function(x){ return idEq(x.id, e.id); })) {
         ARCHIVE[idx].entries.push(e);
         ARCHIVE[idx].count = liveOnly(ARCHIVE[idx].entries).length;
         recTouch(ARCHIVE[idx], ts + 1);
@@ -3177,7 +3223,7 @@ async function syncFromCloud() {
       // הממוזגת, כדי שגם העותק הענני שנדחף מיד אחר כך יצטמצם.
       if (_tombPrunePending) { _tombPrunePending = false; ENTRIES = prunePastTombstones(ENTRIES); }
       // Sort by id descending (newest first)
-      ENTRIES.sort(function(a,b){ return b.id - a.id; });
+      ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
       tbRowsPush('tb_entries', ENTRIES).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_entries'); });
       if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES);
@@ -3661,7 +3707,13 @@ function addEntry() {
   if (!task)   { toast("⚠️ יש להזין משימה"); return; }
   var now = new Date();
   var entry = {
-    id: now.getTime(),
+    // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורה 25 במטריצה).
+    //    עד כאן היה `now.getTime()`: שני מכשירים שהוסיפו רשומה באותה
+    //    מילישנייה קיבלו **אותו מזהה**, והמיזוג ראה בהם רשומה אחת.
+    id: newClientId(),
+    // ⛔ `createdAt` נפרד מהמזהה (סבב 38) — הסדר היה נגזר מה-`id`, ו-uuid
+    //    אינו ניתן להשוואה מספרית. ר' `entryOrderTs`.
+    createdAt: now.getTime(),
     day: selDay, hdate: hdate, gdate: document.getElementById("gregDateInput").value.trim(),
     cat: selCat.letter, catName: selCat.name,
     task: task, sub: sub, notes: notes, count: count,
@@ -3731,8 +3783,8 @@ function renderLog() {
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button class="edit-btn" onclick="editEntry(' + e.id + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
-      + '<button class="del-btn" onclick="delEntry(' + e.id + ')">✕</button>'
+      + '<button class="edit-btn" onclick="editEntry(' + idArg(e.id) + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
+      + '<button class="del-btn" onclick="delEntry(' + idArg(e.id) + ')">✕</button>'
       + '</div>';
   }).join("");
 }
@@ -3740,7 +3792,7 @@ function renderLog() {
 function delEntry(id) {
   // tombstone במקום הסרה פיזית: הסרה פיזית נראית למכשיר אחר כ"רשומה שאני לא
   // מכיר" — הוא היה מחזיר אותה לחיים בסנכרון הבא.
-  var deleted = ENTRIES.find(function(e){ return e.id === id && isLive(e); });
+  var deleted = ENTRIES.find(function(e){ return idEq(e.id, id) && isLive(e); });
   if (!deleted) return;
   recDelete(deleted);
   pendMark(PK_ENTRY + deleted.id);   // מחיקה היא כתיבה — ממתינה לאישור
@@ -4882,8 +4934,8 @@ function renderArcDetail() {
     sortedE.forEach(function(e, ei) {
       var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
       html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button class="arc-entry-edit" onclick="arcEditEntry(\''+jsQ(arcSelDayKey)+'\','+e.id+')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
-        '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+jsQ(arcSelDayKey)+'\','+e.id+')">×</button>' : '')+
+        (arcEditMode ? '<button class="arc-entry-edit" onclick="arcEditEntry(\''+jsQ(arcSelDayKey)+'\','+idArg(e.id)+')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+        '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+jsQ(arcSelDayKey)+'\','+idArg(e.id)+')">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
         '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
         '<span style="color:#bbb">←</span>'+
@@ -4936,11 +4988,11 @@ function arcDeleteEntry(gdateKey, entryId) {
   var ts = Date.now();
   ARCHIVE.forEach(function(snap) {
     var hit = false;
-    (snap.entries||[]).forEach(function(e){ if (e.id === entryId && isLive(e)) { recDelete(e, ts); hit = true; } });
+    (snap.entries||[]).forEach(function(e){ if (idEq(e.id, entryId) && isLive(e)) { recDelete(e, ts); hit = true; } });
     if (hit) { snap.count = liveOnly(snap.entries).length; recTouch(snap, ts); }
   });
   saveArchive();
-  ENTRIES.forEach(function(e){ if (e.id === entryId && isLive(e)) recDelete(e, ts); });
+  ENTRIES.forEach(function(e){ if (idEq(e.id, entryId) && isLive(e)) recDelete(e, ts); });
   saveEntries();
   renderArcDetail();
   renderArcBreadcrumb();
@@ -4957,17 +5009,21 @@ function arcAddEntry(gdateKey) {
   var letter = catSel.value;
   var cat = CATS.find(function(c){ return c.letter === letter; });
   if (!cat) return;
+  // ⭐ סבב 38 — אותו דפוס בדיוק כמו ב-`addEntry`: מזהה מהמודול המשותף,
+  //    וחותמת יצירה נפרדת לסדר.
+  var _now = Date.now();
   var newEntry = {
-    id: Date.now(),
+    id: newClientId(),
+    createdAt: _now,
     day: d.day, hdate: d.hdate, gdate: d.gdate,
     cat: letter, catName: cat.name,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
-    updatedAt: Date.now()
+    updatedAt: _now
   };
   // Add to ARCHIVE snapshot if exists.
   // יום בלי gdate ממופתח לפי snapId — התאמה לפי gdate ריק הייתה בוחרת סנאפשוט שגוי.
   var snap = ARCHIVE.find(function(s){
-    return isLive(s) && (d.gdate ? s.gdate === d.gdate : (d.snapId != null && s.id === d.snapId));
+    return isLive(s) && (d.gdate ? s.gdate === d.gdate : (d.snapId != null && idEq(s.id, d.snapId)));
   });
   if (snap) {
     snap.entries = snap.entries || [];
@@ -5012,7 +5068,7 @@ function renderArchive() {
 
 
 function exportArchivePDF(id) {
-  var snap = ARCHIVE.find(function(s){ return s.id === id; });
+  var snap = ARCHIVE.find(function(s){ return idEq(s.id, id); });
   if (!snap) return;
   var savedEntries = ENTRIES;
   ENTRIES = liveOnly(snap.entries);
@@ -5108,7 +5164,7 @@ async function autoSyncData() {
       var cloudEntries = _rowsE.ok ? _rowsE.data : JSON.parse(res.data.value);
       if (Array.isArray(cloudEntries)) {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
-        ENTRIES.sort(function(a,b){ return b.id - a.id; });
+        ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
         lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
         renderLog();
         console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
@@ -5442,7 +5498,7 @@ function sendSignal(){
 
 
 function editEntry(id) {
-  var e = ENTRIES.find(function(x){ return x.id === id && isLive(x); });
+  var e = ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
   if(!e) return;
   var row = document.querySelector('[onclick*="delEntry(' + id + ')"]');
   if(!row) { row = document.querySelector('[onclick*="editEntry(' + id + ')"]'); }
@@ -5456,7 +5512,7 @@ function editEntry(id) {
     '<input id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input id="ei_count" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button onclick="saveEntry(' + id + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button onclick="saveEntry(' + idArg(id) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
   container.innerHTML = '';
   container.appendChild(div);
@@ -5468,7 +5524,7 @@ function editEntry(id) {
 }
 
 function saveEntry(id) {
-  var e = ENTRIES.find(function(x){ return x.id === id && isLive(x); });
+  var e = ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
   if(!e) return;
   e.task = document.getElementById('ei_task').value.trim() || e.task;
   e.sub = document.getElementById('ei_sub').value.trim();
@@ -5487,7 +5543,7 @@ function arcEditEntry(gdateKey, entryId) {
   var days = getAllArchiveDays();
   var d = days[gdateKey];
   if(!d) return;
-  var e = d.entries.find(function(x){ return x.id === entryId; });
+  var e = d.entries.find(function(x){ return idEq(x.id, entryId); });
   if(!e) return;
   // Find the row element and replace with inline edit form
   var rows = document.querySelectorAll('.arc-entry-row');
@@ -5506,7 +5562,7 @@ function arcEditEntry(gdateKey, entryId) {
     '<input id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input id="aei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button onclick="arcSaveEntry(\'' + qk + '\',' + entryId + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button onclick="arcSaveEntry(\'' + qk + '\',' + idArg(entryId) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
 }
@@ -5526,12 +5582,12 @@ function arcSaveEntry(gdateKey, entryId) {
   ARCHIVE.forEach(function(snap) {
     var hit = false;
     (snap.entries||[]).forEach(function(e) {
-      if (e && e.id === entryId) { apply(e); hit = true; hits++; }
+      if (e && idEq(e.id, entryId)) { apply(e); hit = true; hits++; }
     });
     if (hit) { recTouch(snap, ts); touchedArc.push(archiveKey(snap)); }
   });
   ENTRIES.forEach(function(e) {
-    if (e && e.id === entryId) { apply(e); hits++; }
+    if (e && idEq(e.id, entryId)) { apply(e); hits++; }
   });
   if (!hits) {
     // אין מה לשמור — לא לשקר למשתמש

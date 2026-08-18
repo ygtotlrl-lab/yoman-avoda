@@ -55,7 +55,7 @@ const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey',
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbTableOf', 'tbArchivedFlag',
-  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'tbSortRows',
+  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
 
 /* ── לקוח Supabase מדומה ────────────────────────────────────────────────
