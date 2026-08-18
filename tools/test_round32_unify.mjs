@@ -121,11 +121,13 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
-  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = true;'), sandbox);
+  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
   vm.runInContext(cutVar('var TB_ROW_TABLES = '), sandbox);
   vm.runInContext(cutVar('var _tbRemote = '), sandbox);
   if (opts.unified === false) sandbox.TB_ARC_UNIFIED = false;
-  if (opts.legacyWrite === false) sandbox.TB_ARC_LEGACY_WRITE = false;
+  // ⭐ סבב 35: הדגל כבוי בקוד הרץ; בדיקות נתיב-החזרה (5ו-5יא) מדליקות אותו
+  //    כאן במפורש כדי שהנתיב יישאר מכוסה עד המחיקה ב-30.8.
+  sandbox.TB_ARC_LEGACY_WRITE = (opts.legacyWrite === false) ? false : true;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
   env.sb = sandbox;
   return env;
