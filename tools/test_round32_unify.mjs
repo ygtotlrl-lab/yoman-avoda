@@ -50,7 +50,10 @@ function cutVar(decl) {
   return SRC.slice(i + 1, SRC.indexOf('\n', i + 1));
 }
 
-const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey', 'mergeEntries',
+const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey',
+  // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
+  //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
+  'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbTableOf', 'tbArchivedFlag',
   'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'tbSortRows',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
