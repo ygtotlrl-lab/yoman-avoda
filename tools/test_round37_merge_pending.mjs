@@ -19,13 +19,16 @@ import vm from 'node:vm';
 /* ── APP — הדבר היחיד שנבדל בין הריפו (yoman-avoda) ────────────────────── */
 const APP = {
   app: 'yoman-avoda',
-  names: ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
+  names: ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
   vars: [],
   globals: { PK_ENTRY: 'entry:', PK_ARC: 'arc:' },
   offlineFn: null,   // ⚠️ אין כאן משתמשים ואין כניסה
-  mutFn: 'mergeRecords',
-  guard: /pend\(k\) \|\| recTs\(r\) > recTs\(map\[k\]\)/,
-  mutate: (fn) => fn.replace('pend(k) || recTs(r) > recTs(map[k])', 'recTs(r) > recTs(map[k])'),
+  // ⭐ סבב 38 — כלל ההכרעה עבר לליבה המשותפת, ולכן גם המוטציה מכוונת
+  //    לשם. ⛔ הטענה לא נחלשה: היא עדיין דורשת שהסרת סעיף ה-⏳ תפיל את
+  //    טענת הבסיס — רק שעכשיו זה קורה **בארבע האפליקציות בבת אחת**.
+  mutFn: '_mergePick',
+  guard: /isPend \|\| tsOf\(loc\) > tsOf\(rem\)/,
+  mutate: (fn) => fn.replace('isPend || tsOf(loc) > tsOf(rem)', 'tsOf(loc) > tsOf(rem)'),
   rec: (id, ts, tag) => ({ id: id, updatedAt: ts, cat: 'א', task: tag }),
   keyOf: (r) => r.id,
   tag: (r) => r && r.task,

@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="25-2026-08-18-1">
+<meta name="app-version" content="26-2026-08-18-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2598,37 +2598,110 @@ function prunePastTombstones(arr, nowTs) {
 //    המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
 //    יותר. זו העדפה מכוונת — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי
 //    24 שעות, בעוד שעריכה שנמחקת בשקט אינה משאירה עקבות.
-function mergeRecords(local, remote, getKey, mergePair, isPending) {
+/* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
+   ליבת המיזוג של הארגון, זהה בית-לבית בארבע האפליקציות. עד סבב 38 חיו כאן
+   **ארבעה מנועים נפרדים** — `mergeRecords` · `ysMergeRecords` · `slMerge` ·
+   `mergeRows` — שכולם מימשו את אותם שלושה כללים של כלל ברזל 6:
+     • רשומה מקומית מסומנת ⏳ מנצחת, **ללא תלות בחותמת**;
+     • בשוויון חותמות — **הענן מנצח** (שובר-שוויון דטרמיניסטי);
+     • רשומה שקיימת רק מקומית **שורדת** — היעדרות אצל הצד השני אינה מחיקה.
+   ⛔ שלושת הכללים יושבים מעכשיו ב-`_mergePick` בלבד (סבב 38) — ארבעה
+   עותקים של כלל הכרעה הם ארבע הזדמנויות שאחד מהם ייסחף, וזה בדיוק מה
+   שקרה: ההגנה על ⏳ הייתה קיימת בשתיים מארבע במשך שמונה-עשר סבבים.
+
+   ⚠️ **מה שנבדל בין האפליקציות נשאר נבדל — כפרמטר מדוד ולא כקוד כפול.**
+   ארבע ידיות המדיניות (`dedupe` · `remoteDupe` · `keyless` · `localPick`)
+   אינן קישוט: הן מקודדות התנהגויות **קיימות** במצבי קצה, שנמדדו לפני
+   האיחוד ונשמרו בדיוק כפי שהיו. ⛔ אין לשנות אף אחת מהן «לשם אחידות»
+   (סבב 38) — היפוך `dedupe` בשכר לימוד, למשל, היה מכווץ שתי שורות כספיות
+   בעלות אותו מפתח לשורה אחת, בשקט. אובדן שקט גרוע מכפילות גלויה.
+
+   ⛔ ואין להוסיף כאן קריאה לרשת, ל-localStorage או ל-DOM (סבב 38) — הליבה
+   טהורה, וזה מה שמאפשר להריץ אותה בבדיקות דיפרנציאליות מול המנוע שהיא
+   החליפה.
+
+   **ה-API:** `_mergePick` · `mergeCore`.
+   ═══════════════════════════════════════════════════════════════════════ */
+// כלל ההכרעה בין שתי גרסאות של **אותה** רשומה — הנקודה היחידה בארגון שבה
+// הוא נכתב. ⛔ אין לשכפל אותה (סבב 38) — ר' הנימוק שבראש הבלוק.
+// `isPend` הוא הסימון ⏳ של הרשומה המקומית; `mergePair`, כשהוא קיים, מקבל
+// את ההכרעה כפרמטר ומרחיב אותה (מיזוג פנימי של סנאפשוט).
+function _mergePick(loc, rem, k, isPend, tsOf, mergePair) {
+  if (mergePair) return mergePair(loc, rem, k, isPend);
+  return (isPend || tsOf(loc) > tsOf(rem)) ? loc : rem;   // שוויון → הענן
+}
+// `opts`: getKey · ts · isPending · mergePair · keepUnversionedLocal · onDrop
+//         ובנוסף ארבע ידיות המדיניות שבראש הבלוק.
+function mergeCore(local, remote, opts) {
+  var o = opts || {};
+  var getKey = o.getKey, tsOf = o.ts, mergePair = o.mergePair || null;
+  var keepUnversionedLocal = !!o.keepUnversionedLocal, onDrop = o.onDrop || null;
+  var dedupe = o.dedupe !== false;
+  var remoteDupe = o.remoteDupe || 'ts';        // 'ts' | 'last'
+  var keyless = o.keyless || 'drop';            // 'drop' | 'keep-remote'
+  var localPick = o.localPick || 'last';        // 'last' | 'first'
+  var pend = function (k) { return !!(o.isPending && o.isPending(k)); };
   var L = Array.isArray(local) ? local : [];
   var R = Array.isArray(remote) ? remote : [];
-  var map = {}, order = [];
-  var pend = function(k) { return !!(isPending && isPending(k)); };
-  R.forEach(function(r) {
-    if (!r) return;
-    var k = getKey(r); if (k == null) return; k = String(k);
-    if (!(k in map)) { order.push(k); map[k] = r; return; }
-    // כפילות בתוך אותו מערך (למשל שני סנאפשוטים לאותו gdate שנוצרו בשתי
-    // קריאות autoArchiveDay). דריסה עיוורת כאן הייתה מוחקת רשומות אמיתיות,
-    // ולכן גם כאן ממזגים.
-    // ⚠️ שני הצדדים כאן מרוחקים, ולכן הגנת ה-⏳ אינה חלה (סבב 37) — היא
-    //    מכריעה בין **מקומי** למרוחק בלבד.
-    map[k] = mergePair ? mergePair(map[k], r, k, false) : (recTs(r) >= recTs(map[k]) ? r : map[k]);
+
+  // ── מסלול א: איחוד כפילויות (map+order) ────────────────────────────────
+  if (dedupe) {
+    var map = {}, order = [];
+    R.forEach(function (r) {
+      if (!r) return;
+      var k = getKey(r); if (k == null) return; k = String(k);
+      if (!(k in map)) { order.push(k); map[k] = r; return; }
+      // ⚠️ הסדר כאן הוא (הקיים, החדש) — שוויון נופל על ה**מאוחר** במערך.
+      //    היפוך הארגומנטים הופך את שובר-השוויון בשקט.
+      map[k] = (remoteDupe === 'last') ? r
+             : _mergePick(map[k], r, k, false, tsOf, mergePair);
+    });
+    L.forEach(function (r) {
+      if (!r) return;
+      var k = getKey(r); if (k == null) return; k = String(k);
+      if (!(k in map)) {
+        // רשומה מקומית-בלבד — היעדרות אצל הצד השני אינה מחיקה.
+        if (tsOf(r) > 0 || keepUnversionedLocal || remote == null) { order.push(k); map[k] = r; }
+        else if (onDrop) { try { onDrop(r, k); } catch (eD) {} }
+      } else { map[k] = _mergePick(r, map[k], k, pend(k), tsOf, mergePair); }
+    });
+    return order.map(function (k) { return map[k]; });
+  }
+
+  // ── מסלול ב: שימור כפילויות (דחיפה זורמת) ──────────────────────────────
+  var out = [], seen = {}, byKey = {};
+  L.forEach(function (l) {
+    var k = getKey(l); if (k == null) return; k = String(k);
+    if (localPick === 'last' || !(k in byKey)) byKey[k] = l;
   });
-  L.forEach(function(r) {
-    if (!r) return;
-    var k = getKey(r); if (k == null) return; k = String(k);
-    if (!(k in map)) {
-      // רשומה מקומית בלבד — תמיד שורדת, גם בלי updatedAt (נתוני legacy).
-      // היעדרות אצל הצד השני אינה מחיקה. המחיר: רשומה שנמחקה פיזית ע"י
-      // הקוד הישן במכשיר אחר עלולה לחזור פעם אחת — עדיף על אובדן נתונים.
-      order.push(k); map[k] = r;
-    } else if (mergePair) {
-      map[k] = mergePair(r, map[k], k, pend(k));
-    } else if (pend(k) || recTs(r) > recTs(map[k])) {
-      map[k] = r;   // שוויון (כולל 0 מול 0) → הענן מנצח, אלא אם המקומי מסומן ⏳
-    }
+  R.forEach(function (r) {
+    var k = getKey(r);
+    if (k == null) { if (keyless === 'keep-remote') out.push(r); return; }
+    k = String(k); seen[k] = 1;
+    var l = byKey[k];
+    if (!l) { out.push(r); return; }
+    out.push(_mergePick(l, r, k, pend(k), tsOf, mergePair));
   });
-  return order.map(function(k){ return map[k]; });
+  L.forEach(function (l) {
+    var k = getKey(l); if (k == null) return; k = String(k);
+    if (!seen[k]) out.push(l);
+  });
+  return out;
+}
+/* ═══════════════ סוף מודול המיזוג ══════════════════════════════════════ */
+
+// חיבור יומן העבודה לליבה המשותפת (סבב 38). ⛔ החתימה לא השתנתה —
+// עשרות אתרי קריאה מסתמכים עליה.
+// ⚠️ `dedupe: true` **נדרש כאן ואינו ברירת מחדל שקטה**: שתי קריאות
+//    `autoArchiveDay` על אותו יום מייצרות שני סנאפשוטים לאותו `gdate`
+//    באותו מערך, ובלי איחוד הם היו שורדים שניהם ומכפילים את הארכיון.
+// `remoteDupe: 'ts'` — בכפילות בתוך המערך המרוחק מנצחת החותמת הגבוהה,
+//    ובשוויון המאוחר. ⚠️ שני הצדדים שם מרוחקים, ולכן הגנת ה-⏳ אינה חלה.
+function mergeRecords(local, remote, getKey, mergePair, isPending) {
+  return mergeCore(local, remote, {
+    getKey: getKey, ts: recTs, mergePair: mergePair, isPending: isPending,
+    keepUnversionedLocal: true, dedupe: true, remoteDupe: 'ts'
+  });
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
