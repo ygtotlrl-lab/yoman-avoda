@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="26-2026-08-18-1">
+<meta name="app-version" content="27-2026-08-19-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3170,6 +3170,23 @@ function arcCleanupCorrupted() {
         console.log('[arcCleanup] שוחזר תאריך לסנאפשוט:', cand, '(' + (snap.hdate||'') + ')');
       }
     }
+    // א2. סנאפשוט מתוארך שה-hdate שלו שבור — נרפא גם הוא
+    // ⛔ עד סבב 39 הריפוי ישב **בתוך** ענף «אין gdate» (סבב 31) — ולכן
+    //    סנאפשוט שכבר היה לו gdate ו-hdate שבור לא רופא לעולם.
+    // ⛔ הגזירה היא מ-gdate בלבד ולא מהשעון (סבב 39) — שעון היה נותן את
+    //    היום שבו רץ הניקוי במקום את יומו של הסנאפשוט.
+    if (snap.gdate && !hasHebMonth(snap.hdate)) {
+      var pg = parseGregLike(snap.gdate);
+      if (pg) {
+        var hg = hebrewDate(new Date(pg.y, pg.m - 1, pg.d, 12, 0, 0));
+        if (hg) {
+          snap.hdate = hg;
+          if (!snap.name || parseGregLike(snap.name)) snap.name = hg;
+          recTouch(snap, ts); changed = true;
+          console.log('[arcCleanup] שוחזר תאריך עברי לסנאפשוט', snap.gdate);
+        }
+      }
+    }
     // ב. רשומות בלי gdate בתוך סנאפשוט מתוארך — יורשות את תאריך הסנאפשוט
     if (snap.gdate) {
       var fixed = 0;
@@ -4994,7 +5011,7 @@ function renderArcDetail() {
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
     '<div style="flex:1">'+
-      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary)">' + d.hdate + '</div>'+
+      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" onclick="arcToggleEdit()" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
