@@ -12,11 +12,13 @@ native bridge.
 
 ## Why WebView and never a TWA
 
+<!-- SHARED:start id="android-why-twa" -->
 **Do not rebuild this as a TWA, and do not use PWABuilder** (it only produces
 TWAs). A TWA is not a standalone component — it runs the site *inside Chrome*
 and merely hides the address bar. The content filtering installed on the users'
 devices blocks Chrome, so a TWA build never opens at all. A WebView renders
 in-process and never goes through Chrome, so the filter does not touch it.
+<!-- SHARED:end -->
 
 This is measured, not theoretical: gius shipped a PWABuilder TWA and did not
 open on the users' devices, while this app and hanhala — both WebView — work.
@@ -28,7 +30,7 @@ gius has since been converted to a WebView shell built the same way.
 |---|---|
 | **Package ID** | `com.yoman.avoda` — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
 | **טוען** | `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 2 (1 = המעטפת שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה) |
+| **versionCode** | 3 — קודם בסבב 41 (חילוץ המעטפת). 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
@@ -36,9 +38,11 @@ gius has since been converted to a WebView shell built the same way.
 | **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` |
 | **אופליין** | ה-service worker של האתר. המעטפת מציגה דף שגיאה בעברית **רק** בהפעלה ראשונה בלי רשת |
 
+<!-- SHARED:start id="android-web-update" -->
 **עדכוני קוד web לא מצריכים APK חדש.** כל דחיפה ל-`main` מגיעה למכשירים דרך
 אותו מנגנון service worker + באנר "גרסה חדשה זמינה" שכבר עובד בדפדפן. APK חדש
 נדרש רק כששינוי נוגע במעטפת עצמה.
+<!-- SHARED:end -->
 
 ## ⛔ הגשר המקורי מוגבל לדומיין שלנו — ולא ניתן לשנות זאת
 
@@ -55,9 +59,9 @@ gius has since been converted to a WebView shell built the same way.
    גם iframe חוצה-origin בתוך דף שלנו אינו מגיע אליו. דורש WebView 88+.
 2. **`addJavascriptInterface` הישן**, למכשירים עם WebView ישן יותר. נעול פעמיים:
    הממשק **מחובר רק כשהמעטפת על הדומיין שלנו** ומנותק ברגע שהיא מנווטת משם
-   (`onPageStarted`/`onPageFinished` → `syncLegacyBridge`), **וכל קריאה מאמתת
-   מחדש** את מקור הדף על ה-UI thread לפני שהיא נוגעת במשהו. קריאה מכל מקום
-   אחר נזרקת.
+   (`onShellNavigation`, שהליבה קוראת מ-`onPageStarted`/`onPageFinished`),
+   **וכל קריאה מאמתת מחדש** את מקור הדף על ה-UI thread לפני שהיא נוגעת
+   במשהו. קריאה מכל מקום אחר נזרקת.
 
 הדף מנסה את שניהם, בסדר הזה (`_androidShareImage` ב-`index.html`).
 **אין להחליף את הסדר ואין להסיר את האימות.**
@@ -87,12 +91,38 @@ gius has since been converted to a WebView shell built the same way.
 לכן — **לפני הפצת ה-APK, ודא בכל מכשיר שמסך ההגדרות ← «⏳ ממתין לסנכרון»
 מציג 0.** רשומה שמסומנת ⏳ יושבת רק על המכשיר, ומעבר ה-origin ישאיר אותה מאחור.
 
+<!-- SHARED:start id="android-shell-split" -->
+## המעטפת — ליבה משותפת ומעטפת פר-אפליקציה (סבב 41)
+
+`MainActivity.java` היה עד סבב 41 **ארבעה עותקים חופשיים** של אותה מעטפת:
+hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח, ו-yoman כפולה בגלל
+גשר השיתוף. שער החתימה של סבב 40 הקפיא את המצב, ⛔ אך לא איחד אותו.
+
+מעכשיו הקוד מפוצל לשניים:
+
+| קובץ | מה יש בו |
+|---|---|
+| `ShellActivity.java` | **הליבה המשותפת** — הגדרות ה-WebView, בורר הקבצים, `shouldOverrideUrlLoading`, דף האופליין, כפתור החזרה ושמירת המצב. ⭐ **זהה בית-לבית בארבעת הריפו** פרט לשורת ה-`package`. |
+| `MainActivity.java` | **זהות בלבד** — הכתובת, משפט האופליין וצבע הכפתור, דרך שלוש מתודות. |
+
+⛔ **אין להוסיף לוגיקה ל-`MainActivity`** (סבב 41) — התנהגות שנוספת
+לאפליקציה אחת בלבד מחזירה בדיוק את ארבעת העותקים שהחילוץ החליף. מה שנחוץ
+לכולן נכנס ל-`ShellActivity`; מה שנחוץ לאחת עובר דרך שתי הווים שהליבה
+חושפת — `installBridge()` ו-`onShellNavigation(String)` — ונרשם כחריגה
+מנומקת.
+
+⚠️ **החריגה היחידה היום היא גשר השיתוף של yoman-avoda**, והיא מדודה: הליבה
+נושאת חתימה אחת בארבעתן (`d8efd10bc6d47354`), ורק המעטפת של yoman נבדלת.
+`tools/test_round40_shell.mjs` אוכף את שתי החתימות, ו⛔ **נכשל אם נמצא גשר
+בליבה** — גשר שם היה מגיע לארבע האפליקציות בבת אחת.
+<!-- SHARED:end -->
+
 ## Build
 
 ### הדרך המומלצת — GitHub Actions (לא צריך שום דבר מותקן)
 
-`.github/workflows/build-apk.yml`: Actions → **Build Signed APK** → **Run workflow**.
-ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-signed-apk`.
+`.github/workflows/build-apk.yml`: Actions → **Build APK** → **Run workflow**.
+ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-apk`.
 
 **אין יותר שלב "copy web assets"** — ואין להחזיר אותו (ר' הפרק שמעל).
 `copy-assets.sh` נשאר בריפו כשלד עם הסבר בלבד.
@@ -109,14 +139,11 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ## Sign with the PERMANENT key (required so it installs over previous builds)
 
 ```bash
-zipalign -p -f 4 app-release-unsigned.apk yoman-aligned.apk
-apksigner sign --ks ../signing/yoman.keystore --ks-key-alias yoman \
-  --ks-pass pass:yoman123 --key-pass pass:yoman123 \
-  --out yoman-avoda.apk yoman-aligned.apk
-apksigner verify --print-certs yoman-avoda.apk    # SHA256 must be 29:F5:0B:...:F8:B5
+../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk yoman-avoda.apk
 ```
 
-(or run `../signing/sign-apk.sh app-release-unsigned.apk yoman-avoda.apk`)
+או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/yoman.keystore`,
+alias `yoman`). אחרי חתימה מאמתים שה-SHA256 תואם לטבלה שם.
 
 ## Notes
 - בדיקת האוטו-אפדייט מול GitHub `raw` **נשארה כפי שהיא**, אבל משמעותה השתנתה:
