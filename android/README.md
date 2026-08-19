@@ -28,7 +28,7 @@ gius has since been converted to a WebView shell built the same way.
 |---|---|
 | **Package ID** | `com.yoman.avoda` — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
 | **טוען** | `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 2 (1 = המעטפת שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה) |
+| **versionCode** | 3 — קודם בסבב 41 (חילוץ המעטפת). 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
@@ -91,8 +91,8 @@ gius has since been converted to a WebView shell built the same way.
 
 ### הדרך המומלצת — GitHub Actions (לא צריך שום דבר מותקן)
 
-`.github/workflows/build-apk.yml`: Actions → **Build Signed APK** → **Run workflow**.
-ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-signed-apk`.
+`.github/workflows/build-apk.yml`: Actions → **Build APK** → **Run workflow**.
+ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-apk`.
 
 **אין יותר שלב "copy web assets"** — ואין להחזיר אותו (ר' הפרק שמעל).
 `copy-assets.sh` נשאר בריפו כשלד עם הסבר בלבד.
@@ -109,14 +109,11 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ## Sign with the PERMANENT key (required so it installs over previous builds)
 
 ```bash
-zipalign -p -f 4 app-release-unsigned.apk yoman-aligned.apk
-apksigner sign --ks ../signing/yoman.keystore --ks-key-alias yoman \
-  --ks-pass pass:yoman123 --key-pass pass:yoman123 \
-  --out yoman-avoda.apk yoman-aligned.apk
-apksigner verify --print-certs yoman-avoda.apk    # SHA256 must be 29:F5:0B:...:F8:B5
+../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk yoman-avoda.apk
 ```
 
-(or run `../signing/sign-apk.sh app-release-unsigned.apk yoman-avoda.apk`)
+או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/yoman.keystore`,
+alias `yoman`). אחרי חתימה מאמתים שה-SHA256 תואם לטבלה שם.
 
 ## Notes
 - בדיקת האוטו-אפדייט מול GitHub `raw` **נשארה כפי שהיא**, אבל משמעותה השתנתה:

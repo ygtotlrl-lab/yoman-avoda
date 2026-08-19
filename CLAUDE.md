@@ -1,6 +1,6 @@
 # יומן עבודה — CLAUDE.md
 
-עודכן לאחרונה: סבב 40 · 2026-08-19
+עודכן לאחרונה: סבב 41 · 2026-08-19
 
 ## סביבת עבודה
 - **ריפו:** `ygtotlrl-lab/yoman-avoda`
@@ -169,7 +169,7 @@ TWA (Trusted Web Activity) אינו רכיב עצמאי — הוא מריץ את
 > **ההמלצה הזו שגויה ובוטלה** — היא הייתה מחליפה מעטפת עובדת במעטפת חסומה.
 > השיתוף פתור ממילא בגשר מקורי, ולא דרך `navigator.share`.
 
-### פרטי המעטפת (⭐ versionCode 2 — טוענת מהרשת)
+### פרטי המעטפת (⭐ versionCode 3 — טוענת מהרשת)
 - אייקון: `res/mipmap-*/ic_launcher.png` (לוח משימות + גרף, מ-`icons/icon-512.png`)
 - **מה המעטפת טוענת:** `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**,
   בדפוס של gius. **שחרור קוד web כבר לא מצריך APK חדש**: `location.reload()`
@@ -203,7 +203,7 @@ TWA (Trusted Web Activity) אינו רכיב עצמאי — הוא מריץ את
 ## בנייה — דורש כלים שאינם זמינים בכל סביבה
 לבנייה מקומית צריך Android SDK (`aapt2`, `d8`, `apksigner`/`zipalign`).
 בסביבת הענן הם אינם מותקנים, ו-`dl.google.com` חסום — לכן הדרך המעשית היא
-**`.github/workflows/build-apk.yml`**: Actions → Build Signed APK → Run workflow.
+**`.github/workflows/build-apk.yml`**: Actions → Build APK → Run workflow.
 ה-workflow בונה וחותם עם `signing/yoman.keystore`. ⛔ **שלב "copy web assets"
 הוסר ואין להחזיר אותו** — המעטפת טוענת מהרשת.
 **לא להשתמש ב-PWABuilder** — הוא מייצר TWA (ר' האזהרה למעלה).
