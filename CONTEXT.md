@@ -10,6 +10,7 @@
 
 ---
 
+<!-- SHARED:start id="context-grant" -->
 ## ⚠️ Supabase — GRANT חובה לטבלאות חדשות
 
 כל טבלה חדשה שנוצרת ב-`public` schema חייבת לכלול GRANT מפורש — אחרת supabase-js
@@ -21,6 +22,7 @@ grant select, insert, update on public.TABLE_NAME to anon, authenticated;
 grant all on public.TABLE_NAME to service_role;
 alter table public.TABLE_NAME enable row level security;
 ```
+<!-- SHARED:end -->
 
 ⚠️ **הסיבה:** `GRANT` הוא **אדיטיבי בלבד ואינו מסיר דבר**, ופרויקט Supabase
 סטנדרטי מגיע עם `alter default privileges … grant all on tables` — כלומר
@@ -103,3 +105,5 @@ apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
 ```bash
 TS=$(date +%s) && apksigner sign ... --out yoman-${TS}.apk
 ```
+
+הכללים המחייבים והתיעוד המלא — ב-[CLAUDE.md](CLAUDE.md).
