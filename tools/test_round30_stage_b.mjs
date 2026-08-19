@@ -45,14 +45,16 @@ function cutVar(decl) {
   return SRC.slice(i + 1, SRC.indexOf('\n', i + 1));
 }
 
-const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey',
+const NAMES = ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
   // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbRowOf',
   // ⚠️ נוספו בסבב 31 — `tbRowsGet` ממיינת את מה שנמשך, ובלעדיהן היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
-  'parseGregLike', 'gdateOrderTs', 'tbSortRows',
+  // ⚠️ `entryOrderTs` נוספה בסבב 38 — `tbSortRows` ממיינת דרכה מאז שמזהה
+  //    הרשומה הוא uuid; בלעדיה היא זורקת ונתפסת ב-catch של `tbRowsGet`.
+  'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
   // ⚠️ נוספו בסבב 32 — `tbRowsGet`/`tbRowsPush` פונות דרכן לטבלה המאוחדת.
   'tbTableOf', 'tbArchivedFlag',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];

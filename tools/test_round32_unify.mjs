@@ -50,12 +50,12 @@ function cutVar(decl) {
   return SRC.slice(i + 1, SRC.indexOf('\n', i + 1));
 }
 
-const NAMES = ['recTs', 'isLive', 'liveOnly', 'mergeRecords', 'entryKey',
+const NAMES = ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
   // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbTableOf', 'tbArchivedFlag',
-  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'tbSortRows',
+  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
   'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
 
 /* ── לקוח Supabase מדומה ────────────────────────────────────────────────

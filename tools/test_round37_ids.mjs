@@ -20,11 +20,11 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
-/*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⚠️ ביומן הוא `false`,
- *  וזה פער מתועד עם טריגר ולא השמטה: מזהי היומן הם חותמות זמן שמשמשות
- *  כמפתח מיון מספרי ונכנסות בלי מרכאות למאפייני `onclick`. ר' שורה 25
- *  במטריצה.                                                              */
-const APP = { app: 'yoman-avoda', wired: false };
+/*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ ביומן הוא `true`
+ *  מסבב 38: שני אתרי היצירה עברו ל-`newClientId()`, יחד עם שלושת הממדים
+ *  שחסמו את ההמרה — המיון (`entryOrderTs`), הציטוט (`idArg`) וההשוואה
+ *  (`idEq`). ר' שורה 25 במטריצה ו-`test_round38_ids_yoman.mjs`.        */
+const APP = { app: 'yoman-avoda', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
