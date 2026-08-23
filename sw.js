@@ -1,4 +1,11 @@
-var CACHE_NAME = 'yoman-avoda-v34';
+/*  יומן עבודה — service worker.
+ *  ⚠️ מוסכמות משותפות (סבב 8): שם קבוע הגרסה הוא CACHE_NAME, מערך הליבה
+ *  נקרא CORE ורשימת ה-CDN נקראת CDN_ASSETS, וסדר המאזינים הוא
+ *  install → activate → fetch → message. ⛔ אין לשנות שם/סדר בפרויקט אחד.
+ *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
+ *  בארבע האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
+ */
+var CACHE_NAME = 'yoman-avoda-v35'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
 
 // App shell — must be cached for the app to work offline.
 var CORE = [
@@ -9,34 +16,16 @@ var CORE = [
   './icons/icon-512.png'
 ];
 
-// Third-party scripts the app depends on (Supabase client, html2canvas, hebcal).
-// Fetched with an explicit CORS request so the response is NOT opaque and can be
-// validated + stored. Without these cached, an offline launch loses the Hebrew
-// date and any report/image export.
-//
-// ⚠️ Versions are pinned exactly — never go back to a floating '@2' / '@4'.
-// A publisher-side release then breaks the app with no code change here, and
-// the break is unreproducible from the repo. Must stay identical to the tags
-// in index.html, or the SW caches a build the page never asks for.
+// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף ('@2'/'@4'). שחרור מצד
+// הספק היה שובר את האפליקציה בלי שום שינוי קוד כאן, ובלי שניתן לשחזר
+// מהריפו. חייב להיות זהה לתגיות שב-index.html.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
   'https://cdn.jsdelivr.net/npm/@hebcal/core@4.5.1/dist/hdate-bundle.min.js'
 ];
 
-// Supabase traffic must never be intercepted or cached — a stale cached read
-// would look like fresh cloud data.
-function isSupabaseRequest(url) {
-  return url.indexOf('supabase.co') !== -1;
-}
-
-// The auto-update version probe (raw.githubusercontent) must never be cached:
-// it used to add a fresh ~950KB entry on every check.
-function isVersionCheck(url) {
-  return url.indexOf('raw.githubusercontent.com') !== -1;
-}
-
-var OFFLINE_HTML =
+var SW_OFFLINE_HTML =
   '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="UTF-8">' +
   '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
   '<title>אין חיבור</title></head>' +
@@ -47,136 +36,318 @@ var OFFLINE_HTML =
   '<div style="font-size:14px;opacity:.8;line-height:1.6">הדף המבוקש אינו שמור במכשיר.<br>' +
   'התחבר לאינטרנט ונסה שוב.</div></div></body></html>';
 
-function offlineResponse() {
-  return new Response(OFFLINE_HTML, {
-    status: 503,
+/*  ⚠️ SW_CFG — הדבר היחיד שנבדל בין ארבע האפליקציות (סבב 42ג). כל ידית
+ *  כאן היא התנהגות **שנמדדה** ברתמת קו-הבסיס, ⛔ ולא ברירת מחדל שנפלה
+ *  מאליה: שינוי שלה מפיל את `tools/test_round42_sw.mjs`, וזה הרצוי.
+ *  ⚠️ `skipHosts` — בדיקת הגרסה מ-raw.githubusercontent אסור שתיכנס
+ *  למטמון (היא הוסיפה ~950KB בכל בדיקה), ורק ליומן יש מנגנון
+ *  אוטו-אפדייט שמושך משם. ⛔ כלל שנכתב על מה שאינו קיים הוא הצהרה ולא
+ *  מדידה (כלל ברזל 14), ולכן הרשימה ריקה בשלוש האחיות. */
+var SW_CFG = {
+  prefix: 'yoman-avoda-',
+  skipHosts: ['raw.githubusercontent.com'],
+  cdnHosts: [],
+  scoped: false,
+  navFallback: 'request',
+  navIgnoreSearch: false,
+  subStrategy: 'network-first',
+  subMiss: 'error',
+  offlineStatus: 503,
+  skipWaiting: true,
+  cdnTimeoutMs: 10000
+};
+
+/* ═══ מודול ה-service worker — מודול משותף (סבב 42ג)
+   ══════════════════════════════════════════════════════════════════════════
+   ⭐ ליבה אחת לארבע האפליקציות. עד סבב 42ג חיו כאן ארבעה מימושים **זרים
+   זה לזה** — 92 שורות (schar) · 182 (yoman) · 210 (hanhala) · 242 (gius),
+   עם קבוצות פונקציות שונות לגמרי. מיושר היה רק מה שסבבים קודמים יישרו
+   במפורש: תבנית CACHE_NAME, דילוג supabase, CDN_ASSETS ו-ensureCdnCached.
+   ⛔ אסטרטגיית ה-fetch עצמה — הדבר שקובע מה המשתמש רואה אופליין — מעולם
+   לא הוכרעה, וסבב 40 מדד אותה בטבלה. זה הסבב שמאחד אותה.
+
+   ⭐ המאחד: **רשת-קודם עם נפילה-חזרה מדורגת** — רשת ⇐ מטמון ⇐ (בניווט)
+   הקליפה ⇐ דף אופליין; ובתת-משאב ⇐ שגיאת רשת אמיתית, ⛔ לעולם לא HTML
+   בגוף תשובה של סקריפט (סבב 42ג) — HTML שם הוא שגיאת תחביר בדף, לא הודעה
+   למשתמש.
+
+   ⚠️ ומה שנבדל נשאר נבדל — **כפרמטר מדוד ב-SW_CFG ולא כקוד כפול**, בדיוק
+   הדפוס של mergeCore (סבב 38). ⛔ אין לשנות אף ידית «לשם אחידות»
+   (סבב 42ג) — כל אחת מהן היא התנהגות שנמדדה ברתמת קו-הבסיס
+   (`tools/test_round42_sw.mjs`), ולא ברירת מחדל שנפלה מאליה. שינוי ידית
+   מפיל את הרתמה, וזה הרצוי.
+
+   ⛔ אין לשמור תשובה שלא אומתה (סבב 42ג) — רק `ok && status 200 &&
+   !opaque`. תשובת 404 של GitHub Pages שנשמרת תחת מפתח הבקשה מוגשת ממנו
+   אופליין ומרעילה את המטמון; תשובה אטומה מייצרת דחייה שקטה ב-cache.put.
+
+   ⛔ בקשות supabase.co אינן עוברות דרך ה-SW כלל (סבב 42ג) — לא מיוירטות,
+   לא נשמרות, לא מוגשות. נתון API ישן שמוגש כטרי גרוע מכישלון גלוי:
+   באופליין עדיף שהבקשה תיכשל באמת, כך שמסלול הסנכרון יזהה זאת.
+
+   ⛔ הפינוי ב-activate לפי `SW_CFG.prefix` בלבד (סבב 42ג) — ה-origin
+   משותף לארבע האפליקציות, וסריקה גורפת של caches.keys() השמידה בעבר את
+   המטמונים של האחיות ושברה להן את האופליין.
+
+   ⛔ ורק תשובה שהגיעה מ**נתיב הקליפה** רשאית לרענן את index.html במטמון
+   (סבב 42ג) — GitHub Pages עונה 404 לכל נתיב עמוק תחת ה-scope, ושמירת
+   הגוף הזה תחת הקליפה מבריחה את האפליקציה אופליין. זו הנקודה השברירית
+   ביותר בקובץ.
+
+   ⛔ ומחיקת מטמון ישן רק אחרי שאומת שהקליפה נכנסה לחדש (סבב 42ג) —
+   התקנה שנכשלה באמצע משאירה אחרת את המשתמש בלי אפליקציה כלל.
+
+   ה-API: swSkip · swIsCdn · swInScope · swIsShellPath · swOfflinePage ·
+   swSubMiss · swStore · swShell · swFetchCors · swFetchAsset ·
+   swNavigate · swNavOffline · swNetworkFirst · swCacheFirst ·
+   swRevalidate · ensureCdnCached · swCachePut.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+var SW_SCOPE = new URL('./', self.location);
+var SW_ROOT = SW_SCOPE.href;
+var SW_SHELL = new URL('./index.html', self.location).href;
+
+/*  ⛔ שני הנתיבים היחידים שתשובתם רשאית להפוך לקליפה שבמטמון (סבב 42ג) —
+ *  ר' הנימוק בכותרת המודול. */
+var SW_SHELL_PATHS = [SW_SCOPE.pathname, SW_SCOPE.pathname + 'index.html'];
+
+/*  ⚠️ שתי מפות חיפוש נפרדות, ⛔ ואין לאחד אותן (סבב 42ג): ignoreSearch
+ *  מתעלם מה-query, וב-PostgREST כל הפילטרים יושבים דווקא שם. חיפוש כללי
+ *  איתו גרם בהנהלה לכך שבקשת כניסה של משתמש אחד התאימה לתשובה שנשמרה
+ *  עבור אחר — כניסה בזהות זרה. ניווט בלבד רשאי להשתמש ב-NAV_OPTS. */
+var SW_NAV_OPTS = { ignoreVary: true, ignoreSearch: true };
+var SW_SUB_OPTS = { ignoreVary: true };
+
+function swSkip(url) {
+  if (url.indexOf('http') !== 0) return true;
+  if (url.indexOf('.supabase.co') !== -1) return true;
+  for (var i = 0; i < SW_CFG.skipHosts.length; i++) {
+    if (url.indexOf(SW_CFG.skipHosts[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function swIsCdn(u) {
+  return CDN_ASSETS.indexOf(u.href) !== -1 || SW_CFG.cdnHosts.indexOf(u.hostname) !== -1;
+}
+
+function swInScope(u) {
+  return u.origin === SW_SCOPE.origin && u.pathname.indexOf(SW_SCOPE.pathname) === 0;
+}
+
+function swIsShellPath(u) {
+  return SW_SHELL_PATHS.indexOf(u.pathname) !== -1;
+}
+
+/*  דף אופליין — HTML אמיתי עם Content-Type מפורש, ⛔ לא מחרוזת 'Offline'
+ *  שנראית כמסך שחור עם טקסט זעיר בפינה (סבב 42ג). */
+function swOfflinePage() {
+  return new Response(SW_OFFLINE_HTML, {
+    status: SW_CFG.offlineStatus,
     statusText: 'Offline',
-    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
   });
 }
 
-// CDN cache self-healing. A CDN script missing from the cache (deleted by a
-// sibling app before the activate prefix fix, or a transient network failure
-// during install) was never re-added: at runtime the page loads it as a no-cors
-// request, the response is opaque, and networkFirst refuses to store it. Runs
-// on activate and once per SW startup, fetches only what's missing, and any
-// failure is silent — so damaged devices heal on their own, without waiting
-// for a new version.
-function ensureCdnCached() {
-  return caches.open(CACHE_NAME).then(function(cache) {
-    return Promise.all(CDN_ASSETS.map(function(url) {
-      return cache.match(url, { ignoreVary: true }).then(function(hit) {
-        if (hit) return;
-        return fetch(new Request(url, { mode: 'cors', credentials: 'omit' }))
-          .then(function(res) {
-            if (res && res.ok && res.type !== 'opaque') {
-              console.log('[SW] healed CDN asset:', url);
-              return cache.put(url, res);
-            }
-          });
-      }).catch(function() {});
-    }));
-  }).catch(function() {});
+/*  תת-משאב שאין לו עותק ואין רשת. ⛔ לעולם לא HTML (סבב 42ג) — ר' כותרת
+ *  המודול. `Response.error()` הוא שגיאת הרשת האמיתית; 504 ריק הוא הווריאנט
+ *  שנמדד ב-gius ונשמר כידית. */
+function swSubMiss() {
+  if (SW_CFG.subMiss === '504') return new Response('', { status: 504, statusText: 'Offline' });
+  try { return Response.error(); }
+  catch (e) { return new Response('', { status: 504, statusText: 'Offline' }); }
 }
-ensureCdnCached(); // top-level = runs once every time the SW wakes up
 
-// Install - cache the app shell (required) and the CDN scripts (best effort)
-self.addEventListener('install', function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      console.log('[SW] Caching core assets');
-      return cache.addAll(CORE).then(function() {
-        // A CDN hiccup must not fail the whole install — ensureCdnCached()
-        // fills in whatever is missing on activate / the next SW startup.
-        return Promise.all(CDN_ASSETS.map(function(url) {
-          return fetch(new Request(url, { mode: 'cors', credentials: 'omit' }))
-            .then(function(res) {
-              if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
-              console.warn('[SW] skipped CDN asset:', url);
-            })
-            .catch(function(err) { console.warn('[SW] CDN asset failed:', url, err); });
-        }));
-      });
-    }).then(function() { return self.skipWaiting(); })
-  );
-});
+/*  ⛔ רק תשובה שאומתה נשמרת (סבב 42ג) — ר' כותרת המודול. */
+function swStore(key, res) {
+  if (!res || !res.ok || res.status !== 200 || res.type === 'opaque') return;
+  var clone = res.clone();
+  caches.open(CACHE_NAME).then(function (cache) {
+    return cache.put(key, clone);
+  }).catch(function () {});
+}
 
-// Activate - drop old caches, but only once the new cache really holds the shell
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) { return cache.match('./index.html'); })
-      .then(function(indexHit) {
-        if (!indexHit) {
-          // Install didn't complete properly — keeping the old cache is far better
-          // than leaving the user with nothing offline.
-          console.warn('[SW] index.html missing from ' + CACHE_NAME + ' — old caches kept');
-          return;
-        }
-        // ⚠️ All three apps live on the same origin (ygtotlrl-lab.github.io) and
-        // share one CacheStorage. Delete ONLY this app's caches (prefix
-        // 'yoman-avoda-') — deleting "everything that isn't CACHE_NAME" wiped
-        // the caches of schar-limud and hanhala-ruchanit and broke their
-        // offline support. Never remove this filter.
-        return caches.keys().then(function(cacheNames) {
-          return Promise.all(
-            cacheNames.filter(function(name) {
-              return name.indexOf('yoman-avoda-') === 0 && name !== CACHE_NAME;
-            }).map(function(name) {
-              return caches.delete(name);
-            })
-          );
+/*  הקליפה שבמטמון — index.html, ובהיעדרו שורש ה-scope. */
+function swShell() {
+  return caches.match(SW_SHELL, SW_NAV_OPTS).then(function (hit) {
+    return hit || caches.match(SW_ROOT, SW_NAV_OPTS);
+  });
+}
+
+/*  ⚠️ בקשת CDN חייבת mode:'cors' (סבב 35) — תגובת no-cors היא opaque עם
+ *  status 0, ו-cache.put דוחה אותה; כך הנכסים מעולם לא נשמרו.
+ *  ⚠️ והפסק-זמן אינו קישוט (סבב 42ג): בקשת CDN שנתקעת משאירה את
+ *  waitUntil של install תלוי לנצח, והעובד נשאר «installing» בלי אופליין. */
+function swFetchCors(url) {
+  var opts = { mode: 'cors', credentials: 'omit' };
+  if (typeof AbortController !== 'function' || !SW_CFG.cdnTimeoutMs) {
+    return fetch(new Request(url, opts));
+  }
+  var ctrl = new AbortController();
+  var timer = setTimeout(function () { ctrl.abort(); }, SW_CFG.cdnTimeoutMs);
+  opts.signal = ctrl.signal;
+  return fetch(new Request(url, opts)).then(function (res) {
+    clearTimeout(timer);
+    return res;
+  }, function (err) {
+    clearTimeout(timer);
+    throw err;
+  });
+}
+
+function swFetchAsset(request, u) {
+  return swIsCdn(u) ? swFetchCors(request.url) : fetch(request);
+}
+
+function swCachePut(cache, url, opts) {
+  return fetch(url, opts).then(function (res) {
+    if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '?'));
+    if (res.type === 'opaque') throw new Error('opaque response');
+    return cache.put(url, res);
+  });
+}
+
+/*  ריפוי עצמי של מטמון ה-CDN (סבב 9 בהנהלה, סבב 35 בשלוש) — סקריפט CDN
+ *  שחסר במטמון לא היה מושלם לעולם: install אינו רץ שוב לאותו CACHE_NAME,
+ *  ובזמן-ריצה הדף מבקש אותו כ-no-cors ⇒ opaque ⇒ לא נשמר. רץ ב-activate
+ *  וגם פעם אחת בכל עליית SW, משלים רק את מה שחסר, וכשל בו שקט. */
+function ensureCdnCached() {
+  return caches.open(CACHE_NAME).then(function (cache) {
+    return Promise.all(CDN_ASSETS.map(function (url) {
+      return cache.match(url, SW_SUB_OPTS).then(function (hit) {
+        if (hit) return;
+        return swFetchCors(url).then(function (res) {
+          if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
         });
-      })
-      .then(function() { return ensureCdnCached(); })
-      .then(function() { return self.clients.claim(); })
-  );
-});
+      }).catch(function () {});
+    }));
+  }).catch(function () {});
+}
+ensureCdnCached(); // קוד עליון = רץ פעם אחת בכל עליית SW
 
-// Network first, fall back to cache; every path returns a real Response
-// (respondWith(undefined) throws a TypeError and breaks the page).
-function networkFirst(request) {
-  return fetch(request).then(function(response) {
-    // Only store complete, validated responses. Opaque ones (status 0, cross-origin
-    // no-cors) can't be checked — caching them can poison the shell with an error page.
-    if (response && response.ok && response.status === 200 && response.type !== 'opaque') {
-      var responseClone = response.clone();
-      caches.open(CACHE_NAME).then(function(cache) {
-        return cache.put(request, responseClone);
-      }).catch(function(err) { console.warn('[SW] cache put failed:', err); });
+/*  ניווט — רשת קודם. תשובה תקינה מנתיב הקליפה מרעננת את הקליפה; תשובה
+ *  שאינה תקינה (404 של נתיב עמוק) מקבלת את הקליפה שבמטמון. */
+function swNavigate(request, u) {
+  return fetch(request).then(function (net) {
+    if (net && net.ok) {
+      if (swIsShellPath(u)) swStore(SW_SHELL, net);
+      return net;
     }
-    return response;
-  }).catch(function() {
-    return caches.match(request, { ignoreVary: true }).then(function(hit) {
-      if (hit) return hit;
-      // Navigation fallback: any page we don't have cached gets the app shell,
-      // so deep links / refreshes still open the app while offline.
-      if (request.mode === 'navigate') {
-        return caches.match('./index.html', { ignoreVary: true }).then(function(shell) {
-          return shell || offlineResponse();
-        });
-      }
-      return offlineResponse();
+    return swShell().then(function (shell) { return shell || net; });
+  }).catch(function () {
+    return swNavOffline(request);
+  });
+}
+
+/*  ⚠️ `navFallback` — הידית שנמדדה: 'shell' פונה ישר לקליפה, 'request'
+ *  מחפש קודם את הבקשה עצמה (ועם `navIgnoreSearch` גם '?apk=1' מוצא את
+ *  './'). ⛔ שתיהן מסתיימות בדף האופליין ולעולם לא ב-undefined
+ *  (סבב 42ג) — respondWith על Promise<undefined> זורק TypeError, כלומר
+ *  כל בקשה שנכשלת ברשת ואינה במטמון נכשלת פעמיים. */
+function swNavOffline(request) {
+  var first = SW_CFG.navFallback === 'shell'
+    ? swShell()
+    : caches.match(request, SW_CFG.navIgnoreSearch ? SW_NAV_OPTS : SW_SUB_OPTS)
+        .then(function (hit) { return hit || swShell(); });
+  return first.then(function (hit) { return hit || swOfflinePage(); });
+}
+
+function swNetworkFirst(request) {
+  return fetch(request).then(function (res) {
+    swStore(request, res);
+    return res;
+  }).catch(function () {
+    return caches.match(request, SW_SUB_OPTS).then(function (hit) {
+      return hit || swSubMiss();
     });
   });
 }
 
-self.addEventListener('fetch', function(event) {
+/*  ⚠️ מטמון-קודם + רענון ברקע — ידית שנמדדה ב-gius (סבב 40) ונשמרה
+ *  (סבב 42ג). ⛔ אין להפוך אותה ל'network-first' «לשם אחידות»: זו
+ *  התנהגות שנמדדה ברתמת קו-הבסיס, והיפוכה משנה מה המשתמש רואה. */
+function swCacheFirst(request, u) {
+  return caches.open(CACHE_NAME).then(function (cache) {
+    return cache.match(request, SW_SUB_OPTS).then(function (hit) {
+      if (hit) { swRevalidate(request, u); return hit; }
+      return swFetchAsset(request, u).then(function (res) {
+        swStore(request, res);
+        return res;
+      }).catch(function () { return swSubMiss(); });
+    });
+  });
+}
+
+function swRevalidate(request, u) {
+  swFetchAsset(request, u).then(function (res) {
+    swStore(request, res);
+  }).catch(function () {});
+}
+
+self.addEventListener('install', function (event) {
+  event.waitUntil(caches.open(CACHE_NAME).then(function (cache) {
+    /*  ⚠️ כשל CDN בודד לא מפיל את ההתקנה — ensureCdnCached משלים אותו
+     *  ב-activate ובעליית ה-SW הבאה. */
+    var jobs = CORE.map(function (url) {
+      return swCachePut(cache, url, { cache: 'reload' })
+        .catch(function () { return swCachePut(cache, url, {}); })
+        .catch(function () {});
+    }).concat(CDN_ASSETS.map(function (url) {
+      return swFetchCors(url).then(function (res) {
+        if (res && res.ok && res.type !== 'opaque') return cache.put(url, res);
+      }).catch(function () {});
+    }));
+    return Promise.all(jobs);
+  }).catch(function () {}));
+  /*  ⚠️ `skipWaiting` הוא ידית שנמדדה: ב-gius הוא נעדר **בכוונה** — הדף
+   *  מציג באנר «🔄 גרסה חדשה זמינה» והמשתמש מחליט מתי לעדכן. ⛔ אין
+   *  ליישר בלי החלטת מנהל (סבב 42ג) — זה משנה מתי גרסה חדשה נכנסת לתוקף. */
+  if (SW_CFG.skipWaiting) self.skipWaiting();
+});
+
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(function (cache) {
+      return cache.match(SW_SHELL, SW_NAV_OPTS);
+    }).then(function (hit) {
+      /*  ⛔ אין למחוק מטמון ישן לפני שאומת שהקליפה נכנסה לחדש (סבב 42ג) —
+       *  ר' כותרת המודול. */
+      if (!hit) return;
+      return caches.keys().then(function (names) {
+        return Promise.all(names.filter(function (name) {
+          return name.indexOf(SW_CFG.prefix) === 0 && name !== CACHE_NAME;
+        }).map(function (name) {
+          return caches.delete(name);
+        }));
+      });
+    }).catch(function () {})
+      .then(function () { return ensureCdnCached(); })
+      .then(function () { return self.clients.claim(); })
+  );
+});
+
+self.addEventListener('fetch', function (event) {
   var request = event.request;
-  var url = request.url;
+  if (request.method !== 'GET') return;
+  if (swSkip(request.url)) return;
 
-  // Not ours to handle — leave these entirely to the browser.
-  if (request.method !== 'GET') return;              // POST/PATCH must never be cached
-  if (url.indexOf('http') !== 0) return;             // chrome-extension:, data:, ...
-  if (isSupabaseRequest(url)) return;                // live API traffic
-  if (isVersionCheck(url)) return;                   // update probe — never cache
+  var u;
+  try { u = new URL(request.url); } catch (e) { return; }
 
-  event.respondWith(networkFirst(request));
-});
-
-// Message - page asks the waiting worker to activate immediately
-self.addEventListener('message', function(event) {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+  if (request.mode === 'navigate') {
+    event.respondWith(swNavigate(request, u));
+    return;
   }
+  /*  ⚠️ `scoped` — ידית שנמדדה ב-gius: היא מטפלת אך ורק בנכסי ה-scope
+   *  ובנכסי ה-CDN, וכל השאר עובר לדפדפן כפי שהוא. */
+  if (SW_CFG.scoped && !swIsCdn(u) && !swInScope(u)) return;
+
+  event.respondWith(SW_CFG.subStrategy === 'cache-first'
+    ? swCacheFirst(request, u)
+    : swNetworkFirst(request));
 });
+
+self.addEventListener('message', function (event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+/* ═══════════════ סוף מודול ה-service worker */
