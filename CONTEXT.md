@@ -80,11 +80,16 @@ alter table public.TABLE_NAME enable row level security;
 
 ---
 
+<!-- SHARED:start id="context-smali-scope" -->
 ## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
 
-⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום היא
-מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת — ולכן
-אין בה URL שצריך לתקן.
+⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
+היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
+ולכן אין בה URL שצריך לתקן.
+⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
+ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
+«חתימת APK» ב-CLAUDE.md.
+<!-- SHARED:end -->
 
 ```bash
 apktool d <app>.apk -o /tmp/yw_work -f
@@ -96,14 +101,19 @@ apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
   --ks-pass pass:yoman123 --key-pass pass:yoman123 --out output.apk aligned.apk
 ```
 
-⛔ **smali בלבד — לא binary patch** (כלל קריטי 3).
 ⚠️ **המפתח הישן שישב ב-`/tmp/yoman.keystore` אבד**; המפתח הקבוע הוא
 `signing/yoman.keystore` שבריפו.
 
+<!-- SHARED:start id="context-cache-apk" -->
 ### ⚠️ Cache APK — כלל זהב
-שם קובץ חוזר נתפס במטמון. תמיד שם חדש:
+
+שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
+מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
+חותמת זמן:
+<!-- SHARED:end -->
+
 ```bash
-TS=$(date +%s) && apksigner sign ... --out yoman-${TS}.apk
+TS=$(date +%s) && apksigner sign ... --out yoman-avoda-${TS}.apk
 ```
 
 הכללים המחייבים והתיעוד המלא — ב-[CLAUDE.md](CLAUDE.md).
