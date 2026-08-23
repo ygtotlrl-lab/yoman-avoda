@@ -46,20 +46,20 @@ const APP = {
     'nav-offline-query':     'body:CORE-INDEX|status:200',
     'sub-cached-online':     'body:NET-OK|status:200',
     'sub-cached-offline':    'body:CORE-ASSET|status:200',
-    /* ⛔ תת-משאב שנכשל מקבל את **דף האופליין** — כלומר HTML נכנס לגוף
-       תשובה של תג script. זו שגיאת תחביר בדף, לא הודעה למשתמש; hanhala
-       תיקנה בדיוק את זה ומחזירה Response.error(). מתוקן בשלב א3. */
-    'sub-missing-offline': { be: 'body:html|status:503', defect: true,
-      why: 'yoman: דף אופליין (HTML) מוזרק לתוך תג script במקום שגיאת רשת אמיתית' },
+    /* ⭐ תוקן בסבב 42ג (שלב א2): תת-משאב שנכשל קיבל כאן את **דף
+       האופליין** — כלומר HTML בגוף תשובה של תג script, שגיאת תחביר בדף
+       ולא הודעה למשתמש. ⛔ דף האופליין הוא למסלול הניווט בלבד; תת-משאב
+       חסר מקבל שגיאת רשת אמיתית. */
+    'sub-missing-offline':   'network-error',
     'sub-404':               'body:NET-404|status:404',
     'sub-404-stored':        'not-stored',
     'supabase':              'passthrough',
     'cdn-cached-online':     'body:NET-OK|status:200',
     'version-probe':         'passthrough',
     'non-get':               'passthrough',
-    'sweep-scope':           'sister-app-v9,yoman-avoda-v34',
+    'sweep-scope':           'sister-app-v9,yoman-avoda-v35',
   },
-  defectCount: 1,
+  defectCount: 0,
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
