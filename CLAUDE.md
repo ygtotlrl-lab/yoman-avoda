@@ -190,7 +190,7 @@ TWA (Trusted Web Activity) אינו רכיב עצמאי — הוא מריץ את
 > **ההמלצה הזו שגויה ובוטלה** — היא הייתה מחליפה מעטפת עובדת במעטפת חסומה.
 > השיתוף פתור ממילא בגשר מקורי, ולא דרך `navigator.share`.
 
-### פרטי המעטפת (⭐ versionCode 3 — טוענת מהרשת)
+### פרטי המעטפת (⭐ versionCode 4 — טוענת מהרשת)
 - אייקון: `res/mipmap-*/ic_launcher.png` (לוח משימות + גרף, מ-`icons/icon-512.png`)
 - **מה המעטפת טוענת:** `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**,
   בדפוס של gius. **שחרור קוד web כבר לא מצריך APK חדש**: `location.reload()`
