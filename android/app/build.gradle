@@ -10,6 +10,8 @@ android {
         applicationId "com.yoman.avoda"   // same ID as the existing app
         minSdk 21
         targetSdk 34
+        // ⛔ versionCode לעולם אינו יורד (סבב 46ב) — מספר נמוך ממה
+        // שמותקן במכשיר חוסם את העדכון.
         // 1 = the shell that loaded file:///android_asset/index.html.
         // 2 = loads the live site (https://ygtotlrl-lab.github.io/yoman-avoda/).
         // Anything installing over an earlier build has to be higher.
@@ -18,8 +20,10 @@ android {
         // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
         // 4 = סבב 45 — יישור `AndroidManifest.xml` (`configChanges` לסופרסט)
         // ואכיפת חתימה על החלק המשותף של המניפסט ושל קובץ הבנייה.
-        versionCode 4
-        versionName "4.0"
+        // 5 = סבב 46ב — היפוך ברירת המחדל בקובצי התצורה: חתימה חסרת-גשר
+        // על המניפסט ועל קובץ הבנייה, וחתימה אחת לשני ה-workflows.
+        versionCode 5
+        versionName "5.0"
     }
 
     buildTypes {
