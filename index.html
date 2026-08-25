@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="31-2026-08-25-1">
+<meta name="app-version" content="32-2026-08-25-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4431,12 +4431,23 @@ var _syncPushTimer = null;
 //    למסלול שני (סבב 44) — שתי דחיפות שונות לאותם נתונים הן שתי
 //    הזדמנויות שאחת מהן תיסחף.
 async function tbSyncPushNow() {
+    // ⚠️ t0 לפני שהצילום נקרא — רשומה שתסומן אחרי הרגע הזה אינה במה שנדחף
+    //    עכשיו, והורדת הסימון ממנה הייתה מאבדת אותה בשקט (סבב 12).
+    var _t0 = Date.now();
     // ⭐ מסבב 35 הדחיפה כאן היא שורות (סבב 35) — קודם המסלול הזה דחף את
     //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
     //    יחד עם כיבוי הכתיבה הכפולה.
     var rEntries = await tbRowsPush("tb_entries", ENTRIES);
     var rArchive = await tbRowsPush("tb_archive", ARCHIVE);
     if (TB_KV_LEGACY_WRITE) { await sbSet("tb_entries", ENTRIES); await sbSet("tb_archive", ARCHIVE); }
+    // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
+    //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
+    //    ו-`scheduleSyncPush`), ובלי האישור הסימון שרד דחיפה שהצליחה: המונה
+    //    נשאר על המסך עד שפעולה חדשה גררה אותו, `_rtyPending()` נשאר אמת,
+    //    והניסיון החוזר הצליח שוב ושוב — ועם כל הצלחה חזר «✅ נשמר בענן».
+    //    ⚠️ פר-קטגוריה ולא גורף: דחיפה שהצליחה באחת אינה ראיה לשנייה.
+    if (rEntries.ok) { _tbMarkPushed('tb_entries'); pendConfirmPush(PK_ENTRY, _t0); }
+    if (rArchive.ok) { _tbMarkPushed('tb_archive'); pendConfirmPush(PK_ARC, _t0); }
     if (!rEntries.ok || !rArchive.ok) {
       // Don't stamp tb_last_changed for data that never arrived — other devices
       // would pull the stale cloud copy over their own newer entries.
