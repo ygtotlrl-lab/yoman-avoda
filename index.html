@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="30-2026-08-23-1">
+<meta name="app-version" content="31-2026-08-25-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2288,6 +2288,138 @@ function rtyBoot() {
 }
 /* ═══════════════ סוף מודול הניסיון החוזר ════════════════════════════════ */
 
+/* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
+/* ⚠️ ביומן החותמת היא שורת `tb_last_changed` שבטבלת המוסד (`KV_TABLE`),
+   ⛔ ולכן `active()` נבדק מול `YESHIVA` (סבב 51) — פולינג לפני בחירת מוסד
+   היה נוגע בנתונים של דייר שאיש לא בחר.
+   ⚠️ `ok()` הוא `_tbMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
+   ממנה את עֵד הפינוי (סבב 51) — הוא `_tbPushedAt` פר-מפתח, ר' כלל ברזל 7. */
+var PL_CFG = {
+  every:  3000,
+  active: function () { return !!YESHIVA; },
+  seen:   function () { return _lastKnownTimestamp; },
+  note:   function (ts) { _lastKnownTimestamp = ts; },
+  ok:     function () { _tbMarkSynced(); },
+  stamp:  function (ts) { return sbSet("tb_last_changed", ts); },
+  pull:   function () { return tbPullFromCloud(); },
+  remote: function () {
+    return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "tb_last_changed").maybeSingle())
+      .then(function (r) {
+        if (!r || r.error) return { ok: false, ts: null };
+        return { ok: true, ts: r.data ? plNum(r.data.value) : null };
+      }, function () { return { ok: false, ts: null }; });
+  },
+};
+/* ═══ מנגנון המשיכה — מודול משותף (סבב 51) ════════════════════════════════
+   ⭐ **המשיכה מותנית בחותמת שינוי אחת, ואינה רצה בכל תקתוק.** הפולינג
+   קורא שורה אחת מהענן, ומושך את הנתונים **רק כשהיא התקדמה** מעבר למה
+   שהמכשיר כבר ראה.
+   ⚠️ **הרקע נמדד בסבב 46ב:** yoman ו-hanhala כבר עבדו כך, ואילו schar
+   משכה **ארבע טבלאות ב-`select('*')` בכל תקתוק** (כל שלוש שניות) ו-gius
+   משכה משיכה מלאה כל עשרים שניות — עלות שגדלה עם הנתונים ואינה קונה
+   דבר, מפני שברוב התקתוקים אין שום שינוי בענן.
+   ⛔ **החותמת נכתבת בכל מסלול שמשנה נתונים בענן (סבב 51) — אחרת השינוי
+   נשאר בלתי-נראה למכשירים האחרים לנצח.** זו הנקודה השברירית היחידה
+   כאן: מסלול כתיבה חדש שאינו מקדם את החותמת יוצר עדכון שקט שאיש אינו
+   רואה, ולכן הקידום יושב במשפך הכתיבה שכבר קיים בכל אפליקציה.
+   ⛔ **נפילה-חזרה כשאין חותמת בענן (סבב 51) — `PL_FALLBACK_MS`.** התקנה
+   טרייה, או מסד שמעולם לא נכתבה אליו חותמת, מחזירים `ts === null`;
+   במצב כזה מושכים מלא אחת לדקה ולא נעצרים. שער שנשען על שורה שאינה
+   קיימת הוא שער שמפסיק לסנכרן בשקט.
+   ⛔ **כשל בקריאת החותמת אינו ראיה לכלום (סבב 51)** — אין רשת, השאילתה
+   זרקה או החזירה שגיאה ⇒ לא מושכים, ולא מקדמים את «מה שכבר נראה».
+   משיכה או דילוג על סמך כשל הם הסקה ולא ראיה (כלל ברזל 6).
+   ⛔ **אין ריצה כפולה (סבב 51)** — `_plBusy` חוסם תקתוק חדש כל עוד הקודם
+   רץ. בלעדיו רשת איטית הייתה ערמת משיכות מלאות זו על זו.
+   ⚠️ **המצב «מה כבר נראה» חי באפליקציה ולא במודול** (`PL_CFG.seen`
+   ו-`PL_CFG.note`) — לכל אחת מהארבע יש כבר משתנה כזה, שנכתב גם ממסלולי
+   הכתיבה שלה. ⛔ עותק שני שלו במודול (סבב 51) היה יוצא מסנכרון מול
+   המקור בשקט, וזה בדיוק «מקור אמת שני».
+   ⛔ **המרווח הוא פרמטר ולא קבוע (סבב 51)** — `PL_CFG.every` נמדד מכל
+   אפליקציה ואינו נבחר כאן: 3,000 מ״ש בשלוש, 5,000 ב-gius.
+   ⛔ **נקודת ההפעלה היחידה היא `plBoot()` מפונקציית העלייה (סבב 51)** —
+   זו שקוראת גם ל-`lsBoot()`, ל-`pendBoot()`, ל-`bkBoot()` ול-`rtyBoot()`.
+   מנגנון שתלוי במסלול אחר נעצר בדיוק כשהמסלול ההוא אינו רץ (כלל ברזל 12).
+   ה-API: `plBoot`/`plStop` · `plTick` · `plTouch` · `plNum` · `plBusy` ·
+   `plState`. מעליו `PL_CFG` — הדבר היחיד שנבדל בין האפליקציות.
+   ═══════════════════════════════════════════════════════════════════════ */
+var PL_FALLBACK_MS = 60000;   // אין שורת חותמת בענן ⇒ משיכה מלאה אחת לדקה
+var _plTimer = null, _plBusy = false, _plFullAt = 0, _plWired = false;
+
+/* חותמת מהענן: מספר, מחרוזת JSON של מספר, או כל דבר אחר ⇒ 0. */
+function plNum(v) {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return Math.floor(v) || 0;
+  try { var p = JSON.parse(v); if (typeof p === 'number') return Math.floor(p) || 0; } catch (e) { }
+  return parseInt(v, 10) || 0;
+}
+
+function plBusy() { return _plBusy; }
+function _plSeen() { try { return plNum(PL_CFG.seen()); } catch (e) { return 0; } }
+function plState() { return { busy: _plBusy, armed: !!_plTimer, fullAt: _plFullAt, seen: _plSeen() }; }
+
+/* ⭐ נקראת אחרי כל כתיבה מוצלחת לענן. היא מקדמת קודם את «מה שכבר נראה»
+   מקומית — כדי שהתקתוק הבא לא ימשוך מלא בגלל השינוי של המכשיר הזה
+   עצמו — ורק אז כותבת את החותמת לענן. ⛔ כשל בכתיבת החותמת אינו מפיל
+   את הכתיבה שקדמה לה (סבב 51) — הנתון כבר בענן, והמכשירים האחרים
+   יראו אותו בשינוי הבא או בנפילה-חזרה. */
+function plTouch(ts) {
+  var t = plNum(ts) || Date.now();
+  try { PL_CFG.note(t); } catch (e) { }
+  try {
+    return Promise.resolve(PL_CFG.stamp(t)).then(function () { return t; }, function () { return t; });
+  } catch (e) { return Promise.resolve(t); }
+}
+
+function _plFull() {
+  var done = function (v) { _plBusy = false; return v; };
+  try {
+    return Promise.resolve(PL_CFG.pull()).then(
+      function () { _plFullAt = Date.now(); return done(true); },
+      function () { return done(false); });
+  } catch (e) { return Promise.resolve(done(false)); }
+}
+
+function plTick() {
+  if (_plBusy) return Promise.resolve(false);
+  var live; try { live = !!PL_CFG.active(); } catch (e) { live = false; }
+  if (!live) return Promise.resolve(false);
+  _plBusy = true;
+  var done = function (v) { _plBusy = false; return v; };
+  var p;
+  try { p = Promise.resolve(PL_CFG.remote()); } catch (e) { p = Promise.reject(e); }
+  return p.then(function (r) {
+    if (!r || !r.ok) return done(false);
+    try { PL_CFG.ok(); } catch (e) { }
+    if (r.ts === null || r.ts === undefined) {
+      if (Date.now() - _plFullAt >= PL_FALLBACK_MS) return _plFull();
+      return done(false);
+    }
+    var ts = plNum(r.ts);
+    if (ts > _plSeen()) { try { PL_CFG.note(ts); } catch (e) { } return _plFull(); }
+    return done(false);
+  }, function () { return done(false); });
+}
+
+function plStop() { if (_plTimer) { clearInterval(_plTimer); _plTimer = null; } }
+
+function plBoot() {
+  if (!_plWired) {
+    _plWired = true;
+    try { window.addEventListener('online', function () { plTick(); }); }
+    catch (e) { console.warn('[pl] wiring', e); }
+  }
+  if (_plTimer) return false;
+  var ms = 0;
+  try { ms = parseInt(PL_CFG.every, 10) || 0; } catch (e) { ms = 0; }
+  if (!ms) ms = 3000;
+  _plTimer = setInterval(function () { plTick(); }, ms);
+  plTick();
+  return true;
+}
+/* ═══════════════ סוף מנגנון המשיכה ══════════════════════════════════════ */
+
+
 
 /* ── HW_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⭐ ביומן החלון החם הוא `archived=false` (סבב 35) — מנגנון הארכוב הקיים
@@ -3198,10 +3330,9 @@ function saveEntries() {
     if (_ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_entries', _rows.n);
-    var ts = Date.now();
-    await sbSet("tb_last_changed", ts);
-    // Update local timestamp so THIS device doesn't re-pull its own push
-    _lastKnownTimestamp = ts;
+    // ⭐ סבב 51 — המשפך המשותף: מקדם קודם את «מה שכבר נראה» מקומית, כדי
+    //    שהמכשיר הזה לא ימשוך בחזרה את מה שזה עתה דחף, ורק אז כותב.
+    await plTouch();
   })();
 }
 function saveArchive() {
@@ -3218,9 +3349,7 @@ function saveArchive() {
     if (_ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_archive', _rows.n);
-    var ts = Date.now();
-    await sbSet("tb_last_changed", ts);
-    _lastKnownTimestamp = ts;
+    await plTouch();   // ר' ההערה ב-saveEntries
   })();
 }
 
@@ -3392,7 +3521,7 @@ function arcCleanupCorrupted() {
 /* ⭐ יומן הפעולות של הסנכרון — הדפוס של hanhala-ruchanit (סבב 35): דחיפה
    שהצליחה נרשמת עם מספר השורות, ומשיכה מלאה נרשמת פעם אחת בסשן. הרישום
    דרך `logAction` שבמודול הגיבוי — fire-and-forget, לעולם אינו חוסם.
-   ⛔ אין לרשום את הפולינג של `autoSyncData` (סבב 35) — הוא רץ כל 3 שניות,
+   ⛔ אין לרשום את תקתוק המשיכה (סבב 35) — הוא רץ כל 3 שניות,
    ו-`sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
 function tbSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
@@ -4315,8 +4444,14 @@ async function tbSyncPushNow() {
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
-    var rTs = await sbSet("tb_last_changed", Date.now());
+    // ⭐ סבב 51 — דרך `PL_CFG.stamp` ולא ב-`sbSet` ישיר: זו אותה כתיבה
+    //    בדיוק, ⛔ ומסלול שני לחותמת (סבב 51) היה יוצא מסנכרון מול
+    //    המודול ביום שבו מקום האחסון שלה ישתנה. כאן, בשונה מ-`plTouch()`,
+    //    הקורא זקוק לתוצאה עצמה כדי להזהיר את המשתמש.
+    var stampTs = Date.now();
+    var rTs = await PL_CFG.stamp(stampTs);
     if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
+    PL_CFG.note(stampTs);
     toast("✅ נשמר בענן");
 }
 function scheduleSyncPush() {
@@ -5372,17 +5507,14 @@ function _tbMarkSynced() {
   //    בטיחות שרץ רק כשמשהו אחר רץ. נקודת ההפעלה היא `bkBoot()`
   //    ב-`selectYeshiva`, לצד `lsBoot()` ו-`pendBoot()`.
 }
-async function autoSyncData() {
-  if (!YESHIVA) return;   // no yeshiva chosen yet → don't touch any tenant's data
+// ⭐ סבב 51 — כאן ישבה `autoSyncData`, שקראה את שורת החותמת **ואז** מיזגה.
+//    בדיקת החותמת עברה למודול המשותף (`PL_CFG` + `plTick`), ומה שנשאר
+//    כאן הוא **המשיכה עצמה** — בדיוק כמו `ysPullFromCloud` בהנהלה.
+//    ⛔ אין להחזיר לכאן את בדיקת החותמת (סבב 51) — מסלול שני שמכריע מתי
+//    למשוך היה יוצא מסנכרון מול המודול, וזה בדיוק «מקור אמת שני».
+async function tbPullFromCloud() {
   try {
     var sb = getSB();
-    var resTs = await sb.from(KV_TABLE).select("value").eq("key","tb_last_changed").single();
-    if (resTs && !resTs.error) _tbMarkSynced();
-    if (!resTs.data) return;
-    var remoteTs = parseInt(JSON.parse(resTs.data.value)) || 0;
-    console.log("[sync] remote=" + remoteTs + " local=" + _lastKnownTimestamp);
-    if (remoteTs <= _lastKnownTimestamp) return;
-    _lastKnownTimestamp = remoteTs;
     console.log("[sync] pulling data...");
 
     // מיזוג ברמת רשומה במקום החלפה מלאה. ההחלפה היא שגרמה לאובדן: מכשיר
@@ -5451,8 +5583,9 @@ function checkForUpdates() {
 window.addEventListener("DOMContentLoaded", function() {
   setTimeout(checkForUpdates, 5000);
   setInterval(checkForUpdates, UPDATE_INTERVAL_MS);
-  // Auto-sync data from cloud every 60 seconds (silent, merges without UI)
-  setInterval(autoSyncData, 3 * 1000); // polls only a timestamp — very lightweight
+  // ⛔ הפולינג אינו נדרך כאן יותר (סבב 51) — נקודת ההפעלה היחידה של
+  //    מנגנון המשיכה היא `plBoot()` מ-`selectYeshiva()`, פונקציית העלייה.
+  //    לפני בחירת מוסד אין `KV_TABLE`, ותקתוק כאן היה נוגע ברשת לחינם.
 });
 // ============================================================
 
@@ -5687,6 +5820,10 @@ function selectYeshiva(y) {
   try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // ניסיון חוזר בסנכרון (סבב 44) — נקודת ההפעלה היחידה של המודול.
   try { rtyBoot(); } catch (e) { console.warn('[rty] rtyBoot', e); }
+  // מנגנון המשיכה (סבב 51) — נקודת ההפעלה היחידה של המודול. ⚠️ כאן ולא
+  //    מוקדם יותר, מאותה סיבה כמו `bkBoot`: `KV_TABLE` הוא `null` עד
+  //    שנבחר מוסד, ותקתוק לפני כן היה שואל טבלה שאינה קיימת.
+  try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
   loadLocalData();
   var ov = document.getElementById('yeshivaSelect');
   if (ov) ov.style.display = 'none';
