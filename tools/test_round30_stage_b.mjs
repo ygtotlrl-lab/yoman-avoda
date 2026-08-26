@@ -63,7 +63,7 @@ function makeEnv(opts = {}) {
   const env = { rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [] };
   const client = {
     from(t) {
-      const q = { t, cols: null, y: null, arch: null, order: null };
+      const q = { t, cols: null, y: null, arch: null, order: null, range: null };
       const api = {
         select(c) { q.cols = c; return api; },
         // ⚠️ `archived` נוסף בסבב 32 — השליפה המסוננת של הטבלה המאוחדת.
@@ -71,15 +71,19 @@ function makeEnv(opts = {}) {
         // ⚠️ נוסף בסבב 31 — המשיכה מבקשת סדר מפורש מהמסד. מוק בלי `order`
         //    היה זורק, ובדיקה שנופלת על המוק אינה בודקת את הקוד.
         order(c, o) { q.order = { col: c, opts: o }; return api; },
+        // ⚠️ נוסף בסבב 55 — המשיכה עוברת בעמודים. מוק בלי `range` היה
+        //    זורק, ובדיקה שנופלת על המוק אינה בודקת את הקוד.
+        range(a, b) { q.range = [a, b]; return api; },
         then(res, rej) {
           env.selects.push({ table: q.t, cols: q.cols, yeshiva: q.y, archived: q.arch, order: q.order });
           const rows = env.rows.filter((r) => r._t === q.t && r.yeshiva === q.y
             && (q.arch === null || !!r.archived === q.arch));
+          const paged = q.range ? rows.slice(q.range[0], q.range[1] + 1) : rows;
           const out = env.net
-            ? { data: rows, error: null }
+            ? { data: paged, error: null }
             // ⚠️ `errWithData` מדמה תשובה שיש בה **גם** `error` וגם מערך — זו
             //    הצורה שמפילה קוד שבודק רק `Array.isArray(data)`.
-            : (env.errWithData ? { data: rows, error: { message: 'net' } }
+            : (env.errWithData ? { data: paged, error: { message: 'net' } }
                                : { data: null, error: { message: 'net' } });
           return Promise.resolve(out).then(res, rej);
         },
@@ -109,7 +113,10 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
-  vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
+    vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
+  // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
+  //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
+  vm.runInContext(cutVar("var TB_ROWS_PAGE = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
   if (opts.tbRows === false) sandbox.TB_ROWS = false;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
