@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* ── APP — הדבר היחיד שנבדל בין הריפו (yoman-avoda) ────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /* ⚠️ yoman חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם schar,
    ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`
    ב-`migrations/000_initial_schema.sql`. ⛔ עותק שני שלה כאן היה מקור אמת
@@ -37,6 +37,7 @@ const APP = {
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/004_backup_retention_cron.sql',
 };
+/* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');

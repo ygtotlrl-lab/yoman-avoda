@@ -5,7 +5,7 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בארבע האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'yoman-avoda-v37'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
+var CACHE_NAME = 'yoman-avoda-v38'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
 
 // App shell — must be cached for the app to work offline.
 var CORE = [
