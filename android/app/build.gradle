@@ -17,13 +17,15 @@ android {
         // Anything installing over an earlier build has to be higher.
         // 3 = סבב 41 — יישור שכבת הבנייה והחילוץ של המעטפת לתבנית
         // משותפת. ⛔ כל שינוי תחת android/ מחייב קידום כאן,
-        // ו-tools/test_round40_gradle.mjs אוכף זאת מול origin/main.
+        // ו-tools/test_round40_gradle.mjs אוכף זאת מול קומיט הקידום האחרון.
         // 4 = סבב 45 — יישור `AndroidManifest.xml` (`configChanges` לסופרסט)
         // ואכיפת חתימה על החלק המשותף של המניפסט ושל קובץ הבנייה.
         // 5 = סבב 46ב — היפוך ברירת המחדל בקובצי התצורה: חתימה חסרת-גשר
         // על המניפסט ועל קובץ הבנייה, וחתימה אחת לשני ה-workflows.
-        versionCode 6
-        versionName "6.0"
+        // 6 = סבב 56 — עשרת אייקוני ה-mipmap של המעטפת הוחלפו.
+        // 7 = סבב 57 — הסרת FLAG_ACTIVITY_NEW_TASK ממסלול השיתוף.
+        versionCode 7
+        versionName "7.0"
     }
 
     buildTypes {

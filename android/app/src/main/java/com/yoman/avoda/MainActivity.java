@@ -177,7 +177,17 @@ public class MainActivity extends ShellActivity {
                     } else {
                         toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
                     }
-                    toStart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    /*  ⛔ אין להוסיף כאן FLAG_ACTIVITY_NEW_TASK (סבב 57) — הדגל
+                     *  גורם לאנדרואיד להביא קדימה **משימה קיימת** בעלת אותו
+                     *  affinity במקום להתחיל את היעד מחדש, ולכן לחיצה על שיתוף
+                     *  נחתה לפעמים על המסך הקודם של אותה אפליקציה ולא על שיתוף
+                     *  חדש; אתחול המכשיר (שמנקה את המשימות) «פתר» את זה — וזו
+                     *  בדיוק חתימת התסמין.
+                     *  ⚠️ והדגל גם לא היה נחוץ מלכתחילה: הקריאה כאן היא
+                     *  MainActivity.this.startActivity(...) — הקשר Activity חי
+                     *  על ה-UI thread, ולא Service או הקשר יישום; NEW_TASK נדרש
+                     *  רק משם. בלעדיו יעד השיתוף נפתח בתוך המשימה הנוכחית,
+                     *  ו«חזור» מחזיר לאפליקציה.                                */
                     try {
                         startActivity(toStart);
                     } catch (Exception e) {
