@@ -137,6 +137,8 @@ public class MainActivity extends ShellActivity {
     }
 
     // ── The share itself. Reached only through one of the two guarded paths above. ──
+    // appPackage is kept for the page's bridge signature only — ⛔ it no longer routes
+    // the share (סבב 59); ר' share-bridge-rule ב-CLAUDE.md
     private void shareImage(final String base64Data, final String mimeType, final String appPackage) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
@@ -160,24 +162,9 @@ public class MainActivity extends ShellActivity {
                     send.putExtra(Intent.EXTRA_STREAM, uri);
                     send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-                    Intent toStart;
-                    if (appPackage != null && !appPackage.isEmpty()) {
-                        send.setPackage(appPackage);
-                        if (send.resolveActivity(getPackageManager()) != null) {
-                            // target app installed → go straight to it
-                            toStart = send;
-                        } else {
-                            // not installed → generic chooser
-                            Intent generic = new Intent(Intent.ACTION_SEND);
-                            generic.setType(mime);
-                            generic.putExtra(Intent.EXTRA_STREAM, uri);
-                            generic.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            toStart = Intent.createChooser(generic, "שיתוף הדו\"ח");
-                        }
-                    } else {
-                        toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
-                    }
-                    toStart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    // ⛔ שיתוף רק ב-createChooser · אין FLAG_ACTIVITY_NEW_TASK (סבב 59) —
+                    // ר' share-bridge-rule ב-CLAUDE.md
+                    Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
                     try {
                         startActivity(toStart);
                     } catch (Exception e) {
