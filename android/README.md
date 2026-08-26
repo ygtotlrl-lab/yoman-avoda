@@ -30,7 +30,7 @@ gius has since been converted to a WebView shell built the same way.
 |---|---|
 | **Package ID** | `com.yoman.avoda` — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
 | **טוען** | `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 5 — קודם בסבב 46ב (היפוך ברירת המחדל בקובצי התצורה). 4 = סבב 45, 3 = סבב 41 (חילוץ המעטפת), 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
+| **versionCode** | 6 — קודם בסבב 56 (עשרת אייקוני ה-mipmap של המעטפת הוחלפו). 5 = סבב 46ב (היפוך ברירת המחדל בקובצי התצורה), 4 = סבב 45, 3 = סבב 41 (חילוץ המעטפת), 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
