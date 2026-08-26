@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="32-2026-08-25-1">
+<meta name="app-version" content="33-2026-08-26-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3141,6 +3141,7 @@ var TB_ARC_UNIFIED = true;
 var TB_ARC_LEGACY_WRITE = false;
 var TB_KV_LEGACY_WRITE = false;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
+var TB_ROWS_PAGE = 1000;
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
 function tbTableOf(kvKey) {
   return (TB_ARC_UNIFIED && kvKey === 'tb_archive') ? 'tb_entries' : TB_ROW_TABLES[kvKey];
@@ -3236,15 +3237,33 @@ async function tbRowsGet(kvKey) {
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA);
-    // ⭐ השליפה המסוננת (סבב 32) — זו היכולת שהחליפה את מנגנון הארכוב: במקום
-    //    להעביר את הישן לטבלה אחרת כדי לא למשוך אותו, מושכים רק את הצד הנכון
-    //    של הדגל. ⛔ ובטבלה הישנה אין עמודת `archived`, ולכן התנאי מותנה ביעד.
-    if (t === 'tb_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
-    var res = await withTimeout(q.order('rec_key', { ascending: true }));
-    if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
+    // ⛔ שליפה בעמודים ולא בבקשה אחת (סבב 55) — זה אותו שיקול בדיוק שהוליד
+    //    את החלוקה למנות בכתיבה: גוף בקשה שגדל עם הנתונים נדחה או נחתך.
+    //    ⚠️ ובנוסף PostgREST יודע להגביל את מספר השורות בתשובה
+    //    (`db-max-rows`) — ⚠️ **נמדד ב-26.8 שהפרויקט הזה אינו מגדיר אותו**,
+    //    ⛔ אבל זו הגדרת שרת ולא חוזה: ביום שתוגדר, התשובה תיחתך **בשקט**.
+    //    ⛔ ותשובה חלקית שנראית שלמה גרועה מ«הענן ריק» — היא נקראת כאמת.
+    var rows = [], fromIx = 0;
+    for (;;) {
+      var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA);
+      // ⭐ השליפה המסוננת (סבב 32) — זו היכולת שהחליפה את מנגנון הארכוב: במקום
+      //    להעביר את הישן לטבלה אחרת כדי לא למשוך אותו, מושכים רק את הצד הנכון
+      //    של הדגל. ⛔ ובטבלה הישנה אין עמודת `archived`, ולכן התנאי מותנה ביעד.
+      if (t === 'tb_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
+      var res = await withTimeout(q.order('rec_key', { ascending: true })
+        .range(fromIx, fromIx + TB_ROWS_PAGE - 1));
+      // ⛔ עמוד שנכשל מחזיר «אין ראיה» ולא את מה שהספיק להגיע (סבב 55) —
+      //    נפילה-חזרה לבלוק ה-kv עדיפה על תמונה חסרה שנראית שלמה.
+      if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
+      rows = rows.concat(res.data);
+      if (res.data.length < TB_ROWS_PAGE) break;
+      fromIx += TB_ROWS_PAGE;
+      // ⛔ תקרת בטיחות (סבב 55) — לולאה שתלויה בגודל התשובה חייבת גבול
+      //    עליון משלה, אחרת מסד שמחזיר עמוד מלא לנצח תולה את הדף.
+      if (fromIx > 500000) break;
+    }
     var map = {}, out = [];
-    res.data.forEach(function (r) {
+    rows.forEach(function (r) {
       if (!r || !r.data) return;
       map[String(r.rec_key)] = Number(r.updated_at) || 0;
       out.push(r.data);

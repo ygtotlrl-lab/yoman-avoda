@@ -74,11 +74,14 @@ function makeEnv(opts = {}) {
   };
   const client = {
     from(t) {
-      const q = { t, cols: null, y: null, arch: null, order: null };
+      const q = { t, cols: null, y: null, arch: null, order: null, range: null };
       const api = {
         select(c) { q.cols = c; return api; },
         eq(c, v) { if (c === 'yeshiva') q.y = v; if (c === 'archived') q.arch = v; return api; },
         order(c, o) { q.order = { col: c, opts: o }; return api; },
+        // ⚠️ נוסף בסבב 55 — המשיכה עוברת בעמודים. מוק בלי `range` היה
+        //    זורק, ובדיקה שנופלת על המוק אינה בודקת את הקוד.
+        range(a, b) { q.range = [a, b]; return api; },
         then(res, rej) {
           env.selects.push({ table: q.t, yeshiva: q.y, archived: q.arch, order: q.order });
           if (!env.net) return Promise.resolve({ data: null, error: { message: 'net' } }).then(res, rej);
@@ -126,6 +129,9 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
   vm.runInContext(cutVar('var TB_ROW_TABLES = '), sandbox);
+  // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
+  //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
+  vm.runInContext(cutVar('var TB_ROWS_PAGE = '), sandbox);
   vm.runInContext(cutVar('var _tbRemote = '), sandbox);
   if (opts.unified === false) sandbox.TB_ARC_UNIFIED = false;
   // ⭐ סבב 35: הדגל כבוי בקוד הרץ; בדיקות נתיב-החזרה (5ו-5יא) מדליקות אותו
