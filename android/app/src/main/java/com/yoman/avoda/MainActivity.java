@@ -98,7 +98,7 @@ public class MainActivity extends ShellActivity {
                         if (!isMainFrame || !APP_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
                         try {
                             JSONObject o = new JSONObject(String.valueOf(message.getData()));
-                            shareImage(o.optString("data"), o.optString("mime"), o.optString("pkg"));
+                            shareImage(o.optString("data"), o.optString("mime"));
                         } catch (Exception e) {
                             toastUi("שגיאה בהכנת התמונה לשיתוף");
                         }
@@ -137,7 +137,8 @@ public class MainActivity extends ShellActivity {
     }
 
     // ── The share itself. Reached only through one of the two guarded paths above. ──
-    private void shareImage(final String base64Data, final String mimeType, final String appPackage) {
+    // ⛔ אין כאן יעד — הבורר של המערכת הוא שבוחר (סבב 60) — ר' share-bridge-rule ב-CLAUDE.md
+    private void shareImage(final String base64Data, final String mimeType) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
             File dir = new File(getCacheDir(), "shared");
@@ -160,34 +161,9 @@ public class MainActivity extends ShellActivity {
                     send.putExtra(Intent.EXTRA_STREAM, uri);
                     send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-                    Intent toStart;
-                    if (appPackage != null && !appPackage.isEmpty()) {
-                        send.setPackage(appPackage);
-                        if (send.resolveActivity(getPackageManager()) != null) {
-                            // target app installed → go straight to it
-                            toStart = send;
-                        } else {
-                            // not installed → generic chooser
-                            Intent generic = new Intent(Intent.ACTION_SEND);
-                            generic.setType(mime);
-                            generic.putExtra(Intent.EXTRA_STREAM, uri);
-                            generic.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            toStart = Intent.createChooser(generic, "שיתוף הדו\"ח");
-                        }
-                    } else {
-                        toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
-                    }
-                    /*  ⛔ אין להוסיף כאן FLAG_ACTIVITY_NEW_TASK (סבב 57) — הדגל
-                     *  גורם לאנדרואיד להביא קדימה **משימה קיימת** בעלת אותו
-                     *  affinity במקום להתחיל את היעד מחדש, ולכן לחיצה על שיתוף
-                     *  נחתה לפעמים על המסך הקודם של אותה אפליקציה ולא על שיתוף
-                     *  חדש; אתחול המכשיר (שמנקה את המשימות) «פתר» את זה — וזו
-                     *  בדיוק חתימת התסמין.
-                     *  ⚠️ והדגל גם לא היה נחוץ מלכתחילה: הקריאה כאן היא
-                     *  MainActivity.this.startActivity(...) — הקשר Activity חי
-                     *  על ה-UI thread, ולא Service או הקשר יישום; NEW_TASK נדרש
-                     *  רק משם. בלעדיו יעד השיתוף נפתח בתוך המשימה הנוכחית,
-                     *  ו«חזור» מחזיר לאפליקציה.                                */
+                    // ⛔ שיתוף רק ב-createChooser · אין FLAG_ACTIVITY_NEW_TASK (סבב 59) —
+                    // ר' share-bridge-rule ב-CLAUDE.md
+                    Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
                     try {
                         startActivity(toStart);
                     } catch (Exception e) {
@@ -209,11 +185,11 @@ public class MainActivity extends ShellActivity {
      */
     private class ShareBridge {
         @JavascriptInterface
-        public void shareImage(final String base64Data, final String mimeType, final String appPackage) {
+        public void shareImage(final String base64Data, final String mimeType) {
             runOnUiThread(new Runnable() {
                 @Override public void run() {
                     if (!isAppOrigin(webView.getUrl())) return;   // ⛔ not our page — drop it
-                    MainActivity.this.shareImage(base64Data, mimeType, appPackage);
+                    MainActivity.this.shareImage(base64Data, mimeType);
                 }
             });
         }

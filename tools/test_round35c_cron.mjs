@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
    ⚠️ `prefixes` — כאן, ורק כאן, מפתח הגיבוי נושא את סיומת המוסד. */
 const APP = {
   name: 'yoman-avoda',
-  keys: ['tb_entries_rows', 'tb_cats', 'tb_subs', 'tb_subs_meta', 'tb_wa_phone'],
+  keys: ['tb_entries_rows', 'tb_cats', 'tb_subs', 'tb_subs_meta'],
   prefixes: ['rishon_', 'ramataviv_'],
   /* ⭐ שמות גיבוי השגרה שרצו עד סבב 35, לפני המעבר לגיבוי-טבלאות (השלמת
      סבב 35ג): 23 שורות שלהם יושבות במסד, והן חייבות להתפנות ככל שגרה

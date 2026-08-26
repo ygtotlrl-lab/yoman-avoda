@@ -24,8 +24,8 @@ android {
         // על המניפסט ועל קובץ הבנייה, וחתימה אחת לשני ה-workflows.
         // 6 = סבב 56 — עשרת אייקוני ה-mipmap של המעטפת הוחלפו.
         // 7 = סבב 57 — הסרת FLAG_ACTIVITY_NEW_TASK ממסלול השיתוף.
-        versionCode 7
-        versionName "7.0"
+        versionCode 9
+        versionName "9.0"
     }
 
     buildTypes {

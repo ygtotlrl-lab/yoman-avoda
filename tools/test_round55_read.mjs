@@ -20,7 +20,7 @@ const APP = {
   minRowsGet: 5,
   legacyOff: /var TB_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv, ולכן ⛔ אין להם שכבת שורות.
-  kvOnly: ['tb_cats', 'tb_subs', 'tb_subs_meta', 'tb_wa_phone'],
+  kvOnly: ['tb_cats', 'tb_subs', 'tb_subs_meta'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
