@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="33-2026-08-26-1">
+<meta name="app-version" content="34-2026-08-26-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -440,16 +440,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
   <!-- SETTINGS -->
   <div class="panel" id="panel-settings" style="display:none">
-    <div class="card" style="margin-bottom:12px" id="waSettingsCard">
-      <div class="card-ttl">📱 שליחה לוואטסאפ</div>
-      <div style="margin:10px 0 8px;font-size:13px;color:var(--textmid)">מספר הנמען (קידומת בינלאומית, ללא +)</div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="waPhone" type="tel" placeholder="972501234567"
-          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:Heebo,sans-serif;direction:ltr;text-align:left;letter-spacing:1px">
-        <button class="btn-save" style="white-space:nowrap" onclick="saveWAPhone()">💾 שמור</button>
-      </div>
-      <div id="waPhoneStatus" style="font-size:11px;color:var(--success);margin-top:6px;display:none">✅ נשמר!</div>
-    </div>
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
@@ -1481,7 +1471,7 @@ var BK_CFG = {
        נשארים מקורות `kv` — זה ביתם היחיד בענן. */
     var out = [{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',
                  eq: ['yeshiva', YESHIVA], order: 'rec_key' }];
-    return out.concat(['tb_cats', 'tb_subs', 'tb_subs_meta', 'tb_wa_phone']
+    return out.concat(['tb_cats', 'tb_subs', 'tb_subs_meta']
       .map(function (k) { return { kind: 'kv', table: KV_TABLE, name: k }; }));
   }
 };
@@ -3136,7 +3126,7 @@ var TB_ARC_UNIFIED = true;
    `tb_entries`/`tb_archive`) כבויים. השקילות אומתה ב-17.8 (720/171, אפס
    אי-התאמות). ⛔ המחיקה עצמה ב-30.8, פעולת מנהל — לא כאן (סבב 35) — חלון
    שבועיים בין כיבוי למחיקה הוא מה שמאפשר לגלות טעות בזמן.
-   ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta`/`tb_wa_phone` אינם חלק מהכיבוי —
+   ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta` אינם חלק מהכיבוי —
    ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
 var TB_ARC_LEGACY_WRITE = false;
 var TB_KV_LEGACY_WRITE = false;
@@ -3632,14 +3622,6 @@ async function syncFromCloud() {
 
     // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
     arcCleanupCorrupted();
-
-    // WA Phone: always pull from cloud to stay in sync across devices
-    var cloudWaPhone = await pull('tb_wa_phone', 'מספר וואטסאפ');
-    if (cloudWaPhone) {
-      setWAPhone(cloudWaPhone);   // מפתח פר-מוסד — לא דורס את המוסד השני
-      var waEl = document.getElementById('waPhone');
-      if (waEl) waEl.value = cloudWaPhone;
-    }
 
     buildCatGrid();
     // Reconcile selCat after CATS replaced — old reference is no longer in new array
@@ -4203,7 +4185,7 @@ function showConfirm(title, msg, onOk) {
   overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
 }
 
-// שם המוסד הפעיל — מקור אמת יחיד לכל הפלטים (PDF / דוח תמונה / וואטסאפ).
+// שם המוסד הפעיל — מקור אמת יחיד לכל הפלטים (PDF / דוח תמונה / סיגנל).
 // קודם היה מקודד קשיח "ראשון לציון", כך שרמת אביב הוציאה דוחות בשם
 // הישיבה השנייה.
 function instName() {
@@ -4440,9 +4422,8 @@ function _buildReportDiv(cb){
 
 
 /* ══════════════════════════════════════════════════════════════════════════
-   שיתוף — וואטסאפ, סיגנל והגשר המקורי של המעטפת
+   שיתוף — סיגנל והגשר המקורי של המעטפת
    ══════════════════════════════════════════════════════════════════════════ */
-// ── WhatsApp Send ──
 // Debounced push to cloud after any UI change
 var _syncPushTimer = null;
 // ⭐ גוף הדחיפה, בלי ההשהיה (סבב 44) — חולץ כדי שמודול הניסיון
@@ -4492,69 +4473,6 @@ function scheduleSyncPush() {
   _syncPushTimer = setTimeout(tbSyncPushNow, 500);
 }
 
-// ── מספר וואטסאפ — מופרד לפי מוסד ──
-// קודם נכתב ל-'tb_wa_phone' בלי סיומת LS, בעוד כל שאר המפתחות משתמשים ב-LS:
-// מספר הנמען של ישיבה אחת דרס את של השנייה. הצד הענני כבר מופרד ממילא —
-// sbSet כותב ל-KV_TABLE (kv_rishon / kv_ramataviv).
-function waPhoneKey() { return 'tb_wa_phone' + LS; }
-// נתונים קיימים: המפתח הישן (בלי סיומת) מהגר פעם אחת למוסד הפעיל, כדי שהמספר
-// שכבר הוגדר לא ילך לאיבוד. המפתח הישן נשאר על כנו ולא נמחק.
-function getWAPhone() {
-  var v = null;
-  try {
-    v = localStorage.getItem(waPhoneKey());
-    if (v == null) {
-      var legacy = localStorage.getItem('tb_wa_phone');
-      if (legacy) { lsSet(waPhoneKey(), legacy); v = legacy; }
-    }
-  } catch(e) { console.warn('[wa] קריאת מספר נכשלה', e); }
-  return v || '';
-}
-function setWAPhone(val) {
-  lsSet(waPhoneKey(), val);
-}
-
-function saveWAPhone() {
-  var val = document.getElementById('waPhone').value.trim();
-  setWAPhone(val);
-  sbSet('tb_wa_phone', val);   // KV_TABLE כבר פר-מוסד
-  var st = document.getElementById('waPhoneStatus');
-  st.style.display = 'block';
-  setTimeout(function(){ st.style.display = 'none'; }, 1500);
-}
-
-function sendWhatsApp(){
-  var curKey = getCurrentDateKey();
-  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){toast("אין רשומות לשיתוף להיום");return;}
-  toast("מכין תמונה...");
-  // Get phone number from settings field, clean it
-  var rawPhone = ((document.getElementById('waPhone')||{}).value || '').trim() || getWAPhone();
-  var phone = rawPhone.replace(/[^0-9+]/g,'');
-  // Convert Israeli local format 05X to international 97X
-  if(phone.startsWith('0')) phone = '972' + phone.substring(1);
-  _buildReportDiv(function(div){
-    _renderReport(div).then(function(canvas){
-      div.style.left='-9999px';
-      // Native Android WebView bridge (com.whatsapp) — attaches the image directly
-      if (_androidShareImage(canvas, 'com.whatsapp')) return;
-      canvas.toBlob(function(blob){
-        // Web Share API: open the system share sheet with the image attached
-        var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
-        if (navigator.canShare && navigator.canShare({files:[file]})) {
-          navigator.share({files:[file]}).catch(function(err){
-            // AbortError = user closed the share sheet — not a failure
-            if (err && err.name !== 'AbortError') _waDownloadFallback(canvas, phone);
-          });
-          return;
-        }
-        // Fallback (desktop / unsupported): download + open whatsapp://
-        _waDownloadFallback(canvas, phone);
-      },'image/jpeg',0.95);
-    }).catch(function(e){ _reportError(div, e); });
-  });
-}
-
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
 // (FileProvider) and fires ACTION_SEND to the target app.
 // Returns true if the native bridge handled it; false in a plain browser (use Web Share / fallback).
@@ -4590,7 +4508,10 @@ function _androidShareImage(canvas, appPackage){
   return false;
 }
 
-function _waDownloadFallback(canvas, phone){
+// ⛔ נפילה-חזרה של הורדה בלבד — בלי קישור-עומק ליעד ספציפי (סבב 58):
+//    קישור כזה הוא מסלול שיתוף שני, מקביל לבורר של המערכת, שאיש אינו
+//    קורא לו ואינו נבדק — והוא נשבר בשקט ביום שהיעד משנה סכימה.
+function _shareDownloadFallback(canvas){
   var dataUrl = canvas.toDataURL('image/jpeg',0.95);
   var a=document.createElement('a');
   a.href=dataUrl;
@@ -4598,11 +4519,6 @@ function _waDownloadFallback(canvas, phone){
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  if(phone){
-    setTimeout(function(){
-      window.location.href = 'whatsapp://send?phone='+phone;
-    },1000);
-  }
 }
 // SETTINGS
 var _dragKind = null; // "cat" | "task" | "sub"
@@ -4893,10 +4809,6 @@ function renderSettings() {
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
   });
-
-  // Load saved WA phone
-  var waPhoneEl = document.getElementById('waPhone');
-  if(waPhoneEl) waPhoneEl.value = getWAPhone();
 }
 
 function removeTask(ci, ti) {
@@ -5822,14 +5734,12 @@ function selectYeshiva(y) {
   if (sub) sub.textContent = (y === 'ramataviv')
     ? 'ישיבת תומכי תמימים ליובאוויטש רמת אביב'
     : 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון';
-  // Single output button per yeshiva
+  // ⚠️ כפתור פלט אחד, ולרמת אביב בלבד (סבב 58) — לראשון לציון ישב כאן
+  //    כפתור פלט משלה, והוא ירד יחד עם היכולת שהפעילה אותו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML = (y === 'ramataviv')
     ? '<button class="btn-sm" style="background:#3A76F0;color:white" onclick="sendSignal()">📨 שלח לסיגנל</button>'
-    : '<button class="btn-sm" style="background:#25D366;color:white" onclick="sendWhatsApp()">📱 שלח לוואטסאפ</button>';
-  // WhatsApp-number settings card is Rishon-only
-  var waCard = document.getElementById('waSettingsCard');
-  if (waCard) waCard.style.display = (y === 'ramataviv') ? 'none' : '';
+    : '';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
   // עכשיו — ומיד אחריה המדידה והפינוי היזום, **לפני** loadLocalData, כדי
@@ -5866,8 +5776,8 @@ function selectYeshiva(y) {
   }
 }
 
-// ── Signal output: IMAGE of the daily report (identical to WhatsApp, target = Signal) ──
-// Same mechanism as sendWhatsApp: build report div → html2canvas → file → Web Share sheet
+// ── Signal output: IMAGE of the daily report ──
+// build report div → html2canvas → file → Web Share sheet
 // (user picks Signal). The report image uses the selected yeshiva's logo + name automatically
 // (via #appLogo.src and _buildReportDiv's per-yeshiva instName). Desktop fallback: download image.
 function sendSignal(){
@@ -5884,12 +5794,12 @@ function sendSignal(){
         var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
         if (navigator.canShare && navigator.canShare({files:[file]})) {
           navigator.share({files:[file]}).catch(function(err){
-            if (err && err.name !== 'AbortError') _waDownloadFallback(canvas, null);
+            if (err && err.name !== 'AbortError') _shareDownloadFallback(canvas);
           });
           return;
         }
         // Desktop / unsupported: download the image (no Signal deep-link exists)
-        _waDownloadFallback(canvas, null);
+        _shareDownloadFallback(canvas);
       },'image/jpeg',0.95);
     }).catch(function(e){ _reportError(div, e); });
   });
