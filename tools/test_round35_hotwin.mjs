@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 
-/* ── APP — הדבר היחיד שנבדל בין הריפו (yoman-avoda) ────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   checks: [
     [/var TB_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (TB_KV_LEGACY_WRITE=false)'],
@@ -32,6 +32,7 @@ const APP = {
      'מוטציה שמכבה את גיבוי-הטבלאות נתפסת'],
   ],
 };
+/* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
