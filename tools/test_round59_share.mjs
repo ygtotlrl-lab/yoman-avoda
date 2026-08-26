@@ -135,7 +135,7 @@ if (real.length === 0) {
 const MUTATIONS = [
   { name: 'החזרת setPackage למסלול השיתוף',
     apply: (s) => s.replace('Intent toStart = Intent.createChooser(send,',
-                            'send.setPackage(appPackage);\n                    Intent toStart = Intent.createChooser(send,') },
+                            'send.setPackage("com.example.target");\n                    Intent toStart = Intent.createChooser(send,') },
   { name: 'startActivity ישיר על ה-intent במקום על הבורר',
     apply: (s) => s.replace(/Intent toStart = Intent\.createChooser\(send,[^;]*;/, 'Intent toStart = send;') },
   { name: 'החזרת FLAG_ACTIVITY_NEW_TASK לבורר השיתוף',

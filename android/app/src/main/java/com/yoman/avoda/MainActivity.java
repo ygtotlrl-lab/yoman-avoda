@@ -98,7 +98,7 @@ public class MainActivity extends ShellActivity {
                         if (!isMainFrame || !APP_ORIGIN.equals(String.valueOf(sourceOrigin))) return;
                         try {
                             JSONObject o = new JSONObject(String.valueOf(message.getData()));
-                            shareImage(o.optString("data"), o.optString("mime"), o.optString("pkg"));
+                            shareImage(o.optString("data"), o.optString("mime"));
                         } catch (Exception e) {
                             toastUi("שגיאה בהכנת התמונה לשיתוף");
                         }
@@ -137,9 +137,8 @@ public class MainActivity extends ShellActivity {
     }
 
     // ── The share itself. Reached only through one of the two guarded paths above. ──
-    // appPackage is kept for the page's bridge signature only — ⛔ it no longer routes
-    // the share (סבב 59); ר' share-bridge-rule ב-CLAUDE.md
-    private void shareImage(final String base64Data, final String mimeType, final String appPackage) {
+    // ⛔ אין כאן יעד — הבורר של המערכת הוא שבוחר (סבב 60) — ר' share-bridge-rule ב-CLAUDE.md
+    private void shareImage(final String base64Data, final String mimeType) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
             File dir = new File(getCacheDir(), "shared");
@@ -186,11 +185,11 @@ public class MainActivity extends ShellActivity {
      */
     private class ShareBridge {
         @JavascriptInterface
-        public void shareImage(final String base64Data, final String mimeType, final String appPackage) {
+        public void shareImage(final String base64Data, final String mimeType) {
             runOnUiThread(new Runnable() {
                 @Override public void run() {
                     if (!isAppOrigin(webView.getUrl())) return;   // ⛔ not our page — drop it
-                    MainActivity.this.shareImage(base64Data, mimeType, appPackage);
+                    MainActivity.this.shareImage(base64Data, mimeType);
                 }
             });
         }

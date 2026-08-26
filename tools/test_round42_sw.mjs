@@ -57,7 +57,7 @@ const APP = {
     'cdn-cached-online':     'body:NET-OK|status:200',
     'version-probe':         'passthrough',
     'non-get':               'passthrough',
-    'sweep-scope':           'sister-app-v9,yoman-avoda-v40',
+    'sweep-scope':           'sister-app-v9,yoman-avoda-v41',
   },
   defectCount: 0,
 };

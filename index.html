@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="34-2026-08-26-1">
+<meta name="app-version" content="35-2026-08-26-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4474,8 +4474,12 @@ function scheduleSyncPush() {
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
-// (FileProvider) and fires ACTION_SEND to the target app.
+// (FileProvider) and fires ACTION_SEND through the system share sheet.
 // Returns true if the native bridge handled it; false in a plain browser (use Web Share / fallback).
+//
+// ⛔ אין כאן פרמטר יעד (סבב 60) — הבורר של המערכת הוא שבוחר, ור' share-bridge-rule
+//    ב-CLAUDE.md. ⚠️ הגשר הוא חוזה בין הדף ל-Java, ולכן החתימה ירדה בשני הצדדים
+//    באותו קומיט; ⛔ הסרה בצד אחד בלבד שוברת את השיתוף.
 //
 // ⚠️ שני גשרים, ולא במקרה. מאז שהמעטפת טוענת את האתר **מהרשת** ולא מנכסים
 // מוטבעים, גשר מקורי הוא הרשאה שניתנת לדף שמגיע מהרשת — ולכן הוא חייב להיות
@@ -4488,20 +4492,19 @@ function scheduleSyncPush() {
 //     כשהיא על הדומיין שלנו, ובכל קריאה מאמתת מחדש את מקור הדף.
 // **אין להסיר את סדר הניסיון הזה** — נפילה-חזרה לגשר הישן כשהחדש קיים היא
 // ויתור על האכיפה שהפלטפורמה נותנת בחינם.
-function _androidShareImage(canvas, appPackage){
+function _androidShareImage(canvas){
   try {
     var br = window.AndroidShareBridge;
     if (br && typeof br.postMessage === 'function') {
       br.postMessage(JSON.stringify({
         data: canvas.toDataURL('image/jpeg',0.95).split(',')[1],
-        mime: 'image/jpeg',
-        pkg:  appPackage || ''
+        mime: 'image/jpeg'
       }));
       return true;
     }
     if (window.AndroidShare && typeof window.AndroidShare.shareImage === 'function') {
       var b64 = canvas.toDataURL('image/jpeg',0.95).split(',')[1];
-      window.AndroidShare.shareImage(b64, 'image/jpeg', appPackage || '');
+      window.AndroidShare.shareImage(b64, 'image/jpeg');
       return true;
     }
   } catch(e) { /* fall through to browser behavior */ }
@@ -5788,8 +5791,8 @@ function sendSignal(){
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
-      // Native Android WebView bridge → Signal (org.thoughtcrime.securesms)
-      if (_androidShareImage(canvas, 'org.thoughtcrime.securesms')) return;
+      // Native Android WebView bridge → the system share sheet (the user picks Signal)
+      if (_androidShareImage(canvas)) return;
       canvas.toBlob(function(blob){
         var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
         if (navigator.canShare && navigator.canShare({files:[file]})) {
