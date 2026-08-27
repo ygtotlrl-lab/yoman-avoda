@@ -30,7 +30,7 @@ gius has since been converted to a WebView shell built the same way.
 |---|---|
 | **Package ID** | `com.yoman.avoda` — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
 | **טוען** | `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 9 — קודם בסבב 60 (הסרת הפרמטר `appPackage` מחתימת גשר השיתוף, בשני צדדיו: ה-Java וה-`index.html`). 8 = סבב 59 (הסרת מסלול ה-`setPackage` מהשיתוף: כל שיתוף עובר ב-`Intent.createChooser`, וגם הדגל `FLAG_ACTIVITY_NEW_TASK` ירד מבורר השיתוף). 7 = סבבים 57–58 (הסרת `FLAG_ACTIVITY_NEW_TASK` ממסלול השיתוף וממסירת יעד חיצוני ל-`ACTION_VIEW`). 6 = סבב 56 (עשרת אייקוני ה-mipmap של המעטפת הוחלפו). 5 = סבב 46ב (היפוך ברירת המחדל בקובצי התצורה), 4 = סבב 45, 3 = סבב 41 (חילוץ המעטפת), 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
+| **versionCode** | 10 — קודם בסבב 65 (מחיקת `copy-assets.sh` ותיקיית `assets/`, שאפס קוראים נמדדו להם). 9 = סבב 60 (הסרת הפרמטר `appPackage` מחתימת גשר השיתוף, בשני צדדיו: ה-Java וה-`index.html`). 8 = סבב 59 (הסרת מסלול ה-`setPackage` מהשיתוף: כל שיתוף עובר ב-`Intent.createChooser`, וגם הדגל `FLAG_ACTIVITY_NEW_TASK` ירד מבורר השיתוף). 7 = סבבים 57–58 (הסרת `FLAG_ACTIVITY_NEW_TASK` ממסלול השיתוף וממסירת יעד חיצוני ל-`ACTION_VIEW`). 6 = סבב 56 (עשרת אייקוני ה-mipmap של המעטפת הוחלפו). 5 = סבב 46ב (היפוך ברירת המחדל בקובצי התצורה), 4 = סבב 45, 3 = סבב 41 (חילוץ המעטפת), 2 = המעטפת שטוענת מהרשת, 1 = זו שטענה `file://`; חייב להיות גבוה יותר כדי להתקין מעליה |
 | **minSdk / targetSdk** | 21 / 34 |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
@@ -156,10 +156,15 @@ hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח
 `.github/workflows/build-apk.yml`: Actions → **Build APK** → **Run workflow**.
 ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-apk`.
 
-**אין יותר שלב "copy web assets"** — ואין להחזיר אותו (ר' הפרק שמעל).
-`copy-assets.sh` נשאר בריפו כשלד עם הסבר בלבד.
+**אין יותר שלב "copy web assets"** — ⛔ ואין להחזיר אותו (ר' הפרק שמעל).
+⭐ **וגם `copy-assets.sh` ותיקיית `assets/` נמחקו (סבב 65)** — נמדד: אפס
+קוראים בארבעת הריפו (workflow · gradle · manifest · קוד), והאיסור עצמו
+כבר מגודר בחמישה מקומות. ⛔ שלד ששרד את תפקידו נקרא כהזמנה להחזירו.
 
 ### בנייה מקומית (דורשת Android SDK + Gradle)
+
+⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — ולכן הדרך המעשית
+היא ה-workflow שלמעלה. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
 
 ```bash
 cd android
@@ -174,10 +179,65 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk yoman-avoda.apk
 ```
 
-או ידנית — ר' הפרק "חתימת APK" ב-CLAUDE.md (מפתח `signing/yoman.keystore`,
-alias `yoman`). אחרי חתימה מאמתים שה-SHA256 תואם לטבלה שם.
+### המפתח הקבוע — ⛔ לעולם לא להחליף
+
+| | |
+|---|---|
+| **קובץ** | `signing/yoman.keystore` (PKCS12, RSA 2048, תקף עד 2053) |
+| **alias** | `yoman` |
+| **storepass / keypass** | `yoman123` (זהה לשניהם) |
+| **SHA256** | `29:F5:0B:29:60:79:0B:77:28:25:7C:88:79:12:31:28:7A:B8:F1:D9:3E:90:B6:3B:50:F4:1E:41:B9:FA:F8:B5` |
+
+חלופות ידניות, כשאין `sign-apk.sh`:
+
+```bash
+apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
+  --ks-pass pass:yoman123 --key-pass pass:yoman123 app.apk
+jarsigner -keystore signing/yoman.keystore -storepass yoman123 \
+  -keypass yoman123 app.apk yoman
+```
+
+אחרי חתימה מאמתים שה-SHA256 תואם לטבלה. ⚠️ המפתח הקודם (`/tmp/yoman.keystore`)
+אבד; ההתקנה הראשונה של APK חתום במפתח הנוכחי דרשה **הסרה חד-פעמית**, ומאז
+הוא קבוע. ⛔ לעולם לא להריץ `keytool -genkeypair` לפרויקט הזה.
 
 ## Notes
 - בדיקת האוטו-אפדייט מול GitHub `raw` **נשארה כפי שהיא**, אבל משמעותה השתנתה:
   מעכשיו `location.reload()` באמת מביא את הקוד החדש (הדף הוא https ולא
   `file://`), ולכן שחרור web כבר לא דורש בניית APK.
+
+<!-- SHARED:start id="context-smali-scope" -->
+## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
+
+⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
+היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
+ולכן אין בה URL שצריך לתקן.
+⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
+ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
+«חתימת APK» ב-CLAUDE.md.
+<!-- SHARED:end -->
+
+```bash
+apktool d <app>.apk -o /tmp/yw_work -f
+# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
+rm -rf /tmp/yw_work/build          # חובה לפני בנייה חוזרת
+apktool b /tmp/yw_work -o built.apk
+zipalign -f 4 built.apk aligned.apk
+apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
+  --ks-pass pass:yoman123 --key-pass pass:yoman123 --out output.apk aligned.apk
+```
+
+⚠️ **המפתח הישן שישב ב-`/tmp/yoman.keystore` אבד**; המפתח הקבוע הוא
+`signing/yoman.keystore` שבריפו.
+
+<!-- SHARED:start id="context-cache-apk" -->
+### ⚠️ Cache APK — כלל זהב
+
+שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
+מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
+חותמת זמן:
+<!-- SHARED:end -->
+
+```bash
+TS=$(date +%s) && apksigner sign ... --out yoman-avoda-${TS}.apk
+```

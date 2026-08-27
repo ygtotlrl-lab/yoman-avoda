@@ -57,7 +57,7 @@ const APP = {
     'cdn-cached-online':     'body:NET-OK|status:200',
     'version-probe':         'passthrough',
     'non-get':               'passthrough',
-    'sweep-scope':           'sister-app-v9,yoman-avoda-v44',
+    'sweep-scope':           'sister-app-v9,%CACHE%',
   },
   defectCount: 0,
 };
@@ -324,7 +324,7 @@ const SCENARIOS = [
 /* ══════════════════════════════════════════════════════════════════════════
    הרצה
    ══════════════════════════════════════════════════════════════════════════ */
-console.log(`\n── ${APP.app}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
+console.log(`\n──────── ${APP.app}: קו הבסיס ההתנהגותי של sw.js (סבב 42) ──`);
 
 is(!!CACHE_NAME, `CACHE_NAME נקרא מהמקור — '${CACHE_NAME}'`);
 is(listeners.fetch.length === 1, 'מאזין fetch יחיד נרשם');
@@ -340,8 +340,12 @@ for (const [key, title, run] of SCENARIOS) {
   if (RECORD) { console.log(`    ${key.padEnd(20)} → ${got}`); continue; }
   const exp = APP.expects[key];
   const spec = exp && typeof exp === 'object' ? exp : { be: exp };
+  /* ⭐ סבב 65 — `%CACHE%` במקום מספר הגרסה: ⛔ ערך שקיים בקוד אינו מוצהר
+   *  בשער (כלל ברזל 21). קיבוע `yoman-avoda-v44` כאן הפך כל קידום
+   *  `CACHE_NAME` — שהוא **חובה** בכל שינוי קוד — לשער אדום. */
+  const want = typeof spec.be === 'string' ? spec.be.split('%CACHE%').join(CACHE_NAME) : spec.be;
   const mark = spec.defect ? '⛔ התנהגות פגומה — מתוקנת בשלב א3: ' : '';
-  is(got === spec.be, `${mark}${title} → ${got}${got === spec.be ? '' : `  (צפוי: ${spec.be})`}`);
+  is(got === want, `${mark}${title} → ${got}${got === want ? '' : `  (צפוי: ${want})`}`);
 }
 
 if (RECORD) { console.log('\n(SW_RECORD — לא הושוותה שום ציפייה)'); process.exit(0); }
