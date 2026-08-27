@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*  test_round38_ids_yoman.mjs — סבב 38: מזהה רשומת יומן עובר ל-uuid.
+/*  test_ids_yoman.mjs — סבב 38: מזהה רשומת יומן עובר ל-uuid.
  *
  *  ⚠️ פרטי ל-yoman-avoda — היא היחידה שהמזהה שלה היה `Date.now()`.
  *
