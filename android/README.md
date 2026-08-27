@@ -203,3 +203,39 @@ jarsigner -keystore signing/yoman.keystore -storepass yoman123 \
 - בדיקת האוטו-אפדייט מול GitHub `raw` **נשארה כפי שהיא**, אבל משמעותה השתנתה:
   מעכשיו `location.reload()` באמת מביא את הקוד החדש (הדף הוא https ולא
   `file://`), ולכן שחרור web כבר לא דורש בניית APK.
+
+<!-- SHARED:start id="context-smali-scope" -->
+## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
+
+⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
+היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
+ולכן אין בה URL שצריך לתקן.
+⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
+ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
+«חתימת APK» ב-CLAUDE.md.
+<!-- SHARED:end -->
+
+```bash
+apktool d <app>.apk -o /tmp/yw_work -f
+# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
+rm -rf /tmp/yw_work/build          # חובה לפני בנייה חוזרת
+apktool b /tmp/yw_work -o built.apk
+zipalign -f 4 built.apk aligned.apk
+apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
+  --ks-pass pass:yoman123 --key-pass pass:yoman123 --out output.apk aligned.apk
+```
+
+⚠️ **המפתח הישן שישב ב-`/tmp/yoman.keystore` אבד**; המפתח הקבוע הוא
+`signing/yoman.keystore` שבריפו.
+
+<!-- SHARED:start id="context-cache-apk" -->
+### ⚠️ Cache APK — כלל זהב
+
+שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
+מתקין שוב את הבנייה **הקודמת** בלי לדעת. ⛔ **תמיד שם חדש בכל בנייה**, עם
+חותמת זמן:
+<!-- SHARED:end -->
+
+```bash
+TS=$(date +%s) && apksigner sign ... --out yoman-avoda-${TS}.apk
+```
