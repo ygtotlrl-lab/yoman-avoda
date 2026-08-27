@@ -170,7 +170,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
 .arc-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--bgsec);}
 .arc-btn.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
-.arc-btn.has-data{border-color:var(--primary);}
+
 .arc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
 .arc-crumb{font-size:12px;color:var(--textmid);cursor:pointer;padding:3px 8px;border-radius:6px;
   background:var(--bgsec);border:1px solid var(--border);transition:all 0.15s;}
@@ -260,7 +260,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .empty{text-align:center;padding:26px;color:var(--textlite);font-size:13px;line-height:2;}
 .exp-row{display:flex;gap:7px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:9px;padding:8px 14px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
-.btn-green{background:#E8F5EE;color:#1A7A45;border:1px solid #B0DCC5;} .btn-green:hover{background:#1A7A45;color:white;}
+
 .btn-blue{background:var(--bgsec);color:var(--primary);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary);color:white;}
 .btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
 
@@ -276,16 +276,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Heebo',sans-serif;font-size:13px;direction:rtl;color:var(--text);}
 .set-name-inp:focus{outline:none;border-color:var(--primary);}
 .set-lbl{font-size:10px;color:var(--textlite);margin-bottom:5px;}
-.set-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;}
+
 .chip{display:flex;align-items:center;gap:3px;background:var(--bgsec);border:1px solid var(--border);
   border-radius:14px;padding:3px 8px 3px 5px;font-size:11px;cursor:grab;}
 .chip.chip-sub{background:white;font-size:10px;border-color:#D8E4F0;}
-.chip.chip-dragging{opacity:0.4;}
+
 .drag-over{outline:2px dashed var(--primary);border-radius:8px;}
 .chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:12px;padding:0;line-height:1;}
 .chip button:hover{color:#CC3333;}
 .sub-chips{display:flex;flex-wrap:wrap;gap:4px;padding-right:8px;min-height:10px;}
-.task-drag-handle{user-select:none;}
+
 .task-block{background:var(--bgcard);border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:grab;transition:box-shadow 0.15s;}
 .task-block:hover{box-shadow:0 2px 10px var(--shadow);}
 .task-block.dragging{opacity:0.4;}
@@ -2619,10 +2619,11 @@ function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); 
 // 2. **רק עם updatedAt מספרי.** tombstone בלי חותמת (נתוני legacy) — אי אפשר
 //    לדעת מתי נמחק, ולכן הוא **נשאר**. recTs() מחזיר 0 עבורו, וגריעה לפי 0
 //    הייתה מוחקת דווקא את הישנים ביותר בלי שום ראיה לגילם.
-// 3. **90 יום.** הסף צריך להיות ארוך בהרבה מכל היעדרות סבירה של מכשיר.
+// 3. **`TOMBSTONE_TTL_MS`.** הסף צריך להיות ארוך בהרבה מכל היעדרות סבירה
 //
 // המחיר המודע (זהה לזה שכבר תועד במנוע המיזוג): מכשיר שהיה מנותק יותר
-// מ-90 יום ולא קיבל את ה-tombstone עדיין מחזיק את הרשומה כחיה, וכשיסתנכרן
+// מעבר ל-`TOMBSTONE_TTL_MS` ולא קיבל את ה-tombstone עדיין מחזיק את הרשומה
+// כחיה, וכשיסתנכרן
 // היא תחזור **פעם אחת**. מחיקה חוזרת יוצרת tombstone חדש ומתוארך.
 var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -5354,13 +5355,13 @@ function loadLocalData() {
     ENTRIES = lsRead("tb_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
-    // גריעת tombstones ישנים מ-90 יום — בטעינה בלבד, פעם אחת לכל עליית אפליקציה.
+    // גריעת tombstones מעבר ל-`TOMBSTONE_TTL_MS` — בטעינה בלבד, פעם אחת לעלייה.
     // הדגל נצרך במיזוג הראשון שאחרי הטעינה (ראה _tombPrunePending), כי אחרת
     // העותק הענני היה מחזיר את כולם מיד.
     var _beforePrune = ENTRIES.length;
     ENTRIES = prunePastTombstones(ENTRIES);
     if (ENTRIES.length !== _beforePrune) {
-      console.log('[load] נגרעו ' + (_beforePrune - ENTRIES.length) + ' tombstones ישנים מ-90 יום');
+      console.log('[load] נגרעו ' + (_beforePrune - ENTRIES.length) + ' tombstones מעבר ל-TOMBSTONE_TTL_MS');
     }
     _tombPrunePending = true;
     var arr = lsRead("tb_archive"+LS, null, 'array');
