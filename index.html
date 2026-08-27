@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="39-2026-08-27-1">
+<meta name="app-version" content="40-2026-08-27-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -391,8 +391,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
           <button class="day-chip" onclick="pickDay(this,'ערב שבת')">ערב שבת</button>
           <button class="day-chip" onclick="pickDay(this,'מוצאי שבת')">מוצ"ש</button>
         </div>
-        <input class="heb-inp" id="hebDateInput" type="text" placeholder="תאריך עברי..." />
-        <input class="heb-inp" id="gregDateInput" type="text" placeholder="תאריך לועזי..." style="min-width:130px;" oninput="onGregDateChange()" />
+        <!-- ⛔ תאריך עברי נשאר טקסט חופשי (סבב 67) — אין בורר תאריך עברי
+             מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
+             ⚠️ הערך נגזר ממילא מ-gregDateInput דרך hebrewDate(). -->
+        <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" autocomplete="off" placeholder="תאריך עברי..." />
+        <!-- ⛔ בלי inputmode בכוונה (סבב 67) — הפורמט המתקבל הוא dd/mm/yyyy או
+             yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
+             ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
+             שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
+        <input aria-label="תאריך לועזי" class="heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." style="min-width:130px;" oninput="onGregDateChange()" />
       </div>
     </div>
 
@@ -408,12 +415,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
         <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
       </div>
       <div class="inp-grid">
-        <div class="fld"><label>משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
-        <div class="fld"><label>תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
+        <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
+        <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
       </div>
       <div class="inp-grid">
-        <div class="fld"><label>הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
-        <div class="fld"><label>כמות</label><input id="countInput" type="text" placeholder="1" /></div>
+        <div class="fld"><label for="notesInput">הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
+        <div class="fld"><label for="countInput">כמות</label><input id="countInput" type="text" inputmode="numeric" autocomplete="off" placeholder="1" /></div>
       </div>
       <button class="btn-add" id="btn-add-entry"
         ontouchstart="this.classList.add('btn-flash')"
@@ -4527,7 +4534,7 @@ function renderSettings() {
     var hdr = '<div class="set-hdr">'
       + '<span class="drag-handle">⠿</span>'
       + '<div class="set-badge" style="background:' + c.bg + '"></div>'
-      + '<input class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
+      + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
@@ -4554,7 +4561,7 @@ function renderSettings() {
               + '</div>';
           }
           var addSubRow = '<div style="display:flex;gap:4px;margin-top:4px">'
-            + '<input class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
+            + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
             + '<button class="btn-mini" onclick="addSub('+ci+','+ti+')" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
@@ -4574,7 +4581,7 @@ function renderSettings() {
             + '</div>';
         }).join('')
       + '<div class="set-add-row" style="margin-top:8px">'
-      + '<input class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
+      + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
       + '<button class="btn-mini" onclick="addTask(' + ci + ')">+ הוסף</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHtml;
@@ -5030,13 +5037,13 @@ function renderArcDetail() {
     html += '<div style="border-top:2px dashed var(--accent);margin-top:10px;padding-top:10px">'+
       '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
       '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
-      '<select id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
-      '<select id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
-      '<input id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
+      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
       '<button class="btn-mini" onclick="arcAddEntry()" style="white-space:nowrap">+ הוסף</button>'+
       '</div></div>';
   }
@@ -5589,10 +5596,10 @@ function editEntry(id) {
   var div = document.createElement('div');
   div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
   div.innerHTML =
-    '<input id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input id="ei_count" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<button onclick="saveEntry(' + idArg(id) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
   container.innerHTML = '';
@@ -5640,10 +5647,10 @@ function arcEditEntry(gdateKey, entryId) {
   if(!target) return;
   target.innerHTML =
     '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
-    '<input id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input id="aei_count" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<button onclick="arcSaveEntry(\'' + qk + '\',' + idArg(entryId) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
