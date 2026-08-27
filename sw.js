@@ -7,7 +7,7 @@
  */
 var CACHE_NAME = 'yoman-avoda-v46'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
 
-// App shell — must be cached for the app to work offline.
+// קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
   './',
   './index.html',
