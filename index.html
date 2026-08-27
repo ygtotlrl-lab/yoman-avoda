@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="36-2026-08-26-1">
+<meta name="app-version" content="37-2026-08-27-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5827,8 +5827,9 @@ function sendSignal(){
 function editEntry(id) {
   var e = ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
   if(!e) return;
-  var row = document.querySelector('[onclick*="delEntry(' + id + ')"]');
-  if(!row) { row = document.querySelector('[onclick*="editEntry(' + id + ')"]'); }
+  // ⛔ `idArg` חובה (סבב 64) — מזהה טקסט. ר' מודול מזהי רשומות ב-CLAUDE.md
+  var row = document.querySelector('[onclick*="delEntry(' + idArg(id) + ')"]');
+  if(!row) { row = document.querySelector('[onclick*="editEntry(' + idArg(id) + ')"]'); }
   if(!row) return;
   var container = row.closest('.entry-row');
   if(!container) return;
@@ -5877,8 +5878,9 @@ function arcEditEntry(gdateKey, entryId) {
   var target = null;
   var qk = jsQ(gdateKey);
   rows.forEach(function(r){
-    if(r.innerHTML.indexOf('arcDeleteEntry(\'' + qk + '\',' + entryId + ')') > -1 ||
-       r.innerHTML.indexOf('arcEditEntry(\'' + qk + '\',' + entryId + ')') > -1) {
+    // ⛔ `idArg` חובה (סבב 64) — מזהה טקסט. ר' מודול מזהי רשומות ב-CLAUDE.md
+    if(r.innerHTML.indexOf('arcDeleteEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1 ||
+       r.innerHTML.indexOf('arcEditEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1) {
       target = r;
     }
   });
