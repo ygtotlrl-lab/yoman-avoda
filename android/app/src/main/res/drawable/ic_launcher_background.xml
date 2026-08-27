@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- ⛔ משחזר את שוליי ic_launcher — ר' tools/test_round66_iconlayer.mjs -->
+<!-- שוליי ic_launcher אינם צבע אחד אלא מדרג באלכסון: 142 גוונים,
+     #2B508F בשמאל-עליון עד #0D1F42 בימין-תחתון. צבע אחיד מחטיא ב-36
+     יחידות לערוץ; המדרג הזה מחטיא ב-5. android:angle="315" הוא
+     שמאל-עליון ← ימין-תחתון. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#0A4DAC"/>
+    <gradient
+        android:type="linear"
+        android:angle="315"
+        android:startColor="#2B508F"
+        android:endColor="#0D1F42"/>
 </shape>
