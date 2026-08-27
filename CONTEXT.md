@@ -70,7 +70,7 @@ alter table public.TABLE_NAME enable row level security;
 - Supabase sync בפולינג של 3 שניות, מיזוג ברמת רשומה עם הגנת ⏳ ✅
 - גיבוי יומי ל-`kv_backup` + יומן פעולות ל-`sync_log` ✅
 - חלון חם ופינוי יזום מאומת מול הענן ✅
-- PWA מותקן — `CACHE_NAME` נוכחי `yoman-avoda-v33`, `app-version` `27-2026-08-19-1`
+- PWA מותקן — שני מזהי גרסה, ⛔ והערכים עצמם ב-`sw.js` וב-`index.html` בלבד
 
 ## פרטי מערכת
 - מעטפת APK: **WebView מקורי** ב-`android/` שטוען מהרשת — ⛔ לא TWA ולא PWABuilder
