@@ -2083,6 +2083,43 @@ function idArg(v) {
 }
 /* ═══════════════ סוף מודול מזהי הרשומות ════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════════════
+   העברת מזהה ל-DOM — `data-id` ודלגציה (סבב 67, כלל ברזל 27)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ מזהה רשומה עובר ב-`data-id` ובדלגציה — ⛔ לעולם לא מוטבע ב-`onclick`.
+   ⚠️ **וזו האי-אחידות שהולידה את כל באגי סבב 64** (העיפרון · כפתורי
+   התלמידים · ה-PDF): מזהה שנשתל בתוך מחרוזת קוד הוא ציטוט שיכול להישבר,
+   ואילו `data-id` הוא ערך שהדפדפן מוסר כמות שהוא.
+   ⛔ **ו-`data-id` מחזיר תמיד מחרוזת** — ההשוואה חייבת לעבור ב-`idEq`,
+   שממיר את שני הצדדים ל-`String`. ⛔ אין להשוות ב-`===` על מספר.
+   ══════════════════════════════════════════════════════════════════════════ */
+/*  בורר CSS למזהה — ⛔ רשימת-היתר של תווים ולא בריחה (סבב 67) — אותו
+ *  נימוק כמו `idArg`: ערך שאינו עובר את הסינון אינו יכול לסגור את
+ *  הבורר ולהריץ בורר אחר. */
+function cssQ(v) {
+  return String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '');
+}
+var DOM_ACTIONS = {
+  'entry-edit':     function (el) { editEntry(el.getAttribute('data-id')); },
+  'entry-del':      function (el) { delEntry(el.getAttribute('data-id')); },
+  'entry-save':     function (el) { saveEntry(el.getAttribute('data-id')); },
+  'arc-pdf':        function (el) { exportArchivePDF(el.getAttribute('data-id')); },
+  'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
+  'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
+  'arc-entry-save': function (el) { arcSaveEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
+};
+/*  ⛔ מאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — המסכים כאן
+ *  נבנים מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם;
+ *  ⚠️ בדיוק שם נולד «הכפתור שהפסיק לעבוד אחרי רענון». */
+document.addEventListener('click', function (ev) {
+  var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+  if (!el) return;
+  var fn = DOM_ACTIONS[el.getAttribute('data-act')];
+  if (!fn) return;
+  ev.preventDefault();
+  fn(el);
+});
+
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ ביומן אין תור אופליין: «ממתין» הוא סימון ⏳, והריקון הוא דחיפת-מצב
    של שתי שכבות השורות. `tbSyncPushNow` היא גוף `scheduleSyncPush` בלי
@@ -3910,8 +3947,8 @@ function renderLog() {
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button class="edit-btn" onclick="editEntry(' + idArg(e.id) + ')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
-      + '<button class="del-btn" onclick="delEntry(' + idArg(e.id) + ')">✕</button>'
+      + '<button class="edit-btn" data-act="entry-edit" data-id="' + esc(e.id) + '" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
+      + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
       + '</div>';
   }).join("");
 }
@@ -5010,7 +5047,7 @@ function renderArcDetail() {
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" onclick="arcToggleEdit()" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm hide-mobile" onclick="exportArchivePDF('+idArg(d.snapId)+')" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
+    (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
@@ -5019,8 +5056,8 @@ function renderArcDetail() {
     sortedE.forEach(function(e, ei) {
       var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
       html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button class="arc-entry-edit" onclick="arcEditEntry(\''+jsQ(arcSelDayKey)+'\','+idArg(e.id)+')" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
-        '<button class="arc-entry-del" onclick="arcDeleteEntry(\''+jsQ(arcSelDayKey)+'\','+idArg(e.id)+')">×</button>' : '')+
+        (arcEditMode ? '<button class="arc-entry-edit" data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+        '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
         '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
         '<span style="color:#bbb">←</span>'+
@@ -5588,8 +5625,12 @@ function editEntry(id) {
   var e = ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
   if(!e) return;
   // ⛔ `idArg` חובה (סבב 64) — מזהה טקסט. ר' מודול מזהי רשומות ב-CLAUDE.md
-  var row = document.querySelector('[onclick*="delEntry(' + idArg(id) + ')"]');
-  if(!row) { row = document.querySelector('[onclick*="editEntry(' + idArg(id) + ')"]'); }
+  // ⛔ האיתור עבר ל-`data-id` יחד עם ההעברה (סבב 67) — בורר שחיפש את
+  // מחרוזת ה-`onclick` היה מפסיק למצוא דבר ברגע שהמאפיין ירד, והעריכה
+  // הייתה מתה בשקט. ר' כלל ברזל 27.
+  var sel = '[data-id="' + cssQ(id) + '"]';
+  var row = document.querySelector('[data-act="entry-del"]' + sel);
+  if(!row) { row = document.querySelector('[data-act="entry-edit"]' + sel); }
   if(!row) return;
   var container = row.closest('.entry-row');
   if(!container) return;
@@ -5600,7 +5641,7 @@ function editEntry(id) {
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button onclick="saveEntry(' + idArg(id) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="entry-save" data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
   container.innerHTML = '';
   container.appendChild(div);
@@ -5651,7 +5692,7 @@ function arcEditEntry(gdateKey, entryId) {
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button onclick="arcSaveEntry(\'' + qk + '\',' + idArg(entryId) + ')" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="arc-entry-save" data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
     '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
 }
