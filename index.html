@@ -5263,7 +5263,7 @@ function renderArcDetail() {
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" onclick="arcToggleEdit()" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm hide-mobile" onclick="exportArchivePDF('+d.snapId+')" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
+    (d.snapId ? '<button class="btn-sm hide-mobile" onclick="exportArchivePDF('+idArg(d.snapId)+')" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
