@@ -174,7 +174,7 @@ function t1() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   2 · ⛔ נוסחת הזהות זהה לזו שב-migrations/003
+   2 · ⛔ נוסחת הזהות זהה לזו שב-migrations/003 — שתי נוסחאות = שתי שורות
    ══════════════════════════════════════════════════════════════════════════ */
 function t2() {
   const sb = makeEnv().sb;
@@ -230,7 +230,7 @@ async function t4() {
   const sb = env.sb;
   const arr = [E(1, 100), E(2, 200), E(3, 300)];
 
-  // ⛔ מפה null (טרם נמשך) ⇒ הכל דחוף
+  // ⛔ מפה null (טרם נמשך) ⇒ הכל דחוף — דילוג היה משאיר רשומה בלי עותק בענן
   eq(sb.tbDirtyRows('tb_entries', arr).length, 3, '4א · ⛔ לפני משיכה — הכל נחשב לדחיפה');
 
   sb._tbRemote.tb_entries = { '1': 100, '2': 200, '3': 300 };
@@ -245,7 +245,7 @@ async function t4() {
   arr.push(E(9, 50));
   eq(sb.tbDirtyRows('tb_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
 
-  // ⏳ מנצח
+  // ⚠️ רשומה מסומנת ⏳ מנצחת במיזוג (כלל ברזל 6)
   const env2 = makeEnv({ pending: { 'entry:1': 1 } });
   env2.sb._tbRemote.tb_entries = { '1': 999 };
   eq(env2.sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1,

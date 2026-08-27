@@ -75,7 +75,7 @@ assert(c.entryOrderTs(null) === 0 && c.entryOrderTs({}) === 0,
     '5 · ⭐ ישנה וחדשה יחד — החדשה קודם, בסדר יורד');
 }
 {
-  // ⛔ הסדר של רשומות העבר לא זז: שלוש רשומות מספריות, אותו סדר כמו
+  // ⛔ הסדר של רשומות העבר לא זז — שלוש רשומות מספריות, אותו סדר כמו
   //    `b.id - a.id` הישן.
   const legacy = [{ id: 100 }, { id: 300 }, { id: 200 }];
   const now = legacy.slice().sort((a, b) => c.entryOrderTs(b) - c.entryOrderTs(a));

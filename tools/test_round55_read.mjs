@@ -19,7 +19,7 @@ const APP = {
   //    _tbVerify) ועוד ספק החלון החם — ר' הטענה 1ב.
   minRowsGet: 5,
   legacyOff: /var TB_KV_LEGACY_WRITE = false;/,
-  // המפתחות שביתם היחיד בענן הוא ה-kv, ולכן ⛔ אין להם שכבת שורות.
+  // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
   kvOnly: ['tb_cats', 'tb_subs', 'tb_subs_meta'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -34,7 +34,7 @@ const assert = (c, m) => (c ? ok(m) : bad(m));
 
 console.log('— סבב 55 (יומן): מקור הקריאה —');
 
-/* ── 1. הדפוס: טבלאות תחילה, ה-kv רק כנפילה-חזרה ─────────────────────── */
+/* ── 1. הדפוס: טבלאות תחילה, ה-kv רק כנפילה-חזרה ───────────────────────── */
 const calls = (SRC.match(new RegExp(APP.rowsGet + "\\('", 'g')) || []).length;
 assert(calls >= APP.minRowsGet,
   `1א · ${APP.rowsGet} נקראת ב-${calls} אתרים (≥${APP.minRowsGet})`);
@@ -60,7 +60,7 @@ for (const k of APP.kvOnly) {
     '1ו · ' + k + ' נקרא מ-kv — ⚠️ זה ביתו היחיד בענן, ולא סטייה');
 }
 
-/* ── 2. הרצת tbRowsGet האמיתית — עמודים ונכשל-סגור ───────────────────── */
+/* ── 2. הרצת tbRowsGet האמיתית — עמודים ונכשל-סגור ─────────────────────── */
 function cut(name) {
   const re = new RegExp('\\n(async )?function ' + name + '\\s*\\(', 'g');
   const mm = re.exec(SRC);

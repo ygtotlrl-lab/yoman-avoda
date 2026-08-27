@@ -27,7 +27,7 @@ let passN = 0, failN = 0;
 const ok = (c, m) => { if (c) passN++; else { failN++; console.error('❌ ' + m); } };
 const eq = (a, b, m) => ok(a === b, `${m} — קיבלתי ${JSON.stringify(a)}, ציפיתי ${JSON.stringify(b)}`);
 
-/* ── חיתוך מהקובץ ─────────────────────────────────────────────────────── */
+/* ── חיתוך מהקובץ ──────────────────────────────────────────────────────── */
 function cut(name) {
   const re = new RegExp('\\n(async )?function ' + name + '\\s*\\(', 'g');
   const m = re.exec(SRC);
@@ -92,7 +92,7 @@ function makeCtx() {
   return sandbox;
 }
 
-/* ── טעינת הפיקסטורה ──────────────────────────────────────────────────── */
+/* ── טעינת הפיקסטורה ───────────────────────────────────────────────────── */
 function loadFixture() {
   const out = { rishon: [], ramataviv: [] };
   let cur = null;
@@ -124,7 +124,7 @@ const FX = loadFixture();
 
 console.log('═══ סבב 31 — תצוגת הארכיון ומקור הרשומות האוטומטיות ═══\n');
 
-/* ── 0. שלמות הפיקסטורה ───────────────────────────────────────────────── */
+/* ── 0. שלמות הפיקסטורה ────────────────────────────────────────────────── */
 eq(FX.rishon.length, 155, 'הפיקסטורה מחזיקה 155 סנאפשוטים לראשון לציון');
 eq(FX.ramataviv.length, 15, 'הפיקסטורה מחזיקה 15 סנאפשוטים לרמת אביב');
 eq(FX.rishon.filter((r) => !r.snap.gdate).length, 5, 'חמישה סנאפשוטים בראשון בלי gdate');
@@ -132,7 +132,7 @@ eq(FX.rishon.filter((r) => !r.snap.hdate).length, 6, 'שישה סנאפשוטי�
 eq(FX.ramataviv.filter((r) => !r.snap.hdate).length, 7, 'שבעה סנאפשוטים ברמת אביב בלי hdate');
 ok(FX.rishon.every((r) => r.snap.count >= 1), 'לכל סנאפשוט בראשון יש לפחות רשומה חיה אחת');
 
-/* ── 1. כל הימים מוצגים, ואף אחד אינו «לא ידוע» ───────────────────────── */
+/* ── 1. כל הימים מוצגים, ואף אחד אינו «לא ידוע» ────────────────────────── */
 function daysOf(list) {
   const c = makeCtx();
   c.ARCHIVE = list.map((r) => JSON.parse(JSON.stringify(r.snap)));
@@ -183,7 +183,7 @@ function reachable(c) {
     'כל חמשת הימים בלי gdate מופיעים ברשימת הימים של אלול ה׳תשפ״ה');
 }
 
-/* ── 3. הרשומות בלי hdate — מקובצות מתוך `name` ───────────────────────── */
+/* ── 3. הרשומות בלי hdate — מקובצות מתוך `name` ────────────────────────── */
 {
   // הצפי נגזר מה-name שבפיקסטורה, לא מהקוד — שני צדדים עצמאיים.
   const expect = (name) => {
@@ -216,7 +216,7 @@ function reachable(c) {
   eq(dup.entries.length, 5, '⛔ הרשומה החוזרת אינה נספרת פעמיים');
 }
 
-/* ── 5. סדר טעינה יציב ────────────────────────────────────────────────── */
+/* ── 5. סדר טעינה יציב ─────────────────────────────────────────────────── */
 {
   const c = makeCtx();
   const kvOrder = FX.rishon.map((r) => JSON.parse(JSON.stringify(r.snap)));
@@ -274,7 +274,7 @@ function reachable(c) {
     'רשומות ממוינות לפי id יורד — כמו המיון שרץ אחרי המיזוג');
 }
 
-/* ── 6. hebFromText — חילוץ התאריך העברי מטקסט חופשי ──────────────────── */
+/* ── 6. hebFromText — חילוץ התאריך העברי מטקסט חופשי ───────────────────── */
 {
   const c = makeCtx();
   const cases = [
@@ -304,7 +304,7 @@ function reachable(c) {
   eq(c.snapHDate({ hdate: '', name: '' }), '', 'אין ממה לגזור — מחרוזת ריקה, והקיבוץ יפול ל«לא ידוע»');
 }
 
-/* ── 7. המקור: רשומה אוטומטית זהה בשדותיה לידנית ──────────────────────── */
+/* ── 7. המקור: רשומה אוטומטית זהה בשדותיה לידנית ───────────────────────── */
 const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count', 'updatedAt'];
 {
   // המסלול הידני — `autoArchiveDay` על הקוד האמיתי.
@@ -380,7 +380,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   eq(a.ARCHIVE[0].entries.length, 2, 'הרשומות מוזגו ולא נדרסו');
 }
 
-/* ── 8. arcPutSnapshot — השומר של שני המסלולים ────────────────────────── */
+/* ── 8. arcPutSnapshot — השומר של שני המסלולים ─────────────────────────── */
 {
   const c = makeCtx();
   eq(c.arcPutSnapshot('יום שני', 'ה׳ אב ה׳תשפ״ו', '', [{ id: 1 }], 1, null), null,
@@ -388,6 +388,6 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   eq(c.ARCHIVE.length, 0, 'ובאמת לא נוסף דבר לארכיון');
 }
 
-/* ── סיכום ────────────────────────────────────────────────────────────── */
+/* ── סיכום ─────────────────────────────────────────────────────────────── */
 console.log(`\n${failN === 0 ? '✅' : '❌'} עברו ${passN}, נכשלו ${failN}`);
 process.exit(failN === 0 ? 0 : 1);
