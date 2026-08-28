@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="40-2026-08-27-1">
+<meta name="app-version" content="41-2026-08-28-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2107,6 +2107,28 @@ var DOM_ACTIONS = {
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-save': function (el) { arcSaveEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
+  /*  ⛔⛔ וכל ערך שחוזר מ-`data-*` הוא **מחרוזת** (סבב 67, כלל ברזל 27ג) —
+   *  ⚠️ ו-`ci`/`ti`/`si` כאן הם **אינדקסים במערך**, לא מזהי טקסט: הם
+   *  נכנסים ל-`CATS[ci].tasks[ti]` ול-`splice(si, 1)`. ⛔ ההמרה ל-`Number`
+   *  נעשית **באותו קומיט של ההמרה** (סבב 68) — מסלול שהיה מסתמך על
+   *  ההמרה המשתמעת של JS נשבר בשקט ברגע שמישהו יוסיף שם השוואת `===`. */
+  'cat-task-add':   function (el) { addTask(Number(el.getAttribute('data-ci'))); },
+  'cat-task-del':   function (el) { removeTask(Number(el.getAttribute('data-ci')),
+                                               Number(el.getAttribute('data-ti'))); },
+  'cat-sub-add':    function (el) { addSub(Number(el.getAttribute('data-ci')),
+                                           Number(el.getAttribute('data-ti'))); },
+  /*  ⚠️ שם המשימה עובר כ-`data-task` ולא כמחרוזת בתוך קוד (סבב 68) —
+   *  ⛔ זה בדיוק הציטוט שנשבר: `safeT` היה בורח מגרשים ידנית. */
+  'cat-sub-del':    function (el) { removeSub(Number(el.getAttribute('data-ci')),
+                                              el.getAttribute('data-task'),
+                                              Number(el.getAttribute('data-si'))); },
+  /*  ⚠️ מפתחות הארכיון הם **מחרוזות** ונשארות כאלה — ⛔ אין להמיר שנה
+   *  ל-`Number` (סבב 68): `arcSelYear` מושווה ומוצג כמחרוזת לאורך כל
+   *  מסלול הארכיון, והמרה כאן הייתה מייצרת שני טיפוסים לאותו ערך. */
+  'arc-nav-months': function (el) { arcGoMonths(el.getAttribute('data-year')); },
+  'arc-nav-days':   function (el) { arcGoDays(el.getAttribute('data-year'),
+                                              el.getAttribute('data-month')); },
+  'arc-nav-detail': function (el) { arcGoDetail(el.getAttribute('data-key')); },
 };
 /*  ⛔ מאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — המסכים כאן
  *  נבנים מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם;
@@ -4577,6 +4599,11 @@ function renderSettings() {
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
+          /*  ⛔ שני אתרי ה-`onclick` שנשארו כאן נושאים `event.stopPropagation()`
+           *  **באותו מאפיין**, ⛔ ולכן אינם מומרים לדלגציה (סבב 68, כלל ברזל 27) —
+           *  ⚠️ דלגציה ב-`document` רצה **אחרי** בועת האלמנט, ולכן המטפל של השורה
+           *  העוטפת היה רץ **לפני** המואצל וההגנה הייתה מפסיקה לפעול בשקט.
+           *  ⛔ ולכן `safeT`/`safeS` נשארים — הם הציטוט של אותם שני אתרים בלבד. */
           var safeT = t.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
           var subsSection = '';
           if(subs.length > 0) {
@@ -4593,14 +4620,14 @@ function renderSettings() {
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
-                    + '<button onclick="removeSub('+ci+',\''+safeT+'\','+si+')">×</button>'
+                    + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
           }
           var addSubRow = '<div style="display:flex;gap:4px;margin-top:4px">'
             + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
-            + '<button class="btn-mini" onclick="addSub('+ci+','+ti+')" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
+            + '<button class="btn-mini" data-act="cat-sub-add" data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
             + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
@@ -4612,7 +4639,7 @@ function renderSettings() {
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
             + '<button onclick="editTaskInline('+ci+','+ti+');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
-            + '<button onclick="removeTask('+ci+','+ti+')" class="task-del-btn">×</button>'
+            + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
             + addSubRow
@@ -4620,7 +4647,7 @@ function renderSettings() {
         }).join('')
       + '<div class="set-add-row" style="margin-top:8px">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
-      + '<button class="btn-mini" onclick="addTask(' + ci + ')">+ הוסף</button>'
+      + '<button class="btn-mini" data-act="cat-task-add" data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
@@ -4869,11 +4896,11 @@ function renderArcBreadcrumb() {
   parts.push('<span class="arc-crumb" onclick="arcGoYears()">שנים</span>');
   if (arcSelYear) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" onclick="arcGoMonths(\''+arcSelYear+'\')">' + arcSelYear + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-months" data-year="'+esc(arcSelYear)+'">' + arcSelYear + '</span>');
   }
   if (arcSelMonth) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" onclick="arcGoDays(arcSelYear,\''+arcSelMonth+'\')">' + arcSelMonth + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-days" data-year="'+esc(arcSelYear)+'" data-month="'+esc(arcSelMonth)+'">' + arcSelMonth + '</span>');
   }
   if (arcSelDayKey) {
     var days = getAllArchiveDays();
@@ -4922,7 +4949,7 @@ function renderArcYears() {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoMonths(\''+y+'\')">' + y + '</button>';
+          + '" data-act="arc-nav-months" data-year="'+esc(y)+'">' + y + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -4960,7 +4987,7 @@ function renderArcMonths(year) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoDays(\''+year+'\',\''+m+'\')">' + m + '</button>';
+          + '" data-act="arc-nav-days" data-year="'+esc(year)+'" data-month="'+esc(m)+'">' + m + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -4996,7 +5023,7 @@ function renderArcDays(year, month) {
     // הניווט לפי d.key ולא לפי d.gdate — סנאפשוט ישן בלי gdate ממופתח לפי id,
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoDetail(\''+jsQ(d.key)+'\')" title="'+(d.hdate||d.name||"")+'">'
+          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
           + dayNum + '<br><small style="font-size:9px;font-weight:400;opacity:0.8">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
