@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="40-2026-08-27-1">
+<meta name="app-version" content="42-2026-08-28-2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -326,6 +326,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .sync-line button[disabled]{opacity:.5;cursor:default}
 /* ═══ סוף CSS אזור המצב ═════════════════════════════════════════════════ */
 .ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
+/* ══ שכבת המודאל — מיכל אחד (סבב 68, כלל ברזל 27) ══════════════════════ */
+body.locked{overflow:hidden}
+.veil{position:fixed;inset:0;z-index:10050;background:rgba(10,20,30,.5);
+  display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
+.veil.open{display:flex}
+@media (min-width:640px){.veil{align-items:center}}
+.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:#fff;
+  color:#1a1a2e;border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
+  font-family:'Heebo',sans-serif;direction:rtl}
+@media (min-width:640px){.sheet{border-radius:20px}}
+.sheet-hd{display:flex;align-items:center;gap:10px;padding:15px 18px;
+  border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:#fff;z-index:2}
+.sheet-hd h3{font-size:16px;flex:1;margin:0;font-weight:800}
+.sheet-hd .x{background:none;border:0;font-size:22px;line-height:1;color:#777;
+  cursor:pointer;padding:2px 6px;border-radius:8px}
+.sheet-bd{padding:16px 18px;font-size:14px;line-height:1.6;color:#555}
+.sheet-ft{padding:12px 18px 18px;display:flex;gap:9px}
+.sheet-ft:empty{display:none}
+.sheet-ft button{flex:1;padding:10px;border-radius:10px;border:1.5px solid #ccc;
+  background:#f5f5f5;color:#333;font-family:Heebo;font-size:14px;font-weight:600;cursor:pointer}
+.sheet-ft button.danger{border:none;background:#E53935;color:#fff}
+/* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
 </style>
 <!-- ⚠️ גרסאות CDN נעוצות במדויק — אין לחזור ל-'@2'/'@4' צפים: שחרור בצד הספק
      שובר את האפליקציה בלי שינוי קוד, וזה בלתי ניתן לשחזור מהריפו.
@@ -2107,6 +2129,33 @@ var DOM_ACTIONS = {
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-save': function (el) { arcSaveEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
+  /*  ⛔⛔ וכל ערך שחוזר מ-`data-*` הוא **מחרוזת** (סבב 67, כלל ברזל 27ג) —
+   *  ⚠️ ו-`ci`/`ti`/`si` כאן הם **אינדקסים במערך**, לא מזהי טקסט: הם
+   *  נכנסים ל-`CATS[ci].tasks[ti]` ול-`splice(si, 1)`. ⛔ ההמרה ל-`Number`
+   *  נעשית **באותו קומיט של ההמרה** (סבב 68) — מסלול שהיה מסתמך על
+   *  ההמרה המשתמעת של JS נשבר בשקט ברגע שמישהו יוסיף שם השוואת `===`. */
+  'cat-task-add':   function (el) { addTask(Number(el.getAttribute('data-ci'))); },
+  'cat-task-del':   function (el) { removeTask(Number(el.getAttribute('data-ci')),
+                                               Number(el.getAttribute('data-ti'))); },
+  'cat-sub-add':    function (el) { addSub(Number(el.getAttribute('data-ci')),
+                                           Number(el.getAttribute('data-ti'))); },
+  /*  ⚠️ שם המשימה עובר כ-`data-task` ולא כמחרוזת בתוך קוד (סבב 68) —
+   *  ⛔ זה בדיוק הציטוט שנשבר: `safeT` היה בורח מגרשים ידנית. */
+  'cat-sub-del':    function (el) { removeSub(Number(el.getAttribute('data-ci')),
+                                              el.getAttribute('data-task'),
+                                              Number(el.getAttribute('data-si'))); },
+  /*  ⚠️ מפתחות הארכיון הם **מחרוזות** ונשארות כאלה — ⛔ אין להמיר שנה
+   *  ל-`Number` (סבב 68): `arcSelYear` מושווה ומוצג כמחרוזת לאורך כל
+   *  מסלול הארכיון, והמרה כאן הייתה מייצרת שני טיפוסים לאותו ערך. */
+  'arc-nav-months': function (el) { arcGoMonths(el.getAttribute('data-year')); },
+  'arc-nav-days':   function (el) { arcGoDays(el.getAttribute('data-year'),
+                                              el.getAttribute('data-month')); },
+  'arc-nav-detail': function (el) { arcGoDetail(el.getAttribute('data-key')); },
+  /*  ⛔ שלושת כפתורי המודאל עוברים באותה דלגציה (סבב 68) — ⚠️ המיכל קבוע
+   *  ב-DOM, ולכן אין כאן חיווט מחדש בכל רינדור. */
+  'modal-close':    function () { closeModal(); },
+  'ask-no':         function () { closeAsk(false); },
+  'ask-yes':        function () { closeAsk(true); },
 };
 /*  ⛔ מאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — המסכים כאן
  *  נבנים מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם;
@@ -3979,22 +4028,68 @@ function clearAll() {
     scheduleSyncPush();
   });
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   שכבת המודאל — מיכל אחד ו-`openModal(title, body, foot)` (סבב 68)
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ פתיחת מודאל עוברת דרך `openModal` בחתימה אחידה, ⛔ וסגירה במסלול אחד
+   (סבב 68, כלל ברזל 27) — ⚠️ בדפוס הדינמי שהיה כאן כל דיאלוג בנה `overlay`
+   משלו ומימש מחדש פתיחה, סגירה ומיקוד; ⛔ דיאלוג שמפספס אחד מהם נראה תקין
+   עד שמישהו לוחץ `Escape`. ⭐ המיכל קבוע ב-DOM, ולכן `data-act` שבתוכו
+   נתפס באותו מאזין דלגציה של כלל ברזל 27.
+   ⛔ **החתימה זהה לזו של גיוס** (סבב 68) — ⚠️ ובשכר יושבת היום
+   `openModal(id)` בשם זהה ובמשמעות אחרת; ⛔ מי שמעתיק קריאה משם לכאן
+   מקבל קוד שמתקמפל ואינו עובד.
+   ══════════════════════════════════════════════════════════════════════════ */
+function openModal(title, body, foot) {
+  var ttl = document.getElementById('modal-title');
+  if (!ttl) return;
+  ttl.textContent = title || '';
+  document.getElementById('modal-body').innerHTML = body || '';
+  document.getElementById('modal-foot').innerHTML = foot || '';
+  document.getElementById('modal').classList.add('open');
+  document.body.classList.add('locked');
+}
+function closeModal() {
+  var m = document.getElementById('modal');
+  if (!m) return;
+  m.classList.remove('open');
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal-foot').innerHTML = '';
+  if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
+}
+/*  ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית
+ *  (סבב 68), וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM. */
+var askResolve = null;
+function ask(title, text, yesLabel) {
+  document.getElementById('ask-title').textContent = title || '';
+  document.getElementById('ask-body').innerHTML = '<p style="margin:0">' + esc(text || '') + '</p>';
+  document.getElementById('ask-yes').textContent = yesLabel || 'אישור';
+  document.getElementById('ask').classList.add('open');
+  document.body.classList.add('locked');
+  return new Promise(function (res) { askResolve = res; });
+}
+function closeAsk(v) {
+  document.getElementById('ask').classList.remove('open');
+  if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
+  if (askResolve) { askResolve(v); askResolve = null; }
+}
+/*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
+ *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  var a = document.getElementById('ask'), m = document.getElementById('modal');
+  if (a && a.classList.contains('open')) closeAsk(false);
+  else if (m && m.classList.contains('open')) closeModal();
+});
+document.addEventListener('click', function (e) {
+  if (e.target && e.target.id === 'modal') closeModal();
+  if (e.target && e.target.id === 'ask') closeAsk(false);
+});
+
+/*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
+ *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
 function showConfirm(title, msg, onOk) {
-  var overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;";
-  var box = document.createElement("div");
-  box.style.cssText = "background:#ffffff !important;border-radius:16px;padding:24px 20px;max-width:320px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);border:1.5px solid #d0d0d0;position:relative;z-index:10000;";
-  box.innerHTML = "<div style=\"font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:8px\">"+title+"</div>"
-    + "<div style=\"font-size:14px;color:#555;margin-bottom:20px;line-height:1.6\">"+msg+"</div>"
-    + "<div style=\"display:flex;gap:10px;justify-content:center\">"
-    + "<button id=\"conf-cancel\" style=\"flex:1;padding:10px;border-radius:10px;border:1.5px solid #ccc;background:#f5f5f5;color:#333;font-family:Heebo;font-size:14px;cursor:pointer;\">ביטול</button>"
-    + "<button id=\"conf-ok\" style=\"flex:1;padding:10px;border-radius:10px;border:none;background:#E53935;color:white;font-family:Heebo;font-size:14px;font-weight:700;cursor:pointer;\">מחק</button>"
-    + "</div>";
-  overlay.appendChild(box);
-  document.body.appendChild(overlay);
-  box.querySelector("#conf-cancel").onclick = function(){ document.body.removeChild(overlay); };
-  box.querySelector("#conf-ok").onclick = function(){ document.body.removeChild(overlay); onOk(); };
-  overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+  ask(title, msg, 'מחק').then(function (yes) { if (yes) onOk(); });
 }
 
 // שם המוסד הפעיל — מקור אמת יחיד לכל הפלטים (PDF / דוח תמונה / סיגנל).
@@ -4577,6 +4672,11 @@ function renderSettings() {
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
+          /*  ⛔ שני אתרי ה-`onclick` שנשארו כאן נושאים `event.stopPropagation()`
+           *  **באותו מאפיין**, ⛔ ולכן אינם מומרים לדלגציה (סבב 68, כלל ברזל 27) —
+           *  ⚠️ דלגציה ב-`document` רצה **אחרי** בועת האלמנט, ולכן המטפל של השורה
+           *  העוטפת היה רץ **לפני** המואצל וההגנה הייתה מפסיקה לפעול בשקט.
+           *  ⛔ ולכן `safeT`/`safeS` נשארים — הם הציטוט של אותם שני אתרים בלבד. */
           var safeT = t.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
           var subsSection = '';
           if(subs.length > 0) {
@@ -4593,14 +4693,14 @@ function renderSettings() {
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
-                    + '<button onclick="removeSub('+ci+',\''+safeT+'\','+si+')">×</button>'
+                    + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
           }
           var addSubRow = '<div style="display:flex;gap:4px;margin-top:4px">'
             + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
-            + '<button class="btn-mini" onclick="addSub('+ci+','+ti+')" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
+            + '<button class="btn-mini" data-act="cat-sub-add" data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
             + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
@@ -4612,7 +4712,7 @@ function renderSettings() {
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
             + '<button onclick="editTaskInline('+ci+','+ti+');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
-            + '<button onclick="removeTask('+ci+','+ti+')" class="task-del-btn">×</button>'
+            + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
             + addSubRow
@@ -4620,7 +4720,7 @@ function renderSettings() {
         }).join('')
       + '<div class="set-add-row" style="margin-top:8px">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
-      + '<button class="btn-mini" onclick="addTask(' + ci + ')">+ הוסף</button>'
+      + '<button class="btn-mini" data-act="cat-task-add" data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
@@ -4869,11 +4969,11 @@ function renderArcBreadcrumb() {
   parts.push('<span class="arc-crumb" onclick="arcGoYears()">שנים</span>');
   if (arcSelYear) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" onclick="arcGoMonths(\''+arcSelYear+'\')">' + arcSelYear + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-months" data-year="'+esc(arcSelYear)+'">' + arcSelYear + '</span>');
   }
   if (arcSelMonth) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" onclick="arcGoDays(arcSelYear,\''+arcSelMonth+'\')">' + arcSelMonth + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-days" data-year="'+esc(arcSelYear)+'" data-month="'+esc(arcSelMonth)+'">' + arcSelMonth + '</span>');
   }
   if (arcSelDayKey) {
     var days = getAllArchiveDays();
@@ -4922,7 +5022,7 @@ function renderArcYears() {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoMonths(\''+y+'\')">' + y + '</button>';
+          + '" data-act="arc-nav-months" data-year="'+esc(y)+'">' + y + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -4960,7 +5060,7 @@ function renderArcMonths(year) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoDays(\''+year+'\',\''+m+'\')">' + m + '</button>';
+          + '" data-act="arc-nav-days" data-year="'+esc(year)+'" data-month="'+esc(m)+'">' + m + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -4996,7 +5096,7 @@ function renderArcDays(year, month) {
     // הניווט לפי d.key ולא לפי d.gdate — סנאפשוט ישן בלי gdate ממופתח לפי id,
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" onclick="arcGoDetail(\''+jsQ(d.key)+'\')" title="'+(d.hdate||d.name||"")+'">'
+          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
           + dayNum + '<br><small style="font-size:9px;font-weight:400;opacity:0.8">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
@@ -5777,5 +5877,28 @@ document.addEventListener('keydown', function(e) {
   }
 });
 </script>
+<!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68, כלל ברזל 27) — ⚠️ פתיחה, סגירה,
+     מיקוד, Escape ונעילת הגלילה חיים במקום אחד; ⛔ בדפוס הדינמי כל דיאלוג
+     מממש אותם מחדש, ודיאלוג שמפספס אחד מהם נראה תקין עד שלוחצים Escape. -->
+<div class="veil" id="modal">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="sheet-hd">
+      <h3 id="modal-title"></h3>
+      <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
+    </div>
+    <div class="sheet-bd" id="modal-body"></div>
+    <div class="sheet-ft" id="modal-foot"></div>
+  </div>
+</div>
+<div class="veil" id="ask">
+  <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="ask-title">
+    <div class="sheet-hd"><h3 id="ask-title"></h3></div>
+    <div class="sheet-bd" id="ask-body"></div>
+    <div class="sheet-ft">
+      <button data-act="ask-no">ביטול</button>
+      <button class="danger" data-act="ask-yes" id="ask-yes">אישור</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
