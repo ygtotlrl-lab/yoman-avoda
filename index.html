@@ -3611,7 +3611,7 @@ function gregDateStr(jsDate) {
 }
 
 function checkDayChange() {
-  var lastDay = localStorage.getItem("tb_last_day"+LS) || "";
+  var lastDay = lsGet("tb_last_day"+LS) || "";
   var today = new Date().toDateString();
   if (lastDay && lastDay !== today && liveOnly(ENTRIES).length > 0) {
     // זוהה יום חדש — ארכוב מקומי בלבד.
@@ -5336,7 +5336,7 @@ function checkForUpdates() {
       if (!m) return;                                // גוף לא צפוי — ולעולם לא לנחש
       var remoteVersion = m[1];
       if (remoteVersion === APP_VERSION) return;     // מעודכן
-      if (localStorage.getItem(UPDATE_KEY) === remoteVersion) return;  // נסגר ע"י המשתמש
+      if (lsGet(UPDATE_KEY) === remoteVersion) return;  // נסגר ע"י המשתמש
       showUpdateBanner(remoteVersion);
     })
     .then(done, function(){ done(); /* אופליין · פסק זמן · 404 — בשקט */ });
@@ -5381,7 +5381,7 @@ function startApp() {
 // לברירת המחדל, מדווחים לקונסול, וממשיכים לעלות.
 function lsRead(key, fallback, kind) {
   var raw;
-  try { raw = localStorage.getItem(key); } catch(e) { console.warn('[load] localStorage לא זמין:', e); return fallback; }
+  try { raw = lsGet(key); } catch(e) { console.warn('[load] localStorage לא זמין:', e); return fallback; }
   if (raw == null || raw === "") return fallback;
   var val;
   try { val = JSON.parse(raw); } catch(e) {
@@ -5485,7 +5485,7 @@ function migrateLegacyLsKeys() {
 
   TB_LEGACY_SPECS.forEach(function (sp) {
     var raw = null;
-    try { raw = localStorage.getItem(sp.legacy); } catch (e) { raw = null; }
+    try { raw = lsGet(sp.legacy); } catch (e) { raw = null; }
     if (raw == null) return;                 // אין שריד — אידמפוטנטי
     var bytes = (sp.legacy.length + raw.length) * 2;
 

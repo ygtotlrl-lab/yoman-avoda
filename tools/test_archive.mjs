@@ -75,6 +75,10 @@ function makeCtx() {
     saveEntries() {},
     lsSetArray(k, a) { sandbox.calls.lsSetArray.push(k); store[k] = JSON.stringify(a); return true; },
     lsSet(k, v) { sandbox.calls.lsSet.push(k); store[k] = v; return true; },
+    /*  ⛔ הקריאה מהאחסון עוברת גם היא במודול (סבב 67) — `lsGet` החליף
+     *  את `localStorage.getItem` בכל אתר שמחוץ למודול, ורתמה בלי
+     *  הדמה הזו נופלת ב-ReferenceError במקום למדוד. */
+    lsGet(k, fb) { const v = store[k]; return v == null ? (fb === undefined ? null : fb) : v; },
     toast(m) { sandbox.calls.toast.push(m); },
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } },
     LS: '_test',
