@@ -163,8 +163,8 @@ hanhala ו-schar כמעט זהות בית-לבית, gius נבדלת בניסוח
 
 ### בנייה מקומית (דורשת Android SDK + Gradle)
 
-⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — ולכן הדרך המעשית
-היא ה-workflow שלמעלה. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
+⚠️ **בסביבת הענן אין Android SDK ו-`dl.google.com` חסום** — הדרך המעשית
+היא ה-workflow. ⛔ ולא PWABuilder: הוא יודע לייצר TWA בלבד.
 
 ```bash
 cd android
@@ -188,15 +188,6 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **storepass / keypass** | `yoman123` (זהה לשניהם) |
 | **SHA256** | `29:F5:0B:29:60:79:0B:77:28:25:7C:88:79:12:31:28:7A:B8:F1:D9:3E:90:B6:3B:50:F4:1E:41:B9:FA:F8:B5` |
 
-חלופות ידניות, כשאין `sign-apk.sh`:
-
-```bash
-apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
-  --ks-pass pass:yoman123 --key-pass pass:yoman123 app.apk
-jarsigner -keystore signing/yoman.keystore -storepass yoman123 \
-  -keypass yoman123 app.apk yoman
-```
-
 אחרי חתימה מאמתים שה-SHA256 תואם לטבלה. ⚠️ המפתח הקודם (`/tmp/yoman.keystore`)
 אבד; ההתקנה הראשונה של APK חתום במפתח הנוכחי דרשה **הסרה חד-פעמית**, ומאז
 הוא קבוע. ⛔ לעולם לא להריץ `keytool -genkeypair` לפרויקט הזה.
@@ -214,7 +205,7 @@ jarsigner -keystore signing/yoman.keystore -storepass yoman123 \
 ולכן אין בה URL שצריך לתקן.
 ⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
 ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
-«חתימת APK» ב-CLAUDE.md.
+«Sign with the PERMANENT key» שלמעלה.
 <!-- SHARED:end -->
 
 ```bash

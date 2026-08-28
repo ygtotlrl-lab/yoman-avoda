@@ -44,5 +44,4 @@ node tools/check-js.mjs   # חובה לפני כל push
 שטוענת את כתובת ה-Pages מהרשת. בנייה: Actions → **Build APK** → Run workflow.
 שחרור קוד web אינו מצריך APK חדש.
 
-הכללים המחייבים והתיעוד המלא — ב-[CLAUDE.md](CLAUDE.md).
 <!-- SHARED:end -->
