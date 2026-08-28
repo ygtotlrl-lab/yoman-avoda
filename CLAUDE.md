@@ -344,7 +344,9 @@
 
 ### פינוי הגיבויים — הקובץ אינו מקומי
 ⚠️ הפינוי כאן הוא `hanhala-ruchanit/migrations/004_backup_retention_cron.sql`,
-של הפרויקט המשותף. ⭐ **וארבעה שמות גיבוי שיצאו משימוש נמצאים
+של הפרויקט המשותף, ⛔ ורשימת-ההיתר נקראת מהמיגרציה האחרונה שמגדירה אותה
+מחדש — `hanhala-ruchanit/migrations/014_backup_allowlist_drop_wa_phone.sql`;
+⛔ מיגרציה שכבר רצה אינה נערכת. ⭐ **וארבעה שמות גיבוי שיצאו משימוש נמצאים
 ברשימת-ההיתר שלו במפורש**, בהחלטת המנהל: `rishon_tb_entries` ·
 `rishon_tb_archive` · `ramataviv_tb_entries` · `ramataviv_tb_archive` —
 שמות גיבוי-השגרה שרצו עד המעבר לגיבוי-הטבלאות (`*_tb_entries_rows`).
