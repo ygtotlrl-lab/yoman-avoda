@@ -167,6 +167,6 @@ if (counter === SRC) {
 }
 
 console.log(failures === 0
-  ? `\n✅ test_round59_share: כל הטענות עברו (${MUTATIONS.length} מוטציות + מוטציית-נגד)`
-  : `\n❌ test_round59_share: ${failures} כשלים`);
+  ? `\n✅ test_share: כל הטענות עברו (${MUTATIONS.length} מוטציות + מוטציית-נגד)`
+  : `\n❌ test_share: ${failures} כשלים`);
 process.exit(failures === 0 ? 0 : 1);

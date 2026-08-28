@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*  test_round37_ids.mjs — סבב 37א: מודול מזהי הרשומות.
+/*  test_ids.mjs — סבב 37א: מודול מזהי הרשומות.
  *
  *  ⭐ עד הסבב הזה חיה אותה יכולת בדיוק ב**חמישה שמות** — `newClientId`
  *  בשכר לימוד · `newId` ב-gius · `ysNewId` בהנהלה · ודפוס בלי פונקציה
@@ -23,12 +23,12 @@ import { fileURLToPath } from 'node:url';
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ ביומן הוא `true`
  *  מסבב 38: שני אתרי היצירה עברו ל-`newClientId()`, יחד עם שלושת הממדים
  *  שחסמו את ההמרה — המיון (`entryOrderTs`), הציטוט (`idArg`) וההשוואה
- *  (`idEq`). ר' שורה 25 במטריצה ו-`test_round38_ids_yoman.mjs`.        */
+ *  (`idEq`). ר' שורה 25 במטריצה ו-`test_ids_yoman.mjs`.        */
 const APP = { app: 'yoman-avoda', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
-  console.log('test_round37_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
+  console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
   process.exit(0);
 }
 

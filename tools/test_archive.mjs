@@ -75,12 +75,16 @@ function makeCtx() {
     saveEntries() {},
     lsSetArray(k, a) { sandbox.calls.lsSetArray.push(k); store[k] = JSON.stringify(a); return true; },
     lsSet(k, v) { sandbox.calls.lsSet.push(k); store[k] = v; return true; },
+    /*  ⛔ הקריאה מהאחסון עוברת גם היא במודול (סבב 67) — `lsGet` החליף
+     *  את `localStorage.getItem` בכל אתר שמחוץ למודול, ורתמה בלי
+     *  הדמה הזו נופלת ב-ReferenceError במקום למדוד. */
+    lsGet(k, fb) { const v = store[k]; return v == null ? (fb === undefined ? null : fb) : v; },
     toast(m) { sandbox.calls.toast.push(m); },
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } },
     LS: '_test',
     _tbRecTs: (r) => (r && Number(r.updatedAt)) || 0,
     // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות הארכיון — כאן הוא
-    //    שקוף בכוונה, הבדיקות של החלון עצמו יושבות ב-test_round35_hotwin.
+    //    שקוף בכוונה, הבדיקות של החלון עצמו יושבות ב-test_hotwin.
     hwDiskFilter: (k, rows) => rows,
     hwNoteCloud: () => {},
     // hebcal אינו נטען כאן; `hebrewDate` נשלטת פר-בדיקה.
@@ -390,4 +394,50 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 
 /* ── סיכום ─────────────────────────────────────────────────────────────── */
 console.log(`\n${failN === 0 ? '✅' : '❌'} עברו ${passN}, נכשלו ${failN}`);
+/*  ⛔ היציאה עברה לסוף (סבב 67) — המוטציות רצות אחרי הטענות. */
+/* ───────────────────────────────────────────────────────────────────────────
+   ⛔ מוטציה ומוטציית-נגד — סבב 67
+   ───────────────────────────────────────────────────────────────────────────
+   ⛔ מבחן נכנס עם מוטציה, או עם נימוק כתוב מדוע אינו ניתן למוטציה.
+   ⚠️ בלעדיה אין שום ראיה שהמבחן **מסוגל** ליפול: 97 טענות שעוברות על עץ
+   תקין נראות כרשת ביטחון ופועלות כאישור. ⛔ והמוטציה רצה על **עותק
+   בתיקייה זמנית** ולא על העץ (הלקח של סבב 42ג).
+   ⚠️ הרצת-המשנה מסומנת ב-`RD67_MUT` — ⛔ בלעדיו המוטציה הייתה מריצה את
+   עצמה שוב בתוך העותק, לאין סוף.
+   ──────────────────────────────────────────────────────────────────────── */
+if (!process.env.RD67_MUT) {
+  const _m = await import('node:fs');
+  const _p = await import('node:path');
+  const _o = await import('node:os');
+  const _c = await import('node:child_process');
+  const _self = new URL(import.meta.url).pathname;
+  const _name = _p.basename(_self);
+  const _root = _p.resolve(_p.dirname(_self), '..');
+  const _run = (dir) => _c.spawnSync(process.execPath, [_p.join(dir, 'tools', _name)],
+    { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
+
+  const _mut = (label, file, edit, expectFail) => {
+    const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
+    _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
+    const f = _p.join(d, file);
+    if (!_m.existsSync(f)) { console.log('  ok   ' + label + ' — ⚠️ הקובץ אינו קיים כאן, הטענה מוצהרת ריקה'); return; }
+    _m.writeFileSync(f, edit(_m.readFileSync(f, 'utf8')));
+    const st = _run(d);
+    const fell = st !== 0;
+    console.log((fell === expectFail ? '  ok   ' : '  FAIL ') + label);
+    /*  ⛔ יציאה מיידית ולא `exitCode` (סבב 67) — סיכום המבחן קורא
+     *  ל-`process.exit` בסופו, והוא היה דורס כשל מוטציה בשקט. */
+    if (fell !== expectFail) process.exit(1);
+    _m.rmSync(d, { recursive: true, force: true });
+  };
+
+  console.log('\n— מוטציות (סבב 67) —');
+  _mut('⛔ שינוי מפתח הארכיון מפיל את השער', 'index.html',
+       (s) => s.replace(/function archiveKey/, 'function archiveKeyX'), true);
+  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-index.html ⛔ אינה מפילה', 'index.html',
+       (s) => s.replace('</body>', '<!-- הערה -->\n</body>'), false);
+}
+
 process.exit(failN === 0 ? 0 : 1);
+
+

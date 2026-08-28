@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/*  test_round38_ids_yoman.mjs — סבב 38: מזהה רשומת יומן עובר ל-uuid.
+/*  test_ids_yoman.mjs — סבב 38: מזהה רשומת יומן עובר ל-uuid.
  *
  *  ⚠️ פרטי ל-yoman-avoda — היא היחידה שהמזהה שלה היה `Date.now()`.
  *
@@ -99,10 +99,21 @@ assert(c.idArg("a'b\"c<d>") === "'abcd'",
   '11 · ⛔ רשימת-היתר של תווים — גרש, מרכאה וסוגר-זווית נחתכים');
 assert(c.idArg(null) === "''", '12 · `null` ⇒ מחרוזת ריקה, בלי לזרוק');
 {
-  const attrs = SRC.match(/onclick="(editEntry|delEntry|saveEntry|arcEditEntry|arcDeleteEntry|arcSaveEntry)\([^"]*"/g) || [];
-  assert(attrs.length >= 6, '13 · כל שישה מאפייני ה-`onclick` נמצאו (' + attrs.length + ')');
-  assert(attrs.every((a) => /idArg\(/.test(a)),
-    '14 · ⛔ ובכולם המזהה עובר ב-`idArg` — אין הזרקה בלי מרכאות');
+  /*  ⛔ שבעת אתרי ההעברה עברו ל-`data-id` בסבב 67 (כלל ברזל 27) — ⚠️ עד
+   *  אז הטענה כאן ספרה מאפייני `onclick` ברצפה `>= 6`, ⛔ ורצפה אינה
+   *  מדידה: היא עוברת גם כשאתר נוסף בלי הגנה. מעכשיו **ספירה מדויקת**,
+   *  ⛔ ואפס `onclick` שנושא מזהה. */
+  const ACTS = ['entry-edit', 'entry-del', 'entry-save',
+                'arc-pdf', 'arc-entry-edit', 'arc-entry-del', 'arc-entry-save'];
+  const sites = ACTS.filter((a) => SRC.indexOf('data-act="' + a + '"') >= 0);
+  assert(sites.length === ACTS.length,
+    '13 · כל שבעת אתרי ההעברה מוצהרים ב-`data-act` (' + sites.length + '/' + ACTS.length + ')');
+  const legacy = SRC.match(/onclick="(editEntry|delEntry|saveEntry|arcEditEntry|arcDeleteEntry|arcSaveEntry)\(/g) || [];
+  assert(legacy.length === 0,
+    '14 · ⛔ ואף אחד מהם אינו מוטבע ב-`onclick` (' + legacy.length + ')');
+  const wired = ACTS.filter((a) => new RegExp("'" + a + "':\\s*function").test(SRC));
+  assert(wired.length === ACTS.length,
+    '15 · ⛔ ולכל אחד יש מטפל חי ב-`DOM_ACTIONS` (' + wired.length + '/' + ACTS.length + ')');
 }
 
 /* ── ג. השוואה ─────────────────────────────────────────────────────────── */
