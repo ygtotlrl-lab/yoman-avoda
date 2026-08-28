@@ -123,9 +123,9 @@ function check(src) {
 /* ── הרצה על הקוד האמיתי ───────────────────────────────────────────────── */
 const real = check(SRC);
 if (real.length === 0) {
-  pass('מסלול השיתוף תואם ל-share-bridge-rule: createChooser בלבד, בלי setPackage ובלי FLAG_ACTIVITY_NEW_TASK');
+  pass('מסלול השיתוף: createChooser בלבד, בלי setPackage ובלי FLAG_ACTIVITY_NEW_TASK');
 } else {
-  for (const b of real) fail(`⛔ ${b} — ר' share-bridge-rule ב-CLAUDE.md`);
+  for (const b of real) fail(`⛔ ${b} — הבורר של המערכת הוא שבוחר, ונעילה על יעד אחד מסירה מהמשתמש את הבחירה`);
 }
 
 /*  ⭐ והכלל נאכף על **הקובץ**, לא רק על המסלול המוכר: `ACTION_SEND` שייבנה
