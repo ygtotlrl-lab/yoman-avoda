@@ -197,7 +197,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
   מעכשיו `location.reload()` באמת מביא את הקוד החדש (הדף הוא https ולא
   `file://`), ולכן שחרור web כבר לא דורש בניית APK.
 
-<!-- SHARED:start id="context-smali-scope" -->
+<!-- SHARED:start id="android-smali-scope" -->
 ## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
 
 ⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
@@ -221,7 +221,7 @@ apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
 ⚠️ **המפתח הישן שישב ב-`/tmp/yoman.keystore` אבד**; המפתח הקבוע הוא
 `signing/yoman.keystore` שבריפו.
 
-<!-- SHARED:start id="context-cache-apk" -->
+<!-- SHARED:start id="android-cache-apk" -->
 ### ⚠️ Cache APK — כלל זהב
 
 שם קובץ חוזר נתפס במטמון — של הדפדפן, של מנהל ההורדות ושל המכשיר — והמשתמש
