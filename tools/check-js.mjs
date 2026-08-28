@@ -68,7 +68,7 @@ const APP = {
           'test_swcore.mjs',
           'test_build.mjs',
           'test_gradle.mjs', 'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs',
+          'test_md.mjs', 'test_readonly.mjs',
           'test_stage_a.mjs', 'test_stage_b.mjs',
           'test_archive.mjs', 'test_unify.mjs',
           'test_structure.mjs',
