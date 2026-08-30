@@ -205,8 +205,8 @@ function t3() {
   const ek = entries.map((r) => String(sb.entryKey(r)));
   const ak = snaps.map((r) => String(sb.archiveKey(r)));
   eq(ek.filter((k) => ak.includes(k)).length, 0, '3א · ⛔ אפס חפיפה בין שני מרחבי המפתחות');
-  ok(ak.every((k) => /^[gi]:/.test(k)), '3ב · מפתחות הארכיון תמיד בקידומת g:/i:');
-  ok(ek.every((k) => !/^[gi]:/.test(k)), '3ג · ומפתחות היומן לעולם לא');
+  ok(ak.length > 0 && ak.every((k) => /^[gi]:/.test(k)), '3ב · מפתחות הארכיון תמיד בקידומת g:/i:');
+  ok(ek.length > 0 && ek.every((k) => !/^[gi]:/.test(k)), '3ג · ומפתחות היומן לעולם לא');
   ok(/join public\.tb_entries e/.test(M5) && /raise exception/.test(M5),
     '3ד · ⛔ ו-005 בודק את זה במסד ולא מניח — שער התנגשות שזורק');
 }
