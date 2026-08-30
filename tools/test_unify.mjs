@@ -405,8 +405,8 @@ if (!process.env.RD67_MUT) {
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי דגל הארכוב המאוחד מפיל את השער', 'index.html',
        (s) => s.replace(/tbArchivedFlag/g, 'tbArchivedFlagX'), true);
-  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-index.html ⛔ אינה מפילה', 'index.html',
-       (s) => s.replace('</body>', '<!-- הערה -->\n</body>'), false);
+  _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
+       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }</script>\n</body>'), false);
 }
 
 process.exit(failN ? 1 : 0);

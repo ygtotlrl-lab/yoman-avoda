@@ -28,7 +28,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-/* ── APP — הדבר היחיד שנבדל בין הריפו (yoman-avoda) ────────────────────── */
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'yoman-avoda',
   names: ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
