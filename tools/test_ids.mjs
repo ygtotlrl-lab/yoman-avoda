@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ ביומן הוא `true`
  *  מסבב 38: שני אתרי היצירה עברו ל-`newClientId()`, יחד עם שלושת הממדים
  *  שחסמו את ההמרה — המיון (`entryOrderTs`), הציטוט (`idArg`) וההשוואה
- *  (`idEq`). ר' שורה 26 במטריצה ו-`test_ids_yoman.mjs`.        */
+ *  (`idEq`). כך במטריצה ו-`test_ids_yoman.mjs`.        */
 const APP = { app: 'yoman-avoda', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -115,8 +115,8 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
 {
   const callsOutside = SRC.slice(0, SRC.indexOf(START)) + SRC.slice(SRC.indexOf(END));
   const wired = /\bnewClientId\s*\(/.test(callsOutside.replace(/function\s+newClientId\s*\(/g, ''));
-  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (שורה 26 = ✅)'
-                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (שורה 26 = ❌)'),
+  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (התא בטבלה = ✅)'
+                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (התא בטבלה = ❌)'),
     wired === APP.wired);
 }
 

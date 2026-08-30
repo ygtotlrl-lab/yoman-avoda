@@ -42,9 +42,9 @@ const APP = {
   },
   keystore: 'yoman.keystore',
   androidExtra: {
-    /* ⭐ גשר השיתוף קיים ביומן בלבד (מטריצה, שורה 47) — ה-`FileProvider`
+    /* ⭐ גשר השיתוף קיים ביומן בלבד (שורת גשר השיתוף במטריצה) — ה-`FileProvider`
        שבמניפסט מצביע על הקובץ הזה, ⛔ ומחיקתו (סבב 39) — קריסה בזמן ריצה. */
-    'app/src/main/res/xml/file_paths.xml': 'גשר השיתוף — ה-FileProvider שבמניפסט מצביע עליו (מטריצה, שורה 47)',
+    'app/src/main/res/xml/file_paths.xml': 'גשר השיתוף — ה-FileProvider שבמניפסט מצביע עליו (שורת גשר השיתוף במטריצה)',
   },
   toolsDirs: {
     'fixtures': 'פיקסטורות לבדיקות הסבבים (סבב 31 — הארכיון)',
