@@ -10,20 +10,6 @@ https://ygtotlrl-lab.github.io/yoman-avoda/
 It replaces the PWABuilder TWA so that image sharing can attach the file via a
 native bridge.
 
-## Why WebView and never a TWA
-
-<!-- SHARED:start id="android-why-twa" -->
-**Do not rebuild this as a TWA, and do not use PWABuilder** (it only produces
-TWAs). A TWA is not a standalone component — it runs the site *inside Chrome*
-and merely hides the address bar. The content filtering installed on the users'
-devices blocks Chrome, so a TWA build never opens at all. A WebView renders
-in-process and never goes through Chrome, so the filter does not touch it.
-<!-- SHARED:end -->
-
-This is measured, not theoretical: gius shipped a PWABuilder TWA and did not
-open on the users' devices, while this app and hanhala — both WebView — work.
-gius has since been converted to a WebView shell built the same way.
-
 ## מה בפנים
 
 | | |
@@ -43,44 +29,6 @@ gius has since been converted to a WebView shell built the same way.
 אותו מנגנון service worker + באנר "גרסה חדשה זמינה" שכבר עובד בדפדפן. APK חדש
 נדרש רק כששינוי נוגע במעטפת עצמה.
 <!-- SHARED:end -->
-
-## ⛔ הגשר המקורי מוגבל לדומיין שלנו — ולא ניתן לשנות זאת
-
-`addJavascriptInterface` מזריק את האובייקט ל**כל frame של כל דף** שה-WebView
-טוען, בלי שום מושג של origin. במעטפת הישנה זה היה חסר-נזק: הדף היחיד היה זה
-שנצרב ב-APK. **טעינה מהרשת משנה את זה מהיסוד** — מרגע שהמעטפת יכולה להימצא על
-דף שאיננו מגישים, הגשר היה נוסע איתו.
-
-לכן שני מסלולים, והראשון מועדף כי **הפלטפורמה** אוכפת אותו:
-
-1. **`WebViewCompat.addWebMessageListener(webView, "AndroidShareBridge",
-   ALLOWED_ORIGINS, …)`** — WebView בודק את רשימת המקורות המותרים
-   (`https://ygtotlrl-lab.github.io` בלבד), **פר-frame**, לפני שההודעה נמסרת.
-   גם iframe חוצה-origin בתוך דף שלנו אינו מגיע אליו. דורש WebView 88+.
-2. **`addJavascriptInterface` הישן**, למכשירים עם WebView ישן יותר. נעול פעמיים:
-   הממשק **מחובר רק כשהמעטפת על הדומיין שלנו** ומנותק ברגע שהיא מנווטת משם
-   (`onShellNavigation`, שהליבה קוראת מ-`onPageStarted`/`onPageFinished`),
-   **וכל קריאה מאמתת מחדש** את מקור הדף על ה-UI thread לפני שהיא נוגעת
-   במשהו. קריאה מכל מקום אחר נזרקת.
-
-הדף מנסה את שניהם, בסדר הזה (`_androidShareImage` ב-`index.html`).
-**אין להחליף את הסדר ואין להסיר את האימות.**
-
-## למה אין נכסים מוטבעים
-
-השאלה נשקלה במפורש: האם להשאיר את `assets/index.html` **כגיבוי** לעלייה ראשונה
-בלי רשת. **ההחלטה: לא — והשארתם הייתה מזיקה, לא רק מיותרת.**
-
-- ⛔ **`file://` הוא origin אחסון אחר.** ה-localStorage של `file://` ושל
-  `https://ygtotlrl-lab.github.io` הן שתי מחיצות נפרדות לחלוטין. רשומת יומן
-  שנכתבת לעותק המוטבע בעלייה הראשונה **לא נראית לאפליקציה האמיתית לעולם** —
-  והיא גם לא תסונכרן, כי הסנכרון רץ בדף השני. באפליקציה שכל תפקידה הוא רישום,
-  זה אובדן נתונים שקט. גיבוי שמייצר אובדן נתונים אינו גיבוי.
-- **זה מקור אמת שני** — בדיוק מה שכלל קריטי 5 אוסר. הוא מתיישן בכל שחרור.
-- **מה שהוא אמור לפתור כבר פתור**: אחרי עלייה מוצלחת אחת, ה-service worker
-  מגיש הכול אופליין. המקרה היחיד שנשאר הוא **התקנה + הפעלה ראשונה בלי רשת
-  בכלל** — ולהתקנת APK ממילא צריך רשת. במקרה הזה המעטפת מציגה דף שגיאה בעברית
-  עם כפתור "נסה שוב", וזו אי-נוחות חד-פעמית וניתנת לתיקון.
 
 <!-- SHARED:start id="android-origin-switch" -->
 ## ⚠️ מעבר-origin חד-פעמי — ולפני כל הפצת APK
@@ -179,7 +127,7 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ../signing/sign-apk.sh app/build/outputs/apk/release/app-release-unsigned.apk yoman-avoda.apk
 ```
 
-### המפתח הקבוע — ⛔ לעולם לא להחליף
+### פרטי המפתח הקבוע
 
 | | |
 |---|---|
@@ -206,11 +154,13 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 ⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
 ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
 «Sign with the PERMANENT key» שלמעלה.
+⭐ **שני הקבצים שנושאים את ה-URL הם `MainActivity.smali` ו-`MainActivity$2.smali`**
+— ⛔ וההוראה זהה בארבעת הריפו; הכתובת עצמה, שם תיקיית העבודה והמפתח הם
+פר-אפליקציה, ⛔ ויושבים בבלוק שמתחת.
 <!-- SHARED:end -->
 
 ```bash
 apktool d <app>.apk -o /tmp/yw_work -f
-# תקן את ה-URL ב-MainActivity.smali ו-MainActivity$2.smali
 rm -rf /tmp/yw_work/build          # חובה לפני בנייה חוזרת
 apktool b /tmp/yw_work -o built.apk
 zipalign -f 4 built.apk aligned.apk
