@@ -23,9 +23,13 @@ import { fileURLToPath } from 'node:url';
 /*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ ביומן הוא `true`
  *  מסבב 38: שני אתרי היצירה עברו ל-`newClientId()`, יחד עם שלושת הממדים
  *  שחסמו את ההמרה — המיון (`entryOrderTs`), הציטוט (`idArg`) וההשוואה
- *  (`idEq`). ר' שורה 26 במטריצה ו-`test_ids_yoman.mjs`.        */
+ *  (`idEq`). כך במטריצה ו-`test_ids_yoman.mjs`.        */
 const APP = { app: 'yoman-avoda', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
   console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
@@ -88,12 +92,12 @@ ok('2 · ⛔ הפונקציה נקראת `newClientId` — שם אחד לארב�
 
 const uuidPath = gen(SRC, 'uuid', 5);
 ok('3 · `crypto.randomUUID` מנוצל כשהוא קיים — ⛔ ולא נעקף',
-  uuidPath.every((x) => /^ru-\d+$/.test(x)));
+  uuidPath.length > 0 && uuidPath.every((x) => /^ru-\d+$/.test(x)));
 
 for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random']]) {
   const ids = gen(SRC, mode, 500);
   ok('4' + (mode === 'bytes' ? 'א' : 'ב') + ' · נפילה-חזרה `' + label +
-     '`: 500 מזהים, כולם uuid v4 תקין', ids.every((x) => UUID_RE.test(x)));
+     '`: 500 מזהים, כולם uuid v4 תקין', ids.length > 0 && ids.every((x) => UUID_RE.test(x)));
   ok('5' + (mode === 'bytes' ? 'א' : 'ב') + ' · ⭐ וכולם שונים זה מזה (' +
      new Set(ids).size + '/500)', new Set(ids).size === 500);
 }
@@ -104,15 +108,15 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
   const devA = new Set(gen(SRC, 'none', 300));
   const devB = gen(SRC, 'none', 300);
   ok('6 · ⛔ שני מכשירים שיוצרים 300 רשומות כל אחד — אפס מזהים משותפים',
-    devB.every((x) => !devA.has(x)));
+    devB.length > 0 && devB.every((x) => !devA.has(x)));
 }
 
 /* ── 2 · החיווט, לפי מה שהמטריצה מצהירה ────────────────────────────────── */
 {
   const callsOutside = SRC.slice(0, SRC.indexOf(START)) + SRC.slice(SRC.indexOf(END));
   const wired = /\bnewClientId\s*\(/.test(callsOutside.replace(/function\s+newClientId\s*\(/g, ''));
-  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (שורה 26 = ✅)'
-                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (שורה 26 = ❌)'),
+  ok('7 · ' + (APP.wired ? 'קוד האפליקציה קורא למודול (התא בטבלה = ✅)'
+                         : '⚠️ קוד האפליקציה אינו קורא למודול — פער מתועד עם טריגר (התא בטבלה = ❌)'),
     wired === APP.wired);
 }
 

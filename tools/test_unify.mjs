@@ -21,6 +21,10 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const M4 = fs.readFileSync(path.join(ROOT, 'migrations/004_entries_archived_flag.sql'), 'utf8');
@@ -201,8 +205,8 @@ function t3() {
   const ek = entries.map((r) => String(sb.entryKey(r)));
   const ak = snaps.map((r) => String(sb.archiveKey(r)));
   eq(ek.filter((k) => ak.includes(k)).length, 0, '3א · ⛔ אפס חפיפה בין שני מרחבי המפתחות');
-  ok(ak.every((k) => /^[gi]:/.test(k)), '3ב · מפתחות הארכיון תמיד בקידומת g:/i:');
-  ok(ek.every((k) => !/^[gi]:/.test(k)), '3ג · ומפתחות היומן לעולם לא');
+  ok(ak.length > 0 && ak.every((k) => /^[gi]:/.test(k)), '3ב · מפתחות הארכיון תמיד בקידומת g:/i:');
+  ok(ek.length > 0 && ek.every((k) => !/^[gi]:/.test(k)), '3ג · ומפתחות היומן לעולם לא');
   ok(/join public\.tb_entries e/.test(M5) && /raise exception/.test(M5),
     '3ד · ⛔ ו-005 בודק את זה במסד ולא מניח — שער התנגשות שזורק');
 }
@@ -401,8 +405,8 @@ if (!process.env.RD67_MUT) {
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי דגל הארכוב המאוחד מפיל את השער', 'index.html',
        (s) => s.replace(/tbArchivedFlag/g, 'tbArchivedFlagX'), true);
-  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-index.html ⛔ אינה מפילה', 'index.html',
-       (s) => s.replace('</body>', '<!-- הערה -->\n</body>'), false);
+  _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
+       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }</script>\n</body>'), false);
 }
 
 process.exit(failN ? 1 : 0);

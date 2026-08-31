@@ -19,6 +19,10 @@ import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+
+/*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
+ *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
+export const ROWS = [];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FIX = fs.readFileSync(path.join(ROOT, 'tools/fixtures/round31_archive.txt'), 'utf8');
@@ -134,7 +138,7 @@ eq(FX.ramataviv.length, 15, 'הפיקסטורה מחזיקה 15 סנאפשוטי
 eq(FX.rishon.filter((r) => !r.snap.gdate).length, 5, 'חמישה סנאפשוטים בראשון בלי gdate');
 eq(FX.rishon.filter((r) => !r.snap.hdate).length, 6, 'שישה סנאפשוטים בראשון בלי hdate');
 eq(FX.ramataviv.filter((r) => !r.snap.hdate).length, 7, 'שבעה סנאפשוטים ברמת אביב בלי hdate');
-ok(FX.rishon.every((r) => r.snap.count >= 1), 'לכל סנאפשוט בראשון יש לפחות רשומה חיה אחת');
+ok(FX.rishon.length > 0 && FX.rishon.every((r) => r.snap.count >= 1), 'לכל סנאפשוט בראשון יש לפחות רשומה חיה אחת');
 
 /* ── 1. כל הימים מוצגים, ואף אחד אינו «לא ידוע» ────────────────────────── */
 function daysOf(list) {
@@ -183,7 +187,7 @@ function reachable(c) {
     eq(ym.month, 'אלול', `סנאפשוט ${snap.id} — חודש עברי מ-hdate`);
   }
   const elul = ctx.getDaysInMonth('ה׳תשפ״ה', 'אלול').map((d) => d.key);
-  ok(noG.every(({ snap }) => elul.includes(String(snap.id))),
+  ok(noG.length > 0 && noG.every(({ snap }) => elul.includes(String(snap.id))),
     'כל חמשת הימים בלי gdate מופיעים ברשימת הימים של אלול ה׳תשפ״ה');
 }
 
@@ -237,7 +241,7 @@ function reachable(c) {
   ok(a.length === 155 && new Set(a).size === 155, 'המיון אינו מאבד ואינו משכפל סנאפשוט');
   // הסדר הסמנטי: יום חדש קודם.
   const ts = c.tbSortRows('tb_archive', shuffled).map((s) => c.gdateOrderTs(s.gdate));
-  ok(ts.every((v, i) => i === 0 || ts[i - 1] >= v), 'הארכיון ממוין מהיום החדש לישן');
+  ok(ts.length > 0 && ts.every((v, i) => i === 0 || ts[i - 1] >= v), 'הארכיון ממוין מהיום החדש לישן');
   ok(!c.tbSortRows('tb_archive', kvOrder).some((s, i) => s === kvOrder[i] && false),
     'tbSortRows אינה משנה את מערך הקלט');
   eq(JSON.stringify(kvOrder.map((s) => c.archiveKey(s))),
@@ -344,7 +348,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   eq(auto.name, manual.name, 'name זהה');
   eq(auto.auto, true, 'הסימון `auto` נשאר — סימון מקור, לא תחליף לשדה');
   // הרשומות החיות הפכו ל-tombstones ולא נמחקו פיזית.
-  ok(a.ENTRIES.every((e) => e.deleted === true), 'הרשומות החיות סומנו כמחוקות (tombstone)');
+  ok(a.ENTRIES.length > 0 && a.ENTRIES.every((e) => e.deleted === true), 'הרשומות החיות סומנו כמחוקות (tombstone)');
 }
 {
   // ⛔ בלי hebcal ובלי hdate ברשומות — נפילה-חזרה מפורשת, ו-name עדיין מציל.
@@ -434,8 +438,8 @@ if (!process.env.RD67_MUT) {
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי מפתח הארכיון מפיל את השער', 'index.html',
        (s) => s.replace(/function archiveKey/, 'function archiveKeyX'), true);
-  _mut('⭐ מוטציית-נגד: הוספת שורת הערה ל-index.html ⛔ אינה מפילה', 'index.html',
-       (s) => s.replace('</body>', '<!-- הערה -->\n</body>'), false);
+  _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
+       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }</script>\n</body>'), false);
 }
 
 process.exit(failN === 0 ? 0 : 1);

@@ -26,7 +26,12 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-/* ── APP — ⛔ הדבר היחיד שנבדל בין ארבעת הריפו ──────────────────────────── */
+
+/*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ המיפוי היה
+ *  חד-כיווני ב-`check-capabilities` בלבד, ⛔ ומי שערך שער כאן לא ראה
+ *  אותו. ⭐ הבודק גוזר את המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
+export const ROWS = [87];
+/* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   name: 'yoman-avoda',
   /* ⛔ הטבלה המאוחדת בלבד (סבב 32) — היומן והארכיון כאחד, עם דגל
@@ -38,6 +43,7 @@ const APP = {
      באפליקציה הזו מקור מגודר. */
   gates: []
 };
+/* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 const here = dirname(fileURLToPath(import.meta.url));
 const SRC = readFileSync(join(here, '..', 'index.html'), 'utf8');

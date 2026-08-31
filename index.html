@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="43-2026-08-28-3">
+<meta name="app-version" content="44-2026-08-31-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2344,7 +2344,7 @@ function plBoot() {
    ארכיון שאינו ⏳ ושאומת בענן מתפנה מהמכשיר. «מסך העבר» הוא לשונית
    הארכיון עצמה — משיכת הסנכרון מחזירה את הסנאפשוטים לזיכרון כשיש רשת,
    והדיסק נשאר חם בלבד.
-   ⚠️ אין כאן משתמשים ואין תפקידים (מטריצה שורה 3) — המכשיר הוא של
+   ⚠️ אין כאן משתמשים ואין תפקידים (שורת שכבת הכניסה במטריצה) — המכשיר הוא של
    המנהל, ולכן `admin` מחזירה תמיד אמת. */
 var HW_CFG = {
   enabled: true,
@@ -3900,7 +3900,7 @@ function addEntry() {
   if (!task)   { toast("⚠️ יש להזין משימה"); return; }
   var now = new Date();
   var entry = {
-    // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורה 25 במטריצה).
+    // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורת מזהי הרשומות במטריצה).
     //    עד כאן היה `now.getTime()`: שני מכשירים שהוסיפו רשומה באותה
     //    מילישנייה קיבלו **אותו מזהה**, והמיזוג ראה בהם רשומה אחת.
     id: newClientId(),
@@ -5636,12 +5636,15 @@ function selectYeshiva(y) {
   if (sub) sub.textContent = (y === 'ramataviv')
     ? 'ישיבת תומכי תמימים ליובאוויטש רמת אביב'
     : 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון';
-  // ⚠️ כפתור פלט אחד, ולרמת אביב בלבד (סבב 58) — לראשון לציון ישב כאן
-  //    כפתור פלט משלה, והוא ירד יחד עם היכולת שהפעילה אותו.
+  // ⛔ כפתור שיתוף **לשני המוסדות** (סבב 72) — ⚠️ מסבב 58 ועד כאן הוא הוצג
+  //    לרמת אביב בלבד: כפתור ראשון לציון היה «שלח לוואטסאפ», והוא ירד יחד
+  //    עם יכולת הוואטסאפ במקום להיגזר ממנה. ⛔ ההסרה הפילה קורא.
+  //    ⭐ היעד נבחר בגיליון השיתוף של המערכת, ⛔ ולכן אין כאן שם של יעד:
+  //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
-  if (slot) slot.innerHTML = (y === 'ramataviv')
-    ? '<button class="btn-sm" style="background:#3A76F0;color:white" onclick="sendSignal()">📨 שלח לסיגנל</button>'
-    : '';
+  if (slot) slot.innerHTML =
+    '<button class="btn-sm" style="background:#3A76F0;color:white" ' +
+    'onclick="shareReport()">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
   // עכשיו — ומיד אחריה המדידה והפינוי היזום, **לפני** loadLocalData, כדי
@@ -5683,7 +5686,7 @@ function selectYeshiva(y) {
 // (המשתמש בוחר Signal). תמונת הדוח משתמשת אוטומטית בלוגו ובשם של המוסד
 // הנבחר (דרך #appLogo.src ו-instName הפר-מוסדי של _buildReportDiv).
 // נפילה-חזרה בדסקטופ: הורדת התמונה.
-function sendSignal(){
+function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   if(!todayEntries.length){ toast("אין רשומות לשיתוף להיום"); return; }
