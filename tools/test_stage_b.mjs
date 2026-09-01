@@ -312,7 +312,10 @@ async function t6() {
   eq((await sb.tbRowsGet('tb_entries')).ok, false, '6א · ⭐ בכיבוי — אין קריאה מהשורות');
   eq((await sb.tbRowsPush('tb_entries', [E(1, 1)])).ok, false, '6ב · ואין דחיפה');
   eq(env.selects.length + env.upserts.length, 0, '6ג · ⛔ ואפס נגיעה ברשת');
-  ok(/var TB_ROWS = true;/.test(SRC), '6ד · והדגל קיים בקוד כדגל יחיד');
+  const flags = [...SRC.matchAll(/var TB_ROWS = (\w+);/g)].map((m) => m[1]);
+  ok(flags.length === 1 && flags[0] === 'true',
+     `6ד · והדגל קיים בקוד כדגל יחיד — נמדדו ${flags.length} הצהרות ` +
+     `(${flags.join(', ') || '—'}) והצפוי אחת בערך true`);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

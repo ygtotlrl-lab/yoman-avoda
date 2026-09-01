@@ -169,7 +169,10 @@ function t1() {
   const back = makeEnv({ unified: false }).sb;
   eq(back.tbTableOf('tb_archive'), 'tb_archive', '1ה · ⭐ TB_ARC_UNIFIED=false ⇒ חזרה לטבלה הישנה');
   eq(back.tbTableOf('tb_entries'), 'tb_entries', '1ו · ורשומות היומן לא מושפעות מהחזרה');
-  ok(/var TB_ARC_UNIFIED = true;/.test(SRC), '1ז · והדגל קיים בקוד כדגל יחיד');
+  const uFlags = [...SRC.matchAll(/var TB_ARC_UNIFIED = (\w+);/g)].map((m) => m[1]);
+  ok(uFlags.length === 1 && uFlags[0] === 'true',
+     `1ז · והדגל קיים בקוד כדגל יחיד — נמדדו ${uFlags.length} הצהרות ` +
+     `(${uFlags.join(', ') || '—'}) והצפוי אחת בערך true`);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
