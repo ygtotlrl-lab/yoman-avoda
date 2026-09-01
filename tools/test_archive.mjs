@@ -444,7 +444,7 @@ if (!process.env.RD67_MUT) {
   _mut('⛔ שינוי מפתח הארכיון מפיל את השער', 'index.html',
        (s) => s.replace(/function archiveKey/, 'function archiveKeyX'), true);
   _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
-       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }</script>\n</body>'), false);
+       (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }\nvar _r72Seen = r72Live();</script>\n</body>'), false);
 }
 
 process.exit(failN === 0 ? 0 : 1);
