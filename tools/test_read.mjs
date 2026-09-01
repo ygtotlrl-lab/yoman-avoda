@@ -1,15 +1,25 @@
 #!/usr/bin/env node
-/*  test_read.mjs — סבב 55: מתג המעבר: מקור הקריאה.
+/*  test_read.mjs — מקור הקריאה: טבלאות בלבד.
  *
- *  ⚠️ ביומן הקריאה עברה לטבלאות כבר בסבבים 30–32; מה שהסבב הזה מוסיף הוא
- *     **נעילה** של הדפוס — כדי שלא ייסחף — ושליפה בעמודים.
- *  שלושה חלקים: טענות סטטיות על חמשת אתרי הקריאה · הרצת `tbRowsGet`
- *  האמיתית ברתמת `vm` (עמודים, נכשל-סגור) · מוטציות.
+ *  **מה נאכף:** ⛔ אפס קריאות ערך-שלם למפתחות שעברו לטבלה · ⛔ המיזוג יושב
+ *  **בתוך** שער ה-`ok` · ⛔ הכתיבה הכפולה כבויה · ⛔ והמפתחות שביתם היחיד
+ *  בענן הוא המפתח-ערך נקראים משם, ⚠️ וזו אינה סטייה. ⛔ ולצידם רתמת `vm`
+ *  שמריצה את שליפת העמודים האמיתית ⛔ ומודדת נכשל-סגור.
  *
- *  ⚠️ **טריגר להסרה (⏳ מבחן מעבר) — סבב 68, כלל ברזל 14:** זהו מבחן **מעבר** — מסלול הקריאה עבר לטבלאות.
- *  ⛔ הוא יורד בסבב שסוגר את מסלול ה-`kv`: כיבוי דגל הכתיבה ← מחיקת
- *  מפתחות ה-`kv` מהמסד ← ואז המבחן הזה ושורתו ב-`APP.testsOnly`.
+ *  **הנימוק המדוד:** השקילות אומתה מול המסד בשני המוסדות — ⛔ הטבלה
+ *  מחזיקה יותר רשומות מהערך השלם בשניהם, ⚠️ והבלוק חדל להיות רשת ביטחון
+ *  והפך למקור אמת שני.
+ *
+ *  **מה יישבר בלעדיו:** ⛔ כשל שנקרא כ«הענן ריק» מוחק את מה שלא הספיק
+ *  לעלות — ⚠️ מיזוג מול מערך ריק, ⭐ בלי שגיאה ובלי סימן.
+ *
+ *  **מה אינו נאכף כאן:** ⛔ קיום המפתחות שנותרו במסד — ⚠️ הוא אינו נראה
+ *  מהריפו, ⭐ ומחיקתם היא פעולת מנהל.
+ *
+ *  ⚠️ **אינו מבחן מעבר:** מה שהמבחן נועל הוא **היעדר** הנפילה-חזרה —
+ *  ⚠️ נתיב שיוחזר «ליתר ביטחון» הוא מקור אמת שני, ⭐ והוא נכנס בשקט.
  */
+
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,8 +30,11 @@ const APP = {
   rowsGet: 'tbRowsGet',
   keys: ['tb_entries', 'tb_archive'],
   // ⛔ שני מפתחות × שלושה מסלולים (syncFromCloud · tbPullFromCloud ·
-  //    _tbVerify) ועוד ספק החלון החם — ר' הטענה 1ב.
+  //    _tbVerify) ועוד ספק החלון החם — ר' הטענה 1א.
   minRowsGet: 5,
+  // ⛔ שני המסלולים שנמדדים בטענה 1ג — ⚠️ שמם הוא מה שקושר את המשיכה לשער
+  //    ה-`ok` שלה, ⛔ ובלעדיו הטענה מודדת דפוס ולא אתר.
+  rowsVars: ['_rowsE', '_rowsA'],
   legacyOff: /var TB_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
   kvOnly: ['tb_cats', 'tb_subs', 'tb_subs_meta'],
@@ -42,13 +55,13 @@ const assert = (c, m) => (c ? ok(m) : bad(m));
 
 console.log('— סבב 55 (יומן): מקור הקריאה —');
 
-/* ── 1. הדפוס: טבלאות תחילה, ה-kv רק כנפילה-חזרה ───────────────────────── */
+/* ── 1. הדפוס: טבלאות בלבד, ⛔ ובלי נפילה-חזרה ──────────────────────────── */
 const calls = (SRC.match(new RegExp(APP.rowsGet + "\\('", 'g')) || []).length;
 assert(calls >= APP.minRowsGet,
   `1א · ${APP.rowsGet} נקראת ב-${calls} אתרים (≥${APP.minRowsGet})`);
 
-/* ⛔ כל קריאה ל-kv של מפתח שעבר חייבת להיות **מותנית** בכישלון השורות.
-   הצורה: `_rowsX.ok ? … : <kv>` — כלומר ה-kv יושב בענף ה-else. */
+/* ⛔ אין קריאת ערך-שלם למפתח שעבר לטבלה — ⚠️ לא כמסלול ראשי ולא כנפילה-חזרה:
+   ⭐ הבלוק חדל להיות רשת ביטחון והפך למקור אמת שני. */
 const kvReads = [];
 const reKv = /(await pull\('(tb_entries|tb_archive)'|select\("value"\)\.eq\("key","(tb_entries|tb_archive)"\))/g;
 let m;
@@ -56,11 +69,16 @@ while ((m = reKv.exec(SRC))) {
   const line = SRC.slice(SRC.lastIndexOf('\n', m.index) + 1, SRC.indexOf('\n', m.index));
   kvReads.push(line.trim());
 }
-assert(kvReads.length > 0, '1ב · נמצאו קריאות ה-kv של המפתחות שעברו (' + kvReads.length + ')');
-const guarded = kvReads.filter((l) => /_rows[EA]\.ok \?/.test(l));
-assert(guarded.length === kvReads.length,
-  '1ג · ⛔ כל קריאת kv מותנית בכישלון השורות — אין מסלול kv-תחילה');
-assert(kvReads.length >= 4, '1ד · ⛔ והנפילה-חזרה נשמרה בכל אחד מהם (' + kvReads.length + ')');
+assert(kvReads.length === 0,
+  '1ב · ⛔ אפס קריאות ערך-שלם למפתחות שעברו — נמדד ' + kvReads.length +
+  (kvReads.length ? ' · ' + kvReads[0] : ''));
+/* ⛔ וכשל מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ המיזוג יושב **בתוך** שער
+   ה-`ok`: ⭐ מיזוג מול מערך ריק מוחק את מה שלא הספיק לעלות. */
+const ungated = APP.rowsVars.filter((v) => !new RegExp(
+  'var ' + v + ' = await ' + APP.rowsGet + "\\('\\w+'\\);\\s*\\n\\s*if \\(" + v + '\\.ok\\) \\{').test(SRC));
+assert(ungated.length === 0,
+  '1ג · ⛔ המיזוג יושב בתוך שער ה-`ok` — נמדד בלי שער: ' +
+  (ungated.join(', ') || 'אף אחד') + '. עוטפים את המיזוג ב-if (<res>.ok)');
 assert(APP.legacyOff.test(SRC),
   '1ה · ⛔ הכתיבה הכפולה ל-kv נשארה כבויה — הטבלאות הן המאסטר');
 for (const k of APP.kvOnly) {
@@ -153,23 +171,28 @@ assert(PAGE > 0, '2א · TB_ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(10, 'errorFirst');
   const r = await e.sb.tbRowsGet('tb_archive');
-  assert(r.ok === false, '2ו · כשל בעמוד הראשון ⇒ נפילה-חזרה ל-kv');
+  assert(r.ok === false, '2ו · כשל בעמוד הראשון ⇒ «אין ראיה», ⛔ ולא מערך ריק');
 }
 
 /* ── 3. מוטציות ────────────────────────────────────────────────────────── */
 console.log('— מוטציות —');
-// ⚠️ המוטציות כאן סטטיות — הן מודדות את **הדפוס** שהטענות 1ג/1ה נועלות.
+// ⚠️ המוטציות כאן סטטיות — הן מודדות את **הדפוס** שהטענות 1ב/1ג/1ה נועלות.
 {
-  const bad1 = SRC.replace("var cloudEntries = _rowsE.ok ? _rowsE.data : await pull('tb_entries', 'רשומות');",
-                           "var cloudEntries = await pull('tb_entries', 'רשומות');");
-  const lines = [];
+  /* ⛔ החזרת הנפילה-חזרה — ⚠️ בדיוק השינוי ש«ליתר ביטחון» היה מכניס. */
+  const bad1 = SRC.replace('      var cloudEntries = _rowsE.data;',
+    '      var cloudEntries = _rowsE.data || JSON.parse((await sb.from(KV_TABLE)' +
+    '.select("value").eq("key","tb_entries").single()).data.value);');
   const re2 = /(await pull\('(tb_entries|tb_archive)'|select\("value"\)\.eq\("key","(tb_entries|tb_archive)"\))/g;
-  let mm2;
-  while ((mm2 = re2.exec(bad1))) {
-    lines.push(bad1.slice(bad1.lastIndexOf('\n', mm2.index) + 1, bad1.indexOf('\n', mm2.index)).trim());
-  }
-  assert(lines.some((l) => !/_rows[EA]\.ok \?/.test(l)),
-    'מוטציה: ⛔ קריאת kv בלתי-מותנית נתפסת ע"י טענה 1ג');
+  assert((bad1.match(re2) || []).length > 0,
+    'מוטציה: ⛔ החזרת הנפילה-חזרה ל-kv נתפסת ע"י טענה 1ב');
+}
+{
+  /* ⛔ הוצאת המיזוג מחוץ לשער ה-`ok` — ⚠️ «הענן ריק» במקום «אין ראיה». */
+  const bad1b = SRC.replace(`    var _rowsA = await tbRowsGet('tb_archive');
+    if (_rowsA.ok) {`, `    var _rowsA = await tbRowsGet('tb_archive');
+    {`);
+  const still = new RegExp("var _rowsA = await tbRowsGet\\('\\w+'\\);\\s*\\n\\s*if \\(_rowsA\\.ok\\) \\{").test(bad1b);
+  assert(!still, 'מוטציה: ⛔ מיזוג מחוץ לשער ה-`ok` נתפס ע"י טענה 1ג');
 }
 {
   const bad2 = SRC.replace('var TB_KV_LEGACY_WRITE = false;', 'var TB_KV_LEGACY_WRITE = true;');
@@ -181,6 +204,15 @@ console.log('— מוטציות —');
   const r = await e.sb.tbRowsGet('tb_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');
+}
+{
+  /* ⛔ מוטציית-נגד לטענה 1ב — ⚠️ אתר קריאה **נוסף** מהטבלה הוא שינוי חי,
+     ⭐ ואסור לו להפיל: הטענה אוסרת את הערך השלם ⛔ ולא את שכבת השורות. */
+  const good = SRC.replace("    var _rowsA = await tbRowsGet('tb_archive');",
+    "    await tbRowsGet('tb_entries');\n    var _rowsA = await tbRowsGet('tb_archive');");
+  assert((good.match(reKv) || []).length === 0 &&
+         (good.match(new RegExp(APP.rowsGet + "\\('", 'g')) || []).length === calls + 1,
+    'מוטציית-נגד: אתר קריאה נוסף מהטבלה — אינו מפיל את 1ב');
 }
 
 console.log(failed ? `\n✗ סבב 55 (מקור הקריאה) — ${failed} נכשלו` : '\n✓ סבב 55 (מקור הקריאה) — כל הטענות עברו');
