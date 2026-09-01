@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="45-2026-09-01-1">
+<meta name="app-version" content="46-2026-09-01-2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -641,22 +641,19 @@ function lsRebuildPolicy() {
 /* ── עדות סנכרון חלופית (סבב 14) ────────────────────────────────────────
    `_tbPushedAt` הוא עֵד **דחיפה**, ולכן בדפדפן שרק קורא הוא נשאר 0 לנצח
    ושלב ב לא מפנה דבר — בדיוק המצב שנמדד (3.06MB / 61%, פינוי 0). כשאין
-   עֵד מקומי, המודול פונה לכאן: משיכת העותק הענני של אותו מפתח kv
+   עֵד מקומי, המודול פונה לכאן: משיכת שורות אותה קטגוריה מהטבלה המובנית
    (`tb_archive` / `tb_entries` — בלי סיומת המוסד, כי ההפרדה בענן היא
-   ב-`KV_TABLE`) והשוואה פר-רשומה מול המפתח והחותמת.
-   **נכשל סגור:** `sbGetResult` מחזירה `ok:true, data:null` גם למפתח שאינו
-   קיים בענן (PGRST116), ולכן לא די ב-`ok` — נדרש **מערך**. מפתח חסר,
-   כשל רשת או timeout ⇒ `ok:false` ⇒ לא מפנים דבר. */
+   בטבלת המוסד) והשוואה פר-רשומה מול המפתח והחותמת.
+   **נכשל סגור:** לא די ב-`ok` — נדרש **מערך**. כשל רשת או timeout ⇒
+   `ok:false` ⇒ לא מפנים דבר. */
 function _tbVerify(kvKey) {
   return function () {
-    // ⭐ מסבב 30 העדות היא **הטבלה** ולא הבלוק: שם יושבת האמת פר-רשומה.
-    //    ⛔ והנפילה-חזרה לבלוק נשארת (סבב 30) — לפני שהמיגרציה רצה הטבלה
-    //    אינה קיימת, ואימות שהיה נכשל שם היה מפסיק את הפינוי בלי סיבה.
+    // ⭐ העדות היא **הטבלה** ולא הערך השלם: שם יושבת האמת פר-רשומה.
+    //    ⛔ ואין נפילה-חזרה לערך השלם — ⚠️ עֵד שנשען עליו היה מפנה מהדיסק
+    //    רשומה שהטבלה אינה מכירה, ⭐ והראיה שעליה נשען הפינוי היא הטבלה.
     return tbRowsGet(kvKey).then(function (rr) {
-      if (rr && rr.ok && Array.isArray(rr.data)) return { ok: true, rows: rr.data };
-      return sbGetResult(kvKey).then(function (r) {
-        return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data } : { ok: false, rows: [] };
-      });
+      return (rr && rr.ok && Array.isArray(rr.data)) ? { ok: true, rows: rr.data }
+                                                     : { ok: false, rows: [] };
     }, function () { return { ok: false, rows: [] }; });
   };
 }
@@ -3414,10 +3411,13 @@ async function syncFromCloud() {
 
     // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones). קודם: איחוד לפי id
     // בלבד — עדכון שנעשה במכשיר אחד לא ניצח את הגרסה הישנה של השני.
-    // ⭐ שורות תחילה, ונפילה-חזרה לבלוק (סבב 30): טבלה שטרם נוצרה או משיכה
-    //    שנכשלה מחזירות ok:false, והמסלול הישן ממשיך לעבוד בדיוק כשהיה.
+    /* ⛔ מהטבלה בלבד, ⛔ ובלי נפילה-חזרה לערך השלם — ⚠️ וכשל אינו נכנס
+       לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
+       את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
     var _rowsE = await tbRowsGet('tb_entries');
-    var cloudEntries = _rowsE.ok ? _rowsE.data : await pull('tb_entries', 'רשומות');
+    if (!_rowsE.ok) failed.push('רשומות');
+    else {
+    var cloudEntries = _rowsE.data;
     if (cloudEntries && cloudEntries.length) {
       ENTRIES = mergeEntries(ENTRIES, cloudEntries);
       // גריעת ה-tombstones הישנים שהוזמנה בטעינה — פעם אחת, על התוצאה
@@ -3435,13 +3435,16 @@ async function syncFromCloud() {
       // יישאר תלוי ויופעל במיזוג מאוחר ולא צפוי.
       _tombPrunePending = false;
     }
+    }
 
     // ARCHIVE: מיזוג סנאפשוטים לפי gdate + מיזוג הרשומות שבתוך כל סנאפשוט.
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
     var _rowsA = await tbRowsGet('tb_archive');
-    if (_rowsA.ok) hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
-    var cloudArchive = _rowsA.ok ? _rowsA.data : await pull('tb_archive', 'ארכיון');
+    if (!_rowsA.ok) failed.push('ארכיון');
+    else {
+    hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
+    var cloudArchive = _rowsA.data;
     if (cloudArchive && cloudArchive.length) {
       var merged = mergeArchive(ARCHIVE, cloudArchive);
       // שומר גם רשומות ARCHIVE_SEED שאינן בממוזג (ראשון לציון בלבד — הזרע הוא ההיסטוריה שלה)
@@ -3459,6 +3462,7 @@ async function syncFromCloud() {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
       tbRowsPush('tb_archive', ARCHIVE);
       if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
+    }
     }
 
     // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
@@ -5353,16 +5357,17 @@ function _tbMarkSynced() {
 //    למשוך היה יוצא מסנכרון מול המודול, וזה בדיוק «מקור אמת שני».
 async function tbPullFromCloud() {
   try {
-    var sb = getSB();
     console.log("[sync] pulling data...");
 
     // מיזוג ברמת רשומה במקום החלפה מלאה. ההחלפה היא שגרמה לאובדן: מכשיר
     // שדחף blob ישן עם חותמת חדשה יותר מחק כאן עבודה שמכשיר אחר הרגע הקליד.
-    // ⭐ שורות תחילה, ונפילה-חזרה לבלוק (סבב 30) — אותו דפוס כמו ב-syncFromCloud.
+    /* ⛔ הקריאה מהטבלה בלבד, ⛔ ובלי נפילה-חזרה לערך השלם — ⚠️ השקילות
+       נמדדה מול המסד בשני המוסדות, והבלוק חדל להיות רשת ביטחון והפך
+       למקור אמת שני. ⛔ וכשל מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ מיזוג
+       מול מערך ריק מוחק את מה שלא הספיק לעלות. */
     var _rowsE = await tbRowsGet('tb_entries');
-    var res = _rowsE.ok ? null : await sb.from(KV_TABLE).select("value").eq("key","tb_entries").single();
-    if (_rowsE.ok || (res && res.data)) {
-      var cloudEntries = _rowsE.ok ? _rowsE.data : JSON.parse(res.data.value);
+    if (_rowsE.ok) {
+      var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
@@ -5373,10 +5378,9 @@ async function tbPullFromCloud() {
       }
     }
     var _rowsA = await tbRowsGet('tb_archive');
-    if (_rowsA.ok) hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
-    var resA = _rowsA.ok ? null : await sb.from(KV_TABLE).select("value").eq("key","tb_archive").single();
-    if (_rowsA.ok || (resA && resA.data)) {
-      var cloudArchive = _rowsA.ok ? _rowsA.data : JSON.parse(resA.data.value);
+    if (_rowsA.ok) {
+      hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
+      var cloudArchive = _rowsA.data;
       if (Array.isArray(cloudArchive)) {
         ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
         lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
