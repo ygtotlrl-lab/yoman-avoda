@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="46-2026-09-01-2">
+<meta name="app-version" content="46-2026-09-01-3">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -369,8 +369,8 @@ body.locked{overflow:hidden}
     </div>
     <div style="text-align:center;color:var(--textmid);font-size:14px;font-weight:700;margin-bottom:14px">בחר ישיבה</div>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" onclick="selectYeshiva('rishon')">ראשון לציון</button>
-      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" onclick="selectYeshiva('ramataviv')">רמת אביב</button>
+      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
+      <button class="tab-btn" style="flex:none;padding:18px;font-size:18px;font-weight:800;border-color:var(--primary);color:var(--primary)" data-act="pick-yeshiva" data-yeshiva="ramataviv">רמת אביב</button>
     </div>
     <div style="text-align:center;color:var(--textmid);font-size:11px;margin-top:14px;opacity:0.7">הבחירה נדרשת בכל כניסה</div>
   </div>
@@ -392,10 +392,10 @@ body.locked{overflow:hidden}
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="showTab('entry',this)">📝 הזנה</button>
-    <button class="tab-btn" onclick="showTab('log',this)">📋 יומן</button>
-    <button class="tab-btn" onclick="showTab('settings',this)">⚙️ עריכה</button>
-    <button class="tab-btn" onclick="showTab('archive',this)">🗄 ארכיון</button>
+    <button class="tab-btn active" data-act="show-tab" data-tab="entry">📝 הזנה</button>
+    <button class="tab-btn" data-act="show-tab" data-tab="log">📋 יומן</button>
+    <button class="tab-btn" data-act="show-tab" data-tab="settings">⚙️ עריכה</button>
+    <button class="tab-btn" data-act="show-tab" data-tab="archive">🗄 ארכיון</button>
   </div>
 
   <!-- ENTRY -->
@@ -405,13 +405,13 @@ body.locked{overflow:hidden}
       <div class="date-row">
         <span class="date-lbl">יום:</span>
         <div class="day-chips">
-          <button class="day-chip" onclick="pickDay(this,'יום ראשון')">ראשון</button>
-          <button class="day-chip" onclick="pickDay(this,'יום שני')">שני</button>
-          <button class="day-chip" onclick="pickDay(this,'יום שלישי')">שלישי</button>
-          <button class="day-chip" onclick="pickDay(this,'יום רביעי')">רביעי</button>
-          <button class="day-chip" onclick="pickDay(this,'יום חמישי')">חמישי</button>
-          <button class="day-chip" onclick="pickDay(this,'ערב שבת')">ערב שבת</button>
-          <button class="day-chip" onclick="pickDay(this,'מוצאי שבת')">מוצ"ש</button>
+          <button class="day-chip" data-act="pick-day" data-day="יום ראשון">ראשון</button>
+          <button class="day-chip" data-act="pick-day" data-day="יום שני">שני</button>
+          <button class="day-chip" data-act="pick-day" data-day="יום שלישי">שלישי</button>
+          <button class="day-chip" data-act="pick-day" data-day="יום רביעי">רביעי</button>
+          <button class="day-chip" data-act="pick-day" data-day="יום חמישי">חמישי</button>
+          <button class="day-chip" data-act="pick-day" data-day="ערב שבת">ערב שבת</button>
+          <button class="day-chip" data-act="pick-day" data-day="מוצאי שבת">מוצ"ש</button>
         </div>
         <!-- ⛔ תאריך עברי נשאר טקסט חופשי (סבב 67) — אין בורר תאריך עברי
              מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
@@ -447,7 +447,7 @@ body.locked{overflow:hidden}
       <button class="btn-add" id="btn-add-entry"
         ontouchstart="this.classList.add('btn-flash')"
         ontouchend="addEntry(); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500); event.preventDefault();"
-        onclick="if(!('ontouchstart' in window)){addEntry(); this.classList.add('btn-flash'); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500);}">+ הוסף לסדר היום</button>
+        data-act="add-entry">+ הוסף לסדר היום</button>
 
     </div>
   </div>
@@ -461,7 +461,7 @@ body.locked{overflow:hidden}
       </div>
       <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
       <div class="exp-row">
-        <button class="btn-sm btn-red" onclick="clearAll()">🗑 נקה</button>
+        <button class="btn-sm btn-red" data-act="clear-all">🗑 נקה</button>
         <span id="outputBtnSlot"></span>
       </div>
     </div>
@@ -472,7 +472,7 @@ body.locked{overflow:hidden}
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
-      <button class="btn-save" onclick="saveSettings()">💾 שמור שינויים</button>
+      <button class="btn-save" data-act="save-settings">💾 שמור שינויים</button>
     </div>
     <!-- אזור מצב (סבב 17) — שני האלמנטים האחרונים במסך, בסדר הזה -->
     <div id="sync-status-box"></div>
@@ -2140,6 +2140,30 @@ var DOM_ACTIONS = {
   'arc-nav-detail': function (el) { arcGoDetail(el.getAttribute('data-key')); },
   /*  ⛔ שלושת כפתורי המודאל עוברים באותה דלגציה (סבב 68) — ⚠️ המיכל קבוע
    *  ב-DOM, ולכן אין כאן חיווט מחדש בכל רינדור. */
+  /*  ⛔ טאב · יום · ומוסד עוברים בדלגציה (סבב 79) — ⚠️ שלושתם מקבלים את
+   *  האלמנט שנלחץ, ⛔ ולכן `this` שהיה ב-`onclick` הוא ה-`el` שכאן:
+   *  ⭐ אותה פונקציה בדיוק, ⛔ ולא מסלול שני. */
+  'show-tab':       function (el) { showTab(el.getAttribute('data-tab'), el); },
+  'pick-day':       function (el) { pickDay(el, el.getAttribute('data-day')); },
+  'pick-yeshiva':   function (el) { selectYeshiva(el.getAttribute('data-yeshiva')); },
+  /*  ⚠️ הבזק הכפתור רץ רק כשאין מסך מגע — ⛔ במכשיר מגע הוא נשאר דלוק
+   *  אחרי הלחיצה, מפני שאין `mouseleave` שמסיר אותו. */
+  'add-entry':      function (el) {
+                      addEntry();
+                      if ('ontouchstart' in window) return;
+                      el.classList.add('btn-flash');
+                      setTimeout(function () { el.classList.remove('btn-flash'); }, 500);
+                    },
+  'clear-all':      function () { clearAll(); },
+  'save-settings':  function () { saveSettings(); },
+  'share-report':   function () { shareReport(); },
+  'arc-go-years':   function () { arcGoYears(); },
+  'arc-toggle-edit': function () { arcToggleEdit(); },
+  'arc-add-entry':  function () { arcAddEntry(); },
+  /*  ⚠️ ביטול עריכה הוא **רינדור מחדש** ⛔ ולא שחזור ערך — ⭐ המסך נבנה
+   *  מהמצב השמור, ולכן מה שלא נשמר נעלם מעצמו. */
+  'entry-edit-cancel':     function () { renderLog(); },
+  'arc-entry-edit-cancel': function () { renderArcDetail(); },
   'modal-close':    function () { closeModal(); },
   'ask-no':         function () { closeAsk(false); },
   'ask-yes':        function () { closeAsk(true); },
@@ -4946,7 +4970,7 @@ function renderArcBreadcrumb() {
   var bc = document.getElementById("arc-breadcrumb");
   if (!bc) return;
   var parts = [];
-  parts.push('<span class="arc-crumb" onclick="arcGoYears()">שנים</span>');
+  parts.push('<span class="arc-crumb" data-act="arc-go-years">שנים</span>');
   if (arcSelYear) {
     parts.push('<span class="arc-crumb-sep">›</span>');
     parts.push('<span class="arc-crumb" data-act="arc-nav-months" data-year="'+esc(arcSelYear)+'">' + arcSelYear + '</span>');
@@ -5131,7 +5155,7 @@ function renderArcDetail() {
       '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
-    '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" onclick="arcToggleEdit()" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
+    '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
     (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
     '</div>';
 
@@ -5166,7 +5190,7 @@ function renderArcDetail() {
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
-      '<button class="btn-mini" onclick="arcAddEntry()" style="white-space:nowrap">+ הוסף</button>'+
+      '<button class="btn-mini" data-act="arc-add-entry" style="white-space:nowrap">+ הוסף</button>'+
       '</div></div>';
   }
 
@@ -5643,7 +5667,7 @@ function selectYeshiva(y) {
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
     '<button class="btn-sm" style="background:#3A76F0;color:white" ' +
-    'onclick="shareReport()">📤 שיתוף הדוח</button>';
+    'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
   // עכשיו — ומיד אחריה המדידה והפינוי היזום, **לפני** loadLocalData, כדי
@@ -5732,7 +5756,7 @@ function editEntry(id) {
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<button data-act="entry-save" data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button onclick="renderLog()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
+    '<button data-act="entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
   container.innerHTML = '';
   container.appendChild(div);
   // קובע את הערכים ישירות ב-JS — מונע לחלוטין בעיות בריחת HTML
@@ -5783,7 +5807,7 @@ function arcEditEntry(gdateKey, entryId) {
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<button data-act="arc-entry-save" data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button onclick="renderArcDetail()" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '<button data-act="arc-entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
 }
 

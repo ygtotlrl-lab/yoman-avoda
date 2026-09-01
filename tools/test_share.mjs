@@ -152,7 +152,14 @@ export function slotWiring(src) {
       היה עוצר לפני שם הפונקציה — והטענה נופלת על תקין. */
   const m = /;\s*\n/.exec(src.slice(i));
   const st = src.slice(i, i + (m ? m.index + 1 : 400));
-  if (!/shareReport\s*\(\s*\)/.test(st)) bad.push('המילוי אינו קורא ל-shareReport');
+  /*  ⛔ החיווט נמדד בשני צעדים (סבב 79) — ⚠️ הכפתור נושא `data-act`,
+      ⛔ ולכן שם הפונקציה כבר אינו במחרוזת ה-HTML: ⭐ המדידה היא שהמילוי
+      נושא את הפעולה, ⛔ **ושהפעולה מחווטת ל-`shareReport` ב-`DOM_ACTIONS`**
+      — ⚠️ פעולה שאינה שם היא כפתור מת. */
+  const act = /data-act=\\?["']([\w-]*share[\w-]*)\\?["']/.exec(st);
+  if (!act && !/shareReport\s*\(\s*\)/.test(st)) bad.push('המילוי אינו קורא ל-shareReport');
+  if (act && !new RegExp("'" + act[1] + "'\\s*:\\s*function[^}]*shareReport\\s*\\(").test(src))
+    bad.push('הפעולה «' + act[1] + '» אינה מחווטת ל-shareReport ב-DOM_ACTIONS');
   if (/ramataviv|rishon/.test(st)) bad.push('המילוי תלוי במוסד — מוסד אחד נשאר בלי כפתור');
   return bad;
 }
@@ -170,6 +177,12 @@ export function slotWiring(src) {
   const label = HTML.replace('📤 שיתוף הדוח', '📤 שיתוף');
   if (label !== HTML && slotWiring(label).length === 0) pass('⭐ מוטציית-נגד: שינוי תווית הכפתור ⛔ אינו מפיל');
   else fail('⭐ מוטציית-נגד נכשלה — נמדד שהטענה רגישה לניסוח והצפוי שתמדוד חיווט');
+  /*  ⛔ מוטציה: הפעולה נשארת על הכפתור ⛔ והגוף שלה מתרוקן — ⚠️ זה בדיוק
+   *  «כפתור מת» שהמעבר לדלגציה מאפשר, ⭐ והוא בלתי-נראה ב-HTML. */
+  const hollow = HTML.replace(/('share-report':\s*function \(\) \{)[^}]*\}/, '$1 }');
+  if (hollow !== HTML && slotWiring(hollow).length > 0)
+    pass('⛔ מוטציה: פעולת שיתוף שגופה התרוקן — נתפסה');
+  else fail('⛔ מוטציה: פעולת שיתוף ריקה לא נתפסה — נמדדו 0 ממצאים והצפוי אחד');
 }
 
 
