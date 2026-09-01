@@ -194,5 +194,18 @@ console.log('  — מוטציות —');
     '30 · מוטציה: החזרת חותמת זמן כמזהה מפילה את טענות 23 ו-25');
 }
 
-console.log((failed ? '✗' : '✓') + ` סבב 38 (מזהי יומן) — ${30 - failed} טענות עברו, ${failed} נכשלו`);
+/*  ⭐ מוטציית-נגד: **קוד שנוסף** ⛔ אינו מפיל — ⚠️ הטענות מודדות את נוסחת
+ *  ההשוואה ואת מחולל המזהה, ⛔ ולא את אורך הקובץ: ⭐ שער שהיה נופל על כל
+ *  תוספת היה הופך כל עבודה באפליקציה להפרה. */
+{
+  const grown = SRC + '\nfunction _ncIdsPing(){ return 1; }\nvar _ncIdsSeen = _ncIdsPing();\n';
+  const nc = build(grown);
+  assert(grown !== SRC && nc.idEq(OLD_ID, String(OLD_ID)),
+    'נ1 · ⭐ מוטציית-נגד: קוד שנוסף ⛔ אינו מפיל את השוואת המזהים');
+  assert((grown.match(/id: newClientId\(\)/g) || []).length ===
+         (SRC.match(/id: newClientId\(\)/g) || []).length,
+    'נ2 · ⛔ וגם מחולל המזהה נמדד באותו מספר אתרים');
+}
+
+console.log((failed ? '✗' : '✓') + ` סבב 38 (מזהי יומן) — ${32 - failed} טענות עברו, ${failed} נכשלו`);
 process.exit(failed ? 1 : 0);
