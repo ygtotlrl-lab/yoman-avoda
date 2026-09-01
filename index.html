@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="47-2026-09-01-5">
+<meta name="app-version" content="48-2026-09-01-6">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -354,7 +354,6 @@ body.locked{overflow:hidden}
      חייב להישאר זהה לרשימת CDN_ASSETS ב-sw.js. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@hebcal/core@4.5.1/dist/hdate-bundle.min.js"></script>
 </head>
 <body>
 <div id="yeshivaSelect" style="position:fixed;inset:0;z-index:10000;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Heebo',sans-serif;direction:rtl;padding:20px;overflow:auto">
@@ -3544,12 +3543,195 @@ async function syncFromCloud() {
 /* ══════════════════════════════════════════════════════════════════════════
    לוח עברי — חודשים, שנה מעוברת ונרמול שמות
    ══════════════════════════════════════════════════════════════════════════ */
-const MONTHS_HEB = ["תשרי","חשון","כסלו","טבת","שבט","אדר","ניסן","אייר","סיון","תמוז","אב","אלול"];
-const DAYS_HEB = ["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט׳","י׳","י״א","י״ב","י״ג","י״ד","ט״ו","ט״ז","י״ז","י״ח","י״ט","כ׳","כ״א","כ״ב","כ״ג","כ״ד","כ״ה","כ״ו","כ״ז","כ״ח","כ״ט","ל׳"];
+/* ══════════════════════════════════════════════════════════════════════════
+   תאריך עברי — מקור אמת יחיד
+   ══════════════════════════════════════════════════════════════════════════
+   ⚠️ המנוע הוא `Intl.DateTimeFormat('en-u-ca-hebrew')`, ו-`ysHebDate`
+   היא הפונקציה שכל צרכן תאריך עובר דרכה. ⛔ אין למחוק את `_hcST`
+   (סבב 80) — היא רשת הנפילה-חזרה כשאין Intl, והיא אומתה מול מימוש
+   אריתמטי של הלוח הקבוע ולא מול ICU.
+   ⛔ **שמות החודשים כאן נבדלים מההנהלה** — «אב» ולא «מנחם אב», ו«אדר א»
+   בלי גרש: ⚠️ שם החודש הוא **מפתח הקיבוץ של הארכיון** (`extractYM`),
+   ⛔ ושינויו היה מפצל חודש קיים לשני דליים. ⭐ המנוע משותף, שכבת התצוגה
+   אינה.
+   ══════════════════════════════════════════════════════════════════════════ */
+window.DAYS_HEB=["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט׳","י׳","י״א","י״ב","י״ג","י״ד","ט״ו","ט״ז","י״ז","י״ח","י״ט","כ׳","כ״א","כ״ב","כ״ג","כ״ד","כ״ה","כ״ו","כ״ז","כ״ח","כ״ט","ל׳"];
+window.MONTHS_HEB     =["תשרי","חשון","כסלו","טבת","שבט","אדר","ניסן","אייר","סיון","תמוז","אב","אלול"];
+window.MONTHS_HEB_LEAP=["תשרי","חשון","כסלו","טבת","שבט","אדר א","אדר ב","ניסן","אייר","סיון","תמוז","אב","אלול"];
+window.YS_DOW_HEB=["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 
-// שנה עברית מעוברת? מחזור 19 השנים — שנים 3,6,8,11,14,17,19 מעוברות.
-// זהה ל-HDate.isLeapYear של hebcal, אבל לא תלוי בטעינת הספרייה.
-function isHebLeapYear(y) { return ((y * 7 + 1) % 19) < 7; }
+// שנה מעוברת — מחזור 19 השנים (7 שנים מעוברות)
+window.ysHebIsLeap=function(hy){return ((7*(+hy)+1)%19)<7;};
+window.ysHebMonthNames=function(hy){return window.ysHebIsLeap(hy)?window.MONTHS_HEB_LEAP:window.MONTHS_HEB;};
+
+// גימטריה — מספר → אותיות (כולל ט״ו/ט״ז). sep = התו שלפני האות האחרונה
+window.ysGematria=function(n,sep){
+  n=Math.floor(Math.abs(+n))||0;
+  if(!n) return '';
+  if(n>=1000) n=n%1000;
+  var HUN=['','ק','ר','ש','ת'],TENS=['','י','כ','ל','מ','נ','ס','ע','פ','צ'],ONES=['','א','ב','ג','ד','ה','ו','ז','ח','ט'];
+  var s='',h=Math.floor(n/100),r=n%100;
+  while(h>4){s+='ת';h-=4;}
+  s+=HUN[h]||'';
+  if(r===15) s+='טו';
+  else if(r===16) s+='טז';
+  else s+=TENS[Math.floor(r/10)]+ONES[r%10];
+  if(sep===undefined) sep='״';
+  if(!sep||!s) return s;
+  if(s.length===1) return s+'׳';
+  return s.slice(0,-1)+sep+s.slice(-1);
+};
+window.ysHebDayLabel=function(day){var T=window.DAYS_HEB;return (T&&T[day])||window.ysGematria(day)||String(day);};
+// תווית שנה קצרה — תשפ"ו (גרשיים ישרים, כפי שהוצג עד היום בלוח)
+window.ysHebYearLabel=function(hy){return window.ysGematria((+hy)%1000,'"');};
+// תווית שנה מלאה — ה׳תשפ״ו
+window.ysHebYearLabelFull=function(hy){
+  var ONES=['','א','ב','ג','ד','ה','ו','ז','ח','ט'],th=Math.floor((+hy)/1000);
+  return ((th>0&&th<10)?ONES[th]+'׳':'')+window.ysGematria((+hy)%1000,'״');
+};
+
+// ---- קריאת הלוח העברי של הדפדפן ----
+// שמות החודשים נקראים באנגלית ('en-u-ca-hebrew') כי הם יציבים בין גרסאות ICU,
+// וממופים לאינדקס בטבלאות התצוגה שלנו.
+window._ysMICodeLeap={tishri:0,heshvan:1,kislev:2,tevet:3,shevat:4,adar1:5,adar2:6,nisan:7,iyar:8,sivan:9,tamuz:10,av:11,elul:12};
+window._ysMICodeStd ={tishri:0,heshvan:1,kislev:2,tevet:3,shevat:4,adar:5,nisan:6,iyar:7,sivan:8,tamuz:9,av:10,elul:11};
+window._ysMonthCode=function(name){
+  var s=(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(s.indexOf('adar')===0){
+    var t=s.slice(4);
+    if(t==='i'||t==='1'||t==='a') return 'adar1';
+    if(t==='ii'||t==='2'||t==='b') return 'adar2';
+    return 'adar';
+  }
+  if(s.indexOf('tishr')===0) return 'tishri';
+  if(s.indexOf('hesh')!==-1||s.indexOf('chesh')!==-1) return 'heshvan';
+  if(s.indexOf('kislev')===0||s.indexOf('chislev')===0) return 'kislev';
+  if(s.indexOf('tevet')===0||s.indexOf('teveth')===0) return 'tevet';
+  if(s.indexOf('shevat')===0||s.indexOf('shvat')===0||s.indexOf('shebat')===0) return 'shevat';
+  if(s.indexOf('nisan')===0||s.indexOf('nissan')===0) return 'nisan';
+  if(s.indexOf('iyar')===0||s.indexOf('iyyar')===0) return 'iyar';
+  if(s.indexOf('sivan')===0) return 'sivan';
+  if(s.indexOf('tamuz')===0||s.indexOf('tammuz')===0) return 'tamuz';
+  if(s==='av'||s==='ab') return 'av';
+  if(s.indexOf('elul')===0) return 'elul';
+  return null;
+};
+window._ysIntlFmt=null;window._ysIntlOK=null;
+// גרגוריאני → {hy,mi,day,leap} דרך Intl. מחזיר null אם לא זמין / תוצאה לא צפויה
+window.ysIntlHeb=function(d){
+  try{
+    if(window._ysIntlOK===false) return null;
+    if(!window._ysIntlFmt){
+      if(typeof Intl==='undefined'||!Intl.DateTimeFormat){window._ysIntlOK=false;return null;}
+      var f=new Intl.DateTimeFormat('en-u-ca-hebrew',{year:'numeric',month:'long',day:'numeric'});
+      var ro=f.resolvedOptions?f.resolvedOptions():null;
+      if(!ro||ro.calendar!=='hebrew'||!f.formatToParts){window._ysIntlOK=false;return null;}
+      window._ysIntlFmt=f;window._ysIntlOK=true;
+    }
+    var o={};
+    window._ysIntlFmt.formatToParts(d).forEach(function(p){o[p.type]=p.value;});
+    var hy=parseInt(String(o.year||'').replace(/[^0-9]/g,''),10);
+    var day=parseInt(String(o.day||'').replace(/[^0-9]/g,''),10);
+    var code=window._ysMonthCode(o.month);
+    if(!(hy>=4000&&hy<=7000)||!(day>=1&&day<=30)||!code) return null;
+    var leap=window.ysHebIsLeap(hy);
+    var mi=leap?window._ysMICodeLeap[code]:window._ysMICodeStd[code];
+    if(mi===undefined){
+      // אי-התאמה בין חישוב העיבור לשם החודש — סימן שמשהו לא צפוי; לא מנחשים
+      return null;
+    }
+    return {hy:hy,mi:mi,day:day,leap:leap};
+  }catch(e){ window._ysIntlOK=false; return null; }
+};
+
+/*  ⛔ אין לבדוק `d instanceof Date` ואין ליפול-חזרה ל«היום» (סבב 57) —
+ *  `instanceof` תלוי-realm: אובייקט תאריך שנוצר ב-realm אחר (iframe,
+ *  רתמת `vm`) מחזיר `false`, והשורה שהייתה כאן החליפה אותו **בשקט**
+ *  בתאריך של היום. שני כשלים בשורה אחת — בדיקה שתלויה במי יצר את
+ *  האובייקט, ⛔ ונפילה-חזרה שקטה שמציגה תאריך שגוי כאילו הוא נכון.
+ *  ⭐ הבדיקה כאן היא על **החוזה** (`getTime` שמחזיר מספר) ואינה
+ *  תלוית-realm; ⛔ וקלט שאינו עובר אותה מוחזר כ«לא תקף» ונרשם.
+ *  ⚠️ קריאה **בלי ארגומנט** היא חוזה קיים ומשמעה «היום» — היא נשארת,
+ *  ורק ארגומנט שנמסר ואינו תאריך תקף נחשב שגיאה.                       */
+window._ysIsDate=function(d){
+  return !!d&&typeof d.getTime==='function'&&!isNaN(d.getTime());
+};
+window._ysBadDates=[];
+window._ysBadDate=function(where,d){
+  var got;
+  try{ got=Object.prototype.toString.call(d); }catch(e){ got='?'; }
+  window._ysBadDates.push({at:Date.now(),where:where,got:got});
+  if(window._ysBadDates.length>12) window._ysBadDates.shift();
+  try{ console.warn('ysHebDate: קלט שאינו תאריך תקף ב-'+where+' — '+got); }catch(e){}
+};
+window._ysHebNone=function(src){
+  return {year:0,monthIndex:0,monthName:'',day:0,dayLabel:'',yearLabel:'',
+          yearLabelFull:'',leap:false,ok:false,src:src};
+};
+
+// ---- הפונקציה המרכזית ----
+// מחזירה {year, monthIndex, monthName, day, dayLabel, yearLabel, yearLabelFull, leap, ok, src}
+window.ysHebDate=function(d){
+  if(d===undefined||d===null) d=new Date();
+  if(!window._ysIsDate(d)){ window._ysBadDate('ysHebDate',d); return window._ysHebNone('bad-input'); }
+  // צהריים מקומיים — מנטרל הבדלי אזור-זמן/שעון-קיץ בגבול היממה
+  var nd=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12,0,0);
+  var r=window.ysIntlHeb(nd),src='intl';
+  if(!r){ r=(typeof window._hcHTable==='function')?window._hcHTable(nd):null; src='table'; }
+  if(!r||!r.hy){ return window._ysHebNone('none'); }
+  var names=window.ysHebMonthNames(r.hy);
+  return {
+    year:r.hy, monthIndex:r.mi, monthName:names[r.mi]||'', day:r.day,
+    dayLabel:window.ysHebDayLabel(r.day),
+    yearLabel:window.ysHebYearLabel(r.hy),
+    yearLabelFull:window.ysHebYearLabelFull(r.hy),
+    leap:window.ysHebIsLeap(r.hy), ok:true, src:src
+  };
+};
+
+// ---- צרכני התצוגה — כולם יושבים על ysHebDate ----
+
+// ---- לוח שנה עברי ויזואלי לטופס סטאטוס ----
+// טבלת גיבוי לחישוב התאריך העברי — **נפילה-חזרה בלבד**. המנוע הראשי הוא Intl
+// (ysHebYearInfo), והוא בונה את השנה דינמית; הטבלה נכנסת לפעולה רק אם Intl חסר
+// או מחזיר תוצאה לא צפויה. ארבע השורות הראשונות אומתו ידנית מול הלוח האמיתי;
+// כל השאר נוצרו מאותו לוח Intl ואומתו מול הארבע (שחזור מדויק), כולל בדיקה
+// שכל שנה נסגרת בדיוק לא׳ תשרי של הבאה ושאורכה חוקי (353-355 / 383-385).
+// **אין למחוק** — זו רשת הביטחון. הטווח מגיע עד תת"י (2049).
+window._hcST=[
+  {hy:5785,lb:'תשפ"ה',jd:new Date(2024,9, 3),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5786,lb:'תשפ"ו',jd:new Date(2025,8,23),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5787,lb:'תשפ"ז',jd:new Date(2026,8,12),ml:[30,30,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5788,lb:'תשפ"ח',jd:new Date(2027,9, 2),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5789,lb:'תשפ"ט',jd:new Date(2028,8,21),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5790,lb:'תש"צ',jd:new Date(2029,8,10),ml:[30,29,29,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5791,lb:'תשצ"א',jd:new Date(2030,8,28),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5792,lb:'תשצ"ב',jd:new Date(2031,8,18),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5793,lb:'תשצ"ג',jd:new Date(2032,8, 6),ml:[30,29,29,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5794,lb:'תשצ"ד',jd:new Date(2033,8,24),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5795,lb:'תשצ"ה',jd:new Date(2034,8,14),ml:[30,30,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5796,lb:'תשצ"ו',jd:new Date(2035,9, 4),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5797,lb:'תשצ"ז',jd:new Date(2036,8,22),ml:[30,29,29,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5798,lb:'תשצ"ח',jd:new Date(2037,8,10),ml:[30,30,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5799,lb:'תשצ"ט',jd:new Date(2038,8,30),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5800,lb:'ת"ת',jd:new Date(2039,8,19),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5801,lb:'תת"א',jd:new Date(2040,8, 8),ml:[30,29,29,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5802,lb:'תת"ב',jd:new Date(2041,8,26),ml:[30,29,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5803,lb:'תת"ג',jd:new Date(2042,8,15),ml:[30,30,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5804,lb:'תת"ד',jd:new Date(2043,9, 5),ml:[30,29,29,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5805,lb:'תת"ה',jd:new Date(2044,8,22),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5806,lb:'תת"ו',jd:new Date(2045,8,12),ml:[30,29,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5807,lb:'תת"ז',jd:new Date(2046,9, 1),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5808,lb:'תת"ח',jd:new Date(2047,8,21),ml:[30,29,29,29,30,29,30,29,30,29,30,29]   ,leap:false},
+  {hy:5809,lb:'תת"ט',jd:new Date(2048,8, 8),ml:[30,29,30,29,30,30,29,30,29,30,29,30,29],leap:true },
+  {hy:5810,lb:'תת"י',jd:new Date(2049,8,27),ml:[30,30,30,29,30,29,30,29,30,29,30,29]   ,leap:false}];
+
+window._hcHTable=function(d){
+  var td=new Date(d.getFullYear(),d.getMonth(),d.getDate()),b=window._hcST[0];
+  for(var i=window._hcST.length-1;i>=0;i--){if(td>=window._hcST[i].jd){b=window._hcST[i];break;}}
+  var df=Math.round((td-b.jd)/86400000),c=0;
+  for(var mi=0;mi<b.ml.length;mi++){if(df<c+b.ml[mi])return{hy:b.hy,mi:mi,day:df-c+1};c+=b.ml[mi];}
+  return{hy:b.hy,mi:0,day:1};};
 
 // ── נרמול שמות חודשים עבריים ──
 // בנתונים הקיימים מופיע "מרחשון" בעוד הקוד מייצר "חשון" — בלי איחוד נוצרים
@@ -3569,37 +3751,19 @@ function normHMonth(m) {
   return HMONTH_ALIAS[m] || m;
 }
 
+// ---- צרכן התצוגה — יושב על ysHebDate ----
+/*  ⛔ קלט פגום אינו הופך ל«היום» (סבב 80) — ⚠️ `jsDate || new Date()` הסתיר
+ *  ארגומנט שגוי והציג את תאריך היום כאילו הוא התאריך שנתבקש; ⭐ מחרוזת
+ *  ריקה היא מה שכל הצרכנים כאן כבר יודעים לטפל בו.
+ *  ⚠️ קריאה **בלי ארגומנט** היא חוזה קיים ומשמעה «היום» — היא נשארת. */
 function hebrewDate(jsDate) {
-  jsDate = jsDate || new Date();
-  if (!window.hebcal || !hebcal.HDate) return "";
-  var hd = new hebcal.HDate(jsDate);
-  var day = hd.getDate();
-  var month = hd.getMonth();
-  var year = hd.getFullYear();
-  // Hebcal month numbers: Nisan=1..Elul=6, Tishrei=7..Shevat=11, Adar_I=12, Adar_II=13
-  // MONTHS_HEB index: Tishrei=0, Cheshvan=1, Kislev=2, Tevet=3, Shevat=4, Adar=5,
-  //   Nisan=6, Iyar=7, Sivan=8, Tammuz=9, Av=10, Elul=11
-  // אדר: בשנה פשוטה יש אדר אחד (חודש 12 אצל hebcal). בשנה מעוברת 12=אדר א׳
-  // ו-13=אדר ב׳ — קודם שניהם מופו לאינדקס 5 ("אדר"), ולכן ~60 יום היו קורסים
-  // לכפתור חודש אחד בארכיון (תשפ״ז, שמתחילה בספטמבר 2026, היא שנה מעוברת).
-  var MONTH_MAP = {1:6,2:7,3:8,4:9,5:10,6:11,7:0,8:1,9:2,10:3,11:4};
-  var monthName;
-  if (month === 12)      monthName = isHebLeapYear(year) ? "אדר א" : "אדר";
-  else if (month === 13) monthName = "אדר ב";
-  else                   monthName = MONTHS_HEB[MONTH_MAP[month] !== undefined ? MONTH_MAP[month] : 0];
-  var yearMap = {
-    5785:"ה׳תשפ״ה",5786:"ה׳תשפ״ו",
-    5787:"ה׳תשפ״ז",5788:"ה׳תשפ״ח",
-    5789:"ה׳תשפ״ט",5790:"ה׳תש״צ",
-    5791:"ה׳תשצ״א",5792:"ה׳תשצ״ב",
-    5793:"ה׳תשצ״ג",5794:"ה׳תשצ״ד",
-    5795:"ה׳תשצ״ה",5796:"ה׳תשצ״ו",
-    5797:"ה׳תשצ״ז",5798:"ה׳תשצ״ח",
-    5799:"ה׳תשצ״ט"
-  };
-  var yearStr = yearMap[year] || ("ה׳" + year);
-  return DAYS_HEB[day] + " " + monthName + " " + yearStr;
+  if (jsDate === undefined || jsDate === null) jsDate = new Date();
+  if (!window._ysIsDate(jsDate)) { window._ysBadDate('hebrewDate', jsDate); return ""; }
+  var h = window.ysHebDate(jsDate);
+  if (!h.ok) return "";
+  return h.dayLabel + " " + h.monthName + " " + h.yearLabelFull;
 }
+// ═══ סוף אזור התאריך העברי ═══════════════════════════════════════════════
 
 const CAT_COLORS = {
   "א":{bg:"#E8622A",fg:"white"}, // אדום-כתום
@@ -3663,7 +3827,7 @@ function getCurrentDateKey() {
   var v = g ? g.value.trim() : "";
   // נפילה-חזרה: אם שדה התאריך טרם אותחל, משתמשים במפתח של היום כדי
   // שרשומות לא יישמרו לעולם עם gdate ריק (ששובר את הארכוב ואת סינון
-  // היומן היומי). gregDateStr() היא JS טהור ואינה תלויה בספריית hebcal.
+  // היומן היומי). gregDateStr() היא JS טהור ואינה נשענת על הלוח העברי.
   return v || getTodayKey();
 }
 
@@ -3707,7 +3871,7 @@ function checkDayChange() {
     var withD = live.find(function(e){ return e && e.day; });
     var gdate = (withG && withG.gdate) || gregDateStr(prev);
     // ⛔ נפילה-חזרה מפורשת ולא שדה ריק בשקט (סבב 31) — `hebrewDate` מחזירה ""
-    //    כשספריית hebcal טרם נטענה, ו-hdate ריק הוא בדיוק מה שהעיף סנאפשוטים
+    //    כשהלוח אינו זמין, ו-hdate ריק הוא בדיוק מה שהעיף סנאפשוטים
     //    לדלי «לא ידוע». בהיעדר שניהם נשמר לפחות `name` שממנו `snapHDate` גוזרת.
     var hdate = (withH && withH.hdate) || hebrewDate(prev) || "";
     var dayKey = (withD && withD.day) || DAY_VALUE_MAP[prev.getDay()] || "";

@@ -63,6 +63,7 @@ const APP = {
           'test_idarg.mjs',
           'test_sources.mjs',
           'test_backup_policy.mjs',
+          'test_date.mjs',
           'test_bump.mjs', 'test_share.mjs',
           'test_read.mjs',
           'test_pendflush.mjs', 'test_lock.mjs',
