@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="46-2026-09-01-3">
+<meta name="app-version" content="46-2026-09-01-4">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1527,6 +1527,13 @@ function _bkLogRow(action, key, count, details) {
     details: details || null
   };
 }
+/*  ⛔ כשל כתיבה נרשם ואינו נבלע (סבב 79) — ⚠️ הכתיבה נכשלת כפי שנכשלה,
+ *  אבל היא מפסיקה להיות שקטה: ⭐ `catch` ריק סביב כתיבה הוא בדיוק המצב
+ *  שבו נתון נעלם ואיש אינו יודע. ⛔ והרישום אינו משנה את הזרימה — ⚠️ תיעוד
+ *  אבחון שמפיל שמירה גרוע מהיעדרו. */
+function _bkWriteFail(where, e) {
+  try { console.warn('[write-fail] ' + where, (e && e.message) ? e.message : e); } catch (e0) { }
+}
 function _bkLogQueue(row) {
   try {
     var qk = _bkVal(BK_CFG.logQueueKey);
@@ -1535,7 +1542,7 @@ function _bkLogQueue(row) {
     q.push(row);
     if (q.length > BK_LOG_MAX) q = q.slice(-BK_LOG_MAX);
     lsSet(qk, JSON.stringify(q));
-  } catch (e) { }
+  } catch (e) { _bkWriteFail('_bkLogQueue', e); }
 }
 // רישום fire-and-forget. ⛔ לעולם אינו חוסם ואינו מפיל את המסלול שקרא לו
 // (נרשם בסבב 6 בהנהלה) — תיעוד אבחון שמפיל כניסה או שמירה גרוע מהיעדרו.
@@ -1571,7 +1578,7 @@ async function logFlush() {
       var q2 = JSON.parse(lsGet(qk, '[]') || '[]');
       if (!Array.isArray(q2)) q2 = [];
       lsSet(qk, JSON.stringify(q2.concat(failed).slice(-BK_LOG_MAX)));
-    } catch (e3) { }
+    } catch (e3) { _bkWriteFail('logFlush', e3); }
   }
   return sent;
 }
@@ -3163,7 +3170,10 @@ async function tbRowsPush(kvKey, arr) {
         Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
         return c;
       });
-      try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); } catch (e2) {}
+      /*  ⛔ כשל הכתיבה הכפולה נרשם ואינו נבלע (סבב 79) — ⚠️ המסלול הזה הוא
+       *  נתיב-חזרה שכבוי ברוב הזמן, ⭐ וכשל שקט בו נראה בדיוק כמו הצלחה. */
+      try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
+      catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
     }
     var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
     rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
