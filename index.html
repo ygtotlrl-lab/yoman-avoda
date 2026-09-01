@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="46-2026-09-01-4">
+<meta name="app-version" content="47-2026-09-01-5">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1298,9 +1298,9 @@ function lsStatusHTML() {
   }
 
   h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-       '<button type="button" onclick="window.lsSweepNow()">🧹 פנה מקום עכשיו</button>' +
-       '<button type="button" onclick="window.lsRefreshStatus()">↻ רענן</button>';
-  if (hz.length) h += '<button type="button" onclick="window.lsRestoreAll()">☁️ טען הכל מחדש מהענן</button>';
+       '<button type="button" data-act="ls-sweep-now">🧹 פנה מקום עכשיו</button>' +
+       '<button type="button" data-act="ls-refresh-status">↻ רענן</button>';
+  if (hz.length) h += '<button type="button" data-act="ls-restore-all">☁️ טען הכל מחדש מהענן</button>';
   h += '</div></div>';
   return h;
 }
@@ -1411,7 +1411,7 @@ function syncLineHTML() {
     '<div>מצב חיבור: <b>' + (navigator.onLine ? 'מחובר' : 'מנותק') + '</b></div>' +
     '<div>סנכרון אחרון: <b>' + (t ? esc(syncFmtTime(t)) : '— טרם הסתנכרן —') + '</b></div>' +
     '<div class="sync-act"><button type="button"' + (_syncNowBusy ? ' disabled' : '') +
-    ' onclick="window.syncNowFromStatus&&window.syncNowFromStatus()">' +
+    ' data-act="sync-now-status">' +
     (_syncNowBusy ? 'מסנכרן…' : '🔄 סנכרן עכשיו') + '</button></div>' +
     '</div>';
 }
@@ -2131,10 +2131,17 @@ var DOM_ACTIONS = {
   'cat-task-add':   function (el) { addTask(Number(el.getAttribute('data-ci'))); },
   'cat-task-del':   function (el) { removeTask(Number(el.getAttribute('data-ci')),
                                                Number(el.getAttribute('data-ti'))); },
+  'cat-task-edit':  function (el) { editTaskInline(Number(el.getAttribute('data-ci')),
+                                                   Number(el.getAttribute('data-ti'))); },
+  'cat-sub-edit':   function (el) { editSubInline(Number(el.getAttribute('data-ci')),
+                                                  Number(el.getAttribute('data-ti')),
+                                                  Number(el.getAttribute('data-si')),
+                                                  el.getAttribute('data-sub'),
+                                                  el.getAttribute('data-task')); },
   'cat-sub-add':    function (el) { addSub(Number(el.getAttribute('data-ci')),
                                            Number(el.getAttribute('data-ti'))); },
   /*  ⚠️ שם המשימה עובר כ-`data-task` ולא כמחרוזת בתוך קוד (סבב 68) —
-   *  ⛔ זה בדיוק הציטוט שנשבר: `safeT` היה בורח מגרשים ידנית. */
+   *  ⛔ זה בדיוק הציטוט שנשבר: בריחת גרשיים ידנית החטיאה שם שיש בו גרש. */
   'cat-sub-del':    function (el) { removeSub(Number(el.getAttribute('data-ci')),
                                               el.getAttribute('data-task'),
                                               Number(el.getAttribute('data-si'))); },
@@ -2174,6 +2181,11 @@ var DOM_ACTIONS = {
   'modal-close':    function () { closeModal(); },
   'ask-no':         function () { closeAsk(false); },
   'ask-yes':        function () { closeAsk(true); },
+  'ls-sweep-now':      function () { lsSweepNow(); },
+  'ls-refresh-status': function () { lsRefreshStatus(); },
+  'ls-restore-all':    function () { lsRestoreAll(); },
+  'sync-now-status':   function () { syncNowFromStatus(); },
+  'hw-restore':        function (el) { hwRestoreClick(el); },
 };
 /*  ⛔ מאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — המסכים כאן
  *  נבנים מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם;
@@ -2542,7 +2554,7 @@ async function hwPastLoad(key, filter) {
 var _hwRestoreArmed = 0;
 function hwRestoreHTML() {
   return '<div class="sync-line hw-restore-line"><button type="button" ' +
-    'onclick="window.hwRestoreClick&&window.hwRestoreClick(this)">' +
+    'data-act="hw-restore">' +
     '☁️ שחזר הכול מהענן</button></div>';
 }
 function hwRestoreMount() {
@@ -4686,18 +4698,11 @@ function renderSettings() {
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
-          /*  ⛔ שני אתרי ה-`onclick` שנשארו כאן נושאים `event.stopPropagation()`
-           *  **באותו מאפיין**, ⛔ ולכן אינם מומרים לדלגציה (סבב 68, כלל ברזל 27) —
-           *  ⚠️ דלגציה ב-`document` רצה **אחרי** בועת האלמנט, ולכן המטפל של השורה
-           *  העוטפת היה רץ **לפני** המואצל וההגנה הייתה מפסיקה לפעול בשקט.
-           *  ⛔ ולכן `safeT`/`safeS` נשארים — הם הציטוט של אותם שני אתרים בלבד. */
-          var safeT = t.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
           var subsSection = '';
           if(subs.length > 0) {
             subsSection = '<div class="set-lbl" style="font-size:9px;margin:4px 0 2px 0;color:var(--textlite)">תתי משימות:</div>'
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
-                  var safeS = s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
                   return '<div class="chip chip-sub" draggable="true" '
                     + 'ondragstart="subDragStart(event,'+ci+','+ti+','+si+')" '
                     + 'ondragover="subDragOver(event)" '
@@ -4706,7 +4711,7 @@ function renderSettings() {
                     + 'ondragend="subDragEnd(event)">'
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button onclick="editSubInline('+ci+','+ti+','+si+',\''+safeS+'\',\''+safeT+'\');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
@@ -4725,7 +4730,7 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button onclick="editTaskInline('+ci+','+ti+');event.stopPropagation();" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
