@@ -429,8 +429,8 @@ foot)` — מיכל אחד ומסלול סגירה יחיד. ⛔ אירועים 
 ### פינוי הגיבויים — הקובץ אינו מקומי
 ⚠️ הפינוי כאן הוא `hanhala-ruchanit/migrations/004_backup_retention_cron.sql`,
 של הפרויקט המשותף, ⛔ ורשימת-ההיתר נקראת מהמיגרציה האחרונה שמגדירה אותה
-מחדש — `hanhala-ruchanit/migrations/021_soft_delete_ys_cls_years.sql`;
-⛔ מיגרציה שכבר רצה אינה נערכת, ⚠️ ו-`021` **רצה במסד**. ⭐ **וארבעה שמות גיבוי שיצאו משימוש נמצאים
+מחדש — `hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql`;
+⛔ מיגרציה שכבר רצה אינה נערכת, ⚠️ ו-`022` **רצה במסד**. ⭐ **וארבעה שמות גיבוי שיצאו משימוש נמצאים
 ברשימת-ההיתר שלו במפורש**, בהחלטת המנהל: `rishon_tb_entries` ·
 `rishon_tb_archive` · `ramataviv_tb_entries` · `ramataviv_tb_archive` —
 שמות גיבוי-השגרה שרצו עד המעבר לגיבוי-הטבלאות (`*_tb_entries_rows`).
