@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="52-2026-09-02-2">
+<meta name="app-version" content="52-2026-09-02-3">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3263,6 +3263,50 @@ function saveSubs() {
 }
 // יוצר מפתח ייחודי לכל (אינדקס קטגוריה, שם משימה) כדי למנוע התנגשות בין קטגוריות
 function subKey(ci, taskName) { return ci + "::" + taskName; }
+
+/* ══ המיון היחיד לרשומות היומן ════════════════════════════════════════ */
+/*  ⛔ **`tbSortEntries` היא נקודת המיון היחידה** — ⚠️ המסך, הארכיון, גשר
+    השיתוף וה-PDF קוראים לה כולם, ⛔ ואין מיון מקומי בשום מסך: ⭐ ארבעה
+    עותקים של אותו משווה נתנו סדר שנבדל בין המסך לייצוא, ⛔ והמשתמש ראה
+    דף שאינו מה שהוא ייצא.
+    ⛔ **ושש רמות ולא שלוש** — ⚠️ המשווה עצר אחרי תת-המשימה, ⭐ ורשומות
+    ששלוש רמותיהן זהות נשארו בסדר ההכנסה: ⛔ סדר שנראה אקראי במסך.
+    ⛔ **והמזהה הוא הרמה האחרונה** — ⚠️ בלעדיו שתי רשומות זהות לגמרי
+    מתחלפות ביניהן בין רינדור לרינדור, ⭐ והמיון אינו יציב. */
+function tbSortEntries(list) {
+  var arr = Array.isArray(list) ? list.slice() : [];
+  var catOrder = {};
+  CATS.forEach(function (cat, ci) { catOrder[cat.letter] = ci; });
+  /*  ⛔ «אינו ברשימה» נופל לסוף ⛔ ואינו נופל לראש — ⚠️ קטגוריה שנמחקה
+      מההגדרות משאירה רשומות היסטוריות, ⭐ ומקומן בתחתית ולא בראש. */
+  var rank = function (e) {
+    var ca = catOrder[e.cat] !== undefined ? catOrder[e.cat] : 99;
+    var cat = CATS.find(function (c) { return c.letter === e.cat; });
+    var ta = cat ? cat.tasks.indexOf(e.task) : -1;
+    var ci2 = cat ? CATS.indexOf(cat) : -1;
+    var sk = ci2 >= 0 ? subKey(ci2, e.task) : e.task;
+    var subs = SUBS[sk] || SUBS[e.task] || [];
+    var sa = subs.indexOf(e.sub);
+    return [ca, ta === -1 ? 999 : ta, sa === -1 ? 999 : sa];
+  };
+  /*  ⛔ המספר מושווה כמספר ⛔ ולא כמחרוזת — ⚠️ «10» קטן מ-«9» בהשוואת
+      מחרוזות, ⭐ ורשומה בלי מספר יורדת לסוף הקבוצה. */
+  var num = function (e) {
+    var n = parseFloat(String(e && e.count != null ? e.count : '').replace(/[^0-9.\-]/g, ''));
+    return isFinite(n) ? n : Infinity;
+  };
+  return arr.sort(function (a, b) {
+    var ra = rank(a), rb = rank(b);
+    for (var i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+    var na = String((a && a.notes) || ''), nb = String((b && b.notes) || '');
+    if (na !== nb) return na.localeCompare(nb, 'he');
+    var qa = num(a), qb = num(b);
+    if (qa !== qb) return qa - qb;
+    var ia = String((a && a.id) != null ? a.id : ''), ib = String((b && b.id) != null ? b.id : '');
+    return ia < ib ? -1 : ia > ib ? 1 : 0;
+  });
+}
+/* ══ סוף המיון היחיד ═══════════════════════════════════════════════ */
 function saveEntries() {
   // t0 לפני הצילום — רשומה שתסומן אחריו אינה במה שנשלח עכשיו.
   var _t0 = Date.now();
@@ -4210,26 +4254,7 @@ function renderLog() {
     list.innerHTML = '<div class="empty">📋<br>אין רשומות לתאריך זה</div>';
     return;
   }
-  // מיון לפי סדר CATS
-  var catOrder = {};
-  CATS.forEach(function(cat,ci){ catOrder[cat.letter] = ci; });
-  filtered = filtered.slice().sort(function(a,b){
-    var ca = catOrder[a.cat] !== undefined ? catOrder[a.cat] : 99;
-    var cb = catOrder[b.cat] !== undefined ? catOrder[b.cat] : 99;
-    if (ca !== cb) return ca - cb;
-    var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
-    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
-    ta = ta === -1 ? 999 : ta;
-    tb = tb === -1 ? 999 : tb;
-    if (ta !== tb) return ta - tb;
-    var ci2 = cat ? CATS.indexOf(cat) : -1;
-    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
-    var subs = SUBS[sk] || SUBS[a.task] || [];
-    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
-    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
-    return sa - sb;
-  });
+  filtered = tbSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
     var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
     var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
@@ -4353,124 +4378,49 @@ function instName() {
 /* ══════════════════════════════════════════════════════════════════════════
    פלטים — PDF ותמונת הדוח
    ══════════════════════════════════════════════════════════════════════════ */
+/*  ⛔ **הייצוא מצלם את הדוח ⛔ ואינו בונה HTML חדש** — ⚠️ המסלול הזה בנה
+ *  מסמך שני עם צבעים משלו (`#333` · `#ffffff` · `#f0f0f0` · `#ddd`),
+ *  ⭐ ואיבד את צבעי הקטגוריות שהמסך מראה: ⛔ שני מקורות לאותו דוח הם
+ *  שתי הזדמנויות שאחד מהם ייסחף. */
 function exportPDF() {
-  if (!liveOnly(ENTRIES).length) { toast("אין רשומות"); return; }
+  var live = liveOnly(ENTRIES);
+  if (!live.length) { toast("אין רשומות"); return; }
+  /*  ⛔ הכותרת נגזרת **לפני** הרינדור הא-סינכרוני — ⚠️ מסלול הארכיון מחליף
+   *  את `ENTRIES` ואת שדה התאריך ומשחזר אותם מיד אחרי הקריאה, ⭐ והרינדור
+   *  מסתיים אחרי השחזור: ⛔ קריאה מאוחרת הייתה מקבלת את תאריך היום. */
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
-  var dayLabel = selDay || "";
-
-  var rows = "";
-  var byCat = {};
-  // מיון הרשומות לפי סדר הקטגוריה/המשימה
-  var catOrder2 = {};
-  CATS.forEach(function(cat, ci) { catOrder2[cat.letter] = ci; });
-  var sortedPDF = liveOnly(ENTRIES).sort(function(a, b) {
-    var ca = catOrder2[a.cat] !== undefined ? catOrder2[a.cat] : 99;
-    var cb = catOrder2[b.cat] !== undefined ? catOrder2[b.cat] : 99;
-    if (ca !== cb) return ca - cb;
-    var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
-    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
-    ta = ta === -1 ? 999 : ta;
-    tb = tb === -1 ? 999 : tb;
-    if (ta !== tb) return ta - tb;
-    var ci2 = cat ? CATS.indexOf(cat) : -1;
-    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
-    var subs = SUBS[sk] || SUBS[a.task] || [];
-    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
-    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
-    return sa - sb;
-  });
-  sortedPDF.forEach(function(e){
-    if (!byCat[e.cat]) byCat[e.cat] = {name:e.catName, list:[]};
-    byCat[e.cat].list.push(e);
-  });
-
-  // מיון תצוגת הקטגוריות לפי הסדר
-  var catLettersSorted = Object.keys(byCat).sort(function(a,b){
-    var ai=CATS.findIndex(function(c){return c.letter===a;});
-    var bi=CATS.findIndex(function(c){return c.letter===b;});
-    return (ai===-1?99:ai)-(bi===-1?99:bi);
-  });
-  var globalTaskIdx = 0;
-  catLettersSorted.forEach(function(letter){
-    var data = byCat[letter];
-    var c = CAT_COLORS[letter] || {bg:"#333",fg:"white"};
-    // rowspan לקטגוריה ולמשימה, פסים גלובליים
-    var taskGroups = [];
-    data.list.forEach(function(e) {
-      var last = taskGroups[taskGroups.length - 1];
-      if (last && last.task === (e.task || '')) { last.items.push(e); }
-      else { taskGroups.push({ task: e.task || '', items: [e] }); }
-    });
-    var catRowIdx = 0;
-    taskGroups.forEach(function(tg) {
-      var taskBg = (globalTaskIdx % 2 === 0) ? '#ffffff' : '#f0f0f0';
-      globalTaskIdx++;
-      tg.items.forEach(function(e, ti) {
-        rows += '<tr>';
-        if (catRowIdx === 0) {
-          rows += '<td rowspan="' + data.list.length + '" style="background:' + c.bg + ';color:' + c.fg + ';font-weight:900;font-size:15px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:70px">' + data.name + '</td>';
-        }
-        if (ti === 0) {
-          rows += '<td rowspan="' + tg.items.length + '" style="padding:7px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:' + taskBg + ';">' + tg.task + '</td>';
-        }
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + esc(e.sub || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;text-align:center;background:' + taskBg + ';">' + esc(e.count || '') + '</td>';
-        rows += '<td style="padding:7px 10px;border:1px solid #ddd;font-size:12px;background:' + taskBg + ';">' + esc(e.notes || '') + '</td>';
-        rows += '</tr>';
-        catRowIdx++;
-      });
-    });
-    
-  });
-
-  var LOGO = document.getElementById("appLogo").src;
-
-  var html = '<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
-    + '<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@400;600;700;900&display=swap" rel="stylesheet">'
-    + '<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Heebo,sans-serif;direction:rtl;padding:20px}'
-    + '.hd{display:flex;align-items:center;gap:16px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:16px}'
-    + '.hd img{width:55px;height:55px;object-fit:contain}'
-    + '.hd-mid{flex:1;text-align:center}'
-    + '.bh{font-size:10px;color:#C9A84C;letter-spacing:3px}'
-    + '.t1{font-family:"Frank Ruhl Libre",serif;font-size:24px;font-weight:900;color:#1A2B5E}'
-    + '.t2{font-size:10px;color:#666;margin-top:2px}'
-    + '.dt{font-size:13px;color:#333;text-align:left}'
-    + '.dt b{display:block;font-family:"Frank Ruhl Libre",serif;font-size:16px;color:#1A2B5E}'
-    + 'table{width:100%;border-collapse:collapse;margin-top:14px}'
-    + 'thead th{background:#1A2B5E;color:white;padding:7px 10px;font-size:11px;border:1px solid #ddd}'
-    + 'tbody tr:nth-child(even) td:not(:first-child){background:#F7F7F7}'
-    + '.ft{margin-top:16px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:"Frank Ruhl Libre",serif}'
-    + '</style></head><body>'
-    + '<div class="hd"><img src="' + LOGO + '" />'
-    + '<div class="hd-mid"><div class="bh">ב״ה | ימות המשיח</div><div class="t1">יומן עבודה</div>'
-    + '<div class="t2">' + instName() + '</div></div>'
-    + '<div class="dt"><b>' + dayLabel + '</b>' + today + '<small style="color:#888;font-size:11px;display:block">' + todayGreg + '</small></div></div>'
-    + '<table><thead><tr><th>קטגוריה</th><th>משימה</th><th>תת-משימה</th><th>הרחבה</th><th>כמות</th></tr></thead>'
-    + '<tbody>' + rows + '</tbody></table>'
-    // הסיכום סופר בדיוק את השורות שנבנו לטבלה, לא את כל ENTRIES
-    + '<div class="ft">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>'
-    + '<script>window.onload=function(){setTimeout(function(){window.print();},600);}<\/script>'
-    + '</body></html>';
-
-  // שם הקובץ = תאריך עברי + תאריך לועזי
   var fileTitle = "יומן עבודה " + today + " " + todayGreg;
-  // מזריק את הכותרת ל-html
-  html = html.replace('<meta charset="UTF-8">', '<meta charset="UTF-8"><title>' + fileTitle + '</title>');
+  toast("מכין PDF...");
+  _buildReportDiv(function (div) {
+    _renderReport(div).then(function (canvas) {
+      div.style.left = '-9999px';
+      _printCanvas(canvas, fileTitle);
+    }).catch(function (e) { _reportError(div, e); });
+  }, live);
+}
+/*  ⛔ מעטפת הדפסה לצילום ⛔ ואינה מסמך הדוח — ⚠️ אין בה טבלה, כותרת או
+ *  צבע: ⭐ כל מה שנראה בדף הוא הפיקסלים שנמדדו, ⛔ ולכן אין מה שייסחף. */
+function _printCanvas(canvas, title) {
+  var w = null;
+  try { w = window.open("", "_blank", "width=900,height=700"); } catch (e) { w = null; }
   // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נפלה בשקט
   // ("w is null") והמשתמש לא ידע למה לא קרה כלום.
-  var w = null;
-  try { w = window.open("","_blank","width=900,height=700"); } catch(e) { w = null; }
   if (!w || !w.document) {
     toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב");
     return;
   }
-  w.document.write(html);
+  w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
+    + '<title>' + esc(title) + '</title><style>@page{size:A4 portrait;margin:10mm}'
+    + 'html,body{margin:0;padding:0;background:#fff}img{width:100%;height:auto;display:block}'
+    + '</style></head><body><img alt="' + esc(title) + '" src="' + canvas.toDataURL('image/png') + '">'
+    + '<' + 'script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>'
+    + '</body></html>');
   w.document.close();
-  setTimeout(function(){ try { w.document.title = fileTitle; } catch(e){} }, 80);
+  setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
   toast("📄 PDF נפתח!");
 }
+
 // ── רשת ביטחון לרינדור הדוח ──
 // ‎#_rpDiv הוא פאנל לבן position:fixed שמוצג **לפני** הרינדור.
 // אם הרינדור זורק (אופליין ⇐ html2canvas לא נטען ⇐ ReferenceError, או כשל
@@ -4502,7 +4452,10 @@ function _renderReport(div){
   }
 }
 
-function _buildReportDiv(cb){
+/*  ⛔ `entries` אופציונלי ⛔ ואינו נקודת הפעלה שנייה — ⚠️ המשמיט מקבל את
+ *  רשומות היום, ⭐ והייצוא מוסר את רשומות הארכיון: ⛔ סינון קשיח ליום
+ *  הנוכחי היה מוציא דוח ריק לכל יום שאינו היום. */
+function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
   div.style.cssText='position:fixed;top:0;left:0;background:#fff;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
@@ -4512,24 +4465,10 @@ function _buildReportDiv(cb){
   var instTitle=instName();
   var logoEl=document.getElementById('appLogo')||document.querySelector('.hdr-logo');
   var logoUrl=logoEl?logoEl.src:'';
-  var catOrder2={};CATS.forEach(function(cat,ci){catOrder2[cat.letter]=ci;});
   var curKey = getCurrentDateKey();
-  var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  var sortedPDF=todayEntries.slice().sort(function(a,b){
-    var ca=catOrder2[a.cat]!==undefined?catOrder2[a.cat]:99;
-    var cb2=catOrder2[b.cat]!==undefined?catOrder2[b.cat]:99;
-    if(ca!==cb2)return ca-cb2;
-    var cat=CATS.find(function(c){return c.letter===a.cat;});
-    var ta=cat?cat.tasks.indexOf(a.task):-1; ta=ta===-1?999:ta;
-    var tb=cat?cat.tasks.indexOf(b.task):-1; tb=tb===-1?999:tb;
-    if(ta!==tb)return ta-tb;
-    var ci2=cat?CATS.indexOf(cat):-1;
-    var sk=ci2>=0?subKey(ci2,a.task):a.task;
-    var subs=SUBS[sk]||SUBS[a.task]||[];
-    var sa=subs.indexOf(a.sub); sa=sa===-1?999:sa;
-    var sb=subs.indexOf(b.sub); sb=sb===-1?999:sb;
-    return sa-sb;
-  });
+  var src = Array.isArray(entries) ? entries
+          : liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
+  var sortedPDF = tbSortEntries(src);
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
@@ -5362,26 +5301,7 @@ function renderArcDetail() {
   var d = days[arcSelDayKey];
   if (!d) { el.innerHTML = '<div class="empty">לא נמצא</div>'; return; }
 
-  var catOrder = {};
-  CATS.forEach(function(cat,ci){ catOrder[cat.letter] = ci; });
-
-  var sortedE = (d.entries||[]).slice().sort(function(a,b){
-    var ca = catOrder[a.cat] !== undefined ? catOrder[a.cat] : 99;
-    var cb = catOrder[b.cat] !== undefined ? catOrder[b.cat] : 99;
-    if (ca !== cb) return ca-cb;
-    var cat = CATS.find(function(c){ return c.letter === a.cat; });
-    var ta = cat ? cat.tasks.indexOf(a.task) : -1;
-    var tb = cat ? cat.tasks.indexOf(b.task) : -1;
-    ta = ta === -1 ? 999 : ta;
-    tb = tb === -1 ? 999 : tb;
-    if (ta !== tb) return ta - tb;
-    var ci2 = cat ? CATS.indexOf(cat) : -1;
-    var sk = ci2 >= 0 ? subKey(ci2, a.task) : a.task;
-    var subs = SUBS[sk] || SUBS[a.task] || [];
-    var sa = subs.indexOf(a.sub); sa = sa === -1 ? 999 : sa;
-    var sb = subs.indexOf(b.sub); sb = sb === -1 ? 999 : sb;
-    return sa - sb;
-  });
+  var sortedE = tbSortEntries(d.entries);
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
