@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="54-2026-09-02-2">
+<meta name="app-version" content="55-2026-09-02-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -213,6 +213,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ⛔ במסך צר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שב-320px חסרו לה
    39px, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן בפיקסל. */
 @media (max-width:359px){ .hdr-sub{font-size:8px;letter-spacing:0;} .hdr-logo-wrap{padding:0 12px;} }
+/* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
+   כאן לחלל שנשאר אחרי הלוגו ושורת «יחי» לכרטיס כולו, ⭐ ושני מרכזים במרחק
+   של עשרות פיקסלים נקראים כטעות. ⛔ הלוגו יוצא מהזרימה ונצמד לפינה, ⛔ ולא
+   מוקטן: ⚠️ הוא נשאר ממורכז לגוש הטקסט ולא לכרטיס.
+   ⛔ **ובמובייל אין לגעת** — ⚠️ שם הלוגו תופס אחוז גדול מהרוחב, ⭐ ומרכוז
+   לכרטיס היה מציב את הכותרת מתחתיו. ⛔ והסף נמדד: ב-700px רוחב הטקסט
+   ורוחב הלוגו אינם נוגעים. */
+@media (min-width:700px){
+  .hdr-top{position:relative;}
+  .hdr-logo-wrap{position:absolute;top:0;bottom:0;right:0;}
+  .hdr-mid{padding:0 18px;}
+}
 
 /* ניווט לעומק בארכיון */
 .arc-btn{background:var(--bgcard);border:2px solid var(--border);border-radius:12px;padding:10px 14px;
@@ -571,6 +583,14 @@ var _sb = null;
 // ===== בריחת HTML — esc() (סבב 8, זהה לשלושת הפרויקטים) =====
 // כל ערך שמקורו בנתוני משתמש (משימה, תת-משימה, הרחבה, שם קטגוריה) ונכנס
 // ל-innerHTML חייב לעבור כאן. משימה עם '<' או '&' נכנסה עד היום גולמית.
+/*  ⛔ משווה אחד ברמת המודול (סבב 85) — ⚠️ `localeCompare` בונה משווה חדש
+ *  בכל קריאה, ⛔ ובתוך `.sort()` זה קורה O(n log n) פעמים: ⭐ אובייקט יקר
+ *  נבנה **פעם אחת**, ⛔ ולא בגוף פונקציה שנקראת יותר מפעם אחת.
+ *  ⚠️ ובדפדפן שאין בו `Intl.Collator` — נפילה-חזרה ל-`localeCompare` עם
+ *  אותו `he` מפורש, ⛔ שהיא בדיוק ההתנהגות שהייתה כאן עד היום. */
+var _heColl = null;
+try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
+var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
@@ -3395,7 +3415,7 @@ function tbSortEntries(list) {
     var ra = rank(a), rb = rank(b);
     for (var i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     var na = String((a && a.notes) || ''), nb = String((b && b.notes) || '');
-    if (na !== nb) return na.localeCompare(nb, 'he');
+    if (na !== nb) return HE.compare(na, nb);
     var qa = num(a), qb = num(b);
     if (qa !== qb) return qa - qb;
     var ia = String((a && a.id) != null ? a.id : ''), ib = String((b && b.id) != null ? b.id : '');
