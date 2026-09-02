@@ -1,8 +1,8 @@
 /* ───────────────────────────────────────────────────────────────────────────
    test_yeshiva.mjs — החלפת ישיבה, ומסך הבחירה
    ───────────────────────────────────────────────────────────────────────────
-   **מה נאכף:** ההחלפה בין שני המוסדות עוברת בלוגו ⟵ `openModal` ⟵ `ask`
-   ⟵ איפוס המצב הפר-מוסדי ⟵ `selectYeshiva`, **בסדר הזה**; ⛔ ומסך הבחירה
+   **מה נאכף:** ההחלפה בין שני המוסדות עוברת בלוגו ⟵ `openModal` ⟵ איפוס
+   המצב הפר-מוסדי ⟵ `selectYeshiva`, **בסדר הזה** ⛔ ובלי אישור שני; ⛔ ומסך הבחירה
    נושא את חמשת ערכי האייקון — שני צבעי המדרג, זווית המדרג, צבע הדיו,
    וארבעת פסי הסמל — ⛔ כפי שהם מוצהרים ב-`APP` שב-`gen-icons.mjs`.
 
@@ -92,14 +92,18 @@ function audit(root) {
   if (!/openModal\(/.test(picker))
     v.push({ kind: 'modal', msg: 'הבורר אינו נפתח ב-`openModal`' });
 
-  /* ג. סדר המעבר — אישור · איפוס · ואז ההחלפה */
+  /*  ג. סדר המעבר — איפוס ואז ההחלפה, ⛔ ובלי אישור שני (סבב 82):
+      ⚠️ הבחירה במוסד בבורר **היא** האישור, ⭐ ושני דיאלוגים לפעולה אחת
+      מלמדים ללחוץ «כן» בלי לקרוא — ⛔ ואז גם האישור שכן חשוב נלחץ כך. */
   const conf = bodyOf(page, 'ysConfirmSwitch');
-  const iAsk = conf.indexOf('ask(');
   const iRst = conf.indexOf('ysResetTenantState()');
   const iSel = conf.indexOf('selectYeshiva(');
-  if (iAsk < 0 || iRst < 0 || iSel < 0 || !(iAsk < iRst && iRst < iSel))
+  if (iRst < 0 || iSel < 0 || !(iRst < iSel))
     v.push({ kind: 'order', msg:
-      `הסדר במעבר — ask ${iAsk} · איפוס ${iRst} · selectYeshiva ${iSel}; הצפוי עולה` });
+      `הסדר במעבר — איפוס ${iRst} · selectYeshiva ${iSel}; הצפוי עולה` });
+  if (/(?<![\w$])ask\s*\(/.test(conf))
+    v.push({ kind: 'order', msg:
+      'אישור שני במעבר — נמדדה קריאת `ask` ב-`ysConfirmSwitch` והצפוי אפס' });
 
   /* ד. האיפוס מכסה את כל המצב הפר-מוסדי */
   const reset = bodyOf(page, 'ysResetTenantState');
@@ -159,7 +163,7 @@ t(n++, !base.some((x) => x.kind === 'trigger' || x.kind === 'route'),
 t(n++, !base.some((x) => x.kind === 'modal'),
   `ב. הבורר נפתח ב-openModal — מיכל אחד ומסלול סגירה יחיד ${of('modal')}`);
 t(n++, !base.some((x) => x.kind === 'order'),
-  `ג. הסדר במעבר — אישור, אחריו איפוס, ואחריו ההחלפה ${of('order')}`);
+  `ג. הסדר במעבר — איפוס ואז ההחלפה, ובלי אישור שני ${of('order')}`);
 t(n++, !base.some((x) => x.kind === 'reset'),
   `ד. ${TENANT_STATE.length} שמות המצב הפר-מוסדי מאופסים ומוצהרים בקובץ ${of('reset')}`);
 t(n++, !base.some((x) => x.kind === 'palette'),
@@ -191,8 +195,22 @@ mutate('מ1 · מוטציה: שורת האיפוס של אות הפולינג נ
   (s) => s.replace('  _lastKnownTimestamp = 0;\n', ''), ['reset']);
 
 mutate('מ2 · מוטציה: האיפוס אחרי ההחלפה במקום לפניה — טענה ג נופלת',
-  (s) => s.replace('    ysResetTenantState();\n    selectYeshiva(y, true);',
-                   '    selectYeshiva(y, true);\n    ysResetTenantState();'), ['order']);
+  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
+                   '  selectYeshiva(y, true);\n  ysResetTenantState();'), ['order']);
+
+/*  ⛔ החזרת האישור השני היא מוטציה על המנגנון — ⚠️ הכפתור ממשיך לעבוד,
+ *  ⭐ ולכן רק שער תופס את הדיאלוג הכפול שחזר. */
+mutate('מ2ב · מוטציה: אישור שני חוזר ל-ysConfirmSwitch — טענה ג נופלת',
+  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
+                   "  if (!ask('החלפת ישיבה', 'להחליף?')) return;\n" +
+                   '  ysResetTenantState();\n  selectYeshiva(y, true);'), ['order']);
+
+/*  ⭐ מוטציית-נגד: שורה שנוספה בלי `ask` ⛔ אינה מפילה — ⚠️ הנמדד הוא
+ *  הדיאלוג הכפול, ⛔ ולא כל תוספת לגוף הפונקציה. */
+mutate('נ2ב · ⭐ מוטציית-נגד: שורה שנוספה בלי אישור ⛔ אינה מפילה',
+  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
+                   "  console.log('switch');\n" +
+                   '  ysResetTenantState();\n  selectYeshiva(y, true);'), ['__none__']);
 
 mutate('מ3 · מוטציה: הבורר עוקף את openModal — טענה ב נופלת',
   (s) => s.replace("  openModal('החלפת ישיבה', body, '');",
@@ -216,9 +234,11 @@ mutate('נ1 · ⭐ מוטציית-נגד: שורת איפוס **נוספת** ⛔
   (s) => s.replace('  _tombPrunePending = false;\n',
                    '  _tombPrunePending = false;\n  _plBusy = false;\n'), ['__none__']);
 
-mutate('נ2 · ⭐ מוטציית-נגד: ניסוח שאלת האישור ⛔ אינו מפיל את טענה ג',
-  (s) => s.replace('? הנתונים של המוסד הנוכחי נשארים במכשיר.',
-                   '? הנתונים של המוסד הנוכחי נשמרים במכשיר ואינם נמחקים.'), ['__none__']);
+/*  ⭐ מוטציית-נגד חיה: ניסוח ההודעה שאחרי ההחלפה — ⛔ מחרוזת שקיימת בקובץ,
+ *  ⚠️ ולא כזו שנעלמה ממנו: ⛔ מוטציה שהחלפתה אינה מחליפה דבר אינה רצה. */
+mutate('נ2 · ⭐ מוטציית-נגד: ניסוח ההודעה שאחרי ההחלפה ⛔ אינו מפיל את טענה ג',
+  (s) => s.replace("toast('הוחלף ל' + ysNameOf(y));",
+                   "toast('המוסד הוחלף ל' + ysNameOf(y));"), ['__none__']);
 
 rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${fail ? '❌' : '✅'} סבב 81 (החלפת ישיבה ומסך הבחירה) — ${pass} טענות עברו, ${fail} נכשלו`);
