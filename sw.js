@@ -5,7 +5,7 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בארבע האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'yoman-avoda-v54'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
+var CACHE_NAME = 'yoman-avoda-v56'; // ⚠️ לעדכן יחד עם <meta name="app-version"> ב-index.html
 
 // קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
@@ -21,8 +21,7 @@ var CORE = [
 // מהריפו. חייב להיות זהה לתגיות שב-index.html.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-  'https://cdn.jsdelivr.net/npm/@hebcal/core@4.5.1/dist/hdate-bundle.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
 ];
 
 var SW_OFFLINE_HTML =
