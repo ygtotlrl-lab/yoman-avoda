@@ -77,7 +77,7 @@ const APP = {
           'test_swcore.mjs',
           'test_build.mjs',
           'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
-          'test_md.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
+          'test_md.mjs', 'test_orphans.mjs', 'test_removals.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
           'test_stage_a.mjs', 'test_stage_b.mjs',
           'test_archive.mjs', 'test_unify.mjs',
           'test_hotwin.mjs', 'test_cron.mjs',
