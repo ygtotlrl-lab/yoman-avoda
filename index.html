@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="49-2026-09-02-1">
+<meta name="app-version" content="50-2026-09-02-2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -5868,7 +5868,7 @@ var YESHIVOT = [
   { id: 'ramataviv', name: 'רמת אביב' },
 ];
 function ysNameOf(y) {
-  for (var i = 0; i < YESHIVOT.length; i++) if (YESHIVOT[i].id === y) return YESHIVOT[i].name;
+  for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i].name;
   return '';
 }
 
@@ -5891,7 +5891,7 @@ function ysResetTenantState() {
 function ysPickYeshiva() {
   var body = '<div style="display:flex;flex-direction:column;gap:10px">';
   for (var i = 0; i < YESHIVOT.length; i++) {
-    var cur = YESHIVOT[i].id === YESHIVA;
+    var cur = idEq(YESHIVOT[i].id, YESHIVA);
     body += '<button class="btn-sm" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '"' +
             ' style="background:var(--primary);color:#fff;padding:14px;font-size:16px;font-weight:800' +
             (cur ? ';opacity:.55' : '') + '">' + esc(YESHIVOT[i].name) +
