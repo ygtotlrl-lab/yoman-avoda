@@ -136,10 +136,13 @@ function env(total, mode) {
   sb.globalThis = sb;
   vm.createContext(sb);
   for (const d of ['var TB_ROWS = true;', 'var TB_ARC_UNIFIED = true;',
-                   'var TB_ROW_TABLES = ', 'var TB_ROWS_PAGE = ', 'var _tbRemote = ']) {
+                   'var TB_ROW_TABLES = ', 'var YS_ROWS_PAGE = ', 'var YS_ROWS_CAP = ',
+                   'var _tbRemote = ']) {
     vm.runInContext(cutVar(d), sb);
   }
-  for (const n of ['entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs',
+  /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
+   *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
+  for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs',
                    'tbSortRows', 'tbTableOf', 'tbArchivedFlag', 'tbRowsGet']) {
     vm.runInContext(cut(n), sb, { filename: n + '.js' });
   }
@@ -147,8 +150,8 @@ function env(total, mode) {
   return { sb, st };
 }
 
-const PAGE = Number((cutVar('var TB_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
-assert(PAGE > 0, '2א · TB_ROWS_PAGE מוגדר (' + PAGE + ')');
+const PAGE = Number((cutVar('var YS_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
+assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(PAGE + 250);
   const r = await e.sb.tbRowsGet('tb_entries');
@@ -200,7 +203,7 @@ console.log('— מוטציות —');
 }
 {
   const e = env(PAGE + 250);
-  vm.runInContext('TB_ROWS_PAGE = 1e9;', e.sb);
+  vm.runInContext('YS_ROWS_PAGE = 1e9;', e.sb);
   const r = await e.sb.tbRowsGet('tb_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');

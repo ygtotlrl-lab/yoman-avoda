@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="57-2026-09-02-1">
+<meta name="app-version" content="69-2026-09-03-12">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -140,6 +140,10 @@
 <style>
 
 :root {
+  /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
+   *  אין סרגל תחתון קבוע. */
+  --toast-bottom:26px;
+
   --primary:#1E6FBF; --primaryl:#3A8FDF; --primaryd:#0D4A8A;
   --accent:#F0A500; --accentl:#FFB930; --accentd:#C07800;
   --bg:#F0F4FA; --bgsec:#E4EBF5; --bgcard:#FFFFFF;
@@ -366,11 +370,63 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
 /* טוסט */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(100px);
-  background:var(--primary);color:white;padding:10px 20px;border-radius:28px;font-size:13px;font-weight:700;
-  transition:transform 0.3s;z-index:1000;box-shadow:0 4px 20px rgba(30,111,191,0.4);}
-.toast.show{transform:translateX(-50%) translateY(0);}
 
+/* ══════════════════════════════════════════════════════════════════════════
+   מציג טבלת התשתית — פרטי ליומן
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ אין לו שורה בטבלת התשתית — ⚠️ הוא אינו יכולת תשתיתית אלא מסך תצוגה
+   של האפליקציה הזו, ⭐ ולוגיקה עסקית אינה נכנסת לטבלה.
+   ⛔ והתוכן נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד היה מקור אמת שני,
+   ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
+#modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
+.inf{font-family:'Heebo',sans-serif;color:var(--text)}
+.inf-hd{background:linear-gradient(135deg,var(--primary) 0%,#1558a0 100%);color:#fff;
+  border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.inf-hd b{font-size:15px;font-weight:800;display:block}
+.inf-hd span{font-size:12px;opacity:.85}
+.inf-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 2px 10px var(--shadow);padding:12px 14px;margin-bottom:14px}
+.inf-card>h4{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--primaryd)}
+.inf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.inf-bar button{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bgsec);color:var(--text);cursor:pointer}
+.inf-cat{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.inf-cat>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--bgsec);
+  font-weight:800;font-size:13px;color:var(--primaryd)}
+.inf-cat>summary::-webkit-details-marker{display:none}
+.inf-wrap{overflow-x:auto}
+.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
+.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:6px 8px;
+  vertical-align:top;text-align:right;line-height:1.6;overflow-wrap:anywhere}
+.inf-tbl th{background:var(--bgsec);font-weight:800;font-size:11.5px;color:var(--textmid)}
+.inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
+.inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
+.inf-dot{display:inline-block;width:11px;height:11px;border-radius:50%}
+.inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
+.inf-mark{font-weight:800;color:var(--primary)}
+.inf code{background:var(--bgsec);border-radius:5px;padding:0 4px;font-size:.94em}
+.inf-li{border-top:1px solid var(--border);padding:7px 2px;font-size:12px;line-height:1.7}
+.inf-li:first-child{border-top:0}
+.inf-li b{color:var(--primaryd)}
+.inf-tag{display:inline-block;background:var(--bgsec);border-radius:6px;padding:1px 7px;
+  font-size:11px;font-weight:700;margin-inline-start:4px}
+.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:12px;padding:14px;
+  font-size:13px;color:#8a2b2b;line-height:1.8}
+/* ══════════════════════════════════════════════════════════════════════════ */
+/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
+   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
+   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+   ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
+      אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
+      ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
+   ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
+      תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
+.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+.toast.bad{background:#b91c1c;color:#fff}
+.toast.good{background:#15803d;color:#fff}
+@keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
    הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים לא נשענים על
@@ -459,6 +515,9 @@ body.locked{overflow:hidden}
 
   <!-- ENTRY -->
   <div class="panel" id="panel-entry" style="display:block">
+    <div class="inf-bar" style="justify-content:flex-start;margin-bottom:12px">
+      <button data-act="inf-open">📊 טבלת התשתית</button>
+    </div>
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -556,7 +615,7 @@ body.locked{overflow:hidden}
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toasts"></div>
 
 <script>
 
@@ -634,6 +693,47 @@ function errMsg(e) {
   return isNetErr(e) ? MSG_OFFLINE : ('שגיאה: ' + ((e && (e.message || e.code)) || e));
 }
 /* ═══════════════ סוף מודול עוזרי הרשת ══════════════════════════════════ */
+/* ═══ משיכה מסוננת בשרת — מודול משותף (סבב 87) ════════════════════════════
+   ⛔ מסך מושך **רק את החלון שהוא מציג** — ⚠️ הנימוק המדוד: מסך ההשגחה מציג
+      חודש עברי אחד ⛔ ומשך **18,085 סימונים** בכל כניסה אליו, ⭐ ואת כולם
+      סינן בדפדפן. ⛔ סינון שרץ אחרי ההורדה אינו חוסך דבר — ⚠️ הרשת כבר
+      שילמה, ⭐ והמסך ממתין לה.
+   ⛔ שלושה מסלולים מושכים **מלא**, ⛔ ואין לצמצם אותם — ⚠️ הסנכרון והמיזוג,
+      שמנוע ההכרעה שלו חייב את כל הרשומות ⛔ אחרת «אין אצלי» נקרא «נמחקה» ·
+      הגיבוי היומי, ⛔ שמגבה טבלה ולא חלון · והחלון החם, ⚠️ שהוא מנגנון
+      פינוי נפרד. ⭐ ולכן `win` הוא פרמטר **אופציונלי** — ⛔ מי שאינו מעביר
+      אותו מקבל בדיוק את ההתנהגות הקודמת.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ `mkQuery` היא פונקציה ⛔ ולא בונה מוכן — ⚠️ בונה PostgREST נצרך בשליחה,
+      ⭐ וכל עמוד חייב אחד טרי משלו.
+   ⛔ שליפה בעמודים ולא בבקשה אחת — ⚠️ גוף תשובה שגדל עם הנתונים נחתך,
+      ⛔ ו-PostgREST יודע להגביל את מספר השורות (`db-max-rows`): ⭐ ביום
+      שיוגדר, התשובה תיחתך **בשקט**. ⛔ ותשובה חלקית שנראית שלמה גרועה
+      מ«אין ראיה» — ⚠️ ולכן עמוד שנכשל מחזיר `null` ⛔ ולא את מה שהספיק.
+   ⛔ ותקרת בטיחות ללולאה שתלויה בגודל התשובה — ⚠️ מסד שמחזיר עמוד מלא
+      לנצח תולה את הדף.
+   ═══════════════════════════════════════════════════════════════════════ */
+var YS_ROWS_PAGE = 1000;
+var YS_ROWS_CAP = 500000;
+async function _ysRowsPaged(mkQuery, order, win) {
+  var out = [], from = 0;
+  for (;;) {
+    var q = mkQuery();
+    if (win && win.col) {
+      if (win.from) q = q.gte(win.col, win.from);
+      if (win.to) q = q.lte(win.col, win.to);
+    }
+    if (order) q = q.order(order, { ascending: true });
+    var res = await withTimeout(q.range(from, from + YS_ROWS_PAGE - 1));
+    if (!res || res.error || !Array.isArray(res.data)) return null;
+    out = out.concat(res.data);
+    if (res.data.length < YS_ROWS_PAGE) return out;
+    from += YS_ROWS_PAGE;
+    if (from > YS_ROWS_CAP) return out;
+  }
+}
+/* ═══════════════ סוף מודול משיכה מסוננת בשרת ═══════════════════════════ */
 /* ═══ שער מצב הרשת — מודול משותף (סבב 84) ═════════════════════════════════
    ⛔ מודול נפרד ⛔ ולא חלק מעוזרי הרשת — ⚠️ הוא חי בשלוש אפליקציות ואינו
       קיים בגיוס, ⭐ ובלוק אחד לשתי רמות קיום הוא בלוק שאינו זהה.
@@ -1624,7 +1724,7 @@ var BK_CFG = {
        ל-`kv_backup`, כולל השורות המדוגלות `archived`. שאר המפתחות
        נשארים מקורות `kv` — זה ביתם היחיד בענן. */
     var out = [{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',
-                 eq: ['yeshiva', YESHIVA], order: 'rec_key' }];
+                 eq: ['yeshiva', YESHIVA], order: 'rec_key', ts: 'updated_at' }];
     return out.concat(['tb_cats', 'tb_subs', 'tb_subs_meta']
       .map(function (k) { return { kind: 'kv', table: KV_TABLE, name: k }; }));
   }
@@ -1737,6 +1837,73 @@ async function logFlush() {
   return sent;
 }
 
+/*  ⛔⛔ שלוש שכבות הגיבוי (סבב 87ג) — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
+ *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הקיים**
+ *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
+ *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
+ *  אותה יכולת שחזור בשבריר. */
+var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
+var BK_ANCHOR_PREFIX = 'ANCHOR:';
+var BK_DIFF_PREFIX = 'DIFF:';
+/*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
+ *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
+function _bkMarkKey(bkey) { return 'bk_wm_' + bkey; }
+function _bkSetMark(bkey, v) {
+  if (v == null) return;
+  lsSet(_bkMarkKey(bkey), String(v));
+  lsSet('bk_anch_' + bkey, String(Date.now()));
+}
+/*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
+ *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
+ *  היה נשבר בהשוואת מחרוזות. */
+function _bkMaxTs(rows, col) {
+  var mx = null;
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i] ? rows[i][col] : null;
+    if (v == null) continue;
+    if (mx === null) { mx = v; continue; }
+    if (typeof v === 'number' ? v > mx : String(v) > String(mx)) mx = v;
+  }
+  return mx;
+}
+/*  ⛔ איזו שכבה רצה היום — ⚠️ עוגן כשאין חותמת מים, כשאין חותמת עוגן,
+ *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
+function _bkLayer(bkey, s) {
+  var wm = lsGet(_bkMarkKey(bkey), '');
+  var at = parseInt(lsGet('bk_anch_' + bkey, '0'), 10) || 0;
+  if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
+    return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
+  return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
+           win: { col: s.ts, from: wm } };
+}
+/*  ⛔⛔ הקריאה בעימוד, ⛔ ואימות מול מונה השרת — ⚠️ תשובה שנחתכה נראית
+ *  בדיוק כמו תשובה שלמה, ⭐ והדרך היחידה לדעת היא לשאול את השרת כמה שורות
+ *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
+async function _bkReadRows(c, s, win) {
+  var sel = s.cols || '*';
+  var rows = await _ysRowsPaged(function () {
+    var q = c.from(s.name).select(sel);
+    if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+    return q;
+  }, s.order || null, win);
+  if (!rows) return null;
+  try {
+    var cq = c.from(s.name).select(sel, { count: 'exact', head: true });
+    if (s.eq) cq = cq.eq(s.eq[0], s.eq[1]);
+    if (win && win.col) {
+      if (win.from) cq = cq.gte(win.col, win.from);
+      if (win.to) cq = cq.lte(win.col, win.to);
+    }
+    var cr = await withTimeout(cq);
+    if (!cr || cr.error || typeof cr.count !== 'number') return null;
+    if (cr.count !== rows.length) {
+      console.error('[bk] הגיבוי נחתך — ' + s.name + ': נמדדו ' + rows.length +
+                    ' שורות והשרת מדווח ' + cr.count);
+      return null;
+    }
+  } catch (e) { return null; }
+  return rows;
+}
 /* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
 // מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
 async function bkMaybeDaily() {
@@ -1764,6 +1931,13 @@ async function bkMaybeDaily() {
       //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
       var bkey = pre + (s.key || s.name);
       dailyKeys.push(bkey);
+      /*  ⛔ שתי השכבות נכנסות לרשימת-ההיתר של הגריעה (סבב 87ג) — ⚠️ מפתח
+       *  שאינו שם אינו מתפנה לעולם, ⭐ ו-`ANCHOR:`/`DIFF:` הם מפתחות
+       *  חדשים: ⛔ בלעדיהם הם היו נצברים בלי גבול. */
+      if (s.kind !== 'kv') {
+        dailyKeys.push(BK_ANCHOR_PREFIX + bkey);
+        dailyKeys.push(BK_DIFF_PREFIX + bkey);
+      }
       /* ⭐ דגל-יום פר-מקור (סבב 62) — מקור שכבר גובה היום מדולג, גם
          כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל החזיק את כל
          השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
@@ -1777,24 +1951,26 @@ async function bkMaybeDaily() {
         if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
-        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
-        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
-        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var q = c.from(s.name).select(s.cols || '*');
-        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
-        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
-        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
-        if (s.order) q = q.order(s.order);
-        var rt = await q;
-        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; failed.push(bkey); continue; }
-        var rows = rt.data;
+        /*  ⛔⛔ שכבת הגיבוי — עוגן שבועי מלא, ודיפרנציאלי בכל שאר הימים
+         *  (סבב 87ג): ⚠️ הנימוק המדוד — הקריאה הייתה בקשה **אחת** בלי
+         *  עימוד, ⛔ ו-Supabase מחזיר 1,000 שורות כברירת מחדל **בלי
+         *  שגיאה**: ⭐ `ys_marks_rows` גובתה 1,000 מתוך 18,085, ⛔ כלומר
+         *  94.5% ממנה מעולם לא גובו — ⚠️ והכשל היה שקט לחלוטין. */
+        var layer = _bkLayer(bkey, s);
+        var rows = await _bkReadRows(c, s, layer.win);
+        if (rows === null) { ok = false; failed.push(bkey); continue; }
+        bkey = layer.prefix + bkey;
         // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
         //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
         //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
         if (secrets.length) rows = rows.filter(function (r) {
           return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
         });
+        /*  ⛔ דיפרנציאלי ריק אינו נכתב ⛔ ואינו כישלון — ⚠️ יום שלא השתנה
+         *  בו דבר הוא המצב הרגיל, ⭐ ועותק ריק בכל לילה מציף את הפינוי. */
+        if (layer.diff && !rows.length) { same++; continue; }
         val = JSON.stringify(rows);
+        if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
@@ -2318,6 +2494,11 @@ var DOM_ACTIONS = {
    *  ואינו נבנה מחדש, ⛔ אבל כפתורי הבורר כן: ⭐ מאזין פר-כפתור היה צריך
    *  חיווט מחדש בכל פתיחה. */
   'open-yeshiva-picker': function () { ysPickYeshiva(); },
+  /*  ⛔ שלוש הפעולות של מציג טבלת התשתית עוברות בדלגציה — ⚠️ הכפתורים
+   *  נבנים מחדש בכל ציור של המודאל, ⭐ ומאזין פר-כפתור היה צריך חיווט
+   *  מחדש בכל פעם. */
+  'inf-open':       function () { ysInfraOpen(); },
+  'inf-all':        function (el) { ysInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { ysConfirmSwitch(el.getAttribute('data-yeshiva')); },
   /*  ⚠️ הבזק הכפתור רץ רק כשאין מסך מגע — ⛔ במכשיר מגע הוא נשאר דלוק
    *  אחרי הלחיצה, מפני שאין `mouseleave` שמסיר אותו. */
@@ -2775,26 +2956,6 @@ var PK_ENTRY = 'entry:', PK_ARC = 'arc:';
    מוסד: זהו מזהה של המכשיר, לא של המוסד שנבחר בו כרגע. */
 var DEV_CFG = { key: 'tb_device_id' };
 
-/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _deviceIdMem = null;
-function getDeviceId() {
-  var id = lsGet(DEV_CFG.key, null);
-  if (!id) {
-    id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(DEV_CFG.key, id);
-  }
-  _deviceIdMem = id;
-  return id;
-}
-function _randDeviceId() {
-  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
-  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
-  return id;
-}
-/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
    קריאה וכתיבה של מפתחות `kv` — הטבלה היא פר-מוסד
@@ -2935,6 +3096,26 @@ function prunePastTombstones(arr, nowTs) {
 //    המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
 //    יותר. זו העדפה מכוונת — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי
 //    24 שעות, בעוד שעריכה שנמחקת בשקט אינה משאירה עקבות.
+/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
+   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _deviceIdMem = null;
+function getDeviceId() {
+  var id = lsGet(DEV_CFG.key, null);
+  if (!id) {
+    id = _deviceIdMem || _randDeviceId();
+    lsSetRaw(DEV_CFG.key, id);
+  }
+  _deviceIdMem = id;
+  return id;
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 /* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -3173,7 +3354,6 @@ var TB_ARC_UNIFIED = true;
 var TB_ARC_LEGACY_WRITE = false;
 var TB_KV_LEGACY_WRITE = false;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
-var TB_ROWS_PAGE = 1000;
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
 function tbTableOf(kvKey) {
   return (TB_ARC_UNIFIED && kvKey === 'tb_archive') ? 'tb_entries' : TB_ROW_TABLES[kvKey];
@@ -3269,31 +3449,19 @@ async function tbRowsGet(kvKey) {
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    // ⛔ שליפה בעמודים ולא בבקשה אחת (סבב 55) — זה אותו שיקול בדיוק שהוליד
-    //    את החלוקה למנות בכתיבה: גוף בקשה שגדל עם הנתונים נדחה או נחתך.
-    //    ⚠️ ובנוסף PostgREST יודע להגביל את מספר השורות בתשובה
-    //    (`db-max-rows`) — ⚠️ **נמדד ב-26.8 שהפרויקט הזה אינו מגדיר אותו**,
-    //    ⛔ אבל זו הגדרת שרת ולא חוזה: ביום שתוגדר, התשובה תיחתך **בשקט**.
-    //    ⛔ ותשובה חלקית שנראית שלמה גרועה מ«הענן ריק» — היא נקראת כאמת.
-    var rows = [], fromIx = 0;
-    for (;;) {
+    /* ⭐ השליפה המסוננת (סבב 32) — זו היכולת שהחליפה את מנגנון הארכוב: במקום
+       להעביר את הישן לטבלה אחרת כדי לא למשוך אותו, מושכים רק את הצד הנכון
+       של הדגל. ⛔ ובטבלה הישנה אין עמודת `archived`, ולכן התנאי מותנה ביעד.
+       ⛔ **וזה החלון של האפליקציה הזו, ⛔ ולא טווח תאריכים** — ⚠️ ל-`tb_entries`
+       אין עמודת תאריך בת-סינון: `gdate` מלאה ב-351 שורות מתוך 2,483
+       ⛔ ובשני כתיבים שונים, ⭐ ולכן `.gte` עליה היה מחזיר תמונה חלקית
+       שנראית שלמה. ⚠️ החלון כאן הוא **הדגל**, והוא מפריד 2,108 מ-375. */
+    var rows = await _ysRowsPaged(function () {
       var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA);
-      // ⭐ השליפה המסוננת (סבב 32) — זו היכולת שהחליפה את מנגנון הארכוב: במקום
-      //    להעביר את הישן לטבלה אחרת כדי לא למשוך אותו, מושכים רק את הצד הנכון
-      //    של הדגל. ⛔ ובטבלה הישנה אין עמודת `archived`, ולכן התנאי מותנה ביעד.
       if (t === 'tb_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
-      var res = await withTimeout(q.order('rec_key', { ascending: true })
-        .range(fromIx, fromIx + TB_ROWS_PAGE - 1));
-      // ⛔ עמוד שנכשל מחזיר «אין ראיה» ולא את מה שהספיק להגיע (סבב 55) —
-      //    נפילה-חזרה לבלוק ה-kv עדיפה על תמונה חסרה שנראית שלמה.
-      if (!res || res.error || !Array.isArray(res.data)) return { ok: false, data: null };
-      rows = rows.concat(res.data);
-      if (res.data.length < TB_ROWS_PAGE) break;
-      fromIx += TB_ROWS_PAGE;
-      // ⛔ תקרת בטיחות (סבב 55) — לולאה שתלויה בגודל התשובה חייבת גבול
-      //    עליון משלה, אחרת מסד שמחזיר עמוד מלא לנצח תולה את הדף.
-      if (fromIx > 500000) break;
-    }
+      return q;
+    }, 'rec_key', null);
+    if (!rows) return { ok: false, data: null };
     var map = {}, out = [];
     rows.forEach(function (r) {
       if (!r || !r.data) return;
@@ -3624,12 +3792,28 @@ function arcCleanupCorrupted() {
 function tbSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
+/*  ⛔⛔ מזהה ההקשר הפעיל (סבב 87ג) — ⚠️ הנימוק המדוד: `syncFromCloud` היא
+ *  מחזור **קרא ← מזג ← דחוף** עם כמה הלוך-ושוב לרשת, ⭐ והמשתמש יכול
+ *  להחליף מוסד באמצע: ⛔ מאותו רגע `KV_TABLE` ו-`LS` מצביעים על החדש
+ *  והזיכרון עדיין מחזיק את הישן, ⚠️ וכל כתיבה שאחריו כותבת את נתוני
+ *  המוסד הקודם תחת החדש. ⛔ **וזה לא תיאורטי** — ⭐ נמדד במסד: 185 מ-187
+ *  ארכיוני רמת אביב היו של ראשון, 1,062 רשומות זהות, ו-`tb_subs` נדרס
+ *  לגמרי (5,840 בתים, אותו `md5`).
+ *  ⭐ המונה מקודם בכל החלפה, ⛔ וכל מחזור שקורא מהזיכרון לוכד אותו בכניסה
+ *  ⛔ ובודק אותו לפני כל כתיבה: ⚠️ השוואת `YESHIVA` לבדה אינה מספיקה —
+ *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
+var _tbEpoch = 0;
+function ysTenantEpoch() { return _tbEpoch; }
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
   toast("🔄 מסנכרן...", 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
+  /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
+   *  אחרי כל `await`, ⭐ שזו הנקודה היחידה שבה ההקשר יכול להתחלף. */
+  var _ep = ysTenantEpoch();
+  var stale = function () { return _ep !== ysTenantEpoch(); };
   async function pull(key, label) {
     var r = await sbGetResult(key);
     if (!r.ok) failed.push(label);
@@ -3642,6 +3826,9 @@ async function syncFromCloud() {
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudCats && cloudCats.length) {
       CATS = mergeCats(CATS, cloudCats);
       lsSet('tb_cats'+LS, JSON.stringify(CATS));
@@ -3651,6 +3838,9 @@ async function syncFromCloud() {
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
       var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
       SUBS = ms.subs; SUBS_META = ms.meta;
@@ -3666,6 +3856,9 @@ async function syncFromCloud() {
        לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
        את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
     var _rowsE = await tbRowsGet('tb_entries');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsE.ok) failed.push('רשומות');
     else {
     var cloudEntries = _rowsE.data;
@@ -3692,6 +3885,9 @@ async function syncFromCloud() {
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
     var _rowsA = await tbRowsGet('tb_archive');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsA.ok) failed.push('ארכיון');
     else {
     hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
@@ -4422,10 +4618,10 @@ function clearAll() {
   });
 }
 /* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-/*  ⛔ הארגומנט השני של `toast` נבדל בין הריפו — ⚠️ בשלוש הוא **משך** בזמן,
- *  ⛔ ובגיוס הוא **שם מחלקה**: ⭐ ולכן הערך יושב כאן, ⛔ וגוף `lsToast` זהה
- *  בית-לבית בארבעתן. */
-var LS_TOAST = { arg: function (dur) { return dur || 5000; } };
+/*  ⛔ החתימה `toast(msg, dur, kind)` זהה בארבעתן (סבב 87) — ⚠️ ומה שנשאר
+ *  נבדל הוא **שם המחלקה** בלבד: ⭐ המשך הוא ערך משותף שיושב בבלוק, ⛔ ולכן
+ *  גוף `lsToast` זהה בית-לבית בארבעתן. */
+var LS_TOAST = { kind: '' };
 /* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
    ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
       ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
@@ -4478,7 +4674,29 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
-function lsToast(msg, dur) { try { toast(msg, LS_TOAST.arg(dur)); } catch (e) {} }
+/*  ⛔ `div` לכל הודעה, ⛔ ולא אלמנט קבוע אחד — ⚠️ הנימוק המדוד: בשלוש
+ *  מהן הטוסט היה אלמנט יחיד, ⭐ והודעה שנייה דרסה את הראשונה: ⛔ «נשמר»
+ *  ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד, ⚠️ ומי שקרא את המסך לא ידע
+ *  שהייתה שנייה. ⛔ `kind` הוא שם מחלקה ⛔ ולא משך — ⚠️ ומי שאין לו ערך
+ *  מוסר `null`; ⭐ והמשך יושב ב-`TOAST_DEFAULT_MS`, ⛔ הערך היחיד שנבדל. */
+function toast(msg, dur, kind) {
+  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
+  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
+  var box = document.getElementById('toasts');
+  if (!box) return;
+  var el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' ' + kind : '');
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(function () {
+    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 260);
+  }, dur || TOAST_DEFAULT_MS);
+}
+/*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
+   כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
+var LS_TOAST_MS = 5000;
+function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
@@ -5091,15 +5309,6 @@ function saveSettings() {
  *  ⚠️ הערך במקרה זהה ל-`LS_SUCCESS_MUTE_MS`, ⛔ אך הוא מושג אחר
  *  לגמרי (משך תצוגה מול חלון השתקה), ⛔ ואין לאחד ביניהם. */
 var TOAST_DEFAULT_MS = 2500;
-var _toastTid;
-function toast(msg, dur) {
-  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
-  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
-  var t = document.getElementById("toast");
-  t.textContent = msg; t.className = "toast show";
-  clearTimeout(_toastTid);
-  _toastTid = setTimeout(function(){ t.className = "toast"; }, dur || TOAST_DEFAULT_MS);
-}
 
 
 // ארכיון
@@ -5612,7 +5821,10 @@ function exportArchivePDF(id) {
 var GITHUB_USER = "ygtotlrl-lab";
 var GITHUB_REPO = "yoman-avoda";
 var GITHUB_FILE = "index.html"; // חייב להתאים לשם הקובץ האמיתי בריפו — אחרת האוטו-אפדייט מקבל 404
-var RAW_URL = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/" + GITHUB_FILE;
+/*  ⛔ בסיס אחד לכל משיכה גולמית מהריפו — ⚠️ שני צרכנים לו: האוטו-אפדייט
+ *  ומציג טבלת התשתית, ⭐ וכתובת שנייה הייתה מקור אמת שני. */
+var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/";
+var RAW_URL = RAW_BASE + GITHUB_FILE;
 
 // מזהה בנייה מפורש, נקרא מ-<meta name="app-version"> שבראש הקובץ.
 // מחליף את simpleHash() הישנה: היא גיבבה רק את 5000 התווים הראשונים,
@@ -5747,6 +5959,199 @@ window.addEventListener("DOMContentLoaded", function() {
   //    לפני בחירת מוסד אין `KV_TABLE`, ותקתוק כאן היה נוגע ברשת לחינם.
 });
 // ============================================================
+
+/* ══════════════════════════════════════════════════════════════════════════
+   מציג טבלת התשתית — משיכה מ-GitHub ופירוק
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ שני הקבצים נמשכים בזמן אמת ⛔ ואינם מוטבעים — ⚠️ עותק בקוד מתיישן
+      בסבב הבא, ⭐ והמסך הזה נועד להראות את **המצב עכשיו**.
+   ⛔ ומפת הזיווג נקראת מהשער ⛔ ולא משוכפלת כאן — ⚠️ כותרת סעיף שאינה שם
+      שורה מזווגת ב-`RULE_ROW_NAMES`, ⭐ ועותק שני שלה היה נסחף בשקט.
+   ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
+      הכשל השקט.
+   ⚠️ ואין כאן בדיקת הרשאה — ⭐ ביומן משתמש אחד, ⛔ ואין שכבת כניסה. */
+var YS_INF_MD = RAW_BASE + 'CLAUDE.md';
+var YS_INF_GATE = RAW_BASE + 'tools/check-capabilities.mjs';
+
+/*  ⛔ פירוק שורת טבלה — ⚠️ הפרדה על `|` משאירה תא ריק בשני הקצוות,
+ *  ⭐ ושניהם נגזרים ⛔ ואינם נחתכים בקבוע. */
+function _infCells(line) {
+  var p = line.split('|');
+  if (p.length && p[0].trim() === '') p.shift();
+  if (p.length && p[p.length - 1].trim() === '') p.pop();
+  return p.map(function (x) { return x.trim(); });
+}
+/*  ⛔ סימון ה-Markdown מוצג ולא נשפך כטקסט — ⚠️ `**` ו-`` ` `` הם תחביר
+ *  המקור, ⭐ והם מומרים **אחרי** הבריחה: ⛔ המרה לפניה הייתה מחזירה HTML
+ *  מהקובץ אל תוך הדף. */
+function _infMd(t) {
+  return esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+               .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+/*  ⛔ הסימון נגזר מהתא ⛔ ואינו נבדק מול רשימה סגורה — ⚠️ תא שאינו אחד
+ *  משלושת הסימנים מוצג כפי שהוא, ⭐ ולא נבלע בשקט. */
+function _infDot(cell) {
+  if (cell === '✅') return '<span class="inf-dot ok" title="תקין"></span>';
+  if (cell === '⭕') return '<span class="inf-dot gap" title="חסר-מנומק"></span>';
+  if (cell === '❌') return '<span class="inf-dot bad" title="לא מטופל"></span>';
+  return esc(cell);
+}
+/*  ⛔ פירוק ה-Markdown לשלושת החלקים — ⚠️ הטבלה, כותרות הכללים, והסריקה:
+ *  ⭐ שלושתם נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני. */
+function _infParse(md, gate) {
+  var lines = md.split('\n');
+  var cats = [], cur = null, rows = [], heads = [], inRules = false;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    if (/^<!--\s*SHARED:start\s+id="rules-/.test(l)) { inRules = true; continue; }
+    if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; continue; }
+    if (inRules && l.indexOf('### ') === 0) {
+      var raw = l.slice(4).trim();
+      var mm = /^(.*?)\s+([◆◇⧉])$/.exec(raw);
+      heads.push({ name: mm ? mm[1] : raw, mark: mm ? mm[2] : '' });
+      continue;
+    }
+    if (l.charAt(0) !== '|') continue;
+    var c = _infCells(l);
+    if (c.length < 8) continue;
+    if (c[0] === '#') continue;
+    if (c[0] === '' && /^\*\*/.test(c[1])) {
+      cur = { title: c[1].replace(/\*\*/g, ''), rows: [] };
+      cats.push(cur);
+      continue;
+    }
+    if (!/^\d+$/.test(c[0])) continue;
+    var row = { n: Number(c[0]), name: c[1], std: c[2],
+                apps: [c[3], c[4], c[5], c[6]], note: c[7] };
+    rows.push(row);
+    if (!cur) { cur = { title: '—', rows: [] }; cats.push(cur); }
+    cur.rows.push(row);
+  }
+  /*  ⛔ שם השורה ⟵ מספרה, בדיוק כפי שהשער גוזר — ⚠️ סימן הלולאה נחתך
+   *  לפני ההשוואה, ⛔ שאם לא כן הוא היה חלק מהמפתח. */
+  var byName = {};
+  rows.forEach(function (r) { byName[r.name.replace(/\s*[◆◇⧉]\s*$/, '').trim()] = r.n; });
+  var map = {};
+  if (gate) {
+    var g = /const RULE_ROW_NAMES = \{([\s\S]*?)\n\};/.exec(gate);
+    if (g) {
+      var re = /'([^']+)':\s*'([^']+)'/g, m;
+      while ((m = re.exec(g[1]))) map[m[1]] = m[2];
+    }
+  }
+  heads.forEach(function (h) {
+    var want = map[h.name] || h.name.replace(/^⛔+\s*/, '');
+    h.row = byName[want];
+  });
+  return { cats: cats, rows: rows, heads: heads, gateOk: !!gate };
+}
+var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
+/*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
+ *  ⭐ והמשיכה נשמרת בזיכרון. */
+function _infHtml(d) {
+  var h = '<div class="inf">';
+  h += '<div class="inf-hd"><b>טבלת התשתית</b>' +
+       '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
+
+  h += '<div class="inf-card"><h4>א · הטבלה</h4>' +
+       '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתח הכל</button>' +
+       '<button data-act="inf-all" data-open="0">סגור הכל</button>' +
+       '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
+       '<span class="inf-tag"><span class="inf-dot gap"></span> חסר-מנומק</span>' +
+       '<span class="inf-tag"><span class="inf-dot bad"></span> לא מטופל</span></div>';
+  d.cats.forEach(function (c) {
+    h += '<details class="inf-cat"' + (window._infOpen ? ' open' : '') + '>' +
+         '<summary>' + esc(c.title) + ' — ' + c.rows.length + '</summary>' +
+         '<div class="inf-wrap"><table class="inf-tbl">' +
+         '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
+         '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
+         '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
+         YS_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
+         '<th>הערה</th></tr></thead><tbody>';
+    c.rows.forEach(function (r) {
+      h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
+           r.apps.map(function (a) { return '<td>' + _infDot(a) + '</td>'; }).join('') +
+           '<td>' + _infMd(r.note) + '</td></tr>';
+    });
+    h += '</tbody></table></div></details>';
+  });
+  h += '</div>';
+
+  h += '<div class="inf-card"><h4>ב · סיכום הכללים — ' + d.heads.length + ' סעיפים</h4>';
+  if (!d.gateOk)
+    h += '<div class="inf-li">⚠️ מפת הזיווג לא נמשכה — ' +
+         'המספר מוצג רק לסעיף שכותרתו היא שם שורה.</div>';
+  d.heads.forEach(function (x) {
+    h += '<div class="inf-li"><span class="inf-mark">' + esc(x.mark || '—') + '</span> ' +
+         _infMd(x.name) + '<span class="inf-tag">' +
+         (x.row ? 'שורה ' + x.row : 'ללא זיווג') + '</span></div>';
+  });
+  h += '</div>';
+
+  var tot = { '✅': 0, '⭕': 0, '❌': 0 }, gaps = [];
+  d.rows.forEach(function (r) {
+    r.apps.forEach(function (a, i) {
+      if (tot[a] === undefined) tot[a] = 0;
+      tot[a]++;
+      if (a !== '✅') gaps.push({ n: r.n, name: r.name, app: YS_INF_APPS[i], mark: a, why: r.note });
+    });
+  });
+  h += '<div class="inf-card"><h4>ג · הסריקה</h4>' +
+       '<div class="inf-bar">' +
+       '<span class="inf-tag"><span class="inf-dot ok"></span> ✅ ' + (tot['✅'] || 0) + '</span>' +
+       '<span class="inf-tag"><span class="inf-dot gap"></span> ⭕ ' + (tot['⭕'] || 0) + '</span>' +
+       '<span class="inf-tag"><span class="inf-dot bad"></span> ❌ ' + (tot['❌'] || 0) + '</span>' +
+       '</div>';
+  if (!gaps.length) h += '<div class="inf-li">אין תא שאינו ✅.</div>';
+  gaps.forEach(function (g) {
+    h += '<div class="inf-li">' + _infDot(g.mark) + ' <b>' + g.n + ' · ' + _infMd(g.name) + '</b>' +
+         '<span class="inf-tag">' + esc(g.app) + '</span>' +
+         (g.why ? '<div>' + _infMd(g.why) + '</div>' : '') + '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+window._infData = null;
+window._infOpen = false;
+/*  ⛔ שתי המשיכות במקביל ⛔ ולא בזו אחר זו — ⚠️ אין ביניהן תלות,
+ *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
+async function ysInfraOpen() {
+  window._infOpen = false;
+  openModal('טבלת התשתית',
+    '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
+    '<span>מושך מ-GitHub…</span></div></div>', '');
+  var md = null, gate = null;
+  try {
+    /*  ⛔ כשל במפת הזיווג אינו מפיל את המסך — ⚠️ היא משפרת את חלק ב
+     *  בלבד, ⭐ והטבלה עצמה תלויה ב-`CLAUDE.md` לבדו: ⛔ `Promise.all`
+     *  בלי הבליעה הזו היה הופך שיפור לתלות. */
+    var res = await Promise.all([
+      withTimeout(fetch(YS_INF_MD, { cache: 'no-store' })),
+      withTimeout(fetch(YS_INF_GATE, { cache: 'no-store' })).catch(function () { return null; })
+    ]);
+    if (!res[0] || !res[0].ok) throw new Error('HTTP ' + (res[0] ? res[0].status : '—'));
+    md = await res[0].text();
+    if (res[1] && res[1].ok) gate = await res[1].text();
+  } catch (e) {
+    var el = document.getElementById('modal-body');
+    if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
+      '⚠️ המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
+      '<br>הטבלה נקראת בזמן אמת מהריפו, ואין עותק במכשיר.</div>' +
+      '<div class="inf-bar"><button data-act="inf-open">↻ נסה שוב</button></div></div>';
+    return;
+  }
+  window._infData = _infParse(md, gate);
+  _infPaint();
+}
+function _infPaint() {
+  var el = document.getElementById('modal-body');
+  if (el && window._infData) el.innerHTML = _infHtml(window._infData);
+}
+function ysInfraToggleAll(open) {
+  window._infOpen = open;
+  _infPaint();
+}
+/* ══════════════════════════════════════════════════════════════════════════ */
 
 // אתחול — רץ רק אחרי שנבחר מוסד (נקרא מ-selectYeshiva)
 function startApp() {
@@ -5942,6 +6347,9 @@ var YESHIVOT = [
   { id: 'rishon',    name: 'ראשון לציון' },
   { id: 'ramataviv', name: 'רמת אביב' },
 ];
+/* ══════════════════════════════════════════════════════════════════════════
+   החלפת מוסד — הבורר, איפוס המצב, והעלייה מחדש
+   ══════════════════════════════════════════════════════════════════════════ */
 function ysNameOf(y) {
   for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i].name;
   return '';
@@ -5954,12 +6362,37 @@ function ysNameOf(y) {
  *  לחשוב שאין מה למשוך, ⛔ ועֵד דחיפה שנשאר מתיר פינוי של רשומה שמעולם
  *  לא עלתה מהמוסד הנוכחי. ⚠️ שניהם מתאפסים לערך שנקרא «אין ראיה»,
  *  ⛔ ולא לערך שנראה כמו ידיעה. */
+/*  ⛔⛔ המצב הפר-מוסדי מאופס **כולו**, ⛔ ולא משתני הסנכרון בלבד — ⚠️ הנימוק
+ *  המדוד: עד כאן `ENTRIES` · `CATS` · `SUBS` · `SUBS_META` · `ARCHIVE`
+ *  נשארו בזיכרון אחרי ההחלפה, ⛔ בעוד ש-`YESHIVA` · `KV_TABLE` · `LS` כבר
+ *  הצביעו על המוסד החדש: ⭐ וכל דחיפה שרצה בחלון הזה כתבה את נתוני המוסד
+ *  הקודם תחת החדש. ⛔ **וזה לא תיאורטי** — ⚠️ 185 מ-187 ארכיוני רמת אביב
+ *  היו של ראשון, ו-`tb_subs` נדרס לגמרי.
+ *  ⛔ ואיפוס למערך ריק אינו מחיקה בענן — ⚠️ הדחיפה מעלה שורות «מלוכלכות»
+ *  בלבד, ⭐ ומערך ריק הוא «אין מה לדחוף» ⛔ ולא «נמחק הכול».
+ *  ⛔ ומפת החותמות המרוחקות מתאפסת אף היא — ⚠️ היא נמדדה מול המוסד הקודם,
+ *  ⭐ והשוואה מולה הייתה מכריעה מה לדחוף על סמך טבלה אחרת. */
 function ysResetTenantState() {
+  _tbEpoch++;
   _tbPushedAt = {};
   _lastKnownTimestamp = 0;
   _plFullAt = 0;
   _pendMap = null;
   _tombPrunePending = false;
+  _tbRemote = { tb_entries: null, tb_archive: null };
+  _pendDrawHold = {};
+  _hwCloudSeen = {};
+  _tbLastSyncAt = 0;
+  _tbNetWarned = false;
+  _tbPullLogged = false;
+  ENTRIES = [];
+  ARCHIVE = [];
+  CATS = [];
+  SUBS = {};
+  SUBS_META = {};
+  arcSelYear = null;
+  arcSelMonth = null;
+  arcSelDayKey = null;
 }
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
@@ -6034,6 +6467,12 @@ function selectYeshiva(y, again) {
   // לפנות. היא חייבת לרוץ גם **לפני** `loadLocalData`, כדי שהטעינה תראה
   // את המערך הממוזג ולא את זה שלפני ההגירה.
   try { lsRebuildPolicy(); migrateLegacyLsKeys(); lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
+  /*  ⛔⛔ הטעינה **לפני** כל `boot` שיכול לדחוף (סבב 87ג) — ⚠️ עד כאן היא
+   *  ישבה אחרי `plBoot`, ⛔ וביניהן רצו הריקון החוזר והמשיכה: ⭐ בחלון הזה
+   *  `LS` כבר הצביע על המוסד החדש והזיכרון עדיין החזיק את הישן.
+   *  ⛔ אין להזיז אותה שוב מטה — ⚠️ זה בדיוק הבאג. ⭐ והיא נשארת **אחרי**
+   *  `lsBoot`, ⛔ שההגירה והפינוי חייבים לרוץ לפניה. */
+  loadLocalData();
   // סימוני "ממתין לסנכרון" (סבב 12). **pendReload ולא pendBoot בלבד** —
   // מפתח הסימונים נושא סיומת מוסד, וסימון של ראשון לציון אינו תקף לרמת אביב.
   try { pendReload(); if (!again) pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
@@ -6049,7 +6488,6 @@ function selectYeshiva(y, again) {
   //    מוקדם יותר, מאותה סיבה כמו `bkBoot`: `KV_TABLE` הוא `null` עד
   //    שנבחר מוסד, ותקתוק לפני כן היה שואל טבלה שאינה קיימת.
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
-  loadLocalData();
   var ov = document.getElementById('yeshivaSelect');
   if (ov) ov.style.display = 'none';
   // מסך הבחירה כבר נסגר — כישלון כאן חייב להשאיר אפליקציה שמישה ולא מסך ריק
