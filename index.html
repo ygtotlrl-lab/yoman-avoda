@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="63-2026-09-03-6">
+<meta name="app-version" content="66-2026-09-03-9">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -371,6 +371,48 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* טוסט */
 
+/* ══════════════════════════════════════════════════════════════════════════
+   מציג טבלת התשתית — פרטי ליומן
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ אין לו שורה בטבלת התשתית — ⚠️ הוא אינו יכולת תשתיתית אלא מסך תצוגה
+   של האפליקציה הזו, ⭐ ולוגיקה עסקית אינה נכנסת לטבלה.
+   ⛔ והתוכן נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד היה מקור אמת שני,
+   ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
+#modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
+.inf{font-family:'Heebo',sans-serif;color:var(--text)}
+.inf-hd{background:linear-gradient(135deg,var(--primary) 0%,#1558a0 100%);color:#fff;
+  border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.inf-hd b{font-size:15px;font-weight:800;display:block}
+.inf-hd span{font-size:12px;opacity:.85}
+.inf-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 2px 10px var(--shadow);padding:12px 14px;margin-bottom:14px}
+.inf-card>h4{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--primaryd)}
+.inf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.inf-bar button{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bgsec);color:var(--text);cursor:pointer}
+.inf-cat{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.inf-cat>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--bgsec);
+  font-weight:800;font-size:13px;color:var(--primaryd)}
+.inf-cat>summary::-webkit-details-marker{display:none}
+.inf-wrap{overflow-x:auto}
+.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
+.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:6px 8px;
+  vertical-align:top;text-align:right;line-height:1.6;overflow-wrap:anywhere}
+.inf-tbl th{background:var(--bgsec);font-weight:800;font-size:11.5px;color:var(--textmid)}
+.inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
+.inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
+.inf-dot{display:inline-block;width:11px;height:11px;border-radius:50%}
+.inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
+.inf-mark{font-weight:800;color:var(--primary)}
+.inf code{background:var(--bgsec);border-radius:5px;padding:0 4px;font-size:.94em}
+.inf-li{border-top:1px solid var(--border);padding:7px 2px;font-size:12px;line-height:1.7}
+.inf-li:first-child{border-top:0}
+.inf-li b{color:var(--primaryd)}
+.inf-tag{display:inline-block;background:var(--bgsec);border-radius:6px;padding:1px 7px;
+  font-size:11px;font-weight:700;margin-inline-start:4px}
+.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:12px;padding:14px;
+  font-size:13px;color:#8a2b2b;line-height:1.8}
+/* ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
    אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
@@ -473,6 +515,9 @@ body.locked{overflow:hidden}
 
   <!-- ENTRY -->
   <div class="panel" id="panel-entry" style="display:block">
+    <div class="inf-bar" style="justify-content:flex-start;margin-bottom:12px">
+      <button data-act="inf-open">📊 טבלת התשתית</button>
+    </div>
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -2373,6 +2418,11 @@ var DOM_ACTIONS = {
    *  ואינו נבנה מחדש, ⛔ אבל כפתורי הבורר כן: ⭐ מאזין פר-כפתור היה צריך
    *  חיווט מחדש בכל פתיחה. */
   'open-yeshiva-picker': function () { ysPickYeshiva(); },
+  /*  ⛔ שלוש הפעולות של מציג טבלת התשתית עוברות בדלגציה — ⚠️ הכפתורים
+   *  נבנים מחדש בכל ציור של המודאל, ⭐ ומאזין פר-כפתור היה צריך חיווט
+   *  מחדש בכל פעם. */
+  'inf-open':       function () { ysInfraOpen(); },
+  'inf-all':        function (el) { ysInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { ysConfirmSwitch(el.getAttribute('data-yeshiva')); },
   /*  ⚠️ הבזק הכפתור רץ רק כשאין מסך מגע — ⛔ במכשיר מגע הוא נשאר דלוק
    *  אחרי הלחיצה, מפני שאין `mouseleave` שמסיר אותו. */
@@ -5667,7 +5717,10 @@ function exportArchivePDF(id) {
 var GITHUB_USER = "ygtotlrl-lab";
 var GITHUB_REPO = "yoman-avoda";
 var GITHUB_FILE = "index.html"; // חייב להתאים לשם הקובץ האמיתי בריפו — אחרת האוטו-אפדייט מקבל 404
-var RAW_URL = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/" + GITHUB_FILE;
+/*  ⛔ בסיס אחד לכל משיכה גולמית מהריפו — ⚠️ שני צרכנים לו: האוטו-אפדייט
+ *  ומציג טבלת התשתית, ⭐ וכתובת שנייה הייתה מקור אמת שני. */
+var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/";
+var RAW_URL = RAW_BASE + GITHUB_FILE;
 
 // מזהה בנייה מפורש, נקרא מ-<meta name="app-version"> שבראש הקובץ.
 // מחליף את simpleHash() הישנה: היא גיבבה רק את 5000 התווים הראשונים,
@@ -5802,6 +5855,199 @@ window.addEventListener("DOMContentLoaded", function() {
   //    לפני בחירת מוסד אין `KV_TABLE`, ותקתוק כאן היה נוגע ברשת לחינם.
 });
 // ============================================================
+
+/* ══════════════════════════════════════════════════════════════════════════
+   מציג טבלת התשתית — משיכה מ-GitHub ופירוק
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ שני הקבצים נמשכים בזמן אמת ⛔ ואינם מוטבעים — ⚠️ עותק בקוד מתיישן
+      בסבב הבא, ⭐ והמסך הזה נועד להראות את **המצב עכשיו**.
+   ⛔ ומפת הזיווג נקראת מהשער ⛔ ולא משוכפלת כאן — ⚠️ כותרת סעיף שאינה שם
+      שורה מזווגת ב-`RULE_ROW_NAMES`, ⭐ ועותק שני שלה היה נסחף בשקט.
+   ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
+      הכשל השקט.
+   ⚠️ ואין כאן בדיקת הרשאה — ⭐ ביומן משתמש אחד, ⛔ ואין שכבת כניסה. */
+var YS_INF_MD = RAW_BASE + 'CLAUDE.md';
+var YS_INF_GATE = RAW_BASE + 'tools/check-capabilities.mjs';
+
+/*  ⛔ פירוק שורת טבלה — ⚠️ הפרדה על `|` משאירה תא ריק בשני הקצוות,
+ *  ⭐ ושניהם נגזרים ⛔ ואינם נחתכים בקבוע. */
+function _infCells(line) {
+  var p = line.split('|');
+  if (p.length && p[0].trim() === '') p.shift();
+  if (p.length && p[p.length - 1].trim() === '') p.pop();
+  return p.map(function (x) { return x.trim(); });
+}
+/*  ⛔ סימון ה-Markdown מוצג ולא נשפך כטקסט — ⚠️ `**` ו-`` ` `` הם תחביר
+ *  המקור, ⭐ והם מומרים **אחרי** הבריחה: ⛔ המרה לפניה הייתה מחזירה HTML
+ *  מהקובץ אל תוך הדף. */
+function _infMd(t) {
+  return esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+               .replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+/*  ⛔ הסימון נגזר מהתא ⛔ ואינו נבדק מול רשימה סגורה — ⚠️ תא שאינו אחד
+ *  משלושת הסימנים מוצג כפי שהוא, ⭐ ולא נבלע בשקט. */
+function _infDot(cell) {
+  if (cell === '✅') return '<span class="inf-dot ok" title="תקין"></span>';
+  if (cell === '⭕') return '<span class="inf-dot gap" title="חסר-מנומק"></span>';
+  if (cell === '❌') return '<span class="inf-dot bad" title="לא מטופל"></span>';
+  return esc(cell);
+}
+/*  ⛔ פירוק ה-Markdown לשלושת החלקים — ⚠️ הטבלה, כותרות הכללים, והסריקה:
+ *  ⭐ שלושתם נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני. */
+function _infParse(md, gate) {
+  var lines = md.split('\n');
+  var cats = [], cur = null, rows = [], heads = [], inRules = false;
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    if (/^<!--\s*SHARED:start\s+id="rules-/.test(l)) { inRules = true; continue; }
+    if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; continue; }
+    if (inRules && l.indexOf('### ') === 0) {
+      var raw = l.slice(4).trim();
+      var mm = /^(.*?)\s+([◆◇⧉])$/.exec(raw);
+      heads.push({ name: mm ? mm[1] : raw, mark: mm ? mm[2] : '' });
+      continue;
+    }
+    if (l.charAt(0) !== '|') continue;
+    var c = _infCells(l);
+    if (c.length < 8) continue;
+    if (c[0] === '#') continue;
+    if (c[0] === '' && /^\*\*/.test(c[1])) {
+      cur = { title: c[1].replace(/\*\*/g, ''), rows: [] };
+      cats.push(cur);
+      continue;
+    }
+    if (!/^\d+$/.test(c[0])) continue;
+    var row = { n: Number(c[0]), name: c[1], std: c[2],
+                apps: [c[3], c[4], c[5], c[6]], note: c[7] };
+    rows.push(row);
+    if (!cur) { cur = { title: '—', rows: [] }; cats.push(cur); }
+    cur.rows.push(row);
+  }
+  /*  ⛔ שם השורה ⟵ מספרה, בדיוק כפי שהשער גוזר — ⚠️ סימן הלולאה נחתך
+   *  לפני ההשוואה, ⛔ שאם לא כן הוא היה חלק מהמפתח. */
+  var byName = {};
+  rows.forEach(function (r) { byName[r.name.replace(/\s*[◆◇⧉]\s*$/, '').trim()] = r.n; });
+  var map = {};
+  if (gate) {
+    var g = /const RULE_ROW_NAMES = \{([\s\S]*?)\n\};/.exec(gate);
+    if (g) {
+      var re = /'([^']+)':\s*'([^']+)'/g, m;
+      while ((m = re.exec(g[1]))) map[m[1]] = m[2];
+    }
+  }
+  heads.forEach(function (h) {
+    var want = map[h.name] || h.name.replace(/^⛔+\s*/, '');
+    h.row = byName[want];
+  });
+  return { cats: cats, rows: rows, heads: heads, gateOk: !!gate };
+}
+var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
+/*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
+ *  ⭐ והמשיכה נשמרת בזיכרון. */
+function _infHtml(d) {
+  var h = '<div class="inf">';
+  h += '<div class="inf-hd"><b>טבלת התשתית</b>' +
+       '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
+
+  h += '<div class="inf-card"><h4>א · הטבלה</h4>' +
+       '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתח הכל</button>' +
+       '<button data-act="inf-all" data-open="0">סגור הכל</button>' +
+       '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
+       '<span class="inf-tag"><span class="inf-dot gap"></span> חסר-מנומק</span>' +
+       '<span class="inf-tag"><span class="inf-dot bad"></span> לא מטופל</span></div>';
+  d.cats.forEach(function (c) {
+    h += '<details class="inf-cat"' + (window._infOpen ? ' open' : '') + '>' +
+         '<summary>' + esc(c.title) + ' — ' + c.rows.length + '</summary>' +
+         '<div class="inf-wrap"><table class="inf-tbl">' +
+         '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
+         '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
+         '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
+         YS_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
+         '<th>הערה</th></tr></thead><tbody>';
+    c.rows.forEach(function (r) {
+      h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
+           r.apps.map(function (a) { return '<td>' + _infDot(a) + '</td>'; }).join('') +
+           '<td>' + _infMd(r.note) + '</td></tr>';
+    });
+    h += '</tbody></table></div></details>';
+  });
+  h += '</div>';
+
+  h += '<div class="inf-card"><h4>ב · סיכום הכללים — ' + d.heads.length + ' סעיפים</h4>';
+  if (!d.gateOk)
+    h += '<div class="inf-li">⚠️ מפת הזיווג לא נמשכה — ' +
+         'המספר מוצג רק לסעיף שכותרתו היא שם שורה.</div>';
+  d.heads.forEach(function (x) {
+    h += '<div class="inf-li"><span class="inf-mark">' + esc(x.mark || '—') + '</span> ' +
+         _infMd(x.name) + '<span class="inf-tag">' +
+         (x.row ? 'שורה ' + x.row : 'ללא זיווג') + '</span></div>';
+  });
+  h += '</div>';
+
+  var tot = { '✅': 0, '⭕': 0, '❌': 0 }, gaps = [];
+  d.rows.forEach(function (r) {
+    r.apps.forEach(function (a, i) {
+      if (tot[a] === undefined) tot[a] = 0;
+      tot[a]++;
+      if (a !== '✅') gaps.push({ n: r.n, name: r.name, app: YS_INF_APPS[i], mark: a, why: r.note });
+    });
+  });
+  h += '<div class="inf-card"><h4>ג · הסריקה</h4>' +
+       '<div class="inf-bar">' +
+       '<span class="inf-tag"><span class="inf-dot ok"></span> ✅ ' + (tot['✅'] || 0) + '</span>' +
+       '<span class="inf-tag"><span class="inf-dot gap"></span> ⭕ ' + (tot['⭕'] || 0) + '</span>' +
+       '<span class="inf-tag"><span class="inf-dot bad"></span> ❌ ' + (tot['❌'] || 0) + '</span>' +
+       '</div>';
+  if (!gaps.length) h += '<div class="inf-li">אין תא שאינו ✅.</div>';
+  gaps.forEach(function (g) {
+    h += '<div class="inf-li">' + _infDot(g.mark) + ' <b>' + g.n + ' · ' + _infMd(g.name) + '</b>' +
+         '<span class="inf-tag">' + esc(g.app) + '</span>' +
+         (g.why ? '<div>' + _infMd(g.why) + '</div>' : '') + '</div>';
+  });
+  h += '</div></div>';
+  return h;
+}
+window._infData = null;
+window._infOpen = false;
+/*  ⛔ שתי המשיכות במקביל ⛔ ולא בזו אחר זו — ⚠️ אין ביניהן תלות,
+ *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
+async function ysInfraOpen() {
+  window._infOpen = false;
+  openModal('טבלת התשתית',
+    '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
+    '<span>מושך מ-GitHub…</span></div></div>', '');
+  var md = null, gate = null;
+  try {
+    /*  ⛔ כשל במפת הזיווג אינו מפיל את המסך — ⚠️ היא משפרת את חלק ב
+     *  בלבד, ⭐ והטבלה עצמה תלויה ב-`CLAUDE.md` לבדו: ⛔ `Promise.all`
+     *  בלי הבליעה הזו היה הופך שיפור לתלות. */
+    var res = await Promise.all([
+      withTimeout(fetch(YS_INF_MD, { cache: 'no-store' })),
+      withTimeout(fetch(YS_INF_GATE, { cache: 'no-store' })).catch(function () { return null; })
+    ]);
+    if (!res[0] || !res[0].ok) throw new Error('HTTP ' + (res[0] ? res[0].status : '—'));
+    md = await res[0].text();
+    if (res[1] && res[1].ok) gate = await res[1].text();
+  } catch (e) {
+    var el = document.getElementById('modal-body');
+    if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
+      '⚠️ המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
+      '<br>הטבלה נקראת בזמן אמת מהריפו, ואין עותק במכשיר.</div>' +
+      '<div class="inf-bar"><button data-act="inf-open">↻ נסה שוב</button></div></div>';
+    return;
+  }
+  window._infData = _infParse(md, gate);
+  _infPaint();
+}
+function _infPaint() {
+  var el = document.getElementById('modal-body');
+  if (el && window._infData) el.innerHTML = _infHtml(window._infData);
+}
+function ysInfraToggleAll(open) {
+  window._infOpen = open;
+  _infPaint();
+}
+/* ══════════════════════════════════════════════════════════════════════════ */
 
 // אתחול — רץ רק אחרי שנבחר מוסד (נקרא מ-selectYeshiva)
 function startApp() {
