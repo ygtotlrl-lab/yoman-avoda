@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="59-2026-09-03-2">
+<meta name="app-version" content="60-2026-09-03-3">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2816,26 +2816,6 @@ var PK_ENTRY = 'entry:', PK_ARC = 'arc:';
    מוסד: זהו מזהה של המכשיר, לא של המוסד שנבחר בו כרגע. */
 var DEV_CFG = { key: 'tb_device_id' };
 
-/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   ═══════════════════════════════════════════════════════════════════════ */
-var _deviceIdMem = null;
-function getDeviceId() {
-  var id = lsGet(DEV_CFG.key, null);
-  if (!id) {
-    id = _deviceIdMem || _randDeviceId();
-    lsSetRaw(DEV_CFG.key, id);
-  }
-  _deviceIdMem = id;
-  return id;
-}
-function _randDeviceId() {
-  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
-  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
-  return id;
-}
-/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 
 /* ══════════════════════════════════════════════════════════════════════════
    קריאה וכתיבה של מפתחות `kv` — הטבלה היא פר-מוסד
@@ -2976,6 +2956,26 @@ function prunePastTombstones(arr, nowTs) {
 //    המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
 //    יותר. זו העדפה מכוונת — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי
 //    24 שעות, בעוד שעריכה שנמחקת בשקט אינה משאירה עקבות.
+/* ═══ מזהה מכשיר — מודול משותף (סבב 40) ═══════════════════════════════════
+   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _deviceIdMem = null;
+function getDeviceId() {
+  var id = lsGet(DEV_CFG.key, null);
+  if (!id) {
+    id = _deviceIdMem || _randDeviceId();
+    lsSetRaw(DEV_CFG.key, id);
+  }
+  _deviceIdMem = id;
+  return id;
+}
+function _randDeviceId() {
+  var c = 'abcdefghijklmnopqrstuvwxyz0123456789', id = '';
+  for (var i = 0; i < 8; i++) id += c.charAt(Math.floor(Math.random() * c.length));
+  return id;
+}
+/* ═══════════════ סוף מודול מזהה המכשיר ═════════════════════════════════ */
 /* ═══ מיזוג רשומות — מודול משותף (סבב 38) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
