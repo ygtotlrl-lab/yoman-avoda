@@ -152,6 +152,34 @@ const APP = {
           }
         }
       }
+      /*  ⛔ **וכל פונקציה אסינכרונית לוכדת את ההקשר בכניסה** (סבב 89) —
+       *  ⚠️ הנימוק המדוד: `tbPullFromCloud`, מסלול הפולינג שרץ כל שלוש
+       *  שניות, קרא את `LS` הגלובלי **אחרי** ההמתנה, ⛔ והסגור שב-
+       *  `tbRowsGet` קרא את `YESHIVA` פעם אחת **לכל עמוד**: ⭐ נמדד
+       *  בדפדפן שהחלפה באמצע כתבה רשומת ראשון למפתח של רמת אביב,
+       *  ⛔ ושהמשיכה החזירה שורות של **שני** המוסדות תחת `ok:true`.
+       *  ⛔ הגוף נחתך בכל `await`, ⚠️ ובכל קטע שאחריו קריאת גלובלי
+       *  פר-הקשר חייבת לבוא **אחרי** השער — ⭐ או שהערך נלכד בכניסה
+       *  ⛔ ואינו נקרא מהגלובלי כלל. */
+      const CTX = /\b(KV_TABLE|YESHIVA|LS)\b/;
+      const CTXG = /ysTenantStale\(|stale\(\)/;
+      const AFN = /async\s+function\s+[A-Za-z0-9_$]*\s*\(/g;
+      let am;
+      while ((am = AFN.exec(c.code))) {
+        let d = 0, j = c.code.indexOf('{', am.index);
+        const st = j;
+        for (; j < c.code.length; j++) {
+          const ch = c.code[j];
+          if (ch === '{') d++; else if (ch === '}') { d--; if (!d) break; }
+        }
+        const segs = c.code.slice(st, j).split('await ');
+        for (let k = 1; k < segs.length; k++) {
+          const ci = segs[k].search(CTX);
+          if (ci < 0) continue;
+          const gi = segs[k].search(CTXG);
+          if (gi < 0 || gi > ci) return false;
+        }
+      }
       return /clearTimeout\(_syncPushTimer\)/.test(reset);
     },
     /*  ⛔ מסלול תצוגה שקורא לשכבת השורות בלי טווח (סבב 87) — ⚠️ הטענה

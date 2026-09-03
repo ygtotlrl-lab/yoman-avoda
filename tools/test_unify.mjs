@@ -147,6 +147,12 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var YS_ROWS_PAGE = '), sandbox);
   vm.runInContext(cutVar('var YS_ROWS_CAP = '), sandbox);
   vm.runInContext(cutVar('var _tbRemote = '), sandbox);
+  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbRowsPush`
+   *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`
+   *  של עצמן: ⚠️ והבדיקה הייתה מדווחת «אין רשת» על קוד תקין. */
+  vm.runInContext(cutVar('var _tbEpoch = 0;'), sandbox);
+  vm.runInContext(cut('ysTenantEpoch'), sandbox);
+  vm.runInContext(cut('ysTenantStale'), sandbox);
   if (opts.unified === false) sandbox.TB_ARC_UNIFIED = false;
   // ⭐ סבב 35: הדגל כבוי בקוד הרץ; בדיקות נתיב-החזרה (5ו-5יא) מדליקות אותו
   //    כאן במפורש כדי שהנתיב יישאר מכוסה עד המחיקה ב-30.8.
