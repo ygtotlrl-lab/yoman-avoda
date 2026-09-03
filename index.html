@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="55-2026-09-02-1">
+<meta name="app-version" content="57-2026-09-02-1">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -181,11 +181,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-family:'Heebo',sans-serif;direction:rtl;padding:24px;overflow:auto;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto 18px;fill:#F7F4EB;}
-.ys-pick-bh{font-size:10px;letter-spacing:4px;opacity:0.62;margin-bottom:6px;}
+/* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
+   11+6 מעל ו-10+15.4 מתחת; ⭐ ולכן הכותרת נשארת באותה נקודה בדיוק, ⛔ ואין
+   להחליפו ב-`margin` — הוא היה נבלע במרווח של «בחר ישיבה» שמתחתיו */
 .ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:34px;font-weight:900;
-  letter-spacing:1px;line-height:1;margin:0;}
-.ys-pick-yechi{font-size:11px;font-weight:800;opacity:0.75;letter-spacing:0.3px;
-  line-height:1.4;margin-top:10px;}
+  letter-spacing:1px;line-height:1;margin:0;padding:17px 0 25.4px;}
 .ys-pick-lead{font-size:13px;font-weight:700;opacity:0.7;margin:26px 0 12px;}
 .ys-pick-btns{display:flex;flex-direction:column;gap:12px;}
 /* ⚠️ הכפתור שקוף על הגרדיאנט ⛔ ואינו לבן מלא — ⭐ מסגרת בדיו היא אותו
@@ -426,9 +426,7 @@ body.locked{overflow:hidden}
       <rect x="28" y="144" width="240" height="48" rx="24" opacity="0.87"></rect>
       <rect x="114" y="216" width="154" height="48" rx="24" opacity="1"></rect>
     </svg>
-    <div class="ys-pick-bh">ב״ה | ימות המשיח</div>
     <h1 class="ys-pick-h1">יומן עבודה</h1>
-    <div class="ys-pick-yechi">יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד</div>
     <div class="ys-pick-lead">בחר ישיבה</div>
     <div class="ys-pick-btns">
       <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
@@ -591,11 +589,6 @@ var _sb = null;
 var _heColl = null;
 try { _heColl = new Intl.Collator('he'); } catch (e) { _heColl = null; }
 var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
-function esc(s) {
-  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
 
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
@@ -742,8 +735,6 @@ function _tbVerify(kvKey) {
     }, function () { return { ok: false, rows: [] }; });
   };
 }
-// מתאם הטוסט — החתימה כאן היא toast(msg, dur).
-function lsToast(msg, dur) { try { toast(msg, dur || 5000); } catch (e) {} }
 
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
@@ -4430,18 +4421,32 @@ function clearAll() {
     scheduleSyncPush();
   });
 }
-/* ══════════════════════════════════════════════════════════════════════════
-   שכבת המודאל — מיכל אחד ו-`openModal(title, body, foot)` (סבב 68)
-   ══════════════════════════════════════════════════════════════════════════
-   ⛔ פתיחת מודאל עוברת דרך `openModal` בחתימה אחידה, ⛔ וסגירה במסלול אחד
-   (סבב 68, כלל ברזל 27) — ⚠️ בדפוס הדינמי שהיה כאן כל דיאלוג בנה `overlay`
-   משלו ומימש מחדש פתיחה, סגירה ומיקוד; ⛔ דיאלוג שמפספס אחד מהם נראה תקין
-   עד שמישהו לוחץ `Escape`. ⭐ המיכל קבוע ב-DOM, ולכן `data-act` שבתוכו
-   נתפס באותו מאזין דלגציה של כלל ברזל 27.
-   ⛔ **החתימה זהה לזו של גיוס** (סבב 68) — ⚠️ ובשכר יושבת היום
-   `openModal(id)` בשם זהה ובמשמעות אחרת; ⛔ מי שמעתיק קריאה משם לכאן
-   מקבל קוד שמתקמפל ואינו עובד.
-   ══════════════════════════════════════════════════════════════════════════ */
+/* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
+/*  ⛔ הארגומנט השני של `toast` נבדל בין הריפו — ⚠️ בשלוש הוא **משך** בזמן,
+ *  ⛔ ובגיוס הוא **שם מחלקה**: ⭐ ולכן הערך יושב כאן, ⛔ וגוף `lsToast` זהה
+ *  בית-לבית בארבעתן. */
+var LS_TOAST = { arg: function (dur) { return dur || 5000; } };
+/* ═══ שכבת המודאל — מודול משותף (סבב 86) ══════════════════════════════════
+   ⛔ שכבת המודאל ושלושת העוזרים ישבו **מחוץ** לכל בלוק חתום ⛔ ונסחפו:
+      ⚠️ `esc` לשלוש צורות — והיא הגנת ה-HTML היחידה שיש; `openModal` לשלוש,
+      ⛔ ובאחת מהן נעדרה נעילת הגלילה לגמרי; ו-`lsToast` לשתיים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ מיכל אחד ומסלול סגירה יחיד — ⚠️ מסלול נפרד לכל דיאלוג הוא בדיוק מה
+      שנשבר בשקט; ⭐ והכותרת ב-`textContent` ⛔ ולא ב-HTML, מפני שהיא מגיעה
+      גם משם שהמשתמש הקליד. ⛔ וגוף `ask` ב-`textContent` אף הוא — ⚠️ דיאלוג
+      שדורש HTML עובר ב-`openModal`.
+   ⛔ ו-`locked` על ה-`body` אינה קישוט — ⚠️ בלעדיה הדף שמאחורי המודאל נגלל
+      מתחתיו, ⭐ והמשתמש מאבד את מקומו ברשימה שממנה פתח אותו; ⛔ וההסרה
+      מותנית בכך שהדיאלוג השני סגור — ⚠️ אחרת סגירת אחד משחררת את השני.
+   ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית,
+      וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM.
+   ═══════════════════════════════════════════════════════════════════════ */
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
 function openModal(title, body, foot) {
   var ttl = document.getElementById('modal-title');
   if (!ttl) return;
@@ -4459,12 +4464,10 @@ function closeModal() {
   document.getElementById('modal-foot').innerHTML = '';
   if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
 }
-/*  ⚠️ `askResolve` יחיד — ⛔ אין תמיכה בשני דיאלוגי אישור פתוחים בו-זמנית
- *  (סבב 68), וגם אין בכך צורך: `#ask` הוא אלמנט יחיד ב-DOM. */
 var askResolve = null;
 function ask(title, text, yesLabel) {
   document.getElementById('ask-title').textContent = title || '';
-  document.getElementById('ask-body').innerHTML = '<p style="margin:0">' + esc(text || '') + '</p>';
+  document.getElementById('ask-body').textContent = text || '';
   document.getElementById('ask-yes').textContent = yesLabel || 'אישור';
   document.getElementById('ask').classList.add('open');
   document.body.classList.add('locked');
@@ -4475,6 +4478,8 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
+function lsToast(msg, dur) { try { toast(msg, LS_TOAST.arg(dur)); } catch (e) {} }
+/* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
