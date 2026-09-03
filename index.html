@@ -6,7 +6,6 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="72-2026-09-03-89b">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -121,11 +120,11 @@
         });
       });
 
-      function checkForSwUpdate() {
+      function checkForUpdate() {
         try { reg.update().catch(function() {}); } catch (e) {}
       }
-      checkForSwUpdate();
-      setInterval(checkForSwUpdate, 30 * 60 * 1000);
+      checkForUpdate();
+      setInterval(checkForUpdate, 30 * 60 * 1000);
     }).catch(function(err) {
       console.log('SW registration failed:', err);
     });
@@ -5933,51 +5932,11 @@ function exportArchivePDF(id) {
 }
 
 
-// ============================================================
-// מנגנון העדכון האוטומטי
-// ============================================================
+/*  ⛔ בסיס אחד לכל משיכה גולמית מהריפו — ⚠️ צרכן אחד לו, מציג טבלת התשתית:
+ *  ⭐ כתובת שנייה הייתה מקור אמת שני. */
 var GITHUB_USER = "ygtotlrl-lab";
 var GITHUB_REPO = "yoman-avoda";
-var GITHUB_FILE = "index.html"; // חייב להתאים לשם הקובץ האמיתי בריפו — אחרת האוטו-אפדייט מקבל 404
-/*  ⛔ בסיס אחד לכל משיכה גולמית מהריפו — ⚠️ שני צרכנים לו: האוטו-אפדייט
- *  ומציג טבלת התשתית, ⭐ וכתובת שנייה הייתה מקור אמת שני. */
 var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/";
-var RAW_URL = RAW_BASE + GITHUB_FILE;
-
-// מזהה בנייה מפורש, נקרא מ-<meta name="app-version"> שבראש הקובץ.
-// מחליף את simpleHash() הישנה: היא גיבבה רק את 5000 התווים הראשונים,
-// שנגמרים בתוך תגי ה-<link> שב-<head> — ולכן כל בנייה הפיקה את אותו גיבוב
-// והבאנר לא הופיע מעולם. ⛔ יש לקדם את תג ה-meta בכל שינוי קוד
-// (נרשם בסבב 67) — בלי הקידום העדכון אינו מגיע למכשירים.
-var APP_VERSION = (function(){
-  var m = document.querySelector('meta[name="app-version"]');
-  return (m && m.getAttribute("content")) || "";
-})();
-
-// הגרסה שהמשתמש סגר במפורש (✕) — כדי לא לנדנד בכל בדיקה.
-var UPDATE_KEY = "tb_dismissed_version";
-
-// כל כמה זמן לחפש בנייה חדשה, וכמה להמתין לפני ויתור.
-// היה כל 5 דקות על הקובץ המלא (~950KB) — כ-11MB לשעה בסלולר, וכל אחת
-// מהמשיכות נשמרה במטמון ה-service worker תחת כתובת ?t= ייחודית.
-var UPDATE_INTERVAL_MS = 60 * 60 * 1000;
-var UPDATE_TIMEOUT_MS  = 10000;
-var VERSION_META_RE = /name=["']app-version["'][^>]*content=["']([^"']+)["']/i;
-
-// ממשק אחד לשני מנגנוני הזיהוי. הבאנר עצמו (התחתון, id="sw-update-banner")
-// מוגדר בסקריפט שבראש הקובץ יחד עם רישום ה-service worker — כך שגם לחיצה על
-// "עדכן עכשיו" מהזיהוי הזה יודעת לשחרר worker ממתין. הבאנר העליון ברוחב מלא
-// (id="updateBanner") בוטל: שני באנרים הופיעו יחד.
-/* ══════════════════════════════════════════════════════════════════════════
-   עדכוני גרסה וסנכרון ברקע
-   ══════════════════════════════════════════════════════════════════════════ */
-function showUpdateBanner(remoteVersion) {
-  if (typeof window.showAppUpdateBanner === "function") {
-    window.showAppUpdateBanner(remoteVersion);
-  } else {
-    console.warn("[update] הבאנר לא זמין — גרסה חדשה:", remoteVersion);
-  }
-}
 
 // סנכרון חכם: בדיקת חותמת כל 3 שניות (זול), ומשיכת נתונים רק כשהיא השתנתה
 var _lastKnownTimestamp = 0;
@@ -6048,44 +6007,6 @@ async function tbPullFromCloud() {
   } catch(e) { _tbNetWarned = true; console.error("[sync] error:", e); }
 }
 
-function checkForUpdates() {
-  if (!APP_VERSION) return;   // אין סמן מקומי ⇐ אין מול מה להשוות
-  var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
-  var timer = ctl ? setTimeout(function(){ ctl.abort(); }, UPDATE_TIMEOUT_MS) : null;
-  var done = function(){ if (timer) { clearTimeout(timer); timer = null; } };
-  fetch(RAW_URL, {
-    // Range: ראש הקובץ בלבד — תג הגרסה יושב ב-KB הראשון.
-    // שרת שמתעלם מ-Range פשוט שולח 200 עם הקובץ כולו; עדיין נכון.
-    headers: { "Range": "bytes=0-4095" },
-    // no-store: בעבר זו הייתה כתובת ?t= ייחודית, ולכן ה-service worker שמר
-    // רשומת מטמון טרייה של ~950KB בכל בדיקה. (מעכשיו sw.js גם מדלג עליהן.)
-    cache: "no-store",
-    signal: ctl ? ctl.signal : undefined
-  })
-    .then(function(r){
-      // ⛔ אין להתייחס ל-404/500 כאל "האפליקציה" (נרשם בסבב 67) — כך נוצר בעבר גיבוב שקרי.
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.text();
-    })
-    .then(function(text){
-      var m = text.match(VERSION_META_RE);
-      if (!m) return;                                // גוף לא צפוי — ולעולם לא לנחש
-      var remoteVersion = m[1];
-      if (remoteVersion === APP_VERSION) return;     // מעודכן
-      if (lsGet(UPDATE_KEY) === remoteVersion) return;  // נסגר ע"י המשתמש
-      showUpdateBanner(remoteVersion);
-    })
-    .then(done, function(){ done(); /* אופליין · פסק זמן · 404 — בשקט */ });
-}
-
-// בדיקה זמן קצר אחרי הטעינה, ומאז פעם בשעה
-window.addEventListener("DOMContentLoaded", function() {
-  setTimeout(checkForUpdates, 5000);
-  setInterval(checkForUpdates, UPDATE_INTERVAL_MS);
-  // ⛔ הפולינג אינו נדרך כאן יותר (סבב 51) — נקודת ההפעלה היחידה של
-  //    מנגנון המשיכה היא `plBoot()` מ-`selectYeshiva()`, פונקציית העלייה.
-  //    לפני בחירת מוסד אין `KV_TABLE`, ותקתוק כאן היה נוגע ברשת לחינם.
-});
 // ============================================================
 
 /* ══════════════════════════════════════════════════════════════════════════
