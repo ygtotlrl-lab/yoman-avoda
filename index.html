@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="66-2026-09-03-9">
+<meta name="app-version" content="69-2026-09-03-12">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1724,7 +1724,7 @@ var BK_CFG = {
        ל-`kv_backup`, כולל השורות המדוגלות `archived`. שאר המפתחות
        נשארים מקורות `kv` — זה ביתם היחיד בענן. */
     var out = [{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',
-                 eq: ['yeshiva', YESHIVA], order: 'rec_key' }];
+                 eq: ['yeshiva', YESHIVA], order: 'rec_key', ts: 'updated_at' }];
     return out.concat(['tb_cats', 'tb_subs', 'tb_subs_meta']
       .map(function (k) { return { kind: 'kv', table: KV_TABLE, name: k }; }));
   }
@@ -1837,6 +1837,73 @@ async function logFlush() {
   return sent;
 }
 
+/*  ⛔⛔ שלוש שכבות הגיבוי (סבב 87ג) — ⭐ **עוגן** מלא אחת לשבוע, ⚠️ **דיפ**
+ *  בכל שאר הימים (רק שורות שהחותמת שלהן חדשה מהעוגן), ⛔ **והפינוי הקיים**
+ *  אוכף את התקרות. ⚠️ הנימוק המדוד: גיבוי מלא בכל לילה של טבלה בת עשרות
+ *  אלפי שורות הוא מגה-בייטים ביום, ⭐ ועוגן שבועי ודיפים קטנים נותנים את
+ *  אותה יכולת שחזור בשבריר. */
+var BK_ANCHOR_MS = 7 * 24 * 60 * 60 * 1000;
+var BK_ANCHOR_PREFIX = 'ANCHOR:';
+var BK_DIFF_PREFIX = 'DIFF:';
+/*  ⛔ חותמת המים של העוגן — ⚠️ נשמרת כמחרוזת, ⭐ ומושווית בשרת בטיפוס
+ *  העמודה: ⛔ `bigint` ו-`timestamptz` שניהם עוברים ב-`gte` כמות שהם. */
+function _bkMarkKey(bkey) { return 'bk_wm_' + bkey; }
+function _bkSetMark(bkey, v) {
+  if (v == null) return;
+  lsSet(_bkMarkKey(bkey), String(v));
+  lsSet('bk_anch_' + bkey, String(Date.now()));
+}
+/*  ⛔ המקסימום נגזר מהשורות ⛔ ואינו נשאל מהשרת — ⚠️ מספר מושווה מספרית
+ *  ומחרוזת לקסיקוגרפית: ⭐ חותמת ISO ממוינת נכון כמחרוזת, ⛔ ו-`bigint`
+ *  היה נשבר בהשוואת מחרוזות. */
+function _bkMaxTs(rows, col) {
+  var mx = null;
+  for (var i = 0; i < rows.length; i++) {
+    var v = rows[i] ? rows[i][col] : null;
+    if (v == null) continue;
+    if (mx === null) { mx = v; continue; }
+    if (typeof v === 'number' ? v > mx : String(v) > String(mx)) mx = v;
+  }
+  return mx;
+}
+/*  ⛔ איזו שכבה רצה היום — ⚠️ עוגן כשאין חותמת מים, כשאין חותמת עוגן,
+ *  או כשעברו שבעה ימים; ⭐ ובכל שאר הימים דיפ מעל חותמת המים. */
+function _bkLayer(bkey, s) {
+  var wm = lsGet(_bkMarkKey(bkey), '');
+  var at = parseInt(lsGet('bk_anch_' + bkey, '0'), 10) || 0;
+  if (!s || !s.ts || !wm || !at || (Date.now() - at) >= BK_ANCHOR_MS)
+    return { diff: false, prefix: BK_ANCHOR_PREFIX, key: bkey, win: null };
+  return { diff: true, prefix: BK_DIFF_PREFIX, key: bkey,
+           win: { col: s.ts, from: wm } };
+}
+/*  ⛔⛔ הקריאה בעימוד, ⛔ ואימות מול מונה השרת — ⚠️ תשובה שנחתכה נראית
+ *  בדיוק כמו תשובה שלמה, ⭐ והדרך היחידה לדעת היא לשאול את השרת כמה שורות
+ *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
+async function _bkReadRows(c, s, win) {
+  var sel = s.cols || '*';
+  var rows = await _ysRowsPaged(function () {
+    var q = c.from(s.name).select(sel);
+    if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
+    return q;
+  }, s.order || null, win);
+  if (!rows) return null;
+  try {
+    var cq = c.from(s.name).select(sel, { count: 'exact', head: true });
+    if (s.eq) cq = cq.eq(s.eq[0], s.eq[1]);
+    if (win && win.col) {
+      if (win.from) cq = cq.gte(win.col, win.from);
+      if (win.to) cq = cq.lte(win.col, win.to);
+    }
+    var cr = await withTimeout(cq);
+    if (!cr || cr.error || typeof cr.count !== 'number') return null;
+    if (cr.count !== rows.length) {
+      console.error('[bk] הגיבוי נחתך — ' + s.name + ': נמדדו ' + rows.length +
+                    ' שורות והשרת מדווח ' + cr.count);
+      return null;
+    }
+  } catch (e) { return null; }
+  return rows;
+}
 /* ── הגיבוי היומי ──────────────────────────────────────────────────────── */
 // מחזירה true רק כשכל המקורות גובו (או דולגו כבלתי-משתנים) בהצלחה.
 async function bkMaybeDaily() {
@@ -1864,6 +1931,13 @@ async function bkMaybeDaily() {
       //    כאן היא רשימת-ההיתר של הגריעה — בלי תלות בהצלחת המקור.
       var bkey = pre + (s.key || s.name);
       dailyKeys.push(bkey);
+      /*  ⛔ שתי השכבות נכנסות לרשימת-ההיתר של הגריעה (סבב 87ג) — ⚠️ מפתח
+       *  שאינו שם אינו מתפנה לעולם, ⭐ ו-`ANCHOR:`/`DIFF:` הם מפתחות
+       *  חדשים: ⛔ בלעדיהם הם היו נצברים בלי גבול. */
+      if (s.kind !== 'kv') {
+        dailyKeys.push(BK_ANCHOR_PREFIX + bkey);
+        dailyKeys.push(BK_DIFF_PREFIX + bkey);
+      }
       /* ⭐ דגל-יום פר-מקור (סבב 62) — מקור שכבר גובה היום מדולג, גם
          כשהדגל הגלובלי לא נכתב. ⛔ בלעדיו מקור אחד שנכשל החזיק את כל
          השאר בלולאה: הדגל הגלובלי נכתב רק כשכולם הצליחו, ולכן כל עלייה
@@ -1877,24 +1951,26 @@ async function bkMaybeDaily() {
         if (!res || res.error) { ok = false; failed.push(bkey); continue; }
         val = (res.data && res.data.value != null) ? String(res.data.value) : null;
       } else {
-        // ⛔ `cols` ולא `*` בטבלאות שיש בהן סוד (סבב 30) — `kv_backup`
-        //    קריאה ל-`anon`, וגיבוי גורף של טבלת משתמשים היה מעתיק לשם
-        //    סיסמאות וטביעות. מי שאין לו סוד מגדיר `cols` ריק ומקבל `*`.
-        var q = c.from(s.name).select(s.cols || '*');
-        // ⭐ `eq`/`order` פר-מקור (סבב 35) — סינון פר-מוסד וסדר דטרמיניסטי,
-        //    כדי שהחתימה הדיפרנציאלית לא תוטרד משינוי סדר-שורות אקראי.
-        if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
-        if (s.order) q = q.order(s.order);
-        var rt = await q;
-        if (!rt || rt.error || !Array.isArray(rt.data)) { ok = false; failed.push(bkey); continue; }
-        var rows = rt.data;
+        /*  ⛔⛔ שכבת הגיבוי — עוגן שבועי מלא, ודיפרנציאלי בכל שאר הימים
+         *  (סבב 87ג): ⚠️ הנימוק המדוד — הקריאה הייתה בקשה **אחת** בלי
+         *  עימוד, ⛔ ו-Supabase מחזיר 1,000 שורות כברירת מחדל **בלי
+         *  שגיאה**: ⭐ `ys_marks_rows` גובתה 1,000 מתוך 18,085, ⛔ כלומר
+         *  94.5% ממנה מעולם לא גובו — ⚠️ והכשל היה שקט לחלוטין. */
+        var layer = _bkLayer(bkey, s);
+        var rows = await _bkReadRows(c, s, layer.win);
+        if (rows === null) { ok = false; failed.push(bkey); continue; }
+        bkey = layer.prefix + bkey;
         // ⛔ שדה-סוד בשורות טבלה מסונן לפני הסריאליזציה (השלמת סבב 35) —
         //    שורה שמפתחה (`secretField`, ברירת מחדל `key`) ברשימת הסודות
         //    אינה מגיעה לגיבוי, גם כשהיא עדיין קיימת במקור.
         if (secrets.length) rows = rows.filter(function (r) {
           return secrets.indexOf(r && r[s.secretField || 'key']) === -1;
         });
+        /*  ⛔ דיפרנציאלי ריק אינו נכתב ⛔ ואינו כישלון — ⚠️ יום שלא השתנה
+         *  בו דבר הוא המצב הרגיל, ⭐ ועותק ריק בכל לילה מציף את הפינוי. */
+        if (layer.diff && !rows.length) { same++; continue; }
         val = JSON.stringify(rows);
+        if (!layer.diff && s.ts) _bkSetMark(layer.key, _bkMaxTs(rows, s.ts));
       }
       // מקור שאין לו ערך בענן — אין מה לגבות, וזה אינו כישלון.
       if (val == null) continue;
@@ -3716,12 +3792,28 @@ function arcCleanupCorrupted() {
 function tbSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
+/*  ⛔⛔ מזהה ההקשר הפעיל (סבב 87ג) — ⚠️ הנימוק המדוד: `syncFromCloud` היא
+ *  מחזור **קרא ← מזג ← דחוף** עם כמה הלוך-ושוב לרשת, ⭐ והמשתמש יכול
+ *  להחליף מוסד באמצע: ⛔ מאותו רגע `KV_TABLE` ו-`LS` מצביעים על החדש
+ *  והזיכרון עדיין מחזיק את הישן, ⚠️ וכל כתיבה שאחריו כותבת את נתוני
+ *  המוסד הקודם תחת החדש. ⛔ **וזה לא תיאורטי** — ⭐ נמדד במסד: 185 מ-187
+ *  ארכיוני רמת אביב היו של ראשון, 1,062 רשומות זהות, ו-`tb_subs` נדרס
+ *  לגמרי (5,840 בתים, אותו `md5`).
+ *  ⭐ המונה מקודם בכל החלפה, ⛔ וכל מחזור שקורא מהזיכרון לוכד אותו בכניסה
+ *  ⛔ ובודק אותו לפני כל כתיבה: ⚠️ השוואת `YESHIVA` לבדה אינה מספיקה —
+ *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
+var _tbEpoch = 0;
+function ysTenantEpoch() { return _tbEpoch; }
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
   toast("🔄 מסנכרן...", 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
+  /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
+   *  אחרי כל `await`, ⭐ שזו הנקודה היחידה שבה ההקשר יכול להתחלף. */
+  var _ep = ysTenantEpoch();
+  var stale = function () { return _ep !== ysTenantEpoch(); };
   async function pull(key, label) {
     var r = await sbGetResult(key);
     if (!r.ok) failed.push(label);
@@ -3734,6 +3826,9 @@ async function syncFromCloud() {
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudCats && cloudCats.length) {
       CATS = mergeCats(CATS, cloudCats);
       lsSet('tb_cats'+LS, JSON.stringify(CATS));
@@ -3743,6 +3838,9 @@ async function syncFromCloud() {
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
       var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
       SUBS = ms.subs; SUBS_META = ms.meta;
@@ -3758,6 +3856,9 @@ async function syncFromCloud() {
        לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
        את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
     var _rowsE = await tbRowsGet('tb_entries');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsE.ok) failed.push('רשומות');
     else {
     var cloudEntries = _rowsE.data;
@@ -3784,6 +3885,9 @@ async function syncFromCloud() {
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
     var _rowsA = await tbRowsGet('tb_archive');
+    /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
+     *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
+    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsA.ok) failed.push('ארכיון');
     else {
     hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
@@ -6243,6 +6347,9 @@ var YESHIVOT = [
   { id: 'rishon',    name: 'ראשון לציון' },
   { id: 'ramataviv', name: 'רמת אביב' },
 ];
+/* ══════════════════════════════════════════════════════════════════════════
+   החלפת מוסד — הבורר, איפוס המצב, והעלייה מחדש
+   ══════════════════════════════════════════════════════════════════════════ */
 function ysNameOf(y) {
   for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i].name;
   return '';
@@ -6255,12 +6362,37 @@ function ysNameOf(y) {
  *  לחשוב שאין מה למשוך, ⛔ ועֵד דחיפה שנשאר מתיר פינוי של רשומה שמעולם
  *  לא עלתה מהמוסד הנוכחי. ⚠️ שניהם מתאפסים לערך שנקרא «אין ראיה»,
  *  ⛔ ולא לערך שנראה כמו ידיעה. */
+/*  ⛔⛔ המצב הפר-מוסדי מאופס **כולו**, ⛔ ולא משתני הסנכרון בלבד — ⚠️ הנימוק
+ *  המדוד: עד כאן `ENTRIES` · `CATS` · `SUBS` · `SUBS_META` · `ARCHIVE`
+ *  נשארו בזיכרון אחרי ההחלפה, ⛔ בעוד ש-`YESHIVA` · `KV_TABLE` · `LS` כבר
+ *  הצביעו על המוסד החדש: ⭐ וכל דחיפה שרצה בחלון הזה כתבה את נתוני המוסד
+ *  הקודם תחת החדש. ⛔ **וזה לא תיאורטי** — ⚠️ 185 מ-187 ארכיוני רמת אביב
+ *  היו של ראשון, ו-`tb_subs` נדרס לגמרי.
+ *  ⛔ ואיפוס למערך ריק אינו מחיקה בענן — ⚠️ הדחיפה מעלה שורות «מלוכלכות»
+ *  בלבד, ⭐ ומערך ריק הוא «אין מה לדחוף» ⛔ ולא «נמחק הכול».
+ *  ⛔ ומפת החותמות המרוחקות מתאפסת אף היא — ⚠️ היא נמדדה מול המוסד הקודם,
+ *  ⭐ והשוואה מולה הייתה מכריעה מה לדחוף על סמך טבלה אחרת. */
 function ysResetTenantState() {
+  _tbEpoch++;
   _tbPushedAt = {};
   _lastKnownTimestamp = 0;
   _plFullAt = 0;
   _pendMap = null;
   _tombPrunePending = false;
+  _tbRemote = { tb_entries: null, tb_archive: null };
+  _pendDrawHold = {};
+  _hwCloudSeen = {};
+  _tbLastSyncAt = 0;
+  _tbNetWarned = false;
+  _tbPullLogged = false;
+  ENTRIES = [];
+  ARCHIVE = [];
+  CATS = [];
+  SUBS = {};
+  SUBS_META = {};
+  arcSelYear = null;
+  arcSelMonth = null;
+  arcSelDayKey = null;
 }
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
@@ -6335,6 +6467,12 @@ function selectYeshiva(y, again) {
   // לפנות. היא חייבת לרוץ גם **לפני** `loadLocalData`, כדי שהטעינה תראה
   // את המערך הממוזג ולא את זה שלפני ההגירה.
   try { lsRebuildPolicy(); migrateLegacyLsKeys(); lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
+  /*  ⛔⛔ הטעינה **לפני** כל `boot` שיכול לדחוף (סבב 87ג) — ⚠️ עד כאן היא
+   *  ישבה אחרי `plBoot`, ⛔ וביניהן רצו הריקון החוזר והמשיכה: ⭐ בחלון הזה
+   *  `LS` כבר הצביע על המוסד החדש והזיכרון עדיין החזיק את הישן.
+   *  ⛔ אין להזיז אותה שוב מטה — ⚠️ זה בדיוק הבאג. ⭐ והיא נשארת **אחרי**
+   *  `lsBoot`, ⛔ שההגירה והפינוי חייבים לרוץ לפניה. */
+  loadLocalData();
   // סימוני "ממתין לסנכרון" (סבב 12). **pendReload ולא pendBoot בלבד** —
   // מפתח הסימונים נושא סיומת מוסד, וסימון של ראשון לציון אינו תקף לרמת אביב.
   try { pendReload(); if (!again) pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
@@ -6350,7 +6488,6 @@ function selectYeshiva(y, again) {
   //    מוקדם יותר, מאותה סיבה כמו `bkBoot`: `KV_TABLE` הוא `null` עד
   //    שנבחר מוסד, ותקתוק לפני כן היה שואל טבלה שאינה קיימת.
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
-  loadLocalData();
   var ov = document.getElementById('yeshivaSelect');
   if (ov) ov.style.display = 'none';
   // מסך הבחירה כבר נסגר — כישלון כאן חייב להשאיר אפליקציה שמישה ולא מסך ריק
