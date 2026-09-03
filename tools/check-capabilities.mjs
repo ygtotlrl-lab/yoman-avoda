@@ -123,8 +123,36 @@ const APP = {
       const iBoot = sel.indexOf('plBoot()');
       if (iLoad < 0 || iBoot < 0 || iLoad > iBoot) return false;
       const sync = c.fnBody('syncFromCloud') || '';
-      return /var _ep = ysTenantEpoch\(\)/.test(sync)
-          && (sync.match(/if \(stale\(\)\)/g) || []).length >= 4;
+      if (!/var _ep = ysTenantEpoch\(\)/.test(sync)) return false;
+      if ((sync.match(/if \(stale\(\)\)/g) || []).length < 4) return false;
+      /*  ⛔ ומסלול **הדחיפה** נמדד אף הוא (סבב 88) — ⚠️ עד כאן נמדד מחזור
+       *  המשיכה בלבד, ⛔ והדחיפה היא מחזור שני עם `await` משלה: ⭐ כל אחת
+       *  משלוש נקודות הכתיבה לוכדת את ההקשר ⛔ ובודקת אותו אחרי ההמתנה,
+       *  ⚠️ והרישום שאחריה — עֵד הפינוי ואישור ה-⏳ — הוא מה שנזקף למוסד
+       *  הלא נכון. ⛔ והתקתוק המושהה מבוטל באיפוס. */
+      /*  ⛔ **כל רישום שאחרי המתנה** נמדד, ⛔ ולא נוכחות שער אחד — ⚠️ אלה
+       *  בדיוק הפעולות שזוקפות את הצלחת הדחיפה לחשבון ההקשר הפעיל:
+       *  ⭐ עֵד הפינוי · אישור ה-⏳ · וחותמת הפולינג. ⛔ הגוף נחתך בכל
+       *  `await`, ⚠️ ובכל קטע שאחריו השער חייב לבוא **לפני** הרישום. */
+      const MARKS = ['_tbMarkPushed(', 'pendConfirmPush(', 'PL_CFG.note(', 'plTouch('];
+      const GUARD = 'ysTenantStale(_ep)';
+      const PUSHERS = ['tbSyncPushNow', 'saveEntries', 'saveArchive', 'saveCats'];
+      for (const fn of PUSHERS) {
+        const b = c.fnBody(fn) || '';
+        if (!/var _ep = ysTenantEpoch\(\)/.test(b)) return false;
+        if (b.indexOf(GUARD) < 0) return false;
+        const segs = b.split('await ').slice(1);
+        for (const seg of segs) {
+          const g = seg.indexOf(GUARD);
+          for (const mk of MARKS) {
+            /*  ⚠️ היסט 0 הוא הביטוי שהומתן לו עצמו — ⛔ ולא רישום שאחריו:
+             *  ⭐ מטענו ויעדו נלכדו סינכרונית ברגע הקריאה. */
+            const i = seg.indexOf(mk);
+            if (i > 0 && (g < 0 || g > i)) return false;
+          }
+        }
+      }
+      return /clearTimeout\(_syncPushTimer\)/.test(reset);
     },
     /*  ⛔ מסלול תצוגה שקורא לשכבת השורות בלי טווח (סבב 87) — ⚠️ הטענה
      *  אינה «`_ysRowsPaged` קיימת» אלא **שכל קריאה מצהירה חלון**: ⭐ קריאה
