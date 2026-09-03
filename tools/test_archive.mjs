@@ -73,7 +73,8 @@ const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick'
 const VARS = ['var GREG_MONTHS_HE', 'var HMONTH_ALIAS', 'var HMO ', 'var HUNKNOWN',
   'var DAY_VALUE_MAP'];
 
-function makeCtx() {
+function makeCtx(opts) {
+  opts = opts || {};
   const store = {};
   const sandbox = {
     console,
@@ -98,10 +99,23 @@ function makeCtx() {
     hwNoteCloud: () => {},
     // hebcal אינו נטען כאן; `hebrewDate` נשלטת פר-בדיקה.
     hebrewDate: () => '',
+    Intl, Date, Object, JSON, String, Number, Array, Math, RegExp, Error,
     _store: store,
   };
   vm.createContext(sandbox);
   vm.runInContext(VARS.map(cutVar).join('\n') + '\n' + FN.map(cut).join('\n'), sandbox);
+  /*  ⛔ מנוע התאריך העברי **האמיתי** ⛔ ולא בדל (סבב 89) — ⚠️ הנפילה-חזרה
+   *  השלישית של `snapHDate` ממירה לועזי לעברי, ⭐ ובדל היה מודד את הבדל
+   *  ולא את ההמרה: ⛔ העוגנים הם אותם שני סמנים מוצהרים שהשער של התאריך
+   *  משתמש בהם, ⚠️ ולא שם פונקציה שנשבר כשהיא נמחקת. */
+  if (opts.realHeb) {
+    const L = SRC.split('\n');
+    const a = L.findIndex((l) => l.startsWith('window.DAYS_HEB='));
+    const b = L.findIndex((l, i) => i > a && l.startsWith('// ═══ סוף אזור התאריך העברי'));
+    if (a < 0 || b <= a) throw new Error('אזור התאריך העברי לא אותר');
+    sandbox.window = sandbox;
+    vm.runInContext(L.slice(a, b + 1).join('\n'), sandbox);
+  }
   return sandbox;
 }
 
@@ -316,6 +330,25 @@ function reachable(c) {
     'hdate תקין גובר על name');
   eq(c.snapHDate({ hdate: '', name: '' }), '', 'אין ממה לגזור — מחרוזת ריקה, והקיבוץ יפול ל«לא ידוע»');
 }
+{
+  /*  ⛔⛔ תאריך **לועזי** שיושב בשדה העברי (סבב 89) — ⚠️ הנימוק המדוד:
+   *  ארבעה סנאפשוטים בענן נושאים `hdate` בצורת «25 בנוב׳ 2025 ה׳תשפ״ו»
+   *  ⛔ ו-`gdate` ריק, ⭐ ו-`extractYM` לא מצאה בהם שם חודש עברי:
+   *  ⚠️ 138 רשומות נערמו תחת «שנה לא ידוע». ⛔ והטענה מודדת **המרה**
+   *  ⛔ ולא נוכחות שם. */
+  const c = makeCtx({ realHeb: true });
+  const rec = { id: 3000079, name: ' 25 בנוב׳ 2025 ה׳תשפ״ו',
+                hdate: '25 בנוב׳ 2025 ה׳תשפ״ו', gdate: '' };
+  const before = JSON.stringify(rec);
+  const got = c.snapHDate(rec);
+  eq(got, 'ה׳ כסלו ה׳תשפ״ו',
+     'hdate לועזי מומר לעברי — 25 בנוב׳ 2025 הוא ה׳ כסלו ה׳תשפ״ו');
+  eq(c.extractYM(got).month, 'כסלו', 'והתוצאה נקראת ע"י extractYM — הקיבוץ אינו «לא ידוע»');
+  eq(c.extractYM(rec.hdate).month, c.HUNKNOWN, '⛔ ובלי ההמרה אותו שדה נקרא «לא ידוע»');
+  eq(JSON.stringify(rec), before, '⛔ והנפילה-חזרה השלישית טהורה — אינה נוגעת בסנאפשוט');
+  eq(c.snapHDate({ hdate: 'ג׳ אלול ה׳תשפ״ה', name: '' }), 'ג׳ אלול ה׳תשפ״ה',
+     '⛔ ו-hdate עברי תקין אינו עובר דרך ההמרה כלל');
+}
 
 /* ── 7. המקור: רשומה אוטומטית זהה בשדותיה לידנית ───────────────────────── */
 const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count', 'updatedAt'];
@@ -443,6 +476,8 @@ if (!process.env.RD67_MUT) {
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ שינוי מפתח הארכיון מפיל את השער', 'index.html',
        (s) => s.replace(/function archiveKey/, 'function archiveKeyX'), true);
+  _mut('⛔ הסרת הנפילה-חזרה מלועזי לעברי מפילה את הטענה «hdate לועזי מומר לעברי»', 'index.html',
+       (s) => s.replace(/var g = parseGregLike\(h\)[\s\S]*?\n  \}\n  return h;/, 'return h;'), true);
   _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
        (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }\nvar _r72Seen = r72Live();</script>\n</body>'), false);
 }

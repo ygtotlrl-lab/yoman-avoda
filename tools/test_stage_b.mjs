@@ -133,6 +133,12 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar("var YS_ROWS_PAGE = "), sandbox);
   vm.runInContext(cutVar("var YS_ROWS_CAP = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
+  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbRowsPush`
+   *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`
+   *  של עצמן: ⚠️ והבדיקה הייתה מדווחת «אין רשת» על קוד תקין. */
+  vm.runInContext(cutVar('var _tbEpoch = 0;'), sandbox);
+  vm.runInContext(cut('ysTenantEpoch'), sandbox);
+  vm.runInContext(cut('ysTenantStale'), sandbox);
   if (opts.tbRows === false) sandbox.TB_ROWS = false;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
   env.sb = sandbox;
