@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="62-2026-09-03-5">
+<meta name="app-version" content="63-2026-09-03-6">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -140,6 +140,10 @@
 <style>
 
 :root {
+  /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
+   *  אין סרגל תחתון קבוע. */
+  --toast-bottom:26px;
+
   --primary:#1E6FBF; --primaryl:#3A8FDF; --primaryd:#0D4A8A;
   --accent:#F0A500; --accentl:#FFB930; --accentd:#C07800;
   --bg:#F0F4FA; --bgsec:#E4EBF5; --bgcard:#FFFFFF;
@@ -366,11 +370,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
 /* טוסט */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(100px);
-  background:var(--primary);color:white;padding:10px 20px;border-radius:28px;font-size:13px;font-weight:700;
-  transition:transform 0.3s;z-index:1000;box-shadow:0 4px 20px rgba(30,111,191,0.4);}
-.toast.show{transform:translateX(-50%) translateY(0);}
 
+/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
+   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
+   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+   ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
+      אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
+      ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
+   ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
+      תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
+.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+.toast.bad{background:#b91c1c;color:#fff}
+.toast.good{background:#15803d;color:#fff}
+@keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
    הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים לא נשענים על
@@ -556,7 +570,7 @@ body.locked{overflow:hidden}
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toasts"></div>
 
 <script>
 
@@ -4506,6 +4520,25 @@ function closeAsk(v) {
   if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
+/*  ⛔ `div` לכל הודעה, ⛔ ולא אלמנט קבוע אחד — ⚠️ הנימוק המדוד: בשלוש
+ *  מהן הטוסט היה אלמנט יחיד, ⭐ והודעה שנייה דרסה את הראשונה: ⛔ «נשמר»
+ *  ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד, ⚠️ ומי שקרא את המסך לא ידע
+ *  שהייתה שנייה. ⛔ `kind` הוא שם מחלקה ⛔ ולא משך — ⚠️ ומי שאין לו ערך
+ *  מוסר `null`; ⭐ והמשך יושב ב-`TOAST_DEFAULT_MS`, ⛔ הערך היחיד שנבדל. */
+function toast(msg, dur, kind) {
+  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
+  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
+  var box = document.getElementById('toasts');
+  if (!box) return;
+  var el = document.createElement('div');
+  el.className = 'toast' + (kind ? ' ' + kind : '');
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(function () {
+    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    setTimeout(function () { el.remove(); }, 260);
+  }, dur || TOAST_DEFAULT_MS);
+}
 /*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
    כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
 var LS_TOAST_MS = 5000;
@@ -5122,21 +5155,6 @@ function saveSettings() {
  *  ⚠️ הערך במקרה זהה ל-`LS_SUCCESS_MUTE_MS`, ⛔ אך הוא מושג אחר
  *  לגמרי (משך תצוגה מול חלון השתקה), ⛔ ואין לאחד ביניהם. */
 var TOAST_DEFAULT_MS = 2500;
-var _toastTid;
-/*  ⛔ חתימה אחת בארבע האפליקציות — `toast(msg, dur, kind)` — ⚠️ הנימוק
- *  המדוד: עד כאן הארגומנט השני היה **משך** בשלוש ו**שם מחלקה** בגיוס,
- *  ⛔ ואותה שורה משותפת בדיוק — `toast(MSG_STALE_CODE, 6000)` — פעלה
- *  בשלוש ⭐ ובגיוס ייצרה `class="toast 6000"`: ⚠️ בלי מחלקת צבע, ובלי
- *  ששת השניות. ⛔ `kind` הוא שם מחלקה ⛔ ולא משך — ⚠️ ומי שאין לו ערך
- *  מוסר `null`. */
-function toast(msg, dur, kind) {
-  // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
-  if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
-  var t = document.getElementById("toast");
-  t.textContent = msg; t.className = "toast show" + (kind ? " " + kind : "");
-  clearTimeout(_toastTid);
-  _toastTid = setTimeout(function(){ t.className = "toast"; }, dur || TOAST_DEFAULT_MS);
-}
 
 
 // ארכיון
