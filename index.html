@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="70-2026-09-03-88">
+<meta name="app-version" content="71-2026-09-03-89">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2989,9 +2989,19 @@ function getSB() {
 // נפתר עם res.error; ולכן קורא שהסתפק ב-try/catch לא ראה כשלים מעולם
 // והודיע למשתמש בשמחה שהכול נשמר.
 async function sbSet(key, value) {
+  /*  ⛔ הטבלה וההקשר נלכדים **בשורה הראשונה** ⛔ ואינם נקראים מהגלובלי בהמשך
+   *  — ⚠️ היום `sb.from(KV_TABLE)` מוערך לפני ההשהיה הראשונה ולכן הוא נכון
+   *  **במקרה ולא במבנה**: ⭐ `await` שיתווסף מעליו יסיט את הכתיבה לטבלה של
+   *  המוסד שהמשתמש עבר אליו בינתיים, ⛔ בלי שגיאה ובלי סימן. */
+  var tbl = KV_TABLE, _ep = ysTenantEpoch();
   try {
     var sb = getSB();
-    var res = await withTimeout(sb.from(KV_TABLE).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"}));
+    var res = await withTimeout(sb.from(tbl).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"}));
+    /*  ⛔ ההקשר התחלף בזמן הכתיבה — ⚠️ הכתיבה עצמה הגיעה לטבלה הנכונה, שהיא
+     *  נלכדה בכניסה, ⛔ אך `ok:true` היה מזכה את עֵד הפינוי של המוסד **החדש**
+     *  בדחיפה שלא נעשתה עבורו: ⭐ נכשל-סגור — ⚠️ עֵד חסר מונע פינוי, ⛔ ועֵד
+     *  שגוי מתיר למחוק מהדיסק רשומה שמעולם לא עלתה. */
+    if (ysTenantStale(_ep)) return { ok: false, error: "ההקשר התחלף", stale: true };
     if (res.error) {
       console.error("sbSet error [" + key + "]:", res.error.message, res.error);
       return { ok: false, error: res.error.message || "שגיאת שרת" };
@@ -3007,9 +3017,10 @@ async function sbSet(key, value) {
 // אותה קריאה, עם התוצאה משומרת: {ok, data, error}.
 // מפתח חסר (PGRST116 מ-single()) הוא תוצאה ריקה, לא כישלון.
 async function sbGetResult(key) {
+  var tbl = KV_TABLE;   // ר' הנימוק ב-sbSet — הטבלה נלכדת ואינה נקראת מהגלובלי
   try {
     var sb = getSB();
-    var res = await withTimeout(sb.from(KV_TABLE).select("value").eq("key", key).single());
+    var res = await withTimeout(sb.from(tbl).select("value").eq("key", key).single());
     if (res.error) {
       var missing = res.error.code === "PGRST116";
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
@@ -3460,6 +3471,11 @@ function tbSortRows(kvKey, arr) {
 async function tbRowsGet(kvKey) {
   var t = tbTableOf(kvKey);
   if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
+  /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
+   *  המדוד: `_ysRowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
+   *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
+   *  של מוסד אחד עם עמוד 2 של השני ⛔ לתוך תוצאה אחת שנראית שלמה. */
+  var yesh = YESHIVA, _ep = ysTenantEpoch();
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
@@ -3471,7 +3487,7 @@ async function tbRowsGet(kvKey) {
        ⛔ ובשני כתיבים שונים, ⭐ ולכן `.gte` עליה היה מחזיר תמונה חלקית
        שנראית שלמה. ⚠️ החלון כאן הוא **הדגל**, והוא מפריד 2,108 מ-375. */
     var rows = await _ysRowsPaged(function () {
-      var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', YESHIVA);
+      var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', yesh);
       if (t === 'tb_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
       return q;
     }, 'rec_key', null);
@@ -3482,6 +3498,10 @@ async function tbRowsGet(kvKey) {
       map[String(r.rec_key)] = Number(r.updated_at) || 0;
       out.push(r.data);
     });
+    /*  ⛔ מפת החותמות המרוחקות היא מצב פר-מוסד — ⚠️ `ysResetTenantState` מאפסת
+     *  אותה, ⭐ וכתיבה שאחרי ההמתנה הייתה ממלאת אותה בחותמות המוסד הקודם:
+     *  ⛔ ואז `tbDirtyRows` משווה מול טבלה אחרת ומחליט מה לדחוף לפיה. */
+    if (ysTenantStale(_ep)) return { ok: false, data: null };
     _tbRemote[kvKey] = map;
     return { ok: true, data: tbSortRows(kvKey, out) };
   } catch (e) { return { ok: false, data: null }; }
@@ -3508,6 +3528,7 @@ function tbDirtyRows(kvKey, arr) {
 async function tbRowsPush(kvKey, arr) {
   var t = tbTableOf(kvKey);
   if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, n: 0 };
+  var _ep = ysTenantEpoch();   // ר' הנימוק ב-tbRowsGet — הרישום שאחרי ההמתנה
   var rows = tbDirtyRows(kvKey, arr);
   if (!rows.length) return { ok: true, n: 0 };
   try {
@@ -3530,6 +3551,9 @@ async function tbRowsPush(kvKey, arr) {
       try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
       catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
     }
+    /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה, ⭐ אך
+     *  הרישום כאן ו-`ok:true` שייכים למוסד שנלכד ⛔ ולא לזה שפעיל עכשיו. */
+    if (ysTenantStale(_ep)) return { ok: false, n: 0 };
     var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
     rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
     return { ok: true, n: rows.length };
@@ -3551,6 +3575,8 @@ function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
 function saveSubs() {
   lsSet("tb_subs"+LS, JSON.stringify(SUBS));
   lsSet("tb_subs_meta"+LS, JSON.stringify(SUBS_META));
+  /*  ⛔ אין כאן שער הקשר ⛔ ואין בו צורך — ⚠️ `sbSet` לוכדת את הטבלה בכניסה,
+   *  ⭐ ולשתי הכתיבות האלה אין עֵד דחיפה שאפשר לזקוף למוסד הלא נכון. */
   sbSet("tb_subs", SUBS);
   sbSet("tb_subs_meta", SUBS_META);
 }
@@ -3867,7 +3893,7 @@ async function syncFromCloud() {
     if (cloudCats && cloudCats.length) {
       CATS = mergeCats(CATS, cloudCats);
       lsSet('tb_cats'+LS, JSON.stringify(CATS));
-      sbSet('tb_cats', CATS).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_cats'); });
+      sbSet('tb_cats', CATS).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
     }
 
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
@@ -3905,7 +3931,7 @@ async function syncFromCloud() {
       // מיון לפי id בסדר יורד (החדש קודם)
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
-      tbRowsPush('tb_entries', ENTRIES).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_entries'); });
+      tbRowsPush('tb_entries', ENTRIES).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_entries'); });
       if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES);
     } else if (ENTRIES.length) {
       tbRowsPush('tb_entries', ENTRIES);
@@ -3938,7 +3964,7 @@ async function syncFromCloud() {
       ARCHIVE = merged;
       lsSetArray('tb_archive'+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
       // דוחף את הארכיון הממוזג בחזרה לענן כדי שכל המכשירים יישארו מסונכרנים
-      tbRowsPush('tb_archive', ARCHIVE).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_archive'); });
+      tbRowsPush('tb_archive', ARCHIVE).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_archive'); });
       if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
@@ -5958,6 +5984,14 @@ function _tbMarkSynced() {
 //    ⛔ אין להחזיר לכאן את בדיקת החותמת (סבב 51) — מסלול שני שמכריע מתי
 //    למשוך היה יוצא מסנכרון מול המודול, וזה בדיוק «מקור אמת שני».
 async function tbPullFromCloud() {
+  /*  ⛔⛔ שער ההקשר של **מסלול הפולינג** — ⚠️ הנימוק המדוד: סבב 87 סגר את
+   *  `syncFromCloud` וסבב 88 את מסלול הדחיפה, ⛔ והמשיכה הזו — שרצה
+   *  **כל שלוש שניות** מ-`plTick` — נשארה בלי שער: ⭐ נמדד בדפדפן
+   *  שהחלפת מוסד בזמן משיכה בטיסה כתבה רשומת ראשון למפתח
+   *  `tb_entries_ramataviv`, ⛔ ומילאה את מפת החותמות בחותמות ראשון
+   *  אחרי ש-`ysResetTenantState` כבר איפסה אותה.
+   *  ⚠️ וזה מה שדווח מהשטח: הקטגוריות והארכיון מתערבבים בין המוסדות. */
+  var _ep = ysTenantEpoch(), _ls = LS;
   try {
     console.log("[sync] pulling data...");
 
@@ -5968,24 +6002,26 @@ async function tbPullFromCloud() {
        למקור אמת שני. ⛔ וכשל מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ מיזוג
        מול מערך ריק מוחק את מה שלא הספיק לעלות. */
     var _rowsE = await tbRowsGet('tb_entries');
+    if (ysTenantStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsE.ok) {
       var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
-        lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
+        lsSetArray("tb_entries"+_ls, ENTRIES, _tbRecTs);
         renderLog();
         console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
                     " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
     }
     var _rowsA = await tbRowsGet('tb_archive');
+    if (ysTenantStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsA.ok) {
-      hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
+      hwNoteCloud('tb_archive'+_ls, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
       var cloudArchive = _rowsA.data;
       if (Array.isArray(cloudArchive)) {
         ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
-        lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
+        lsSetArray("tb_archive"+_ls, hwDiskFilter('tb_archive'+_ls, ARCHIVE), _tbRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
         if (arcPanel && arcPanel.style.display !== "none" && arcSelDayKey) renderArcDetail();
