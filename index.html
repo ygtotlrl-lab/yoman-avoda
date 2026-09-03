@@ -6,7 +6,7 @@
 <title>יומן עבודה</title>
 <!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
      יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
-<meta name="app-version" content="69-2026-09-03-12">
+<meta name="app-version" content="70-2026-09-03-88">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -199,6 +199,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:14px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
 .ys-pick-btn:hover{background:rgba(247,244,235,0.18);border-color:#F7F4EB;}
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+/* ⛔ המרווח הוא מה שמפריד בין בחירה לקריאה — ⚠️ כפתור שלישי צמוד נקרא
+   כישיבה שלישית, ⭐ והקו מעליו הוא הגבול. */
+.ys-pick-aside{margin-top:26px;padding-top:18px;border-top:1px solid rgba(247,244,235,0.18);}
+/* ⚠️ מובחן משני הכפתורים שמעליו בגודל ובעובי המסגרת ⛔ ולא בצבע — ⭐ גוון
+   שלישי על הגרדיאנט היה שובר את המוטיב. */
+.ys-pick-alt{padding:11px 18px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;
+  color:#F7F4EB;background:transparent;border:1px dashed rgba(247,244,235,0.4);
+  border-radius:11px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
+.ys-pick-alt:hover{background:rgba(247,244,235,0.10);border-color:rgba(247,244,235,0.75);}
+.ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 .hdr-mid{flex:1;min-width:0;text-align:center;padding:0 12px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .hdr-bh{font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:4px;margin-bottom:4px;}
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:8px;}
@@ -488,6 +498,13 @@ body.locked{overflow:hidden}
       <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
       <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="ramataviv">רמת אביב</button>
     </div>
+    <!--  ⛔ מציג הטבלה יושב כאן ⛔ ולא בתוך הישיבה — ⚠️ הטבלה היא של הארגון
+          ואינה שייכת למוסד, ⭐ ומסך שנפתח מתוך מוסד נקרא כאילו הוא מתאר
+          אותו. ⛔ והכפתור מובחן משני הכפתורים שמעליו — ⚠️ הם בחירה
+          שממשיכה לאפליקציה, ⭐ וזה מסך קריאה שחוזר לכאן.  -->
+    <div class="ys-pick-aside">
+      <button class="ys-pick-alt" data-act="inf-open">📊 טבלת התשתית</button>
+    </div>
   </div>
 </div>
 
@@ -515,9 +532,6 @@ body.locked{overflow:hidden}
 
   <!-- ENTRY -->
   <div class="panel" id="panel-entry" style="display:block">
-    <div class="inf-bar" style="justify-content:flex-start;margin-bottom:12px">
-      <button data-act="inf-open">📊 טבלת התשתית</button>
-    </div>
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -3524,8 +3538,12 @@ async function tbRowsPush(kvKey, arr) {
 
 // פונקציות שמירה — כותבות גם ל-localStorage וגם ל-Supabase
 function saveCats() {
+  var _ep = ysTenantEpoch();   // ר' ההסבר ב-saveEntries — עֵד הפינוי הוא פר-מוסד
   lsSet("tb_cats"+LS, JSON.stringify(CATS));
-  sbSet("tb_cats", CATS).then(function(r){ if (r && r.ok) _tbMarkPushed('tb_cats'); });
+  sbSet("tb_cats", CATS).then(function(r){
+    if (ysTenantStale(_ep)) return;
+    if (r && r.ok) _tbMarkPushed('tb_cats');
+  });
 }
 // חותמות זמן פר-מפתח של SUBS (ראה mergeSubs). נטען ב-loadLocalData().
 var SUBS_META = {};
@@ -3585,13 +3603,18 @@ function tbSortEntries(list) {
 function saveEntries() {
   // t0 לפני הצילום — רשומה שתסומן אחריו אינה במה שנשלח עכשיו.
   var _t0 = Date.now();
+  /*  ⛔ ההקשר נלכד לפני ההמתנה (סבב 88) — ⚠️ הרישום שאחריה זוקף את
+   *  הצלחת הדחיפה לעֵד הפינוי ולסימון ה-⏳, ⭐ ושניהם פר-מוסד. */
+  var _ep = ysTenantEpoch();
   lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
   (async function(){
     // ⭐ הטבלאות הן המאסטר (סבב 35) — הכתיבה הכפולה לבלוק ה-kv כובתה,
     //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
     //    `TB_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
     var _rows = await tbRowsPush('tb_entries', ENTRIES);
+    if (ysTenantStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_entries", ENTRIES) : null;
+    if (ysTenantStale(_ep)) return;
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
@@ -3603,6 +3626,7 @@ function saveEntries() {
 }
 function saveArchive() {
   var _t0 = Date.now();
+  var _ep = ysTenantEpoch();   // ר' ההסבר ב-saveEntries — אותו שער בדיוק
   lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
@@ -3610,7 +3634,9 @@ function saveArchive() {
     //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. `tbRowsPush`
     //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
     var _rows = await tbRowsPush('tb_archive', ARCHIVE);
+    if (ysTenantStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;
+    if (ysTenantStale(_ep)) return;
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ARC, _t0);
@@ -3804,6 +3830,15 @@ function tbSyncLog(action, key, recordCount, details) {
  *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
 var _tbEpoch = 0;
 function ysTenantEpoch() { return _tbEpoch; }
+/*  ⛔⛔ שער ההקשר של **מסלול הדחיפה** (סבב 88) — ⚠️ עד כאן המונה נבדק
+ *  ב-`syncFromCloud` בלבד, ⛔ והדחיפה היא מחזור שני עם `await` משלו:
+ *  ⭐ `tbSyncPushNow` · `saveEntries` · `saveArchive` כולן ממשיכות אחרי
+ *  ההמתנה ⛔ ורושמות את הצלחת הדחיפה — ⚠️ עֵד הפינוי ואישור ה-⏳ —
+ *  **על ההקשר שפעיל עכשיו**: ⛔ החלפה באמצע זקפה לחשבון המוסד החדש
+ *  דחיפה שמעולם לא נעשתה עבורו, ⭐ ועֵד פינוי כזה מתיר למחוק מהדיסק
+ *  רשומה שלא עלתה מעולם. ⛔ ההקשר נלכד בכניסה ⛔ ונבדק לפני כל כתיבה
+ *  ולפני כל רישום. */
+function ysTenantStale(ep) { return ep !== ysTenantEpoch(); }
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
@@ -4643,35 +4678,63 @@ function esc(s) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
+/*  ⛔ מיכל שאינו ב-DOM ⟵ **זעקה**, ⛔ ולא יציאה בשקט — ⚠️ הנימוק המדוד:
+ *  המיכל ישב באחת מהן **בתוך מסך אחד מתוך שבעה** ⛔ ונמחק יחד איתו,
+ *  ⭐ ו-`openModal` יצאה ב-`return` בלי שגיאה ובלי הודעה: ⛔ הכפתור «לא
+ *  עשה כלום», ⚠️ ושלושה סבבים חיפשו בדלגציה ובמטפל. ⛔ ו-`locked` מוסרת
+ *  גם במסלול הכשל — ⚠️ מחלקה ששרדה פתיחה קודמת חוסמת את גלילת הדף,
+ *  ⭐ והמשתמש קורא לזה «המסך איטי» ⛔ ולא «המודאל תקוע». */
+function uiNoDialog(where, id) {
+  try { console.error('[ui] ' + where + ': #' + id + ' אינו ב-DOM'); } catch (e) {}
+  try { document.body.classList.remove('locked'); } catch (e) {}
+  try { toast('שגיאה: הדיאלוג אינו זמין (#' + id + ')', null, 'bad'); } catch (e) {}
+}
 function openModal(title, body, foot) {
+  var m = document.getElementById('modal');
   var ttl = document.getElementById('modal-title');
-  if (!ttl) return;
+  var bd = document.getElementById('modal-body');
+  var ft = document.getElementById('modal-foot');
+  if (!m || !ttl || !bd || !ft) { uiNoDialog('openModal', 'modal'); return; }
   ttl.textContent = title || '';
-  document.getElementById('modal-body').innerHTML = body || '';
-  document.getElementById('modal-foot').innerHTML = foot || '';
-  document.getElementById('modal').classList.add('open');
+  bd.innerHTML = body || '';
+  ft.innerHTML = foot || '';
+  m.classList.add('open');
   document.body.classList.add('locked');
 }
 function closeModal() {
   var m = document.getElementById('modal');
-  if (!m) return;
+  if (!m) { uiNoDialog('closeModal', 'modal'); return; }
   m.classList.remove('open');
-  document.getElementById('modal-body').innerHTML = '';
-  document.getElementById('modal-foot').innerHTML = '';
-  if (!document.getElementById('ask').classList.contains('open')) document.body.classList.remove('locked');
+  var bd = document.getElementById('modal-body');
+  var ft = document.getElementById('modal-foot');
+  if (bd) bd.innerHTML = '';
+  if (ft) ft.innerHTML = '';
+  var a = document.getElementById('ask');
+  if (!a || !a.classList.contains('open')) document.body.classList.remove('locked');
 }
 var askResolve = null;
+/*  ⛔ דיאלוג אישור שמיכלו חסר נענה **«לא»** — ⚠️ הבטחה שלא נפתרת משאירה
+ *  את הקורא תלוי לנצח, ⭐ ו-`true` היה מבצע את הפעולה ההרסנית בלי שאיש
+ *  אישר: ⛔ נכשל-סגור, ⛔ ובקול. */
 function ask(title, text, yesLabel) {
-  document.getElementById('ask-title').textContent = title || '';
-  document.getElementById('ask-body').textContent = text || '';
-  document.getElementById('ask-yes').textContent = yesLabel || 'אישור';
-  document.getElementById('ask').classList.add('open');
+  var a = document.getElementById('ask');
+  var ttl = document.getElementById('ask-title');
+  var bd = document.getElementById('ask-body');
+  var yes = document.getElementById('ask-yes');
+  if (!a || !ttl || !bd || !yes) { uiNoDialog('ask', 'ask'); return Promise.resolve(false); }
+  ttl.textContent = title || '';
+  bd.textContent = text || '';
+  yes.textContent = yesLabel || 'אישור';
+  a.classList.add('open');
   document.body.classList.add('locked');
   return new Promise(function (res) { askResolve = res; });
 }
 function closeAsk(v) {
-  document.getElementById('ask').classList.remove('open');
-  if (!document.getElementById('modal').classList.contains('open')) document.body.classList.remove('locked');
+  var a = document.getElementById('ask');
+  if (!a) uiNoDialog('closeAsk', 'ask');
+  else a.classList.remove('open');
+  var m = document.getElementById('modal');
+  if (!m || !m.classList.contains('open')) document.body.classList.remove('locked');
   if (askResolve) { askResolve(v); askResolve = null; }
 }
 /*  ⛔ `div` לכל הודעה, ⛔ ולא אלמנט קבוע אחד — ⚠️ הנימוק המדוד: בשלוש
@@ -4683,7 +4746,10 @@ function toast(msg, dur, kind) {
   // שער סבב 11 — אין טוסט הצלחה אחרי כישלון שמירה מקומית. אין להסיר.
   if (typeof lsGuardToast === 'function' && !lsGuardToast(msg)) return;
   var box = document.getElementById('toasts');
-  if (!box) return;
+  /*  ⛔ מיכל הטוסטים חסר ⟵ קונסולה, ⛔ ולא שתיקה — ⚠️ זהו משפך ההודעות
+   *  היחיד, ⭐ ובלעדיו **כל** הודעה שהאפליקציה מנסה להציג נעלמת: ⛔ דיווח
+   *  דרך טוסט היה חוזר לכאן, ⚠️ ולכן הוא בקונסולה בלבד. */
+  if (!box) { try { console.error('[ui] toast: #toasts אינו ב-DOM — ' + msg); } catch (e) {} return; }
   var el = document.createElement('div');
   el.className = 'toast' + (kind ? ' ' + kind : '');
   el.textContent = msg;
@@ -4881,12 +4947,19 @@ async function tbSyncPushNow() {
     // ⚠️ t0 לפני שהצילום נקרא — רשומה שתסומן אחרי הרגע הזה אינה במה שנדחף
     //    עכשיו, והורדת הסימון ממנה הייתה מאבדת אותה בשקט (סבב 12).
     var _t0 = Date.now();
+    /*  ⛔ ההקשר נלכד בכניסה (סבב 88) — ⚠️ המסלול הזה נקרא גם מהתקתוק
+     *  המושהה וגם ממודול הניסיון החוזר, ⭐ ושניהם יכולים להתעורר בדיוק
+     *  בזמן ההחלפה. */
+    var _ep = ysTenantEpoch();
     // ⭐ מסבב 35 הדחיפה כאן היא שורות (סבב 35) — קודם המסלול הזה דחף את
     //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
     //    יחד עם כיבוי הכתיבה הכפולה.
     var rEntries = await tbRowsPush("tb_entries", ENTRIES);
+    if (ysTenantStale(_ep)) return;
     var rArchive = await tbRowsPush("tb_archive", ARCHIVE);
+    if (ysTenantStale(_ep)) return;
     if (TB_KV_LEGACY_WRITE) { await sbSet("tb_entries", ENTRIES); await sbSet("tb_archive", ARCHIVE); }
+    if (ysTenantStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
     //    ו-`scheduleSyncPush`), ובלי האישור הסימון שרד דחיפה שהצליחה: המונה
@@ -4908,6 +4981,7 @@ async function tbSyncPushNow() {
     //    הקורא זקוק לתוצאה עצמה כדי להזהיר את המשתמש.
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
+    if (ysTenantStale(_ep)) return;
     if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
     PL_CFG.note(stampTs);
     toast("✅ נשמר בענן");
@@ -6000,15 +6074,18 @@ function _infDot(cell) {
  *  ⭐ שלושתם נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני. */
 function _infParse(md, gate) {
   var lines = md.split('\n');
-  var cats = [], cur = null, rows = [], heads = [], inRules = false;
+  var cats = [], cur = null, rows = [], heads = [], inRules = false, blk = '';
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
-    if (/^<!--\s*SHARED:start\s+id="rules-/.test(l)) { inRules = true; continue; }
-    if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; continue; }
+    /*  ⛔ מזהה הבלוק נלכד ⛔ ואינו נגזר מסדר הכותרות — ⚠️ הסיכום מקובץ
+     *  לפי ארבע מחלקות הכללים, ⭐ והמחלקה היא הבלוק שממנו הסעיף בא. */
+    var bs = /^<!--\s*SHARED:start\s+id="(rules-[a-z]+)"/.exec(l);
+    if (bs) { inRules = true; blk = bs[1]; continue; }
+    if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; blk = ''; continue; }
     if (inRules && l.indexOf('### ') === 0) {
       var raw = l.slice(4).trim();
       var mm = /^(.*?)\s+([◆◇⧉])$/.exec(raw);
-      heads.push({ name: mm ? mm[1] : raw, mark: mm ? mm[2] : '' });
+      heads.push({ name: mm ? mm[1] : raw, mark: mm ? mm[2] : '', blk: blk });
       continue;
     }
     if (l.charAt(0) !== '|') continue;
@@ -6046,6 +6123,23 @@ function _infParse(md, gate) {
   return { cats: cats, rows: rows, heads: heads, gateOk: !!gate };
 }
 var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
+/*  ⛔ ארבע מחלקות הכללים, בסדר הקנוני של הבלוקים — ⚠️ המזהה נקרא מהקובץ
+ *  ⛔ ואינו נגזר מהסדר: ⭐ בלוק שיזוז נשאר משויך לשמו. */
+var YS_INF_CLASSES = [
+  { id: 'rules-session', name: 'כללי הסשן' },
+  { id: 'rules-writing', name: 'כללי הכתיבה' },
+  { id: 'rules-table',   name: 'הטבלה' },
+  { id: 'rules-enforce', name: 'האכיפה' },
+];
+/*  ⛔ ארבעת מימדי הסריקה — ⚠️ שלושתם הראשונים אינם נראים מהריפו כלל,
+ *  ⭐ והרביעי הוא מה שסוגר את הלולאה: ⛔ סימון בטבלה הוא הצהרה, ⚠️ והמימד
+ *  הזה שואל אם היא נכונה **בפועל**. */
+var YS_INF_DIMS = [
+  ['**א · מסד**', 'סכימה · הרשאות · טריגרים · `cron` — ⭐ **מה קיים בפועל**'],
+  ['**ב · בדיקה חיה**', '**הרצה מול המסד החי**, ⛔ ולא מול קבצים'],
+  ['**ג · עקבות**', 'מתי רצו הגיבוי · הסנכרון · הפינויים האחרונים'],
+  ['**ד · אימות הטבלה**', '**כל סימון בטבלה — נכון בפועל?**'],
+];
 /*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
  *  ⭐ והמשיכה נשמרת בזיכרון. */
 function _infHtml(d) {
@@ -6077,38 +6171,41 @@ function _infHtml(d) {
   });
   h += '</div>';
 
+  /*  ⛔ הסיכום מקובץ לפי ארבע מחלקות הכללים ⛔ ולא כרשימה שטוחה — ⚠️ סעיף
+   *  שנקרא בלי המחלקה שלו אינו אומר **מתי** קוראים אותו: ⭐ כלל סשן נקרא
+   *  פעם אחת בפתיחה, ⛔ וכלל כתיבה נקרא בכל שורה שנוגעים בה. */
   h += '<div class="inf-card"><h4>ב · סיכום הכללים — ' + d.heads.length + ' סעיפים</h4>';
   if (!d.gateOk)
     h += '<div class="inf-li">⚠️ מפת הזיווג לא נמשכה — ' +
          'המספר מוצג רק לסעיף שכותרתו היא שם שורה.</div>';
-  d.heads.forEach(function (x) {
-    h += '<div class="inf-li"><span class="inf-mark">' + esc(x.mark || '—') + '</span> ' +
-         _infMd(x.name) + '<span class="inf-tag">' +
-         (x.row ? 'שורה ' + x.row : 'ללא זיווג') + '</span></div>';
+  YS_INF_CLASSES.forEach(function (c) {
+    var mine = d.heads.filter(function (x) { return x.blk === c.id; });
+    if (!mine.length) return;
+    h += '<details class="inf-cat" open><summary>' + esc(c.name) + ' — ' + mine.length + '</summary>';
+    mine.forEach(function (x) {
+      h += '<div class="inf-li" style="padding-inline:12px"><span class="inf-mark">' +
+           esc(x.mark || '—') + '</span> ' + _infMd(x.name) + '<span class="inf-tag">' +
+           (x.row ? 'שורה ' + x.row : 'ללא זיווג') + '</span></div>';
+    });
+    h += '</details>';
   });
   h += '</div>';
 
-  var tot = { '✅': 0, '⭕': 0, '❌': 0 }, gaps = [];
-  d.rows.forEach(function (r) {
-    r.apps.forEach(function (a, i) {
-      if (tot[a] === undefined) tot[a] = 0;
-      tot[a]++;
-      if (a !== '✅') gaps.push({ n: r.n, name: r.name, app: YS_INF_APPS[i], mark: a, why: r.note });
-    });
+  /*  ⛔ הפרק הזה הוא **מסגרת שממתינה** ⛔ ואינו דוח — ⚠️ ארבעת המימדים הם
+   *  מה שייבדק, ⭐ ותאריך ריק הוא הצהרה שהסריקה טרם נעשתה: ⛔ ריכוז תאים
+   *  שאינם ✅ כבר יושב בפרק א, ⚠️ ופרק שני לאותו נתון הוא מקור אמת שני. */
+  h += '<div class="inf-card"><h4>ג · הסריקה — ארבעת המימדים</h4>' +
+       '<div class="inf-wrap"><table class="inf-tbl" style="min-width:520px">' +
+       '<colgroup><col class="c-t"><col class="c-s"></colgroup>' +
+       '<thead><tr><th>מימד</th><th>מה נבדק</th></tr></thead><tbody>';
+  YS_INF_DIMS.forEach(function (x) {
+    h += '<tr><td>' + _infMd(x[0]) + '</td><td>' + _infMd(x[1]) + '</td></tr>';
   });
-  h += '<div class="inf-card"><h4>ג · הסריקה</h4>' +
-       '<div class="inf-bar">' +
-       '<span class="inf-tag"><span class="inf-dot ok"></span> ✅ ' + (tot['✅'] || 0) + '</span>' +
-       '<span class="inf-tag"><span class="inf-dot gap"></span> ⭕ ' + (tot['⭕'] || 0) + '</span>' +
-       '<span class="inf-tag"><span class="inf-dot bad"></span> ❌ ' + (tot['❌'] || 0) + '</span>' +
+  h += '</tbody></table></div>' +
+       '<div class="inf-li"><b>תאריך הסריקה האחרונה:</b> <span class="inf-tag">______</span></div>' +
+       '<div class="inf-li"><b>מתי תיעשה:</b> כשכל שורות הטבלה יהיו ירוקות או מנומקות</div>' +
        '</div>';
-  if (!gaps.length) h += '<div class="inf-li">אין תא שאינו ✅.</div>';
-  gaps.forEach(function (g) {
-    h += '<div class="inf-li">' + _infDot(g.mark) + ' <b>' + g.n + ' · ' + _infMd(g.name) + '</b>' +
-         '<span class="inf-tag">' + esc(g.app) + '</span>' +
-         (g.why ? '<div>' + _infMd(g.why) + '</div>' : '') + '</div>';
-  });
-  h += '</div></div>';
+  h += '</div>';
   return h;
 }
 window._infData = null;
@@ -6374,6 +6471,11 @@ function ysNameOf(y) {
  *  ⭐ והשוואה מולה הייתה מכריעה מה לדחוף על סמך טבלה אחרת. */
 function ysResetTenantState() {
   _tbEpoch++;
+  /*  ⛔ דחיפה מושהית שנקבעה במוסד הקודם מבוטלת (סבב 88) — ⚠️ היא נקבעה
+   *  על נתונים שכבר אינם בזיכרון, ⭐ ומה שהיא תמצא בו כשתתעורר שייך
+   *  למוסד אחר: ⛔ ובכל מקרה שער ההקשר עוצר אותה, ⚠️ וביטול התקתוק
+   *  חוסך את הנסיעה לרשת. */
+  if (_syncPushTimer) { clearTimeout(_syncPushTimer); _syncPushTimer = null; }
   _tbPushedAt = {};
   _lastKnownTimestamp = 0;
   _plFullAt = 0;
