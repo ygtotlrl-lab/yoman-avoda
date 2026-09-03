@@ -55,7 +55,11 @@ function cutVar(decl) {
   return SRC.slice(i + 1, SRC.indexOf('\n', i + 1));
 }
 
-const NAMES = ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
+const NAMES = [
+  /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ בלעדיו `tbRowsGet` זורקת
+   *  ונתפסת ב-catch שלה עצמה, ⭐ והבדיקה הייתה מדווחת «אין רשת». */
+  '_ysRowsPaged',
+  'recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
   // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
@@ -126,7 +130,8 @@ function makeEnv(opts = {}) {
     vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
   // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
-  vm.runInContext(cutVar("var TB_ROWS_PAGE = "), sandbox);
+  vm.runInContext(cutVar("var YS_ROWS_PAGE = "), sandbox);
+  vm.runInContext(cutVar("var YS_ROWS_CAP = "), sandbox);
   vm.runInContext(cutVar("var _tbRemote = "), sandbox);
   if (opts.tbRows === false) sandbox.TB_ROWS = false;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
