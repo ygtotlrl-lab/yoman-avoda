@@ -105,7 +105,7 @@
     });
 
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      console.log('SW registered:', reg.scope);
+      console.log('[sw] registered:', reg.scope);
       swReg = reg;
 
       if (reg.waiting && navigator.serviceWorker.controller) { window.showAppUpdateBanner(); }
@@ -126,7 +126,7 @@
       checkForUpdate();
       setInterval(checkForUpdate, 30 * 60 * 1000);
     }).catch(function(err) {
-      console.log('SW registration failed:', err);
+      console.warn('[sw] registration failed:', err);
     });
   });
 })();
@@ -1531,9 +1531,7 @@ window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
 var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
-/* ══════════════════════════════════════════════════════════════════════════
-   קוד מיושן מול סכימה שהשתנתה
-   ══════════════════════════════════════════════════════════════════════════ */
+/* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
  *  **אינן שגיאת רשת**, ⛔ וניסיון חוזר עליהן אינו יכול להצליח לעולם.
@@ -1606,9 +1604,9 @@ function sbWatch(c) {
   };
   return c;
 }
-/* ══ סוף קוד מיושן ═════════════════════════════════════════════════════ */
+/* ═══════════════ סוף מודול האזנת הסכימה ════════════════════════════════ */
 
-/* ═══ "מידע טכני" — קיפול מסכי האחסון (תצוגה בלבד, סבב 15) ═══════════════
+/* ═══ מידע טכני — מודול משותף (סבב 91) ════════════════════════════════════
    המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
    בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
    הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
@@ -1657,7 +1655,7 @@ function techInfoMount() {
 }
 window.techInfoToggle = techInfoToggle;
 window.techInfoMount = techInfoMount;
-/* ═══ סוף רכיב "מידע טכני" ═══════════════════════════════════════════════ */
+/* ═══════════════ סוף מודול מידע טכני ═══════════════════════════════════ */
 /* ── SYNC_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
 var SYNC_CFG = {
   lastSync: function () { return _tbLastSyncAt || 0; },
@@ -3002,13 +3000,13 @@ async function sbSet(key, value) {
      *  שגוי מתיר למחוק מהדיסק רשומה שמעולם לא עלתה. */
     if (ysTenantStale(_ep)) return { ok: false, error: "ההקשר התחלף", stale: true };
     if (res.error) {
-      console.error("sbSet error [" + key + "]:", res.error.message, res.error);
+      console.error('[sync] sbSet error', key, res.error.message, res.error);
       return { ok: false, error: res.error.message || "שגיאת שרת" };
     }
-    console.log("sbSet ok [" + key + "]");
+    console.log('[sync] sbSet ok', key);
     return { ok: true, error: null };
   } catch(e) {
-    console.error("sbSet exception [" + key + "]:", e);
+    console.error('[sync] sbSet exception', key, e);
     return { ok: false, error: (e && e.message) || String(e) };
   }
 }
