@@ -43,6 +43,11 @@ const APP = {
  *  ⛔ הצהרת ROWS כאן הייתה כפילות שהשער החוצה מפיל עליה. */
 export const ROWS = [];
 
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 let failures = 0;
@@ -187,6 +192,11 @@ export function slotWiring(src) {
 
 
 /* ── מוטציות — ⛔ בזיכרון בלבד ──────────────────────────────────────────── */
+/*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
+if (!RUN_MUT) {
+  console.log('\n⏭ test_share: המוטציות רצות ברמה המלאה (--full)');
+  process.exit(failures === 0 ? 0 : 1);
+}
 const MUTATIONS = [
   { name: 'החזרת setPackage למסלול השיתוף',
     apply: (s) => s.replace('Intent toStart = Intent.createChooser(send,',
