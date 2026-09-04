@@ -3069,41 +3069,6 @@ function recDelete(r, ts) {
 function isLive(r) { return !!r && !r.deleted; }
 function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); }
 
-// ── גריעת tombstones ישנים ─────────────────────────────────────────────
-// כל רשומה שנמחקה או אורכבה משאירה tombstone ב-tb_entries לנצח. הם נשמרים
-// ב-localStorage **ונדחפים לענן בכל שמירה** — כ-1.3MB בשנה שאיש כבר לא קורא.
-//
-// שלושה כללים, כולם קריטיים:
-// 1. **רק tombstones.** רשומה חיה לא נגרעת לעולם, בלי קשר לגיל.
-// 2. **רק עם updatedAt מספרי.** tombstone בלי חותמת (נתוני legacy) — אי אפשר
-//    לדעת מתי נמחק, ולכן הוא **נשאר**. recTs() מחזיר 0 עבורו, וגריעה לפי 0
-//    הייתה מוחקת דווקא את הישנים ביותר בלי שום ראיה לגילם.
-// 3. **`TOMBSTONE_TTL_MS`.** הסף צריך להיות ארוך בהרבה מכל היעדרות סבירה
-//
-// המחיר המודע (זהה לזה שכבר תועד במנוע המיזוג): מכשיר שהיה מנותק יותר
-// מעבר ל-`TOMBSTONE_TTL_MS` ולא קיבל את ה-tombstone עדיין מחזיק את הרשומה
-// כחיה, וכשיסתנכרן
-// היא תחזור **פעם אחת**. מחיקה חוזרת יוצרת tombstone חדש ומתוארך.
-var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
-
-// דגל חד-פעמי: loadLocalData מרים אותו, והמיזוג הראשון שאחריו צורך אותו.
-// גריעה מקומית בלבד היא חסרת משמעות — mergeRecords מחזיר כל רשומה שקיימת
-// בענן ואין לה מקבילה מקומית, ולכן ה-tombstones היו חוזרים תוך שניות
-// והעותק הענני לעולם לא היה מצטמצם. הגריעה **אינה** רצה בפולינג של 3
-// השניות ואינה נוגעת במנוע המיזוג — היא מופעלת על התוצאה, פעם אחת.
-var _tombPrunePending = false;
-
-function prunePastTombstones(arr, nowTs) {
-  if (!Array.isArray(arr)) return [];
-  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
-  return arr.filter(function(r) {
-    if (!r || typeof r !== 'object') return false;
-    if (!r.deleted) return true;                          // חי — לא נוגעים
-    if (typeof r.updatedAt !== 'number') return true;      // בלי חותמת — לא יודעים, משאירים
-    return r.updatedAt >= cutoff;                          // tombstone טרי — משאירים
-  });
-}
-
 // מיזוג ברמת רשומה. remote (הענן) קובע את סדר הבסיס ומנצח בשוויון — דטרמיניסטי.
 // mergePair (אופציונלי) — מיזוג מותאם כששני הצדדים מכירים את אותו מפתח.
 //
@@ -3209,6 +3174,72 @@ function mergeCore(local, remote, opts) {
   return out;
 }
 /* ═══════════════ סוף מודול המיזוג ══════════════════════════════════════ */
+
+/* ═══ גריעת tombstones — מודול משותף (סבב 93) ════════════════════════════
+   ⛔ שינוי כאן (סבב 93) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
+      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ═══════════════════════════════════════════════════════════════════════ */
+// כל רשומה שנמחקה משאירה tombstone לנצח. הם נשמרים במכשיר **ונדחפים לענן
+// בכל שמירה**, ואיש כבר אינו קורא אותם.
+//
+// שלושה כללים, כולם קריטיים:
+// 1. **רק tombstones.** רשומה חיה אינה נגרעת לעולם, בלי קשר לגיל.
+// 2. **רק עם חותמת מספרית.** tombstone בלי חותמת — אי אפשר לדעת מתי נמחק,
+//    ולכן הוא **נשאר**: חותמת חסרה נקראת 0, וגריעה לפיה הייתה מוחקת דווקא
+//    את הישנים ביותר בלי שום ראיה לגילם.
+// 3. **`TOMBSTONE_TTL_MS`.** ⛔ הסף ארוך בהרבה מכל היעדרות סבירה.
+//
+// ⚠️ המחיר המודע: מכשיר שהיה מנותק מעבר לסף ולא קיבל את ה-tombstone עדיין
+// מחזיק את הרשומה כחיה, וכשיסתנכרן היא תחזור **פעם אחת**. מחיקה חוזרת
+// יוצרת tombstone חדש ומתוארך. ⛔ והסף עצמו הוא מדיניות נתונים ⛔ ולכן
+// החלטת המנהל.
+var TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+
+// דגל חד-פעמי: הטעינה מרימה אותו, והמיזוג הראשון שאחריה צורך אותו.
+// ⛔ גריעה מקומית בלבד חסרת משמעות — מנוע המיזוג מחזיר כל רשומה שקיימת
+// בענן ואין לה מקבילה מקומית, ולכן ה-tombstones היו חוזרים תוך שניות
+// והעותק הענני לעולם לא היה מצטמצם. ⚠️ הגריעה **אינה** רצה בפולינג
+// ואינה נוגעת במנוע המיזוג — היא מופעלת על התוצאה, פעם אחת לעלייה.
+var _tombPrunePending = false;
+
+// ⛔ שתי צורות החותמת נקראות כאן — ⚠️ `updatedAt` ו-`updated_at` חיות שתיהן
+//    בארגון, ⭐ ופונקציה שמכירה אחת מהן אינה מודול משותף: ⛔ היא הייתה
+//    מחזירה «בלי חותמת» לכל רשומה בשתי אפליקציות, ומשאירה כל tombstone.
+function tombStamp(r) {
+  if (!r || typeof r !== 'object') return null;
+  if (typeof r.updatedAt === 'number') return r.updatedAt;
+  if (typeof r.updated_at === 'number') return r.updated_at;
+  return null;
+}
+
+function prunePastTombstones(arr, nowTs) {
+  if (!Array.isArray(arr)) return [];
+  var cutoff = (typeof nowTs === 'number' ? nowTs : Date.now()) - TOMBSTONE_TTL_MS;
+  return arr.filter(function (r) {
+    if (!r || typeof r !== 'object') return false;
+    if (!r.deleted) return true;                 // חי — לא נוגעים
+    var t = tombStamp(r);
+    if (t === null) return true;                 // בלי חותמת — משאירים
+    return t >= cutoff;                          // tombstone טרי — משאירים
+  });
+}
+
+// ⛔ נקודת ההפעלה האחת — ⚠️ המיזוג של אוסף רשומות מעביר כאן את תוצאתו,
+//    ⭐ והגריעה רצה בפעם הראשונה שאחרי הטעינה ותו לא: ⛔ עוטף שני היה
+//    מאפשר לכל מקום בקוד לגרוע, ⚠️ ובכל פולינג.
+function tombPruneMerged(arr) {
+  if (!_tombPrunePending) return arr;
+  _tombPrunePending = false;
+  var before = Array.isArray(arr) ? arr.length : 0;
+  var out = prunePastTombstones(arr);
+  if (before !== out.length) console.log('[tomb] נגרעו ' + (before - out.length) + ' tombstones מעבר לסף');
+  return out;
+}
+// ⛔ נקודת ההפעלה היחידה של המודול — ⚠️ העלייה מרימה את הדגל **פעם אחת**,
+//    ⭐ והמיזוג הראשון שאחריה צורך אותו: ⛔ הרמה בכל פולינג הייתה גורעת
+//    בכל שלוש שניות, ⚠️ וזה בדיוק מה שהדגל בא למנוע.
+function tombBoot() { _tombPrunePending = true; }
+/* ═══════════════ סוף מודול גריעת ה-tombstones ══════════════════════════ */
 
 // חיבור יומן העבודה לליבה המשותפת (סבב 38). ⛔ החתימה לא השתנתה —
 // עשרות אתרי קריאה מסתמכים עליה.
@@ -3924,7 +3955,7 @@ async function syncFromCloud() {
       ENTRIES = mergeEntries(ENTRIES, cloudEntries);
       // גריעת ה-tombstones הישנים שהוזמנה בטעינה — פעם אחת, על התוצאה
       // הממוזגת, כדי שגם העותק הענני שנדחף מיד אחר כך יצטמצם.
-      if (_tombPrunePending) { _tombPrunePending = false; ENTRIES = prunePastTombstones(ENTRIES); }
+      ENTRIES = tombPruneMerged(ENTRIES);
       // מיון לפי id בסדר יורד (החדש קודם)
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
@@ -6283,7 +6314,6 @@ function loadLocalData() {
     if (ENTRIES.length !== _beforePrune) {
       console.log('[load] נגרעו ' + (_beforePrune - ENTRIES.length) + ' tombstones מעבר ל-TOMBSTONE_TTL_MS');
     }
-    _tombPrunePending = true;
     /*  ⛔ הארכיון נטען מהדיסק בלבד ⛔ ואין זרע מוטבע (סבב 89) — ⚠️ הנימוק
      *  המדוד: `ARCHIVE_SEED` החזיק 90 סנאפשוטים בקוד עצמו, ⭐ והוזרק
      *  מחדש **בכל טעינה ובכל מיזוג** לכל `gdate` שלא נמצא: ⛔ ולכן יום
@@ -6548,6 +6578,7 @@ function selectYeshiva(y, again) {
   // סימוני "ממתין לסנכרון" (סבב 12). **pendReload ולא pendBoot בלבד** —
   // מפתח הסימונים נושא סיומת מוסד, וסימון של ראשון לציון אינו תקף לרמת אביב.
   try { pendReload(); if (!again) pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
+  try { tombBoot(); } catch (e) { console.warn('[tomb] tombBoot', e); }
   // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
   // ⚠️ כאן ולא מוקדם יותר, וזה פרטי ליומן: `BK_CFG.sources` נשענת על
   //    `KV_TABLE`, שהוא `null` עד שנבחר מוסד. ⛔ אין להזיז את הקריאה
