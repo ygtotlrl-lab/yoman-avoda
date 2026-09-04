@@ -31,8 +31,8 @@ import vm from 'node:vm';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   app: 'yoman-avoda',
-  names: ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
-  vars: [],
+  names: ['recTs', 'isLive', 'liveOnly', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
+  vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
   globals: { PK_ENTRY: 'entry:', PK_ARC: 'arc:' },
   offlineFn: null,   // ⚠️ אין כאן משתמשים ואין כניסה
   // ⭐ סבב 38 — כלל ההכרעה עבר לליבה המשותפת, ולכן גם המוטציה מכוונת
@@ -50,8 +50,9 @@ const APP = {
    *  מאלה שמעליהם, ⛔ ולכן הם יושבים בקבוצה משלהם ואינם מתמזגים בהם. */
   core: {
     app: 'yoman-avoda',
-    names: ['recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords',
+    names: ['recTs', 'isLive', 'liveOnly', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'mergeRecords',
             'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
+    vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
     globals: { PK_ENTRY: 'entry:', PK_ARC: 'arc:', pendHas: null },
     wrapFn: 'mergeRecords',
     // ⚠️ `dedupe: true` נדרש כאן ואינו ברירת מחדל שקטה — שתי קריאות
@@ -254,6 +255,11 @@ function coreBuild(src) {
   const ctx = Object.assign({ console, Number, String, Array, Object, isFinite, Date, JSON, Math },
                             C.globals || {});
   vm.createContext(ctx);
+  /*  ⛔ ההצהרות קודמות לפונקציות (סבב 93) — ⚠️ מודול גריעת ה-tombstones
+   *  נשען על דגל ברמת הקובץ, ⭐ ופונקציה שנחתכת בלעדיו זורקת
+   *  `ReferenceError` בתוך הרתמה: ⛔ הכשל נראה כשבירה של מנוע המיזוג
+   *  ⚠️ ואינו כזה. */
+  for (const v of (C.vars || [])) vm.runInContext(cutVar(v, src), ctx);
   vm.runInContext(C.names.map((x) => cut(x, src)).join('\n'), ctx);
   return ctx;
 }
