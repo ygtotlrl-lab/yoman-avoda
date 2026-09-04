@@ -28,16 +28,20 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
-/*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ ביומן הוא `true`
- *  מסבב 38: שני אתרי היצירה עברו ל-`newClientId()`, יחד עם שלושת הממדים
- *  שחסמו את ההמרה — המיון (`entryOrderTs`), הציטוט (`idArg`) וההשוואה
- *  (`idEq`). כך במטריצה ו-`test_ids_yoman.mjs`.        */
+/*  `wired` — האם קוד האפליקציה כאן באמת קורא למודול. ⭐ הוא `true` בארבעתן
+ *  מסבב 38 — ⚠️ ביומן עברו שני אתרי היצירה ל-`newClientId()` יחד עם שלושת
+ *  הממדים שחסמו את ההמרה: המיון, הציטוט וההשוואה. כך במטריצה.            */
 const APP = { app: 'yoman-avoda', wired: true };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 
 if (process.env.R33_INNER || process.env.R37_INNER) {
   console.log('test_ids: ריצה פנימית — מדלג (מניעת רקורסיה)');
@@ -128,8 +132,12 @@ for (const [mode, label] of [['bytes', 'getRandomValues'], ['none', 'Math.random
     wired === APP.wired);
 }
 
+if (RUN_MUT) {
 /* ── 3 · מוטציות ───────────────────────────────────────────────────────── */
 function copyRepo() {
+  /*  ⛔ עותק לכל מוטציה, ⛔ ובכוונה (סבב 92) — ⚠️ נמדדו **שלושה** בהרצה
+      אחת: ⭐ המוטציה עורכת את `index.html` **ומריצה עליו שער אמיתי**,
+      ⛔ ושתי מוטציות על אותו עותק היו נמדדות זו על גבי זו. */
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), APP.app + '-r37a-'));
   fs.cpSync(ROOT, dst, {
     recursive: true,
@@ -184,6 +192,8 @@ function checkerFails(mutatedSrc) {
     '\nfunction _ncPing(){ return 1; }\nvar _ncSeen = _ncPing();\n');
   ok('13 · המוטציית-נגד אכן מוסיפה קוד מחוץ לבלוק', added !== SRC && added.includes(B.text));
   ok('14 · ⭐ קוד שנוסף מחוץ לבלוק ⛔ אינו מפיל את החתימה', !checkerFails(added));
+}
+
 }
 
 console.log(failed ? `\n✗ סבב 37א (מזהים) — ${failed} טענות נכשלו`

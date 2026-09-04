@@ -28,6 +28,11 @@ import vm from 'node:vm';
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
  *  ולא היעדר: ⛔ שער בלי הצהרה אינו נבדל משער שההצהרה שלו נשמטה. */
 export const ROWS = [];
+
+/*  ⛔ המוטציות אינן ברירת המחדל (סבב 92) — ⚠️ כל מוטציה היא שינוי ⟵ הרצה
+ *  ⟵ שחזור, ⭐ ושני שערים לבדם היו 70% מזמן הסט: ⛔ הן רצות ברמה המלאה
+ *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
+const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
@@ -156,6 +161,7 @@ assert((SRC.match(/createdAt: /g) || []).length >= 2,
 assert(!/id: now\.getTime\(\)/.test(SRC) && !/\bid: Date\.now\(\),/.test(SRC),
   '25 · ⛔ ואף אתר יצירה אינו משתמש עוד בחותמת זמן כמזהה');
 
+if (RUN_MUT) {
 /* ── ה. מוטציות ────────────────────────────────────────────────────────── */
 console.log('  — מוטציות —');
 {
@@ -205,6 +211,8 @@ console.log('  — מוטציות —');
   assert((grown.match(/id: newClientId\(\)/g) || []).length ===
          (SRC.match(/id: newClientId\(\)/g) || []).length,
     'נ2 · ⛔ וגם מחולל המזהה נמדד באותו מספר אתרים');
+}
+
 }
 
 console.log((failed ? '✗' : '✓') + ` סבב 38 (מזהי יומן) — ${32 - failed} טענות עברו, ${failed} נכשלו`);
