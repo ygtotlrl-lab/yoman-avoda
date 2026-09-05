@@ -412,7 +412,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:50%}
 .inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
-.inf-mark{font-weight:800;color:var(--primary)}
 .inf code{background:var(--bgsec);border-radius:5px;padding:0 4px;font-size:.94em}
 .inf-li{border-top:1px solid var(--border);padding:7px 2px;font-size:12px;line-height:1.7}
 .inf-li:first-child{border-top:0}
@@ -6040,15 +6039,12 @@ async function tbPullFromCloud() {
 /* ══════════════════════════════════════════════════════════════════════════
    מציג טבלת התשתית — משיכה מ-GitHub ופירוק
    ══════════════════════════════════════════════════════════════════════════
-   ⛔ שני הקבצים נמשכים בזמן אמת ⛔ ואינם מוטבעים — ⚠️ עותק בקוד מתיישן
-      בסבב הבא, ⭐ והמסך הזה נועד להראות את **המצב עכשיו**.
-   ⛔ ומפת הזיווג נקראת מהשער ⛔ ולא משוכפלת כאן — ⚠️ כותרת סעיף שאינה שם
-      שורה מזווגת ב-`RULE_ROW_NAMES`, ⭐ ועותק שני שלה היה נסחף בשקט.
+   ⛔ הקובץ נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד מתיישן בסבב הבא,
+      ⭐ והמסך הזה נועד להראות את **המצב עכשיו**.
    ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
       הכשל השקט.
    ⚠️ ואין כאן בדיקת הרשאה — ⭐ ביומן משתמש אחד, ⛔ ואין שכבת כניסה. */
 var YS_INF_MD = RAW_BASE + 'CLAUDE.md';
-var YS_INF_GATE = RAW_BASE + 'tools/check-capabilities.mjs';
 
 /*  ⛔ פירוק שורת טבלה — ⚠️ הפרדה על `|` משאירה תא ריק בשני הקצוות,
  *  ⭐ ושניהם נגזרים ⛔ ואינם נחתכים בקבוע. */
@@ -6073,24 +6069,15 @@ function _infDot(cell) {
   if (cell === '❌') return '<span class="inf-dot bad" title="לא מטופל"></span>';
   return esc(cell);
 }
-/*  ⛔ פירוק ה-Markdown לשלושת החלקים — ⚠️ הטבלה, כותרות הכללים, והסריקה:
- *  ⭐ שלושתם נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני. */
-function _infParse(md, gate) {
+/*  ⛔ פירוק ה-Markdown לשני החלקים — ⚠️ הטבלה ומימדי הסריקה: ⭐ שניהם
+ *  נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני.
+ *  ⛔ **ואין כאן יותר סיכום כללים** (סבב 96) — ⚠️ אין כללים: ⭐ הטבלה
+ *  היא ההוראה, ⛔ ופרק שני שמנה סעיפים היה מונה משהו שאינו קיים. */
+function _infParse(md) {
   var lines = md.split('\n');
-  var cats = [], cur = null, rows = [], heads = [], inRules = false, blk = '';
+  var cats = [], cur = null, rows = [];
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
-    /*  ⛔ מזהה הבלוק נלכד ⛔ ואינו נגזר מסדר הכותרות — ⚠️ הסיכום מקובץ
-     *  לפי ארבע מחלקות הכללים, ⭐ והמחלקה היא הבלוק שממנו הסעיף בא. */
-    var bs = /^<!--\s*SHARED:start\s+id="(rules-[a-z]+)"/.exec(l);
-    if (bs) { inRules = true; blk = bs[1]; continue; }
-    if (/^<!--\s*SHARED:end/.test(l)) { inRules = false; blk = ''; continue; }
-    if (inRules && l.indexOf('### ') === 0) {
-      var raw = l.slice(4).trim();
-      var mm = /^(.*?)\s+([◆◇⧉])$/.exec(raw);
-      heads.push({ name: mm ? mm[1] : raw, mark: mm ? mm[2] : '', blk: blk });
-      continue;
-    }
     if (l.charAt(0) !== '|') continue;
     var c = _infCells(l);
     if (c.length < 8) continue;
@@ -6107,36 +6094,13 @@ function _infParse(md, gate) {
     if (!cur) { cur = { title: '—', rows: [] }; cats.push(cur); }
     cur.rows.push(row);
   }
-  /*  ⛔ שם השורה ⟵ מספרה, בדיוק כפי שהשער גוזר — ⚠️ סימן הלולאה נחתך
-   *  לפני ההשוואה, ⛔ שאם לא כן הוא היה חלק מהמפתח. */
-  var byName = {};
-  rows.forEach(function (r) { byName[r.name.replace(/\s*[◆◇⧉]\s*$/, '').trim()] = r.n; });
-  var map = {};
-  if (gate) {
-    var g = /const RULE_ROW_NAMES = \{([\s\S]*?)\n\};/.exec(gate);
-    if (g) {
-      var re = /'([^']+)':\s*'([^']+)'/g, m;
-      while ((m = re.exec(g[1]))) map[m[1]] = m[2];
-    }
-  }
-  heads.forEach(function (h) {
-    var want = map[h.name] || h.name.replace(/^⛔+\s*/, '');
-    h.row = byName[want];
-  });
-  return { cats: cats, rows: rows, heads: heads, gateOk: !!gate };
+  return { cats: cats, rows: rows };
 }
 var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
-/*  ⛔ ארבע מחלקות הכללים, בסדר הקנוני של הבלוקים — ⚠️ המזהה נקרא מהקובץ
- *  ⛔ ואינו נגזר מהסדר: ⭐ בלוק שיזוז נשאר משויך לשמו. */
-var YS_INF_CLASSES = [
-  { id: 'rules-session', name: 'כללי הסשן' },
-  { id: 'rules-writing', name: 'כללי הכתיבה' },
-  { id: 'rules-table',   name: 'הטבלה' },
-  { id: 'rules-enforce', name: 'האכיפה' },
-];
 /*  ⛔ ארבעת מימדי הסריקה — ⚠️ שלושתם הראשונים אינם נראים מהריפו כלל,
  *  ⭐ והרביעי הוא מה שסוגר את הלולאה: ⛔ סימון בטבלה הוא הצהרה, ⚠️ והמימד
- *  הזה שואל אם היא נכונה **בפועל**. */
+ *  הזה שואל אם היא נכונה **בפועל**. ⭐ והם מוצהרים כאן ⛔ ולא בטקסט
+ *  המסך — ⚠️ לשורה שבטבלה יש כאן מקור אחד, ⛔ ולא שניים. */
 var YS_INF_DIMS = [
   ['**א · מסד**', 'סכימה · הרשאות · טריגרים · `cron` — ⭐ **מה קיים בפועל**'],
   ['**ב · בדיקה חיה**', '**הרצה מול המסד החי**, ⛔ ולא מול קבצים'],
@@ -6150,7 +6114,7 @@ function _infHtml(d) {
   h += '<div class="inf-hd"><b>טבלת התשתית</b>' +
        '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
 
-  h += '<div class="inf-card"><h4>א · הטבלה</h4>' +
+  h += '<div class="inf-card"><h4>הטבלה</h4>' +
        '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתח הכל</button>' +
        '<button data-act="inf-all" data-open="0">סגור הכל</button>' +
        '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
@@ -6174,30 +6138,10 @@ function _infHtml(d) {
   });
   h += '</div>';
 
-  /*  ⛔ הסיכום מקובץ לפי ארבע מחלקות הכללים ⛔ ולא כרשימה שטוחה — ⚠️ סעיף
-   *  שנקרא בלי המחלקה שלו אינו אומר **מתי** קוראים אותו: ⭐ כלל סשן נקרא
-   *  פעם אחת בפתיחה, ⛔ וכלל כתיבה נקרא בכל שורה שנוגעים בה. */
-  h += '<div class="inf-card"><h4>ב · סיכום הכללים — ' + d.heads.length + ' סעיפים</h4>';
-  if (!d.gateOk)
-    h += '<div class="inf-li">⚠️ מפת הזיווג לא נמשכה — ' +
-         'המספר מוצג רק לסעיף שכותרתו היא שם שורה.</div>';
-  YS_INF_CLASSES.forEach(function (c) {
-    var mine = d.heads.filter(function (x) { return x.blk === c.id; });
-    if (!mine.length) return;
-    h += '<details class="inf-cat" open><summary>' + esc(c.name) + ' — ' + mine.length + '</summary>';
-    mine.forEach(function (x) {
-      h += '<div class="inf-li" style="padding-inline:12px"><span class="inf-mark">' +
-           esc(x.mark || '—') + '</span> ' + _infMd(x.name) + '<span class="inf-tag">' +
-           (x.row ? 'שורה ' + x.row : 'ללא זיווג') + '</span></div>';
-    });
-    h += '</details>';
-  });
-  h += '</div>';
-
   /*  ⛔ הפרק הזה הוא **מסגרת שממתינה** ⛔ ואינו דוח — ⚠️ ארבעת המימדים הם
    *  מה שייבדק, ⭐ ותאריך ריק הוא הצהרה שהסריקה טרם נעשתה: ⛔ ריכוז תאים
    *  שאינם ✅ כבר יושב בפרק א, ⚠️ ופרק שני לאותו נתון הוא מקור אמת שני. */
-  h += '<div class="inf-card"><h4>ג · הסריקה — ארבעת המימדים</h4>' +
+  h += '<div class="inf-card"><h4>הסריקה — ארבעת המימדים</h4>' +
        '<div class="inf-wrap"><table class="inf-tbl" style="min-width:520px">' +
        '<colgroup><col class="c-t"><col class="c-s"></colgroup>' +
        '<thead><tr><th>מימד</th><th>מה נבדק</th></tr></thead><tbody>';
@@ -6220,18 +6164,13 @@ async function ysInfraOpen() {
   openModal('טבלת התשתית',
     '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
     '<span>מושך מ-GitHub…</span></div></div>', '');
-  var md = null, gate = null;
+  var md = null;
   try {
-    /*  ⛔ כשל במפת הזיווג אינו מפיל את המסך — ⚠️ היא משפרת את חלק ב
-     *  בלבד, ⭐ והטבלה עצמה תלויה ב-`CLAUDE.md` לבדו: ⛔ `Promise.all`
-     *  בלי הבליעה הזו היה הופך שיפור לתלות. */
-    var res = await Promise.all([
-      withTimeout(fetch(YS_INF_MD, { cache: 'no-store' })),
-      withTimeout(fetch(YS_INF_GATE, { cache: 'no-store' })).catch(function () { return null; })
-    ]);
-    if (!res[0] || !res[0].ok) throw new Error('HTTP ' + (res[0] ? res[0].status : '—'));
-    md = await res[0].text();
-    if (res[1] && res[1].ok) gate = await res[1].text();
+    /*  ⛔ משיכה אחת (סבב 96) — ⚠️ המשיכה השנייה הביאה את מפת הזיווג של
+     *  סעיפי הכללים, ⭐ ואין יותר כללים לזווג. */
+    var res = await withTimeout(fetch(YS_INF_MD, { cache: 'no-store' }));
+    if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
+    md = await res.text();
   } catch (e) {
     var el = document.getElementById('modal-body');
     if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
@@ -6240,7 +6179,7 @@ async function ysInfraOpen() {
       '<div class="inf-bar"><button data-act="inf-open">↻ נסה שוב</button></div></div>';
     return;
   }
-  window._infData = _infParse(md, gate);
+  window._infData = _infParse(md);
   _infPaint();
 }
 function _infPaint() {
