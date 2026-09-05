@@ -64,7 +64,7 @@ const APP = {
    *  ביומן בלבד**: ⛔ אינו יכולת מוצר ואין לו שורה בטבלה, ⚠️ בהכרעת המנהל
    *  מסבב 88. ⭐ ולכן ההבדל **מוצהר** ⛔ ואינו נקרא כסחיפה: ⚠️ שדה ריק
    *  בשלוש האחרות נקרא «נמדד ואין», ⛔ ושדה חסר נקרא «לא נשאל». */
-  viewOnlyConsts: ['RAW_BASE', 'YS_INF_MD', 'YS_INF_GATE'],
+  viewOnlyConsts: ['RAW_BASE', 'YS_INF_MD'],
   offlineLoginFn: null,
   /*  ⛔ חתימת ה-keystore — ⚠️ היא מה שהופך «מפתח קבוע» למדיד:
    *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ וחתימה שונה מפילה. */
@@ -2882,7 +2882,7 @@ const RULE_ROW_NAMES = {};
  *  אתר בפועל מפילה אף היא, ⛔ והצהרה ריקה שיש לה אתר — כך גם. */
 {
   const want = APP.viewOnlyConsts || [];
-  const ALL = ['RAW_BASE', 'YS_INF_MD', 'YS_INF_GATE'];
+  const ALL = ['RAW_BASE', 'YS_INF_MD'];
   const has = (n) => new RegExp('(?<![\\w$])' + n + '(?![\\w$])').test(code);
   const missing = want.filter((n) => !has(n));
   const stray = ALL.filter((n) => want.indexOf(n) < 0 && has(n));
