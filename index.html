@@ -3370,12 +3370,11 @@ function catMeta(c) { return (c && c.tasksMeta && typeof c.tasksMeta === 'object
 function mergeTasks(locList, locMeta, remList, remMeta) {
   var L = Array.isArray(locList) ? locList : [], R = Array.isArray(remList) ? remList : [];
   var Lm = locMeta || {}, Rm = remMeta || {};
-  var lHas = {}, rHas = {}, meta = {}, order = [], seen = {};
+  var lHas = {}, rHas = {}, meta = {};
   L.forEach(function (t) { lHas[t] = 1; });
   R.forEach(function (t) { rHas[t] = 1; });
   // ⛔ הענן הוא בסיס הסדר, והמקומי נוסף אחריו — ⚠️ כמו במיזוג הרשומות
-  R.concat(L).forEach(function (t) { if (!seen[t]) { seen[t] = 1; order.push(t); } });
-  Object.keys(Lm).concat(Object.keys(Rm)).forEach(function (t) { if (!seen[t]) seen[t] = 1; });
+  var order = uniqList(R.concat(L));
   var out = [];
   order.forEach(function (t) {
     var lKnows = !!lHas[t] || (t in Lm), rKnows = !!rHas[t] || (t in Rm);
@@ -3405,16 +3404,6 @@ function mergeCats(local, remote) {
   });
 }
 
-/*  ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה
- *  ובמיזוג כאחד**: ⭐ בדיקת הקיום מונעת את הכפילות שמכאן ואילך,
- *  ⛔ והכיווץ מסלק את מה שכבר נכתב פעמיים — ⚠️ והראשון שורד,
- *  ⭐ שהסדר של הצד שניצח הוא סדר המסך. */
-function uniqList(list) {
-  if (!Array.isArray(list)) return list;
-  var seen = {}, out = [];
-  list.forEach(function (v) { var k = String(v); if (seen[k]) return; seen[k] = 1; out.push(v); });
-  return out;
-}
 // תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}, ו-SUBS_META מחזיקה חותמת
 // לכל מפתח. ⛔ **ושתי מחיקות שונות חיות כאן, ואין לערבב ביניהן:**
 //  ⭐ **מחיקת פריט בתוך הרשימה** — הרשימה כולה היא הרשומה, ⛔ ולה חותמת
@@ -4995,6 +4984,34 @@ function toast(msg, dur, kind) {
 var LS_TOAST_MS = 5000;
 function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS, LS_TOAST.kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
+/* ═══ כיווץ רשימת ערכים — מודול משותף (סבב 101) ═══════════════════════════
+   ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה ובמיזוג
+      כאחד**: ⭐ `uniqHas` מונעת את הכפילות שמכאן ואילך, ⛔ ו-`uniqList`
+      מסלקת את מה שכבר נכתב פעמיים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ ושתיהן מכריעות לפי **אותה זהות** — ⚠️ שני מימושים לאותה טענה נבדלים
+      בשקט, ⭐ ואז המסך מראה פעמיים את מה שהמיזוג מכווץ לאחד.
+   ⛔ והראשון שורד — ⚠️ הסדר של הצד שניצח הוא סדר המסך, ⭐ ומי שדורש
+      שהחדש ינצח ממיין לפני הקריאה. */
+function uniqKeyOf(v, keyFn) { return String(keyFn ? keyFn(v) : v); }
+function uniqList(list, keyFn) {
+  if (!Array.isArray(list)) return list;
+  var seen = {}, out = [];
+  list.forEach(function (v) {
+    var k = uniqKeyOf(v, keyFn);
+    if (seen[k]) return;
+    seen[k] = 1;
+    out.push(v);
+  });
+  return out;
+}
+function uniqHas(list, val, keyFn) {
+  if (!Array.isArray(list)) return false;
+  var k = uniqKeyOf(val, keyFn);
+  return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
+}
+/* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
@@ -5405,7 +5422,7 @@ function addSub(ci, ti) {
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
    *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
-  if (SUBS[sk].indexOf(val) >= 0) { toast("⚠️ תת-המשימה כבר קיימת", 4000); return; }
+  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5590,7 +5607,7 @@ function addTask(ci) {
    *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
    *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
    *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
-  if (CATS[ci].tasks.indexOf(val) >= 0) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000); return; }
+  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
