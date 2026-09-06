@@ -143,7 +143,8 @@
    *  אין סרגל תחתון קבוע. */
   --toast-bottom:26px;
 
-  --primary:#1E6FBF; --primaryl:#3A8FDF; --primaryd:#0D4A8A;
+  --primary-ink:#1E6FBF; --primary-fill:#1E6FBF;
+  --primaryl:#3A8FDF; --primaryd:#0D4A8A;
   --accent:#F0A500; --accentl:#FFB930; --accentd:#C07800;
   --bg:#F0F4FA; --bgsec:#E4EBF5; --bgcard:#FFFFFF;
   --text:#1A2540; --textmid:#4A5A7A; --textlite:#8A9ABB;
@@ -157,7 +158,8 @@
     --bg:#0d151d; --bgsec:#18242f; --bgcard:#131e29;
     --text:#e8eef5; --textmid:#c2cfdc; --textlite:#93a5b8;
     --border:#24333f;
-    --primary:#3A8FDF; --primaryl:#5AA6EE; --primaryd:#9EC8F2;
+    --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
+    --primaryl:#5AA6EE; --primaryd:#9EC8F2;
     --accent:#FFB930; --accentl:#FFC957; --accentd:#F0A500;
     --success:#4ade80;
     --shadow:rgba(0,0,0,0.45);
@@ -171,7 +173,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
-.hdr{background:linear-gradient(135deg,var(--primary) 0%,#1558a0 100%);border-radius:20px;padding:0;margin-bottom:20px;
+.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);border-radius:20px;padding:0;margin-bottom:20px;
   border:none;box-shadow:0 6px 28px rgba(21,88,160,0.35);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
@@ -264,13 +266,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-btn{background:var(--bgcard);border:2px solid var(--border);border-radius:12px;padding:10px 14px;
   font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;
   transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
-.arc-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--bgsec);}
-.arc-btn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--bgsec);}
+.arc-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
 .arc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
 .arc-crumb{font-size:12px;color:var(--textmid);cursor:pointer;padding:3px 8px;border-radius:6px;
   background:var(--bgsec);border:1px solid var(--border);transition:all 0.15s;}
-.arc-crumb:hover{background:var(--primary);color:var(--bg);border-color:var(--primary);}
+.arc-crumb:hover{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);}
 .arc-crumb-sep{color:#bbb;font-size:12px;}
 .arc-day-card{background:var(--bgsec);border-radius:12px;padding:14px;margin-bottom:10px;border:1.5px solid var(--border);}
 .arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
@@ -282,13 +284,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .tabs{display:flex;gap:6px;margin-bottom:12px;}
 .tab-btn{flex:1;background:var(--bgcard);color:var(--textmid);border:2px solid var(--border);
   border-radius:11px;padding:10px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
-.tab-btn:hover{background:var(--bgsec);color:var(--primary);border-color:var(--primary);}
-.tab-btn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.tab-btn:hover{background:var(--bgsec);color:var(--primary-ink);border-color:var(--primary-ink);}
+.tab-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
 /* כרטיס */
 .card{background:var(--bgcard);border-radius:16px;padding:18px;margin-bottom:12px;
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
-.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:var(--primary);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:var(--primary-ink);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
 .card-ttl::before{content:"▸";color:var(--accent);font-size:13px;}
 
 /* תאריך */
@@ -298,10 +300,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .day-chip{background:var(--bgsec);color:var(--textmid);border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;
   font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
 .day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.day-chip.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
+.day-chip.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
 .heb-inp{border:1.5px solid var(--border);border-radius:9px;padding:6px 11px;font-family:'Frank Ruhl Libre',serif;font-size:14px;
   font-weight:700;background:var(--bgcard);direction:rtl;min-width:155px;flex:1;color:var(--text);}
-.heb-inp:focus{outline:none;border-color:var(--primary);}
+.heb-inp:focus{outline:none;border-color:var(--primary-ink);}
 
 /* רשת הקטגוריות */
 /* ⛔ שתי עמודות בברירת המחדל — ⚠️ ארבע נכנסות רק מנקודת השבירה שמעל. */
@@ -319,7 +321,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qbtn{background:var(--bgsec);border:1.5px solid var(--border);border-radius:16px;padding:4px 10px;font-size:11px;
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--textmid);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.qbtn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);font-weight:700;}
+.qbtn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);font-weight:700;}
 .qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .hint{color:var(--textlite);font-size:11px;}
 
@@ -332,10 +334,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .fld label{font-size:10px;font-weight:700;color:var(--textmid);}
 .fld input{border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;font-family:'Heebo',sans-serif;font-size:13px;
   color:var(--text);background:var(--bgcard);direction:rtl;transition:border-color 0.2s;}
-.fld input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
+.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
 
 /* כפתור ההוספה הגדול */
-.btn-add{width:100%;background:linear-gradient(135deg,var(--primary),var(--primaryl));color:white;border:none;
+.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
   border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:16px;font-weight:700;
   cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
@@ -343,7 +345,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.log-cnt{background:var(--primary);color:var(--bg);border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
+.log-cnt{background:var(--primary-fill);color:#fff;border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
 .entry-row{background:var(--bgcard);border-radius:10px;padding:10px 13px;display:grid;grid-template-columns:auto 1fr auto;
   gap:9px;align-items:start;margin-bottom:6px;box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
@@ -359,7 +361,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .exp-row{display:flex;gap:7px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:9px;padding:8px 14px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
 
-.btn-blue{background:var(--bgsec);color:var(--primary);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary);color:var(--bg);}
+.btn-blue{background:var(--bgsec);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:#fff;}
 .btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
 
 /* הגדרות */
@@ -372,14 +374,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .set-badge{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
   font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:900;flex-shrink:0;}
 .set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Heebo',sans-serif;font-size:13px;direction:rtl;color:var(--text);}
-.set-name-inp:focus{outline:none;border-color:var(--primary);}
+.set-name-inp:focus{outline:none;border-color:var(--primary-ink);}
 .set-lbl{font-size:10px;color:var(--textlite);margin-bottom:5px;}
 
 .chip{display:flex;align-items:center;gap:3px;background:var(--bgsec);border:1px solid var(--border);
   border-radius:14px;padding:3px 8px 3px 5px;font-size:11px;cursor:grab;}
 .chip.chip-sub{background:var(--bgcard);font-size:10px;border-color:#D8E4F0;}
 
-.drag-over{outline:2px dashed var(--primary);border-radius:8px;}
+.drag-over{outline:2px dashed var(--primary-ink);border-radius:8px;}
 .chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:12px;padding:0;line-height:1;}
 .chip button:hover{color:#CC3333;}
 .sub-chips{display:flex;flex-wrap:wrap;gap:4px;padding-right:8px;min-height:10px;}
@@ -394,10 +396,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .task-del-btn:hover{color:#cc3333;}
 .set-add-row{display:flex;gap:6px;}
 .set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 9px;font-family:'Heebo',sans-serif;font-size:12px;direction:rtl;color:var(--text);}
-.set-add-inp:focus{outline:none;border-color:var(--primary);}
-.btn-mini{background:var(--primary);color:var(--bg);border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
+.btn-mini{background:var(--primary-fill);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
 .btn-mini:hover{background:var(--primaryl);}
-.btn-save{width:100%;background:linear-gradient(135deg,var(--primary),var(--primaryl));color:white;border:none;
+.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
   border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all 0.2s;}
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
@@ -412,7 +414,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
-.inf-hd{background:linear-gradient(135deg,var(--primary) 0%,#1558a0 100%);color:#fff;
+.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);color:#fff;
   border-radius:14px;padding:14px 16px;margin-bottom:14px}
 .inf-hd b{font-size:15px;font-weight:800;display:block}
 .inf-hd span{font-size:12px;opacity:.85}
@@ -482,7 +484,7 @@ body.locked{overflow:hidden}
 .veil.open{display:flex}
 @media (min-width:640px){.veil{align-items:center}}
 .sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--bgcard);
-  color:#1a1a2e;border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
+  color:var(--text);border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
   font-family:'Heebo',sans-serif;direction:rtl}
 @media (min-width:640px){.sheet{border-radius:20px}}
 .sheet-hd{display:flex;align-items:center;gap:10px;padding:15px 18px;
@@ -5235,7 +5237,7 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
   if (!lbl) return;
   var inp = document.createElement("input");
   inp.value = oldVal;
-  inp.style.cssText = "border:1px solid var(--primary);border-radius:6px;padding:2px 6px;font-family:Heebo;font-size:12px;width:90px;";
+  inp.style.cssText = "border:1px solid var(--primary-ink);border-radius:6px;padding:2px 6px;font-family:Heebo;font-size:12px;width:90px;";
   lbl.replaceWith(inp);
   inp.focus();
   inp.select();
@@ -5283,7 +5285,7 @@ function editTaskInline(ci, ti) {
   var oldVal = CATS[ci].tasks[ti];
   var inp = document.createElement("input");
   inp.value = oldVal;
-  inp.style.cssText = "border:1px solid var(--primary);border-radius:6px;padding:2px 8px;font-family:Heebo;font-size:13px;width:120px;font-weight:600;";
+  inp.style.cssText = "border:1px solid var(--primary-ink);border-radius:6px;padding:2px 8px;font-family:Heebo;font-size:13px;width:120px;font-weight:600;";
   lbl.replaceWith(inp);
   inp.focus(); inp.select();
   function save() {
@@ -5397,7 +5399,7 @@ function renderSettings() {
                     + 'ondragend="subDragEnd(event)">'
                     + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
@@ -5416,7 +5418,7 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary);">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
@@ -5843,7 +5845,7 @@ function renderArcDetail() {
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
     '<div style="flex:1">'+
-      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary-ink)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
       '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
@@ -6487,7 +6489,7 @@ function ysPickYeshiva() {
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
     body += '<button class="btn-sm" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '"' +
-            ' style="background:var(--primary);color:#fff;padding:14px;font-size:16px;font-weight:800' +
+            ' style="background:var(--primary-fill);color:#fff;padding:14px;font-size:16px;font-weight:800' +
             (cur ? ';opacity:.55' : '') + '">' + esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
