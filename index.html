@@ -3352,11 +3352,58 @@ function mergeArchive(local, remote) {
   }, pendArc);
 }
 
-// קטגוריות: רשומה = קטגוריה (מפתח = אות). המשימות הן מחרוזות בלי מזהה, ולכן
-// הן נוסעות עם רשומת הקטגוריה — הוספה/מחיקה/שינוי סדר של משימה היא עדכון של
-// הקטגוריה (updatedAt), ולא היעלמות שקטה במיזוג.
+// קטגוריות: רשומה = קטגוריה (מפתח = אות).
+// ⛔⛔ **ו-`tasks` הוא נקודת מיזוג בפני עצמה** — ⚠️ **הנימוק המדוד**: המשימות
+//    נסעו עם הרשומה, ⛔ ומיזוג ברמת רשומה מחליף את **המערך כולו**: ⭐ מקור
+//    אחר עם חותמת חדשה יותר מחק רשימת משימות שלמה שלא נגעו בה, ⚠️ ושתי
+//    קטגוריות נשאו את המשימות של מוסד אחר מילה במילה.
+// ⛔ **ולכן לכל משימה חותמת משלה ב-`tasksMeta`** — ⚠️ אותו קידוד של מפת
+//    תתי-המשימות: ⭐ מספר לפריט חי, ⛔ ו-`{deleted, updatedAt}` למחיקה —
+//    ⚠️ שהיעדר נקרא «אין לי» ולא «נמחק».
+// ⛔ **והסדר נוסע עם הרשומה** ⛔ ולא עם הפריט — ⚠️ אין למשימה חותמת סדר,
+//    ⭐ ולכן שינוי סדר מוכרע ב-`updatedAt` של הקטגוריה כמו כל שדה אחר.
 function catKey(c) { return (c && c.letter != null) ? c.letter : null; }
-function mergeCats(local, remote) { return mergeRecords(local, remote, catKey); }
+function catMeta(c) { return (c && c.tasksMeta && typeof c.tasksMeta === 'object') ? c.tasksMeta : {}; }
+/*  ⛔ מיזוג רשימת המשימות פר-פריט — ⚠️ צד שאינו מכיר את המשימה כלל אינו
+ *  מכריע עליה, ⭐ אחרת משימה שנוספה אופליין הייתה יורדת במשיכה הראשונה:
+ *  ⛔ ובשוויון חותמות מנצח הענן, ⚠️ שההכרעה דטרמיניסטית. */
+function mergeTasks(locList, locMeta, remList, remMeta) {
+  var L = Array.isArray(locList) ? locList : [], R = Array.isArray(remList) ? remList : [];
+  var Lm = locMeta || {}, Rm = remMeta || {};
+  var lHas = {}, rHas = {}, meta = {}, order = [], seen = {};
+  L.forEach(function (t) { lHas[t] = 1; });
+  R.forEach(function (t) { rHas[t] = 1; });
+  // ⛔ הענן הוא בסיס הסדר, והמקומי נוסף אחריו — ⚠️ כמו במיזוג הרשומות
+  R.concat(L).forEach(function (t) { if (!seen[t]) { seen[t] = 1; order.push(t); } });
+  Object.keys(Lm).concat(Object.keys(Rm)).forEach(function (t) { if (!seen[t]) seen[t] = 1; });
+  var out = [];
+  order.forEach(function (t) {
+    var lKnows = !!lHas[t] || (t in Lm), rKnows = !!rHas[t] || (t in Rm);
+    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[t]) > metaTs(Rm[t]);
+    var mv = useLocal ? Lm[t] : Rm[t];
+    if (metaDeleted(mv)) { meta[t] = mv; return; }
+    if (!(useLocal ? lHas[t] : rHas[t])) return;   // חותמת בלי פריט — אין מה להחזיק
+    out.push(t);
+    if (mv !== undefined) meta[t] = mv;
+  });
+  // ⛔ סימוני מחיקה שאין להם פריט בשום צד נשארים — כך המחיקה מתפשטת הלאה
+  Object.keys(Lm).forEach(function (t) { if (!(t in meta) && metaDeleted(Lm[t])) meta[t] = Lm[t]; });
+  Object.keys(Rm).forEach(function (t) {
+    if (metaDeleted(Rm[t]) && (!(t in meta) || metaTs(Rm[t]) > metaTs(meta[t]))) meta[t] = Rm[t];
+  });
+  return { tasks: out, meta: meta };
+}
+function mergeCats(local, remote) {
+  return mergeRecords(local, remote, catKey, function (loc, rem, k, pend) {
+    var base = (pend || recTs(loc) > recTs(rem)) ? loc : rem;   // שוויון → הענן
+    var out = {};
+    Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
+    var m = mergeTasks(loc.tasks, catMeta(loc), rem.tasks, catMeta(rem));
+    out.tasks = m.tasks;
+    out.tasksMeta = m.meta;
+    return out;
+  });
+}
 
 // תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}, ו-SUBS_META מחזיקה חותמת
 // לכל מפתח. ⛔ **ושתי מחיקות שונות חיות כאן, ואין לערבב ביניהן:**
@@ -3383,10 +3430,10 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
     var rKnows = (k in Rs) || (k in Rm);
     // ⛔ צד שאינו מכיר את המפתח אינו מכריע עליו — «אין לי» אינו «נמחק»;
     // ⚠️ ובשוויון חותמות מנצח הענן, שההכרעה דטרמיניסטית
-    var useLocal = !rKnows ? true : !lKnows ? false : subTs(Lm[k]) > subTs(Rm[k]);
+    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[k]) > metaTs(Rm[k]);
     var mv = useLocal ? Lm[k] : Rm[k];
     // ⛔ הסימון נשאר במפת החותמות ⛔ והמפתח יורד — כך המחיקה מתפשטת הלאה
-    if (subDeleted(mv)) { meta[k] = mv; return; }
+    if (metaDeleted(mv)) { meta[k] = mv; return; }
     var list = useLocal ? Ls[k] : Rs[k];
     if (list === undefined) return;   // חותמת בלי רשימה — אין מה להחזיק
     subs[k] = list;
@@ -3664,15 +3711,32 @@ function saveCats() {
 }
 // חותמות זמן פר-מפתח של SUBS (ראה mergeSubs). נטען ב-loadLocalData().
 var SUBS_META = {};
-/*  ⛔ ערך חי הוא **מספר**, ⛔ ומפתח שנמחק הוא `{deleted, updatedAt}` — ⚠️ אותם
+/*  ⛔ ערך חי הוא **מספר**, ⛔ ופריט שנמחק הוא `{deleted, updatedAt}` — ⚠️ אותם
  *  שני שדות של רשומת יומן, ⭐ ולא קידוד שני לאותו מושג: ⛔ **והחי נשאר מספר**
- *  — ⚠️ כדי שגרסה קודמת תקרא אותו בדיוק כפי שקראה תמיד. */
-function subTs(v) {
+ *  — ⚠️ כדי שגרסה קודמת תקרא אותו בדיוק כפי שקראה תמיד.
+ *  ⛔ **וקידוד אחד לשתי מפות החותמות** — ⚠️ תתי-המשימות ומשימות הקטגוריה,
+ *  ⭐ ששני קידודים לאותו מושג הם שני מסלולי הכרעה. */
+function metaTs(v) {
   if (typeof v === 'number') return isFinite(v) ? v : 0;
   var t = v && Number(v.updatedAt);
   return (isFinite(t) && t > 0) ? t : 0;
 }
-function subDeleted(v) { return !!(v && typeof v === 'object' && v.deleted); }
+function metaDeleted(v) { return !!(v && typeof v === 'object' && v.deleted); }
+/*  ⛔ חותמת פר-משימה — ⚠️ בלעדיה המשימה נושאת את חותמת הקטגוריה בלבד,
+ *  ⭐ ומיזוג ברמת רשומה מחליף את המערך כולו. */
+function touchTask(cat, name) {
+  if (!cat || name == null) return;
+  if (!cat.tasksMeta || typeof cat.tasksMeta !== 'object') cat.tasksMeta = {};
+  cat.tasksMeta[String(name)] = Date.now();
+}
+/*  ⛔ ומחיקת משימה היא סימון ואינה היעדר — ⚠️ ההצהרה נשארת כדי שהמחיקה
+ *  תתפשט: ⭐ מכשיר שלא ראה אותה מחזיר את המשימה. */
+function delTaskMeta(cat, name, ts) {
+  if (!cat || name == null) return;
+  if (!cat.tasksMeta || typeof cat.tasksMeta !== 'object') cat.tasksMeta = {};
+  cat.tasksMeta[String(name)] = metaDel(ts);
+}
+function metaDel(ts) { return { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() }; }
 function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
 /*  ⛔ מחיקת מפתח היא **סימון** ואינה היעדר — ⚠️ ההצהרה נשארת ב-`SUBS_META`
  *  כדי שהמחיקה תתפשט: ⭐ מכשיר שלא ראה אותה קורא היעדר כ«אין לי» ⛔ ולא
@@ -3680,7 +3744,7 @@ function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
 function delSubKey(sk, ts) {
   if (sk == null) return;
   var k = String(sk);
-  SUBS_META[k] = { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() };
+  SUBS_META[k] = metaDel(ts);
   delete SUBS[k];
 }
 /*  ⛔ עידן ה-`SUBS` — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
@@ -5361,6 +5425,7 @@ function editTaskInline(ci, ti) {
         delSubKey(oldVal);
       }
       CATS[ci].tasks[ti] = newVal;
+      delTaskMeta(CATS[ci], oldVal); touchTask(CATS[ci], newVal);
       recTouch(CATS[ci]); touchSubKey(newSk);
       saveCats(); saveSubs();
     }
@@ -5496,6 +5561,7 @@ function removeTask(ci, ti) {
   // מתועדת כעדכון של הקטגוריה (updatedAt) ומנצחת במיזוג במקום להיעלם.
   var gone = CATS[ci].tasks[ti];
   CATS[ci].tasks.splice(ti, 1);
+  delTaskMeta(CATS[ci], gone);
   recTouch(CATS[ci]);
   /*  ⛔ ותתי-המשימות שלה יורדות בסימון — ⚠️ מפתח שנשאר בלי המשימה שלו
    *  חוזר תחת משימה אחרת שתקבל את אותו מספר קטגוריה ואותו שם. */
@@ -5508,6 +5574,7 @@ function addTask(ci) {
   var val = inp.value.trim();
   if (!val) return;
   CATS[ci].tasks.push(val);
+  touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
   inp.value = "";
   saveCats();
@@ -6571,8 +6638,7 @@ function ysConfirmSwitch(y) {
   if (!ysNameOf(y)) return;
   closeModal();
   if (idEq(y, YESHIVA)) { toast('כבר במוסד ' + ysNameOf(y)); return; }
-  ysResetTenantState();
-  selectYeshiva(y, true);
+  selectYeshiva(y);
   /*  ⛔ הארכיון חוזר לשורש דרך נקודת הניווט היחידה — ⚠️ שנת הקידוח
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
@@ -6585,7 +6651,20 @@ function ysConfirmSwitch(y) {
  *  מאזיני רשת בכל קריאה: ⭐ המצב הפר-מוסדי מתרענן ב-`pendReload`,
  *  ⛔ והחיווט נעשה פעם אחת. ⚠️ ואין כאן נקודת הפעלה שנייה — ⭐ זו אותה
  *  פונקציה בדיוק, ⛔ ולא מעטפת שמשכפלת את גופה. */
-function selectYeshiva(y, again) {
+function selectYeshiva(y) {
+  /*  ⛔⛔ האיפוס יושב **בנקודת הניתוב האחת** ⛔ ולא באחריות הקורא — ⚠️ **הנימוק
+   *  המדוד**: לפונקציה היו שני קוראים — הבורר שבתוך האפליקציה, שאיפס לפניה,
+   *  ⛔ ומסך הבחירה שבעלייה, שקרא לה חשופה: ⭐ ובמסלול השני `_tbEpoch` לא
+   *  התקדם, ⛔ וכל שערי ההקשר היו מנוטרלים — ⚠️ מחזור שנפתח במוסד אחד המשיך
+   *  לכתוב תחת השני, ⭐ ורשומת קטגוריה זרה נחתה עם חותמת חדשה יותר ודרסה את
+   *  רשימת המשימות. ⛔ **ואין להחזיר את האיפוס לקורא** — ⚠️ קורא שלישי ישכח
+   *  אותו בדיוק כפי שהשני שכח.
+   *  ⛔ **וכניסה חוזרת נגזרת ואינה נמסרת** — ⚠️ הפרמטר `again` נמסר בקורא
+   *  אחד ולא בשני, ⭐ ולכן `pendBoot` רץ פעם שנייה במסלול השני ⛔ והוסיף
+   *  מאזיני רשת כפולים. */
+  var reentry = !!YESHIVA;
+  if (reentry) ysResetTenantState();
+  var again = reentry;
   YESHIVA  = y;
   KV_TABLE = (y === 'ramataviv') ? 'kv_ramataviv' : 'kv_rishon';
   LS       = '_' + y;

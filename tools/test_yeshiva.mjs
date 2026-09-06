@@ -97,15 +97,29 @@ function audit(root) {
   if (!/openModal\(/.test(picker))
     v.push({ kind: 'modal', msg: 'הבורר אינו נפתח ב-`openModal`' });
 
-  /*  ג. סדר המעבר — איפוס ואז ההחלפה, ⛔ ובלי אישור שני (סבב 82):
-      ⚠️ הבחירה במוסד בבורר **היא** האישור, ⭐ ושני דיאלוגים לפעולה אחת
-      מלמדים ללחוץ «כן» בלי לקרוא — ⛔ ואז גם האישור שכן חשוב נלחץ כך. */
-  const conf = bodyOf(page, 'ysConfirmSwitch');
-  const iRst = conf.indexOf('ysResetTenantState()');
-  const iSel = conf.indexOf('selectYeshiva(');
-  if (iRst < 0 || iSel < 0 || !(iRst < iSel))
+  /*  ג. האיפוס יושב בנקודת הניתוב האחת, ⛔ ובלי אישור שני (סבב 82):
+      ⚠️ **הנימוק המדוד** (סבב 99): הטענה כאן מדדה את האיפוס **בתוך
+      `ysConfirmSwitch`** — ⛔ כלומר קורא אחד מתוך שניים: ⭐ ומסך הבחירה
+      שבעלייה קרא ל-`selectYeshiva` חשופה, ⚠️ `_tbEpoch` לא התקדם, ⛔ וכל
+      שערי ההקשר היו מנוטרלים — ⭐ ורשומת קטגוריה זרה דרסה רשימת משימות.
+      ⛔ **ולכן נמדד הניתוב ולא הקורא**: האיפוס בתוך `selectYeshiva`,
+      ⚠️ לפני שנקבע ולו גלובל פר-מוסד אחד, ⭐ ואתר קריאה **אחד** בקובץ.
+      ⚠️ והבחירה במוסד בבורר **היא** האישור, ⛔ ואין דיאלוג שני. */
+  const sel = bodyOf(page, 'selectYeshiva');
+  const iRst = sel.indexOf('ysResetTenantState()');
+  const iSet = Math.min(...['YESHIVA', 'KV_TABLE', 'LS']
+    .map((n) => { const i = sel.search(new RegExp('(?<![\\w$])' + n + '\\s*=[^=]')); return i < 0 ? 1e9 : i; }));
+  if (iRst < 0 || !(iRst < iSet))
     v.push({ kind: 'order', msg:
-      `הסדר במעבר — איפוס ${iRst} · selectYeshiva ${iSel}; הצפוי עולה` });
+      `האיפוס אינו בנקודת הניתוב — איפוס ${iRst} · גלובל פר-מוסד ${iSet}; הצפוי עולה` });
+  /*  ⛔ ההגדרה אינה אתר קריאה — ⚠️ `function X()` נושא את אותם תווים,
+   *  ⭐ ומדידה גולמית הייתה סופרת אותו. */
+  const calls = (page.match(/(?<!function\s)ysResetTenantState\(\)/g) || []).length;
+  if (calls !== 1)
+    v.push({ kind: 'order', msg:
+      `אתרי קריאה ל-ysResetTenantState — נמדדו ${calls} והצפוי 1: ⛔ האיפוס ` +
+      'הוא אחריות נקודת הניתוב, ולא של הקורא' });
+  const conf = bodyOf(page, 'ysConfirmSwitch');
   if (/(?<![\w$])ask\s*\(/.test(conf))
     v.push({ kind: 'order', msg:
       'אישור שני במעבר — נמדדה קריאת `ask` ב-`ysConfirmSwitch` והצפוי אפס' });
