@@ -2827,13 +2827,14 @@ function pushRow(t, rows) {
   });
 }
 
-/*  ⛔ שכבה 2 — **טבלה אחת**: המנות, סימוני ה-⏳, ועֵד הדחיפה — ⚠️ כשל רשת
+/*  ⛔ שכבה 2 — **טבלה אחת**: המנות, סימוני ה-⏳, ועֵד הדחיפה — ⚠️ «אין ראיה»
+ *  אינו הצלחה: ⭐ לא נדחף דבר ⛔ ואין לזקוף זאת כדחיפה שעברה · ⚠️ וכשל רשת
  *  אינו ראיה לכלום ולכן הסימון נשאר וננסה שוב, ⭐ וכשל סמכותי (ולידציה ·
  *  מפתח זר · הרשאה · סכימה) יחזור על עצמו לנצח: ⛔ הסימון יורד כדי לא
  *  להבטיח שליחה חוזרת שלא תקרה, ⚠️ והסיבה נרשמת ואינה נבלעת. */
 function pushTable(t, ctx) {
   return Promise.resolve(PUSH_CFG.dirty(t, ctx)).then(function (rows) {
-    if (!rows) return { ok: true, still: [], n: 0 };
+    if (!rows) return { ok: false, still: [], n: 0 };
     if (!rows.length) { PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
     var still = [], n = 0, bad = 0, i = 0;
     function won(row) {
@@ -3956,9 +3957,9 @@ function saveEntries() {
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_entries', _rows.n);
-    // ⭐ סבב 51 — המשפך המשותף: מקדם קודם את «מה שכבר נראה» מקומית, כדי
-    //    שהמכשיר הזה לא ימשוך בחזרה את מה שזה עתה דחף, ורק אז כותב.
-    await plTouch();
+    /*  ⛔ החותמת מקודמת בשכבת הדחיפה ⛔ ואינה נכתבת כאן שוב — ⚠️ שכבת
+     *  הדחיפה מקדמת אותה **רק כשבאמת נכתב משהו**, ⭐ וקידום שני היה חותם
+     *  גם על דחיפה שלא העלתה דבר. */
   })();
 }
 function saveArchive() {
@@ -3977,7 +3978,7 @@ function saveArchive() {
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_archive', _rows.n);
-    await plTouch();   // ר' ההערה ב-saveEntries
+    // ר' ההערה ב-saveEntries — החותמת מקודמת בשכבת הדחיפה
   })();
 }
 

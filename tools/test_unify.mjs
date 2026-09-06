@@ -64,6 +64,16 @@ function cutVar(decl) {
   return SRC.slice(i + 1, SRC.indexOf('\n', i + 1));
 }
 
+/*  ⛔ הצהרת אובייקט רב-שורתית — ⚠️ `cutVar` חותכת שורה אחת, ⭐ ו-`PUSH_CFG`
+ *  נפרס על פני עשרות: ⛔ החיתוך כאן הוא עד `\n};` הראשון. */
+function cutObj(decl) {
+  const i = SRC.indexOf('\n' + decl);
+  if (i < 0) throw new Error('ההצהרה «' + decl + '» לא נמצאה');
+  const j = SRC.indexOf('\n};', i);
+  if (j < 0) throw new Error('סוף ההצהרה «' + decl + '» לא נמצא');
+  return SRC.slice(i + 1, j + 3);
+}
+
 const NAMES = [
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ בלעדיו `tbRowsGet` זורקת
    *  ונתפסת ב-catch שלה עצמה, ⭐ והבדיקה הייתה מדווחת «אין רשת». */
@@ -74,7 +84,9 @@ const NAMES = [
   'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbTableOf', 'tbArchivedFlag',
   'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
-  'tbRowsGet', 'tbDirtyRows', 'tbRowsPush'];
+  // ⚠️ ⛔ מסבב 102 הדחיפה היא הבלוק המשותף — ⭐ `tbSendRows` היא הכתיבה
+  //    עצמה, ⛔ והלולאה שמעליה היא `pushTable` שנטענת מהבלוק.
+  'tbRowsGet', 'tbDirtyRows', 'tbSendRows', 'pushRow', 'pushTable'];
 
 /* ── לקוח Supabase מדומה ────────────────────────────────────────────────────
    `cols` מדמה את **עמודות הטבלה**: `upsert` של שדה שאינו בהן נכשל, בדיוק
@@ -139,6 +151,17 @@ function makeEnv(opts = {}) {
     getSB: () => client,
     withTimeout: (p) => p,
     pendHas: (k) => !!(opts.pending || {})[k],
+    /*  ⛔ עוזרי שכבת הדחיפה — ⚠️ הם חיים בבלוקים חתומים אחרים, ⭐ והרתמה
+     *  מספקת אותם כדי שהשכבה תיטען לבדה: ⛔ טעינת בלוק שלם לכל עוזר הייתה
+     *  מכניסה לרתמה קוד שאינו נמדד כאן. */
+    _pushTimer: null,
+    _tbPushEp: 0,
+    isNetErr: (e) => /net|fetch|timeout|failed to/i.test((e && (e.message || '')) + ''),
+    pendClear: () => {},
+    pendFailed: () => {},
+    plTouch: () => {},
+    _tbMarkPushed: () => {},
+    _bkWriteFail: () => {},
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
@@ -152,12 +175,16 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var YS_ROWS_PAGE = '), sandbox);
   vm.runInContext(cutVar('var YS_ROWS_CAP = '), sandbox);
   vm.runInContext(cutVar('var _tbRemote = '), sandbox);
-  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbRowsPush`
+  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbSendRows`
    *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`
    *  של עצמן: ⚠️ והבדיקה הייתה מדווחת «אין רשת» על קוד תקין. */
   vm.runInContext(cutVar('var _tbEpoch = 0;'), sandbox);
   vm.runInContext(cut('ysTenantEpoch'), sandbox);
   vm.runInContext(cut('ysTenantStale'), sandbox);
+  /*  ⛔ `PUSH_CFG` נטען מהמקור ⛔ ואינו נכתב כאן — ⚠️ עותק ברתמה הוא מקור
+   *  אמת שני, ⭐ והוא היה עובר גם כשההצהרה שבקוד השתנתה. */
+  vm.runInContext(cutVar('var PUSH_TABLES = '), sandbox);
+  vm.runInContext(cutObj('var PUSH_CFG = {'), sandbox);
   if (opts.unified === false) sandbox.TB_ARC_UNIFIED = false;
   // ⭐ סבב 35: הדגל כבוי בקוד הרץ; בדיקות נתיב-החזרה (5ו-5יא) מדליקות אותו
   //    כאן במפורש כדי שהנתיב יישאר מכוסה עד המחיקה ב-30.8.
@@ -271,7 +298,7 @@ async function t4() {
    ══════════════════════════════════════════════════════════════════════════ */
 async function t5() {
   const env = makeEnv();
-  const r = await env.sb.tbRowsPush('tb_archive', [S('3/09/2025', 100)]);
+  const r = await env.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
   eq(r.ok, true, '5א · הדחיפה הצליחה');
   eq(env.upserts.length, 2, '5ב · ⭐ שתי כתיבות — המאוחדת והישנה');
   eq(env.upserts[0].table, 'tb_entries', '5ג · הראשונה לטבלה המאוחדת');
@@ -284,18 +311,18 @@ async function t5() {
 
   // רשומת יומן — כתיבה אחת בלבד
   const env2 = makeEnv();
-  await env2.sb.tbRowsPush('tb_entries', [E(1, 100)]);
+  await env2.sb.pushTable('tb_entries', [E(1, 100)]);
   eq(env2.upserts.length, 1, '5ט · ⛔ רשומת יומן אינה נכתבת פעמיים');
 
   // ⛔ כשל בכתיבה הישנה אינו הופך את הדחיפה לכושלת — הטבלה החדשה היא המקור
   const env3 = makeEnv({ legacyFails: true });
-  const r3 = await env3.sb.tbRowsPush('tb_archive', [S('3/09/2025', 100)]);
+  const r3 = await env3.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
   eq(r3.ok, true, '5י · ⛔ כשל בטבלה הישנה אינו מפיל את הדחיפה');
   eq(env3.sb._tbRemote.tb_archive['g:3/09/2025'], 100, '5יא · ומפת החותמות כן התעדכנה');
 
   // כיבוי הכתיבה הכפולה — הצעד הראשון לקראת מחיקת הטבלה
   const env4 = makeEnv({ legacyWrite: false });
-  await env4.sb.tbRowsPush('tb_archive', [S('3/09/2025', 100)]);
+  await env4.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
   eq(env4.upserts.length, 1, '5יב · ⭐ TB_ARC_LEGACY_WRITE=false ⇒ כתיבה אחת בלבד');
   eq(env4.upserts[0].table, 'tb_entries', '5יג · ולטבלה המאוחדת');
 }
@@ -313,7 +340,7 @@ async function t6() {
   eq(g.data, null, '6ב · ובלי נתונים');
   eq(env.sb._tbRemote.tb_entries, null, '6ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
 
-  const p = await env.sb.tbRowsPush('tb_entries', [E(1, 100)]);
+  const p = await env.sb.pushTable('tb_entries', [E(1, 100)]);
   eq(p.ok, false, '6ד · והדחיפה נכשלת — עֵד הפינוי ואישור ה-⏳ לא יינתנו');
   eq(env.sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1,
     '6ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב אחרי המיגרציה');
@@ -333,7 +360,7 @@ async function t7() {
   // אופליין — נכשל סגור
   const off = makeEnv({ net: false });
   eq((await off.sb.tbRowsGet('tb_archive')).ok, false, '7ג · ⛔ אופליין — אין ראיה');
-  eq((await off.sb.tbRowsPush('tb_archive', [S('1/01/2026', 1)])).ok, false, '7ד · ואין דחיפה');
+  eq((await off.sb.pushTable('tb_archive', [S('1/01/2026', 1)])).ok, false, '7ד · ואין דחיפה');
 
   // TB_ROWS=false — נתיב החזרה הרחב של סבב 30 לא נשבר
   const envOff = makeEnv();
