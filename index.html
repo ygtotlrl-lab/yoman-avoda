@@ -3172,7 +3172,7 @@ async function sbSet(key, value) {
   var tbl = KV_TABLE, _ep = ysTenantEpoch();
   try {
     var sb = getSB();
-    var res = await withTimeout(sb.from(tbl).upsert({key: key, value: JSON.stringify(value)}, {onConflict: "key"}));
+    var res = await withTimeout(sb.from(tbl).upsert({key: key, value: JSON.stringify(value), updated_at: Date.now()}, {onConflict: "key"}));
     /*  ⛔ ההקשר התחלף בזמן הכתיבה — ⚠️ הכתיבה עצמה הגיעה לטבלה הנכונה, שהיא
      *  נלכדה בכניסה, ⛔ אך `ok:true` היה מזכה את עֵד הפינוי של המוסד **החדש**
      *  בדחיפה שלא נעשתה עבורו: ⭐ נכשל-סגור — ⚠️ עֵד חסר מונע פינוי, ⛔ ועֵד
