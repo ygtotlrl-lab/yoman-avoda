@@ -3405,6 +3405,16 @@ function mergeCats(local, remote) {
   });
 }
 
+/*  ⛔ שני פריטים באותו ערך הם פריט אחד — ⚠️ **והכיווץ הוא בכתיבה
+ *  ובמיזוג כאחד**: ⭐ בדיקת הקיום מונעת את הכפילות שמכאן ואילך,
+ *  ⛔ והכיווץ מסלק את מה שכבר נכתב פעמיים — ⚠️ והראשון שורד,
+ *  ⭐ שהסדר של הצד שניצח הוא סדר המסך. */
+function uniqList(list) {
+  if (!Array.isArray(list)) return list;
+  var seen = {}, out = [];
+  list.forEach(function (v) { var k = String(v); if (seen[k]) return; seen[k] = 1; out.push(v); });
+  return out;
+}
 // תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}, ו-SUBS_META מחזיקה חותמת
 // לכל מפתח. ⛔ **ושתי מחיקות שונות חיות כאן, ואין לערבב ביניהן:**
 //  ⭐ **מחיקת פריט בתוך הרשימה** — הרשימה כולה היא הרשומה, ⛔ ולה חותמת
@@ -3436,7 +3446,7 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
     if (metaDeleted(mv)) { meta[k] = mv; return; }
     var list = useLocal ? Ls[k] : Rs[k];
     if (list === undefined) return;   // חותמת בלי רשימה — אין מה להחזיק
-    subs[k] = list;
+    subs[k] = uniqList(list);
     meta[k] = (mv === undefined) ? 0 : mv;
   });
   return { subs: subs, meta: meta };
@@ -5393,6 +5403,9 @@ function addSub(ci, ti) {
   if (!val) return;
   var sk = subKey(ci, taskName);
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
+  /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
+   *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
+  if (SUBS[sk].indexOf(val) >= 0) { toast("⚠️ תת-המשימה כבר קיימת", 4000); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5573,6 +5586,11 @@ function addTask(ci) {
   var inp = document.getElementById("snewtask-" + ci);
   var val = inp.value.trim();
   if (!val) return;
+  /*  ⛔ פריט שכבר ברשימה אינו נוסף שוב — ⚠️ **וההשוואה על הערך** ⛔ ולא
+   *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
+   *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
+   *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
+  if (CATS[ci].tasks.indexOf(val) >= 0) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
