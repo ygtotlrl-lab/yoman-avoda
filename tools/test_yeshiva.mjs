@@ -214,23 +214,27 @@ const mutate = (label, fn, kinds) => {
 mutate('מ1 · מוטציה: שורת האיפוס של אות הפולינג נמחקת — טענה ד נופלת',
   (s) => s.replace('  _lastKnownTimestamp = 0;\n', ''), ['reset']);
 
-mutate('מ2 · מוטציה: האיפוס אחרי ההחלפה במקום לפניה — טענה ג נופלת',
-  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
-                   '  selectYeshiva(y, true);\n  ysResetTenantState();'), ['order']);
+mutate('מ2 · מוטציה: האיפוס אחרי קביעת הגלובלים במקום לפניה — טענה ג נופלת',
+  (s) => s.replace('  if (reentry) ysResetTenantState();\n  var again = reentry;\n  YESHIVA  = y;',
+                   '  var again = reentry;\n  YESHIVA  = y;\n  if (reentry) ysResetTenantState();'), ['order']);
+
+/*  ⛔⛔ החזרת האיפוס לקורא היא **המוטציה של הסבב** — ⚠️ זו בדיוק הצורה
+ *  שהייתה כאן, ⭐ ושבה קורא אחד איפס והשני לא: ⛔ והשער אישר אותה. */
+mutate('מ2א · מוטציה: האיפוס חוזר לאחריות הקורא — טענה ג נופלת',
+  (s) => s.replace('  if (reentry) ysResetTenantState();\n', '')
+          .replace('  selectYeshiva(y);\n', '  ysResetTenantState();\n  selectYeshiva(y);\n'), ['order']);
 
 /*  ⛔ החזרת האישור השני היא מוטציה על המנגנון — ⚠️ הכפתור ממשיך לעבוד,
  *  ⭐ ולכן רק שער תופס את הדיאלוג הכפול שחזר. */
 mutate('מ2ב · מוטציה: אישור שני חוזר ל-ysConfirmSwitch — טענה ג נופלת',
-  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
-                   "  if (!ask('החלפת ישיבה', 'להחליף?')) return;\n" +
-                   '  ysResetTenantState();\n  selectYeshiva(y, true);'), ['order']);
+  (s) => s.replace('  selectYeshiva(y);\n',
+                   "  if (!ask('החלפת ישיבה', 'להחליף?')) return;\n  selectYeshiva(y);\n"), ['order']);
 
 /*  ⭐ מוטציית-נגד: שורה שנוספה בלי `ask` ⛔ אינה מפילה — ⚠️ הנמדד הוא
  *  הדיאלוג הכפול, ⛔ ולא כל תוספת לגוף הפונקציה. */
 mutate('נ2ב · ⭐ מוטציית-נגד: שורה שנוספה בלי אישור ⛔ אינה מפילה',
-  (s) => s.replace('  ysResetTenantState();\n  selectYeshiva(y, true);',
-                   "  console.log('switch');\n" +
-                   '  ysResetTenantState();\n  selectYeshiva(y, true);'), ['__none__']);
+  (s) => s.replace('  selectYeshiva(y);\n',
+                   "  console.log('switch');\n  selectYeshiva(y);\n"), ['__none__']);
 
 mutate('מ3 · מוטציה: הבורר עוקף את openModal — טענה ב נופלת',
   (s) => s.replace("  openModal('החלפת ישיבה', body, '');",
