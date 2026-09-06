@@ -3358,20 +3358,39 @@ function mergeArchive(local, remote) {
 function catKey(c) { return (c && c.letter != null) ? c.letter : null; }
 function mergeCats(local, remote) { return mergeRecords(local, remote, catKey); }
 
-// תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}. הרשימה כולה היא הרשומה,
-// וה-updatedAt שלה נשמר במפה מקבילה (SUBS_META) — כך שגם למחיקת תת-משימה
-// יש חותמת שמנצחת במיזוג במקום להיעלם.
+// תתי-משימות: SUBS הוא מפה {מפתח: [מחרוזות]}, ו-SUBS_META מחזיקה חותמת
+// לכל מפתח. ⛔ **ושתי מחיקות שונות חיות כאן, ואין לערבב ביניהן:**
+//  ⭐ **מחיקת פריט בתוך הרשימה** — הרשימה כולה היא הרשומה, ⛔ ולה חותמת
+//    אחת: הפריט יורד מהמערך, החותמת מתקדמת, והמיזוג מכריע לפיה.
+//  ⛔ **ומחיקת המפתח עצמו** — משימה שלמה על כל תתיה — ⚠️ היא **סימון**
+//    ב-`SUBS_META` ⛔ ולא היעדר: ⭐ היעדר נקרא «אין לי» ולא «נמחק».
+//    ⚠️ **וזה לא תיאורטי** — ⛔ האיחוד העיוור החזיר מפתחות שנוקו בענן,
+//    ⭐ והמפתחות מקודדים לפי **מספר** הקטגוריה: ⛔ מפתח שדלף נחת תחת
+//    קטגוריה אחרת לגמרי.
+// ⛔ **וצד שאינו מכיר את המפתח כלל אינו מכריע עליו** — ⚠️ אחרת מפתח
+//    שנוצר במכשיר אופליין היה יורד במשיכה הראשונה.
 function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
   var Ls = (localSubs && typeof localSubs === 'object') ? localSubs : {};
   var Rs = (remoteSubs && typeof remoteSubs === 'object') ? remoteSubs : {};
   var Lm = (localMeta && typeof localMeta === 'object') ? localMeta : {};
   var Rm = (remoteMeta && typeof remoteMeta === 'object') ? remoteMeta : {};
-  var subs = {}, meta = {};
-  Object.keys(Rs).forEach(function(k){ subs[k] = Rs[k]; meta[k] = Rm[k] || 0; });
-  Object.keys(Ls).forEach(function(k){
-    var lt = Lm[k] || 0;
-    if (!(k in subs)) { subs[k] = Ls[k]; meta[k] = lt; }   // מפתח מקומי בלבד — שורד
-    else if (lt > (meta[k] || 0)) { subs[k] = Ls[k]; meta[k] = lt; }   // שוויון → הענן
+  var subs = {}, meta = {}, keys = {};
+  [Ls, Rs, Lm, Rm].forEach(function(m){
+    Object.keys(m).forEach(function(k){ keys[k] = 1; });
+  });
+  Object.keys(keys).forEach(function(k){
+    var lKnows = (k in Ls) || (k in Lm);
+    var rKnows = (k in Rs) || (k in Rm);
+    // ⛔ צד שאינו מכיר את המפתח אינו מכריע עליו — «אין לי» אינו «נמחק»;
+    // ⚠️ ובשוויון חותמות מנצח הענן, שההכרעה דטרמיניסטית
+    var useLocal = !rKnows ? true : !lKnows ? false : subTs(Lm[k]) > subTs(Rm[k]);
+    var mv = useLocal ? Lm[k] : Rm[k];
+    // ⛔ הסימון נשאר במפת החותמות ⛔ והמפתח יורד — כך המחיקה מתפשטת הלאה
+    if (subDeleted(mv)) { meta[k] = mv; return; }
+    var list = useLocal ? Ls[k] : Rs[k];
+    if (list === undefined) return;   // חותמת בלי רשימה — אין מה להחזיק
+    subs[k] = list;
+    meta[k] = (mv === undefined) ? 0 : mv;
   });
   return { subs: subs, meta: meta };
 }
@@ -3645,7 +3664,31 @@ function saveCats() {
 }
 // חותמות זמן פר-מפתח של SUBS (ראה mergeSubs). נטען ב-loadLocalData().
 var SUBS_META = {};
+/*  ⛔ ערך חי הוא **מספר**, ⛔ ומפתח שנמחק הוא `{deleted, updatedAt}` — ⚠️ אותם
+ *  שני שדות של רשומת יומן, ⭐ ולא קידוד שני לאותו מושג: ⛔ **והחי נשאר מספר**
+ *  — ⚠️ כדי שגרסה קודמת תקרא אותו בדיוק כפי שקראה תמיד. */
+function subTs(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  var t = v && Number(v.updatedAt);
+  return (isFinite(t) && t > 0) ? t : 0;
+}
+function subDeleted(v) { return !!(v && typeof v === 'object' && v.deleted); }
 function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
+/*  ⛔ מחיקת מפתח היא **סימון** ואינה היעדר — ⚠️ ההצהרה נשארת ב-`SUBS_META`
+ *  כדי שהמחיקה תתפשט: ⭐ מכשיר שלא ראה אותה קורא היעדר כ«אין לי» ⛔ ולא
+ *  כ«נמחק», ⚠️ ומחזיר את המפתח באיחוד. */
+function delSubKey(sk, ts) {
+  if (sk == null) return;
+  var k = String(sk);
+  SUBS_META[k] = { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() };
+  delete SUBS[k];
+}
+/*  ⛔ עידן ה-`SUBS` — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
+ *  שראה עידן ישן **זורק** את המפה המקומית ומושך מלא, ⛔ בלי מיזוג — ⚠️ פעם
+ *  אחת, ⭐ ואז חוזר למיזוג הרגיל: ⛔ בלעדיו ניקוי בענן נדרס תוך שניות בידי
+ *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי. */
+var SUBS_EPOCH_KEY = 'tb_subs_epoch';
+var _subsEpochSeen = 0;
 function saveSubs() {
   lsSet("tb_subs"+LS, JSON.stringify(SUBS));
   lsSet("tb_subs_meta"+LS, JSON.stringify(SUBS_META));
@@ -3973,16 +4016,30 @@ async function syncFromCloud() {
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
+    var cloudSubsEpoch = Number(await pull(SUBS_EPOCH_KEY, 'עידן תתי-משימות')) || 0;
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
-      var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
-      SUBS = ms.subs; SUBS_META = ms.meta;
-      lsSet('tb_subs'+LS, JSON.stringify(SUBS));
-      lsSet('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
-      sbSet('tb_subs', SUBS);
-      sbSet('tb_subs_meta', SUBS_META);
+      /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את המפה
+       *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
+       *  בדיוק את מה שזה עתה נוקה בו. */
+      if (cloudSubsEpoch > _subsEpochSeen) {
+        SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
+        SUBS_META = (cloudSubsMeta && typeof cloudSubsMeta === 'object') ? cloudSubsMeta : {};
+        _subsEpochSeen = cloudSubsEpoch;
+        lsSet(SUBS_EPOCH_KEY+LS, JSON.stringify(cloudSubsEpoch));
+        lsSet('tb_subs'+LS, JSON.stringify(SUBS));
+        lsSet('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
+        console.log('[sync] עידן תתי-משימות ' + cloudSubsEpoch + ' — העותק המקומי נזרק ונמשך מלא');
+      } else {
+        var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
+        SUBS = ms.subs; SUBS_META = ms.meta;
+        lsSet('tb_subs'+LS, JSON.stringify(SUBS));
+        lsSet('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
+        sbSet('tb_subs', SUBS);
+        sbSet('tb_subs_meta', SUBS_META);
+      }
     }
 
     // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones). קודם: איחוד לפי id
@@ -5297,11 +5354,11 @@ function editTaskInline(ci, ti) {
       if (SUBS[oldSk]) {
         // מפתח בפורמט החדש קיים ⇐ מהגרים אותו
         SUBS[newSk] = SUBS[oldSk];
-        delete SUBS[oldSk];
+        delSubKey(oldSk);
       } else if (SUBS[oldVal]) {
         // מפתח בפורמט הישן (שם המשימה בלבד) ⇐ מהגרים ומנקים
         SUBS[newSk] = SUBS[oldVal];
-        delete SUBS[oldVal];
+        delSubKey(oldVal);
       }
       CATS[ci].tasks[ti] = newVal;
       recTouch(CATS[ci]); touchSubKey(newSk);
@@ -5437,9 +5494,13 @@ function renderSettings() {
 function removeTask(ci, ti) {
   // משימה היא מחרוזת בלי מזהה — היא נוסעת עם רשומת הקטגוריה, ולכן ההסרה
   // מתועדת כעדכון של הקטגוריה (updatedAt) ומנצחת במיזוג במקום להיעלם.
+  var gone = CATS[ci].tasks[ti];
   CATS[ci].tasks.splice(ti, 1);
   recTouch(CATS[ci]);
-  saveCats();
+  /*  ⛔ ותתי-המשימות שלה יורדות בסימון — ⚠️ מפתח שנשאר בלי המשימה שלו
+   *  חוזר תחת משימה אחרת שתקבל את אותו מספר קטגוריה ואותו שם. */
+  delSubKey(subKey(ci, gone));
+  saveCats(); saveSubs();
   renderSettings();
 }
 function addTask(ci) {
@@ -5466,7 +5527,7 @@ function saveSettings() {
     if (inp) {
       var newName = inp.value.trim();
       if (newName && newName !== cat.name) {
-        if (SUBS[cat.name]) { SUBS[newName] = SUBS[cat.name]; delete SUBS[cat.name]; touchSubKey(newName); }
+        if (SUBS[cat.name]) { SUBS[newName] = SUBS[cat.name]; delSubKey(cat.name); touchSubKey(newName); }
         CATS[ci].name = newName;
         recTouch(CATS[ci]);
       }
@@ -6289,6 +6350,7 @@ function loadLocalData() {
     // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
     // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
     SUBS_META = lsRead("tb_subs_meta"+LS, null, 'object') || {};
+    _subsEpochSeen = Number(lsRead(SUBS_EPOCH_KEY+LS, 0)) || 0;
     ENTRIES = lsRead("tb_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
@@ -6314,6 +6376,7 @@ function loadLocalData() {
     if (!Array.isArray(CATS) || !CATS.length) CATS = JSON.parse(JSON.stringify(DEFAULT_CATS));
     if (!SUBS || typeof SUBS !== 'object') SUBS = JSON.parse(JSON.stringify(DEFAULT_SUBS));
     if (!SUBS_META || typeof SUBS_META !== 'object') SUBS_META = {};
+    if (!isFinite(_subsEpochSeen)) _subsEpochSeen = 0;
     if (!Array.isArray(ENTRIES)) ENTRIES = [];
     if (!Array.isArray(ARCHIVE)) ARCHIVE = [];
   }
@@ -6478,6 +6541,7 @@ function ysResetTenantState() {
   CATS = [];
   SUBS = {};
   SUBS_META = {};
+  _subsEpochSeen = 0;
   arcSelYear = null;
   arcSelMonth = null;
   arcSelDayKey = null;
