@@ -149,6 +149,20 @@
   --text:#1A2540; --textmid:#4A5A7A; --textlite:#8A9ABB;
   --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
 }
+/*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
+ *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
+ *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
+@media (prefers-color-scheme:dark){
+  :root {
+    --bg:#0d151d; --bgsec:#18242f; --bgcard:#131e29;
+    --text:#e8eef5; --textmid:#c2cfdc; --textlite:#93a5b8;
+    --border:#24333f;
+    --primary:#3A8FDF; --primaryl:#5AA6EE; --primaryd:#9EC8F2;
+    --accent:#FFB930; --accentl:#FFC957; --accentd:#F0A500;
+    --success:#4ade80;
+    --shadow:rgba(0,0,0,0.45);
+  }
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
 .app{max-width:960px;margin:0 auto;padding:14px;}
@@ -165,7 +179,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hdr-logo-wrap{padding:0 18px;display:flex;align-items:center;justify-content:center;}
 /* ⛔ הסטה של 2% למעלה ⛔ ואינה מספר פיקסלים — ⚠️ איזון אופטי: העין תופסת
    מרכז מעט גבוה מהחישוב, ⭐ והאחוז נגזר מגובה הלוגו ונע איתו. */
-.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:8px;background:white;padding:3px;
+.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:8px;background:var(--bgcard);padding:3px;
   transform:translateY(-2%);}
 /* ⛔ הלוגו יושב בתוך כפתור אמיתי ⛔ ולא נושא `role="button"` — ⚠️ מסלול
    הפעלה אחד לעכבר ולמקלדת, ⭐ ובלי מאזין `keydown` שני לצד הדלגציה. */
@@ -223,17 +237,24 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hdr-div{height:1px;background:rgba(255,255,255,0.22);margin:0 22px;}
 .hdr-yechi{padding:9px 20px 12px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.9);
   letter-spacing:0.3px;line-height:1.4;text-align:center;}
-/* ⛔ במסך צר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שב-320px חסרו לה
-   39px, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן בפיקסל. */
-@media (max-width:359px){ .hdr-sub{font-size:8px;letter-spacing:0;} .hdr-logo-wrap{padding:0 12px;} }
+/* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
+   נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
+   בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
+   את הגודל המלא. */
+.hdr-sub{font-size:8px;letter-spacing:0;}
+.hdr-logo-wrap{padding:0 12px;}
+@media (min-width:360px){
+  .hdr-sub{font-size:10px;letter-spacing:0.3px;}
+  .hdr-logo-wrap{padding:0 18px;}
+}
 /* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
    כאן לחלל שנשאר אחרי הלוגו ושורת «יחי» לכרטיס כולו, ⭐ ושני מרכזים במרחק
    של עשרות פיקסלים נקראים כטעות. ⛔ הלוגו יוצא מהזרימה ונצמד לפינה, ⛔ ולא
    מוקטן: ⚠️ הוא נשאר ממורכז לגוש הטקסט ולא לכרטיס.
    ⛔ **ובמובייל אין לגעת** — ⚠️ שם הלוגו תופס אחוז גדול מהרוחב, ⭐ ומרכוז
-   לכרטיס היה מציב את הכותרת מתחתיו. ⛔ והסף נמדד: ב-700px רוחב הטקסט
+   לכרטיס היה מציב את הכותרת מתחתיו. ⛔ והסף נמדד: מעליו רוחב הטקסט
    ורוחב הלוגו אינם נוגעים. */
-@media (min-width:700px){
+@media (min-width:900px){
   .hdr-top{position:relative;}
   .hdr-logo-wrap{position:absolute;top:0;bottom:0;right:0;}
   .hdr-mid{padding:0 18px;}
@@ -244,12 +265,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;
   transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
 .arc-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--bgsec);}
-.arc-btn.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.arc-btn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
 .arc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
 .arc-crumb{font-size:12px;color:var(--textmid);cursor:pointer;padding:3px 8px;border-radius:6px;
   background:var(--bgsec);border:1px solid var(--border);transition:all 0.15s;}
-.arc-crumb:hover{background:var(--primary);color:white;border-color:var(--primary);}
+.arc-crumb:hover{background:var(--primary);color:var(--bg);border-color:var(--primary);}
 .arc-crumb-sep{color:#bbb;font-size:12px;}
 .arc-day-card{background:var(--bgsec);border-radius:12px;padding:14px;margin-bottom:10px;border:1.5px solid var(--border);}
 .arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
@@ -262,7 +283,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .tab-btn{flex:1;background:var(--bgcard);color:var(--textmid);border:2px solid var(--border);
   border-radius:11px;padding:10px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
 .tab-btn:hover{background:var(--bgsec);color:var(--primary);border-color:var(--primary);}
-.tab-btn.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.tab-btn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
 /* כרטיס */
 .card{background:var(--bgcard);border-radius:16px;padding:18px;margin-bottom:12px;
@@ -276,17 +297,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .day-chips{display:flex;gap:4px;flex-wrap:wrap;}
 .day-chip{background:var(--bgsec);color:var(--textmid);border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;
   font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
-.day-chip:hover{background:var(--primaryl);color:white;border-color:var(--primaryl);}
-.day-chip.active{background:var(--primary);color:white;border-color:var(--primary);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
+.day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
+.day-chip.active{background:var(--primary);color:var(--bg);border-color:var(--primary);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
 .heb-inp{border:1.5px solid var(--border);border-radius:9px;padding:6px 11px;font-family:'Frank Ruhl Libre',serif;font-size:14px;
-  font-weight:700;background:white;direction:rtl;min-width:155px;flex:1;color:var(--text);}
+  font-weight:700;background:var(--bgcard);direction:rtl;min-width:155px;flex:1;color:var(--text);}
 .heb-inp:focus{outline:none;border-color:var(--primary);}
 
 /* רשת הקטגוריות */
-.cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
-@media(max-width:580px){.cat-grid{grid-template-columns:repeat(2,1fr);}}
+/* ⛔ שתי עמודות בברירת המחדל — ⚠️ ארבע נכנסות רק מנקודת השבירה שמעל. */
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px;}
+@media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
 .cat-btn{border:2px solid;border-radius:11px;padding:10px 8px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;text-align:center;line-height:1.4;background:white;box-shadow:0 1px 4px var(--shadow);}
+  cursor:pointer;transition:all 0.2s;text-align:center;line-height:1.4;background:var(--bgcard);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
 .cat-btn strong{font-size:15px;font-family:'Frank Ruhl Libre',serif;}
 
@@ -296,19 +318,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qrow{display:flex;flex-wrap:wrap;gap:4px;}
 .qbtn{background:var(--bgsec);border:1.5px solid var(--border);border-radius:16px;padding:4px 10px;font-size:11px;
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--textmid);white-space:nowrap;}
-.qbtn:hover{background:var(--primaryl);color:white;border-color:var(--primaryl);}
-.qbtn.active{background:var(--primary);color:white;border-color:var(--primary);font-weight:700;}
-.qbtn.tapped{background:var(--primaryl);color:white;border-color:var(--primaryl);}
+.qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
+.qbtn.active{background:var(--primary);color:var(--bg);border-color:var(--primary);font-weight:700;}
+.qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .hint{color:var(--textlite);font-size:11px;}
 
 /* שדות קלט */
-.inp-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px;}
-@media(max-width:480px){.inp-grid{grid-template-columns:1fr;}}
-@media(max-width:800px){.hide-mobile{display:none !important;}}
+.inp-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:10px;}
+@media (min-width:640px){.inp-grid{grid-template-columns:1fr 1fr;}}
+.hide-mobile{display:none !important;}
+@media (min-width:900px){.hide-mobile{display:inline-block !important;}}
 .fld{display:flex;flex-direction:column;gap:3px;}
 .fld label{font-size:10px;font-weight:700;color:var(--textmid);}
 .fld input{border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;font-family:'Heebo',sans-serif;font-size:13px;
-  color:var(--text);background:white;direction:rtl;transition:border-color 0.2s;}
+  color:var(--text);background:var(--bgcard);direction:rtl;transition:border-color 0.2s;}
 .fld input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
 
 /* כפתור ההוספה הגדול */
@@ -320,8 +343,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.log-cnt{background:var(--primary);color:white;border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
-.entry-row{background:white;border-radius:10px;padding:10px 13px;display:grid;grid-template-columns:auto 1fr auto;
+.log-cnt{background:var(--primary);color:var(--bg);border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
+.entry-row{background:var(--bgcard);border-radius:10px;padding:10px 13px;display:grid;grid-template-columns:auto 1fr auto;
   gap:9px;align-items:start;margin-bottom:6px;box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .entry-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;
@@ -336,11 +359,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .exp-row{display:flex;gap:7px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:9px;padding:8px 14px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
 
-.btn-blue{background:var(--bgsec);color:var(--primary);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary);color:white;}
+.btn-blue{background:var(--bgsec);color:var(--primary);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary);color:var(--bg);}
 .btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
 
 /* הגדרות */
-.set-card{background:white;border-radius:11px;padding:13px;border:1.5px solid var(--border);margin-bottom:10px;cursor:grab;transition:box-shadow 0.2s;}
+.set-card{background:var(--bgcard);border-radius:11px;padding:13px;border:1.5px solid var(--border);margin-bottom:10px;cursor:grab;transition:box-shadow 0.2s;}
 .set-card.dragging{opacity:0.5;box-shadow:0 8px 24px var(--shadow);}
 .set-card:active{cursor:grabbing;}
 .drag-handle{font-size:18px;color:#CCC;cursor:grab;margin-left:8px;flex-shrink:0;}
@@ -354,7 +377,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 .chip{display:flex;align-items:center;gap:3px;background:var(--bgsec);border:1px solid var(--border);
   border-radius:14px;padding:3px 8px 3px 5px;font-size:11px;cursor:grab;}
-.chip.chip-sub{background:white;font-size:10px;border-color:#D8E4F0;}
+.chip.chip-sub{background:var(--bgcard);font-size:10px;border-color:#D8E4F0;}
 
 .drag-over{outline:2px dashed var(--primary);border-radius:8px;}
 .chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:12px;padding:0;line-height:1;}
@@ -372,7 +395,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .set-add-row{display:flex;gap:6px;}
 .set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 9px;font-family:'Heebo',sans-serif;font-size:12px;direction:rtl;color:var(--text);}
 .set-add-inp:focus{outline:none;border-color:var(--primary);}
-.btn-mini{background:var(--primary);color:white;border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.btn-mini{background:var(--primary);color:var(--bg);border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
 .btn-mini:hover{background:var(--primaryl);}
 .btn-save{width:100%;background:linear-gradient(135deg,var(--primary),var(--primaryl));color:white;border:none;
   border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all 0.2s;}
@@ -393,7 +416,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:14px;padding:14px 16px;margin-bottom:14px}
 .inf-hd b{font-size:15px;font-weight:800;display:block}
 .inf-hd span{font-size:12px;opacity:.85}
-.inf-card{background:#fff;border:1px solid var(--border);border-radius:14px;
+.inf-card{background:var(--bgcard);border:1px solid var(--border);border-radius:14px;
   box-shadow:0 2px 10px var(--shadow);padding:12px 14px;margin-bottom:14px}
 .inf-card>h4{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--primaryd)}
 .inf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
@@ -458,12 +481,12 @@ body.locked{overflow:hidden}
   display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .veil.open{display:flex}
 @media (min-width:640px){.veil{align-items:center}}
-.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:#fff;
+.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--bgcard);
   color:#1a1a2e;border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
   font-family:'Heebo',sans-serif;direction:rtl}
 @media (min-width:640px){.sheet{border-radius:20px}}
 .sheet-hd{display:flex;align-items:center;gap:10px;padding:15px 18px;
-  border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:#fff;z-index:2}
+  border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:var(--bgcard);z-index:2}
 .sheet-hd h3{font-size:16px;flex:1;margin:0;font-weight:800}
 .sheet-hd .x{background:none;border:0;font-size:22px;line-height:1;color:#777;
   cursor:pointer;padding:2px 6px;border-radius:8px}
@@ -674,6 +697,19 @@ var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזו
 var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
 // סבב 17: נוסח אחיד לארבע האפליקציות — כאן לא הייתה הודעת התאוששות כלל.
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+/* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
+   ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
+   מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
+   ⛔ **וכיוון אחד — `min-width`** — ⚠️ עירוב `min` ו-`max` באותו קובץ
+   מאפשר לשני כללים לחול יחד על אותו רוחב, ⭐ וכלל שנראה מבוטל חל בכל זאת.
+   ⛔ **ומה שמתחת לנקודה הראשונה הוא ברירת המחדל** ⛔ ולא שאילתה —
+   ⚠️ שאילתת `max-width` שמתארת מסך צר היא בסיס שנכתב הפוך.
+   ⛔ **ואין ל-CSS גישה לקבוע** — ⚠️ המספרים חוזרים בשאילתות עצמן,
+   ⭐ והשער הוא מה שמשווה ביניהם לרשימה שכאן: ⛔ הקבוע הוא ההצהרה,
+   ⚠️ והשאילתה היא המימוש. */
+var BP_SCALE = [360, 480, 640, 900, 1200];
+window.BP_SCALE = BP_SCALE;
+/* ═══════════════ סוף מודול סולם נקודות השבירה ═════════════════════════ */
 /* ═══ עוזרי הרשת — מודול משותף (סבב 84) ═══════════════════════════════════
    ⛔ שלוש הפונקציות ישבו **בין** בלוקים חתומים, ⚠️ ולכן אף `sha256` לא מדד
       אותן — ⭐ והן נסחפו בשקט בעוד שהטבלה מצהירה עליהן «זהה בית-לבית»:
@@ -4896,7 +4932,7 @@ function _printCanvas(canvas, title) {
   }
   w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
     + '<title>' + esc(title) + '</title><style>@page{size:A4 portrait;margin:10mm}'
-    + 'html,body{margin:0;padding:0;background:#fff}img{width:100%;height:auto;display:block}'
+    + 'html,body{margin:0;padding:0;background:var(--bgcard)}img{width:100%;height:auto;display:block}'
     + '</style></head><body><img alt="' + esc(title) + '" src="' + canvas.toDataURL('image/png') + '">'
     + '<' + 'script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>'
     + '</body></html>');
