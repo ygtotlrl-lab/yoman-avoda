@@ -2598,7 +2598,7 @@ document.addEventListener('click', function (ev) {
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ ביומן אין תור אופליין: «ממתין» הוא סימון ⏳, והריקון הוא דחיפת-מצב
-   של שתי שכבות השורות. `tbSyncPushNow` היא גוף `scheduleSyncPush` בלי
+   של שתי שכבות השורות. `tbSyncPushNow` היא גוף `schedulePush` בלי
    ההשהיה — אותה דחיפה בדיוק, ⛔ ולא מסלול שני (סבב 44). */
 var RTY_CFG = {
   flush:   function () { return tbSyncPushNow(); },
@@ -2677,6 +2677,8 @@ function rtyBoot() {
 /* ⚠️ ביומן החותמת היא שורת `tb_last_changed` שבטבלת המוסד (`KV_TABLE`),
    ⛔ ולכן `active()` נבדק מול `YESHIVA` (סבב 51) — פולינג לפני בחירת מוסד
    היה נוגע בנתונים של דייר שאיש לא בחר.
+   ⛔ **וזה ההבדל היחיד ב-`active()` בין הארבע** — ⚠️ בשלוש האחרות הוא
+   `sessActive()`, ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
    ⚠️ `ok()` הוא `_tbMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
    ממנה את עֵד הפינוי (סבב 51) — הוא `_tbPushedAt` פר-מפתח. */
 var PL_CFG = {
@@ -2774,6 +2776,137 @@ function plBoot() {
   return true;
 }
 /* ═══════════════ סוף מנגנון המשיכה ══════════════════════════════════════ */
+
+/* ── PUSH_CFG — הדבר היחיד שנבדל בין האפליקציות ────────────────────────── */
+/* ⛔ ביומן אין טבלת משתמשים ואין כניסה — ⚠️ ולכן אין כאן מסלול דחיפה שני,
+   ⭐ ושתי הטבלאות שברשימה הן כל מה שעולה מכאן.
+   ⚠️ `tb_entries` לפני `tb_archive` — ⛔ שתיהן נכתבות לאותה טבלה מאוחדת
+   ובדגל שונה, ⭐ והסדר הוא מה שמשאיר את הצילום אחרי החי. */
+var PUSH_TABLES = ['tb_entries', 'tb_archive'];
+/*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `send` ו-`mark` רצים אחרי
+ *  `await`, ⭐ וקריאת הגלובלי בהם הייתה זוקפת את הצלחת הדחיפה של מוסד
+ *  אחד לחשבון השני. */
+var _tbPushEp = 0;
+var PUSH_CFG = {
+  tables: PUSH_TABLES,
+  chunk:  500,
+  delay:  400,
+  dirty:  function (t, ctx) {
+    if (!TB_ROWS || !tbTableOf(t) || !KV_TABLE || !YESHIVA) return null;
+    _tbPushEp = ysTenantEpoch();
+    return tbDirtyRows(t, ctx || (t === 'tb_archive' ? ARCHIVE : ENTRIES));
+  },
+  key:    function (t, row) { return tbPendPrefix(t) + row.rec_key; },
+  send:   function (t, rows) { return tbSendRows(t, rows, _tbPushEp); },
+  mark:   function (t) { if (!ysTenantStale(_tbPushEp)) _tbMarkPushed(t); },
+  run:    function () { tbSyncPushNow(); },
+};
+/* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
+   ⛔ שלוש שכבות נפרדות — **מנה · טבלה · טבלאות** — ⚠️ וכל אחת פונקציה
+      משלה: ⭐ שכבות שמעורבבות בפונקציה אחת אינן ניתנות לחתימה ואינן
+      ניתנות למדידה, ⛔ ולכן אותו תפקיד נכתב בארבע צורות בלי שאיש מדד.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ המנה היא `PUSH_CFG.chunk` — ⚠️ הדחיפה הראשונה במכשיר נוגעת בכל
+      הרשומות, ⭐ ובקשה לשורה היא אלפי בקשות רשת: ⛔ **ומנה שנכשלה נדחפת
+      שוב שורה-שורה** — ⚠️ כתיבת מנה היא הכל-או-כלום, ⭐ ושורה פגומה אחת
+      חוסמת את כל התקינות שאיתה.
+   ⛔ ו«אין ראיה» אינו «אין מה לדחוף» — ⚠️ `dirty` שמחזירה `null` מדלגת על
+      הטבלה **בלי לסמן את עֵד הפינוי**, ⭐ ומערך ריק מסמן אותו: ⛔ סימון על
+      טבלה שלא נמשכה היה מתיר לפנות מהדיסק רשומה שמעולם לא עלתה. */
+var _pushTimer = null;
+
+/*  ⛔ שכבה 1 — **מנה אחת ותו לא** — ⚠️ היא אינה יודעת מה מלוכלך ואינה
+ *  נוגעת בסימון ה-⏳: ⭐ כל מה שהיא עושה הוא כתיבה אחת, ⛔ וכשל שלה הוא
+ *  זריקה — ⚠️ תשובה שנושאת `error` אינה זורקת מעצמה, ⭐ והבודקת היחידה
+ *  שלה היא כאן. */
+function pushRow(t, rows) {
+  return Promise.resolve(PUSH_CFG.send(t, rows)).then(function (res) {
+    if (res && res.error) throw res.error;
+    return rows.length;
+  });
+}
+
+/*  ⛔ שכבה 2 — **טבלה אחת**: המנות, סימוני ה-⏳, ועֵד הדחיפה — ⚠️ «אין ראיה»
+ *  אינו הצלחה: ⭐ לא נדחף דבר ⛔ ואין לזקוף זאת כדחיפה שעברה · ⚠️ וכשל רשת
+ *  אינו ראיה לכלום ולכן הסימון נשאר וננסה שוב, ⭐ וכשל סמכותי (ולידציה ·
+ *  מפתח זר · הרשאה · סכימה) יחזור על עצמו לנצח: ⛔ הסימון יורד כדי לא
+ *  להבטיח שליחה חוזרת שלא תקרה, ⚠️ והסיבה נרשמת ואינה נבלעת. */
+function pushTable(t, ctx) {
+  return Promise.resolve(PUSH_CFG.dirty(t, ctx)).then(function (rows) {
+    if (!rows) return { ok: false, still: [], n: 0 };
+    if (!rows.length) { PUSH_CFG.mark(t); return { ok: true, still: [], n: 0 }; }
+    var still = [], n = 0, bad = 0, i = 0;
+    function won(row) {
+      var k = PUSH_CFG.key(t, row);
+      n++;
+      if (k != null) pendClear(k);
+    }
+    function lost(row, e) {
+      var k = PUSH_CFG.key(t, row);
+      console.warn('[push] ' + t, e && (e.message || e));
+      if (isNetErr(e)) { if (k != null) still.push(k); }
+      else { bad++; if (k != null) pendFailed(k); }
+    }
+    /*  ⛔ הנפילה-חזרה פר-שורה — ⚠️ המנה כולה נדחתה ואיננו יודעים מי בה
+     *  פגומה, ⭐ ולכן כל שורה נשלחת לבדה: ⛔ כך הפגומה מבודדת ⚠️ ואינה
+     *  חוסמת את התקינות שנשלחו איתה. */
+    function solo(part, j) {
+      if (j >= part.length) return Promise.resolve();
+      var row = part[j];
+      return pushRow(t, [row]).then(function () { won(row); },
+                                    function (e) { lost(row, e); })
+        .then(function () { return solo(part, j + 1); });
+    }
+    function batch() {
+      if (i >= rows.length) return Promise.resolve();
+      var part = rows.slice(i, i + PUSH_CFG.chunk);
+      i += part.length;
+      return pushRow(t, part).then(function () { part.forEach(won); },
+                                   function () { return solo(part, 0); })
+        .then(batch);
+    }
+    return batch().then(function () {
+      /*  ⭐ «באמת נכתב משהו לענן» נמדד כאן — ⛔ בלי קידום החותמת הדחיפה
+       *  נשארת בלתי-נראית לכל מכשיר אחר לנצח: ⚠️ הם מושכים רק כשהיא
+       *  מתקדמת. */
+      if (n) plTouch();
+      /*  ⭐ עֵד הפינוי פר-מפתח — ⛔ רק כשלא נשארה שורה בכשל רשת: ⚠️ «עברנו
+       *  על כל המלוכלכות והענן קיבל את כולן» הוא בדיוק התנאי שמתיר לפנות
+       *  מהדיסק רשומה ישנה של אותה טבלה. */
+      if (!still.length) PUSH_CFG.mark(t);
+      return { ok: !still.length && !bad, still: still, n: n };
+    });
+  });
+}
+
+/*  ⛔ שכבה 3 — **הטבלאות**, בסדר שמוצהר ב-`PUSH_CFG.tables` — ⚠️ הסדר הוא
+ *  מה ששומר על המפתח הזר: ⭐ האב נכתב לפני הבן, ⛔ ואין תלות סדר בין
+ *  שורות של אותה טבלה · ⚠️ וכשל בטבלה אחת אינו עוצר את הבאות אחריה. */
+function pushDirty(ctx) {
+  var acc = [], ok = true, n = 0, i = 0;
+  function step() {
+    if (i >= PUSH_CFG.tables.length) return Promise.resolve({ ok: ok, still: acc, n: n });
+    return pushTable(PUSH_CFG.tables[i++], ctx).then(function (r) {
+      acc = acc.concat(r.still);
+      n += r.n;
+      if (!r.ok) ok = false;
+      return step();
+    });
+  }
+  return step();
+}
+
+/*  ⛔ המתזמן — ⚠️ משפך הכתיבה המקומית היחיד, ⭐ ולכן זו נקודת הדריכה של
+ *  מודול הניסיון החוזר · ⛔ **וההשהיה מתחילה מחדש בכל כתיבה** — ⚠️ שתי
+ *  שמירות רצופות הן מחזור סנכרון אחד ⛔ ולא שניים, ⭐ והרשומה כבר מסומנת
+ *  ⏳ לפני ההשהיה. */
+function schedulePush() {
+  rtyNote();
+  if (_pushTimer) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(function () { _pushTimer = null; PUSH_CFG.run(); }, PUSH_CFG.delay);
+}
+/* ═══════════════ סוף מודול שכבת הדחיפה ══════════════════════════════════ */
 
 
 
@@ -3662,41 +3795,39 @@ function tbDirtyRows(kvKey, arr) {
   });
   return out;
 }
-// דחיפה. ⚠️ `onConflict: 'client_id'` ולא `insert` — ניסיון חוזר אחרי תשובה
+// הכתיבה עצמה, למנה שהשכבה המשותפת מסרה.
+// ⚠️ `onConflict: 'client_id'` ולא `insert` — ניסיון חוזר אחרי תשובה
 // שאבדה ברשת חייב להיות אידמפוטנטי.
-async function tbRowsPush(kvKey, arr) {
+async function tbSendRows(kvKey, rows, ep) {
   var t = tbTableOf(kvKey);
-  if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, n: 0 };
-  var _ep = ysTenantEpoch();   // ר' הנימוק ב-tbRowsGet — הרישום שאחרי ההמתנה
-  var rows = tbDirtyRows(kvKey, arr);
-  if (!rows.length) return { ok: true, n: 0 };
-  try {
-    var sb = getSB();
-    if (!sb) return { ok: false, n: 0 };
-    var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
-    if (!res || res.error) return { ok: false, n: 0 };
-    // ⚠️ כתיבה כפולה לטבלה הישנה — נתיב החזרה בלבד (סבב 32). היא **אינה**
-    //    קובעת את `ok`: אילו הייתה, טבלה ישנה שכבר נמחקה הייתה מפילה את
-    //    עֵד הפינוי ואת אישור ה-⏳ על כתיבה שהצליחה במלואה. הראיה שנדרשת
-    //    לשניהם היא הטבלה המאוחדת ובלוק ה-`kv`, ושתיהן נבדקות במקומן.
-    if (TB_ARC_UNIFIED && TB_ARC_LEGACY_WRITE && kvKey === 'tb_archive') {
-      var legacy = rows.map(function (r) {
-        var c = {};
-        Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
-        return c;
-      });
-      /*  ⛔ כשל הכתיבה הכפולה נרשם ואינו נבלע (סבב 79) — ⚠️ המסלול הזה הוא
-       *  נתיב-חזרה שכבוי ברוב הזמן, ⭐ וכשל שקט בו נראה בדיוק כמו הצלחה. */
-      try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
-      catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
-    }
-    /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה, ⭐ אך
-     *  הרישום כאן ו-`ok:true` שייכים למוסד שנלכד ⛔ ולא לזה שפעיל עכשיו. */
-    if (ysTenantStale(_ep)) return { ok: false, n: 0 };
-    var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
-    rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
-    return { ok: true, n: rows.length };
-  } catch (e) { return { ok: false, n: 0 }; }
+  var sb = getSB();
+  /*  ⛔ היעדר לקוח נרשם כשגיאת רשת ⛔ ולא כשגיאה סמכותית — ⚠️ הסימון
+   *  חייב להישאר: ⭐ השורה לא נדחתה, ⛔ היא כלל לא נשלחה. */
+  if (!sb) throw new Error('failed to reach cloud');
+  var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
+  if (!res || res.error) return res || { error: { message: 'upsert failed' } };
+  // ⚠️ כתיבה כפולה לטבלה הישנה — נתיב החזרה בלבד (סבב 32). היא **אינה**
+  //    קובעת את ההצלחה: אילו הייתה, טבלה ישנה שכבר נמחקה הייתה מפילה את
+  //    עֵד הפינוי ואת אישור ה-⏳ על כתיבה שהצליחה במלואה. הראיה שנדרשת
+  //    לשניהם היא הטבלה המאוחדת ובלוק ה-`kv`, ושתיהן נבדקות במקומן.
+  if (TB_ARC_UNIFIED && TB_ARC_LEGACY_WRITE && kvKey === 'tb_archive') {
+    var legacy = rows.map(function (r) {
+      var c = {};
+      Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
+      return c;
+    });
+    /*  ⛔ כשל הכתיבה הכפולה נרשם ואינו נבלע (סבב 79) — ⚠️ המסלול הזה הוא
+     *  נתיב-חזרה שכבוי ברוב הזמן, ⭐ וכשל שקט בו נראה בדיוק כמו הצלחה. */
+    try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
+    catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
+  }
+  /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה ⭐ והסימון
+   *  שלהן אינו פר-מוסד, ⛔ אבל מפת החותמות המרוחקות כן: ⚠️ מילויה כאן
+   *  היה משווה את המוסד החדש מול חותמות של הקודם. */
+  if (ysTenantStale(ep)) return {};
+  var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
+  rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
+  return {};
 }
 
 // פונקציות שמירה — כותבות גם ל-localStorage וגם ל-Supabase
@@ -3817,17 +3948,18 @@ function saveEntries() {
     // ⭐ הטבלאות הן המאסטר (סבב 35) — הכתיבה הכפולה לבלוק ה-kv כובתה,
     //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
     //    `TB_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
-    var _rows = await tbRowsPush('tb_entries', ENTRIES);
+    var _rows = await pushTable('tb_entries', ENTRIES);
     if (ysTenantStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_entries", ENTRIES) : null;
     if (ysTenantStale(_ep)) return;
+    /*  ⛔ עֵד הפינוי מסומן בשכבה המשותפת ⛔ ואינו נכתב כאן שוב —
+     *  ⚠️ שני אתרי סימון לאותו עֵד הם שתי הכרעות על אותה ראיה. */
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
-    if (_ok) _tbMarkPushed('tb_entries');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_entries', _rows.n);
-    // ⭐ סבב 51 — המשפך המשותף: מקדם קודם את «מה שכבר נראה» מקומית, כדי
-    //    שהמכשיר הזה לא ימשוך בחזרה את מה שזה עתה דחף, ורק אז כותב.
-    await plTouch();
+    /*  ⛔ החותמת מקודמת בשכבת הדחיפה ⛔ ואינה נכתבת כאן שוב — ⚠️ שכבת
+     *  הדחיפה מקדמת אותה **רק כשבאמת נכתב משהו**, ⭐ וקידום שני היה חותם
+     *  גם על דחיפה שלא העלתה דבר. */
   })();
 }
 function saveArchive() {
@@ -3837,17 +3969,16 @@ function saveArchive() {
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
     // ⭐ מסבב 32 הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר
-    //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. `tbRowsPush`
+    //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. שכבת הדחיפה
     //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
-    var _rows = await tbRowsPush('tb_archive', ARCHIVE);
+    var _rows = await pushTable('tb_archive', ARCHIVE);
     if (ysTenantStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;
     if (ysTenantStale(_ep)) return;
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
-    if (_ok) _tbMarkPushed('tb_archive');   // עֵד הפינוי — רק בהצלחה
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_archive', _rows.n);
-    await plTouch();   // ר' ההערה ב-saveEntries
+    // ר' ההערה ב-saveEntries — החותמת מקודמת בשכבת הדחיפה
   })();
 }
 
@@ -4125,10 +4256,10 @@ async function syncFromCloud() {
       // מיון לפי id בסדר יורד (החדש קודם)
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('tb_entries'+LS, ENTRIES, _tbRecTs);
-      tbRowsPush('tb_entries', ENTRIES).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_entries'); });
+      pushTable('tb_entries', ENTRIES);
       if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES);
     } else if (ENTRIES.length) {
-      tbRowsPush('tb_entries', ENTRIES);
+      pushTable('tb_entries', ENTRIES);
       if (TB_KV_LEGACY_WRITE) sbSet('tb_entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
       // אין מה למזג — הגריעה של הטעינה כבר שלמה, מכבים את הדגל כדי שלא
       // יישאר תלוי ויופעל במיזוג מאוחר ולא צפוי.
@@ -4151,11 +4282,11 @@ async function syncFromCloud() {
       ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
       lsSetArray('tb_archive'+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
       // דוחף את הארכיון הממוזג בחזרה לענן כדי שכל המכשירים יישארו מסונכרנים
-      tbRowsPush('tb_archive', ARCHIVE).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_archive'); });
+      pushTable('tb_archive', ARCHIVE);
       if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
-      tbRowsPush('tb_archive', ARCHIVE);
+      pushTable('tb_archive', ARCHIVE);
       if (TB_KV_LEGACY_WRITE) sbSet('tb_archive', ARCHIVE);
     }
     }
@@ -4803,9 +4934,9 @@ function addEntry() {
   autoArchiveDay(entry.day, entry.hdate, entry.gdate);
   clearForm();
   // השמירה המקומית הושלמה בנקודה זו; דחיפת הענן עוד לא התחילה —
-  // scheduleSyncPush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
+  // schedulePush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
   toast("✅ נוסף — שומר בענן…");
-  scheduleSyncPush();
+  schedulePush();
 }
 
 function clearForm() {
@@ -4856,7 +4987,7 @@ function delEntry(id) {
   saveEntries();
   autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
   renderLog();
-  scheduleSyncPush();
+  schedulePush();
 }
 
 function clearAll() {
@@ -4869,7 +5000,7 @@ function clearAll() {
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
     toast("✅ הרשומות נמחקו");
-    scheduleSyncPush();
+    schedulePush();
   });
 }
 /* ── LS_TOAST — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
@@ -5185,8 +5316,6 @@ function _buildReportDiv(cb, entries){
 /* ══════════════════════════════════════════════════════════════════════════
    שיתוף — סיגנל והגשר המקורי של המעטפת
    ══════════════════════════════════════════════════════════════════════════ */
-// דחיפה מושהית לענן אחרי כל שינוי במסך
-var _syncPushTimer = null;
 // ⭐ גוף הדחיפה, בלי ההשהיה (סבב 44) — חולץ כדי שמודול הניסיון
 //    החוזר יקרא לאותה דחיפה בדיוק. ⛔ אין לשכפל את הגוף הזה
 //    למסלול שני (סבב 44) — שתי דחיפות שונות לאותם נתונים הן שתי
@@ -5202,20 +5331,20 @@ async function tbSyncPushNow() {
     // ⭐ מסבב 35 הדחיפה כאן היא שורות (סבב 35) — קודם המסלול הזה דחף את
     //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
     //    יחד עם כיבוי הכתיבה הכפולה.
-    var rEntries = await tbRowsPush("tb_entries", ENTRIES);
+    var rEntries = await pushTable("tb_entries", ENTRIES);
     if (ysTenantStale(_ep)) return;
-    var rArchive = await tbRowsPush("tb_archive", ARCHIVE);
+    var rArchive = await pushTable("tb_archive", ARCHIVE);
     if (ysTenantStale(_ep)) return;
     if (TB_KV_LEGACY_WRITE) { await sbSet("tb_entries", ENTRIES); await sbSet("tb_archive", ARCHIVE); }
     if (ysTenantStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
-    //    ו-`scheduleSyncPush`), ובלי האישור הסימון שרד דחיפה שהצליחה: המונה
+    //    ו-`schedulePush`), ובלי האישור הסימון שרד דחיפה שהצליחה: המונה
     //    נשאר על המסך עד שפעולה חדשה גררה אותו, `_rtyPending()` נשאר אמת,
     //    והניסיון החוזר הצליח שוב ושוב — ועם כל הצלחה חזר «✅ נשמר בענן».
     //    ⚠️ פר-קטגוריה ולא גורף: דחיפה שהצליחה באחת אינה ראיה לשנייה.
-    if (rEntries.ok) { _tbMarkPushed('tb_entries'); pendConfirmPush(PK_ENTRY, _t0); }
-    if (rArchive.ok) { _tbMarkPushed('tb_archive'); pendConfirmPush(PK_ARC, _t0); }
+    if (rEntries.ok) pendConfirmPush(PK_ENTRY, _t0);
+    if (rArchive.ok) pendConfirmPush(PK_ARC, _t0);
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום tb_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
@@ -5233,13 +5362,6 @@ async function tbSyncPushNow() {
     if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
     PL_CFG.note(stampTs);
     toast("✅ נשמר בענן");
-}
-function scheduleSyncPush() {
-  if (_syncPushTimer) clearTimeout(_syncPushTimer);
-  // ⚠️ משפך הכתיבה המקומית היחיד כאן, ולכן זו נקודת הדריכה
-  //    היחידה של מודול הניסיון החוזר (סבב 44).
-  rtyNote();
-  _syncPushTimer = setTimeout(tbSyncPushNow, 500);
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -6626,7 +6748,7 @@ function ysResetTenantState() {
    *  על נתונים שכבר אינם בזיכרון, ⭐ ומה שהיא תמצא בו כשתתעורר שייך
    *  למוסד אחר: ⛔ ובכל מקרה שער ההקשר עוצר אותה, ⚠️ וביטול התקתוק
    *  חוסך את הנסיעה לרשת. */
-  if (_syncPushTimer) { clearTimeout(_syncPushTimer); _syncPushTimer = null; }
+  if (_pushTimer) { clearTimeout(_pushTimer); _pushTimer = null; }
   _tbPushedAt = {};
   _lastKnownTimestamp = 0;
   _plFullAt = 0;
@@ -6840,7 +6962,7 @@ function saveEntry(id) {
   saveEntries();
   autoArchiveDay(e.day, e.hdate, e.gdate);   // שהעריכה תגיע גם לסנאפשוט של אותו יום
   renderLog();
-  scheduleSyncPush();
+  schedulePush();
   toast(MSG_SAVED);
 }
 
