@@ -193,7 +193,7 @@ function reachable(c) {
 }
 {
   const { ctx, days } = daysOf(FX.ramataviv);
-  // 15 סנאפשוטים אך 14 ימים: «11 אוגוסט 2026» מיוצג פעמיים (ר' סעיף 4).
+  // 15 סנאפשוטים אך 14 ימים: «11 אוגוסט 2026» מיוצג פעמיים.
   eq(Object.keys(days).length, 14, 'רמת אביב — 14 ימים נפרדים מתוך 15 סנאפשוטים');
   eq(reachable(ctx).size, 14, 'רמת אביב — כל 14 הימים נגישים בניווט');
   ok(!Object.keys(ctx.getYearsWithData()).includes(ctx.HUNKNOWN), '⛔ רמת אביב — אין שנת «לא ידוע» כלל');

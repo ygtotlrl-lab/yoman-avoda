@@ -271,7 +271,7 @@ async function t4() {
   arr.push(E(9, 50));
   eq(sb.tbDirtyRows('tb_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
 
-  // ⚠️ רשומה מסומנת ⏳ מנצחת במיזוג (כלל ברזל 6)
+  // ⚠️ רשומה מסומנת ⏳ מנצחת במיזוג
   const env2 = makeEnv({ pending: { 'entry:1': 1 } });
   env2.sb._tbRemote.tb_entries = { '1': 999 };
   eq(env2.sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1,
