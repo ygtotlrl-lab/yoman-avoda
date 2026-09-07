@@ -192,6 +192,7 @@ t(n++, !base.some((x) => x.kind === 'mark'),
 
 if (RUN_MUT) {
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
+/*  ⛔ כותב על עותק — ⚠️ השער האמיתי רץ בתהליך נפרד, ⛔ והוא קורא את `index.html` מהדיסק. */
 const tmp = mkdtempSync(join(tmpdir(), 'r81ysv-'));
 cpSync(ROOT, tmp, { recursive: true, filter: (s) => {
   const p = relative(ROOT, s).split(sep);
