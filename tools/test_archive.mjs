@@ -218,9 +218,13 @@ function reachable(c) {
 /* ── 3. הרשומות בלי hdate — מקובצות מתוך `name` ────────────────────────── */
 {
   // הצפי נגזר מה-name שבפיקסטורה, לא מהקוד — שני צדדים עצמאיים.
+  /*  ⛔ השם ההיסטורי מול השם הקנוני (סבב 107) — ⚠️ שכבת התצוגה אוחדה
+   *  ל«מנחם אב», ⭐ ורשומות שכבר בארכיון נושאות את השם הקצר: ⛔ המיפוי
+   *  כתוב כאן ⛔ ואינו נקרא מהקוד הנבדק, ⚠️ ושני הצדדים נשארים עצמאיים. */
+  const CANON_MONTH = { 'אב': 'מנחם אב' };
   const expect = (name) => {
     const m = name.match(/([֐-׿״׳]+)\s+(ה׳תש[֐-׿״׳]+)/);
-    return m ? { month: m[1], year: m[2] } : null;
+    return m ? { month: CANON_MONTH[m[1]] || m[1], year: m[2] } : null;
   };
   for (const yesh of ['rishon', 'ramataviv']) {
     const { ctx, days } = daysOf(FX[yesh]);
@@ -321,8 +325,8 @@ function reachable(c) {
   for (const bad of ['', null, undefined, 'יום רביעי', '11 אפריל 2026', 'שלום עולם']) {
     eq(c.hebFromText(bad), '', `hebFromText על «${bad}» מחזירה ריק ולא ניחוש`);
   }
-  eq(c.extractYM(c.hebFromText('יום כ״ט אב ה׳תשפ״ו (אוטומטי)')).month, 'אב',
-    'התוצאה של hebFromText נקראת ע"י extractYM');
+  eq(c.extractYM(c.hebFromText('יום כ״ט אב ה׳תשפ״ו (אוטומטי)')).month, 'מנחם אב',
+    'התוצאה של hebFromText נקראת ע"י extractYM, והשם ההיסטורי ממופה לקנוני');
 }
 {
   // ⛔ snapHDate טהורה — תיקון תצוגה, לא שינוי נתונים.
@@ -464,6 +468,7 @@ if (!process.env.RD67_MUT) {
     { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
 
   const _mut = (label, file, edit, expectFail) => {
+    /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה שער אמיתי בתהליך נפרד, ⛔ והוא קורא את המקור מהדיסק. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
     const f = _p.join(d, file);
