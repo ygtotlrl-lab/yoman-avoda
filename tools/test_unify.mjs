@@ -83,7 +83,7 @@ const NAMES = [
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
   'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbTableOf', 'tbArchivedFlag',
-  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
+  'tbRowOf', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows',
   // ⚠️ ⛔ מסבב 102 הדחיפה היא הבלוק המשותף — ⭐ `tbSendRows` היא הכתיבה
   //    עצמה, ⛔ והלולאה שמעליה היא `pushTable` שנטענת מהבלוק.
   'tbRowsGet', 'tbDirtyRows', 'tbSendRows', 'pushRow', 'pushTable'];

@@ -83,7 +83,7 @@ const NAMES = [
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
   // ⚠️ `entryOrderTs` נוספה בסבב 38 — `tbSortRows` ממיינת דרכה מאז שמזהה
   //    הרשומה הוא uuid; בלעדיה היא זורקת ונתפסת ב-catch של `tbRowsGet`.
-  'parseGregLike', 'gdateOrderTs', 'entryOrderTs', 'tbSortRows',
+  'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows',
   // ⚠️ נוספו בסבב 32 — `tbRowsGet`/`tbRowsPush` פונות דרכן לטבלה המאוחדת.
   'tbTableOf', 'tbArchivedFlag',
   // ⚠️ ⛔ מסבב 102 הדחיפה היא הבלוק המשותף — ⭐ `tbSendRows` היא הכתיבה

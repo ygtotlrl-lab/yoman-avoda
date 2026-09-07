@@ -55,7 +55,7 @@ function cut(name, src) {
   throw new Error('הפונקציה ' + name + ' אינה סגורה');
 }
 
-const NAMES = ['idEq', 'entryOrderTs', 'idArg', 'entryKey', 'gdateOrderTs',
+const NAMES = ['idEq', 'legacyIdStamp', 'entryOrderTs', 'idArg', 'entryKey', 'gdateOrderTs',
                'parseGregLike', 'tbSortRows', 'archiveKey'];
 function build(src) {
   const ctx = { console, Number, String, Array, Object, isFinite, Date, JSON, Math };

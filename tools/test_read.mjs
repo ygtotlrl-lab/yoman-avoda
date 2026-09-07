@@ -158,7 +158,7 @@ function env(total, mode, mutSrc) {
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
    *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
   vm.runInContext(cutVar('var _tbEpoch = 0;'), sb);
-  for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'entryOrderTs',
+  for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
                    'tbSortRows', 'tbTableOf', 'tbArchivedFlag', 'ysTenantEpoch', 'ysTenantStale', 'tbRowsGet']) {
     vm.runInContext(cut(n, mutSrc), sb, { filename: n + '.js' });
   }
