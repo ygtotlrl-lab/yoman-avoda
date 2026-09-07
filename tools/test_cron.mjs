@@ -26,11 +26,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
+/* ⚠️ פר-אפליקציה — הפרויקט שהאפליקציה חיה בו והבעלות על מיגרציית הגיבוי נבדלים בין הארבע */
 /* ⚠️ yoman חולקת את הפרויקט `kxbtskqobynewvnckaaz` עם hanhala ועם schar,
    ולכן המיגרציה אחת לשלושתן ויושבת בריפו של hanhala — שם מוגדרת `kv_backup`
    ב-`migrations/000_initial_schema.sql`. ⛔ עותק שני שלה כאן היה מקור אמת
    שני שמתיישן (סבב 35ג), ולכן `migration` הוא null.
    ⚠️ `prefixes` — כאן, ורק כאן, מפתח הגיבוי נושא את סיומת המוסד. */
+/* ⚠️ סוף פר-אפליקציה */
 const APP = {
   name: 'yoman-avoda',
   keys: ['tb_entries_rows', 'tb_cats', 'tb_subs', 'tb_subs_meta'],
