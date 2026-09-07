@@ -428,6 +428,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-cat>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--bgsec);
   font-weight:800;font-size:13px;color:var(--primaryd)}
 .inf-cat>summary::-webkit-details-marker{display:none}
+.inf-ord{padding:5px 12px;background:var(--bgsec);font-size:12px;color:var(--textmid);
+  border-top:1px solid var(--border)}
 .inf-wrap{overflow-x:auto}
 .inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:6px 8px;
@@ -6453,8 +6455,15 @@ function _infParse(md) {
     if (c.length < 8) continue;
     if (c[0] === '#') continue;
     if (c[0] === '' && /^\*\*/.test(c[1])) {
-      cur = { title: c[1].replace(/\*\*/g, ''), rows: [] };
+      cur = { title: c[1].replace(/\*\*/g, ''), order: '', rows: [] };
       cats.push(cur);
+      continue;
+    }
+    /*  ⛔ שורת סדר-הפנים נקלטת לקטגוריה שמעליה ⛔ ואינה נבלעת — ⚠️ היא
+     *  אינה שורת נתונים ואינה כותרת, ⭐ ובלי הענף הזה היא נקראה ונזרקה:
+     *  ⛔ הקורא היה רואה כותרת בלי הסדר שהיא מצהירה. */
+    if (c[0] === '' && cur && c[1].charAt(0) === '↳') {
+      cur.order = c[1].slice(1).trim();
       continue;
     }
     if (!/^\d+$/.test(c[0])) continue;
@@ -6493,6 +6502,7 @@ function _infHtml(d) {
   d.cats.forEach(function (c) {
     h += '<details class="inf-cat"' + (window._infOpen ? ' open' : '') + '>' +
          '<summary>' + esc(c.title) + ' — ' + c.rows.length + '</summary>' +
+         (c.order ? '<div class="inf-ord">↳ ' + _infMd(c.order) + '</div>' : '') +
          '<div class="inf-wrap"><table class="inf-tbl">' +
          '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
          '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
