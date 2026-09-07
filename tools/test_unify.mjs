@@ -178,9 +178,9 @@ function makeEnv(opts = {}) {
   /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbSendRows`
    *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`
    *  של עצמן: ⚠️ והבדיקה הייתה מדווחת «אין רשת» על קוד תקין. */
-  vm.runInContext(cutVar('var _tbEpoch = 0;'), sandbox);
-  vm.runInContext(cut('ysTenantEpoch'), sandbox);
-  vm.runInContext(cut('ysTenantStale'), sandbox);
+  vm.runInContext(cutVar('var _ctxEpoch = 0;'), sandbox);
+  vm.runInContext(cut('ctxEpoch'), sandbox);
+  vm.runInContext(cut('ctxStale'), sandbox);
   /*  ⛔ `PUSH_CFG` נטען מהמקור ⛔ ואינו נכתב כאן — ⚠️ עותק ברתמה הוא מקור
    *  אמת שני, ⭐ והוא היה עובר גם כשההצהרה שבקוד השתנתה. */
   vm.runInContext(cutVar('var PUSH_TABLES = '), sandbox);

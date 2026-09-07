@@ -2709,6 +2709,30 @@ var PL_CFG = {
       }, function () { return { ok: false, ts: null }; });
   },
 };
+/* ═══ שומר ההקשר — מודול משותף (סבב 109) ══════════════════════════════════
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
+   ⛔ מחזור «קרא ← מזג ← דחוף» נפתח בהקשר אחד ⛔ ואינו רשאי לכתוב באחר —
+      ⚠️ בין ה-`await` הראשון לאחרון ההקשר יכול להתחלף, ⭐ ומאותו רגע
+      הגלובלים מצביעים על החדש והזיכרון עדיין מחזיק את הישן: ⛔ כל כתיבה
+      שאחריו כותבת את נתוני ההקשר הקודם תחת החדש, ⚠️ וכל רישום הצלחה נזקף
+      לחשבון הלא נכון — ⭐ ועֵד פינוי כזה מתיר למחוק מהדיסק רשומה שמעולם
+      לא עלתה.
+   ⛔ **המונה ⛔ ולא שם ההקשר** — ⚠️ החלפה הלוך-ושוב מחזירה את אותו שם,
+      ⭐ והזיכרון בינתיים כבר הוחלף: ⛔ שוויון שמות אינו שוויון הקשר.
+   ⛔ **ומה נלכד מוצהר פר-אפליקציה** ⛔ ואינו כאן — ⚠️ באפליקציה רב-מוסדית
+      זה המוסד, ⭐ ובשאר המשתמש המחובר: ⛔ המנגנון אחד ⚠️ והנלכד נבדל.
+   ═══════════════════════════════════════════════════════════════════════ */
+var _ctxEpoch = 0;
+function ctxEpoch() { return _ctxEpoch; }
+/*  ⛔ נקודת הקידום היחידה — ⚠️ כל מסלול שמחליף הקשר קורא לה **לפני**
+ *  הטעינה החדשה: ⭐ קידום שאחרי הטעינה משאיר את המחזור שרץ עכשיו סבור
+ *  שהוא עדיין בהקשר שלו, ⛔ והכתיבה שלו נזקפת לחשבון החדש. */
+function ctxSwitch() { _ctxEpoch++; return _ctxEpoch; }
+/*  ⛔ «האם ההקשר התחלף מאז שהתחלתי» — ⚠️ הקורא לוכד את הערך בכניסה
+ *  ⛔ ומוסר אותו כאן, ⭐ ואינו קורא את הגלובלי פעמיים. */
+function ctxStale(ep) { return ep !== _ctxEpoch; }
+/* ═══════════════ סוף שומר ההקשר ═════════════════════════════════════════ */
 /* ═══ מנגנון המשיכה — מודול משותף (סבב 51) ════════════════════════════════
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
@@ -2805,12 +2829,12 @@ var PUSH_CFG = {
   delay:  400,
   dirty:  function (t, ctx) {
     if (!TB_ROWS || !tbTableOf(t) || !KV_TABLE || !YESHIVA) return null;
-    _tbPushEp = ysTenantEpoch();
+    _tbPushEp = ctxEpoch();
     return tbDirtyRows(t, ctx || (t === 'tb_archive' ? ARCHIVE : ENTRIES));
   },
   key:    function (t, row) { return tbPendPrefix(t) + row.rec_key; },
   send:   function (t, rows) { return tbSendRows(t, rows, _tbPushEp); },
-  mark:   function (t) { if (!ysTenantStale(_tbPushEp)) _tbMarkPushed(t); },
+  mark:   function (t) { if (!ctxStale(_tbPushEp)) _tbMarkPushed(t); },
   run:    function () { tbSyncPushNow(); },
 };
 /* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
@@ -3181,7 +3205,7 @@ async function sbSet(key, value) {
    *  — ⚠️ היום `sb.from(KV_TABLE)` מוערך לפני ההשהיה הראשונה ולכן הוא נכון
    *  **במקרה ולא במבנה**: ⭐ `await` שיתווסף מעליו יסיט את הכתיבה לטבלה של
    *  המוסד שהמשתמש עבר אליו בינתיים, ⛔ בלי שגיאה ובלי סימן. */
-  var tbl = KV_TABLE, _ep = ysTenantEpoch();
+  var tbl = KV_TABLE, _ep = ctxEpoch();
   try {
     var sb = getSB();
     var res = await withTimeout(sb.from(tbl).upsert({key: key, value: JSON.stringify(value), updated_at: Date.now()}, {onConflict: "key"}));
@@ -3189,7 +3213,7 @@ async function sbSet(key, value) {
      *  נלכדה בכניסה, ⛔ אך `ok:true` היה מזכה את עֵד הפינוי של המוסד **החדש**
      *  בדחיפה שלא נעשתה עבורו: ⭐ נכשל-סגור — ⚠️ עֵד חסר מונע פינוי, ⛔ ועֵד
      *  שגוי מתיר למחוק מהדיסק רשומה שמעולם לא עלתה. */
-    if (ysTenantStale(_ep)) return { ok: false, error: "ההקשר התחלף", stale: true };
+    if (ctxStale(_ep)) return { ok: false, error: "ההקשר התחלף", ctxStale: true };
     if (res.error) {
       console.error('[sync] sbSet error', key, res.error.message, res.error);
       return { ok: false, error: res.error.message || "שגיאת שרת" };
@@ -3764,7 +3788,7 @@ async function tbRowsGet(kvKey) {
    *  המדוד: `_ysRowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
    *  של מוסד אחד עם עמוד 2 של השני ⛔ לתוך תוצאה אחת שנראית שלמה. */
-  var yesh = YESHIVA, _ep = ysTenantEpoch();
+  var yesh = YESHIVA, _ep = ctxEpoch();
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
@@ -3790,7 +3814,7 @@ async function tbRowsGet(kvKey) {
     /*  ⛔ מפת החותמות המרוחקות היא מצב פר-מוסד — ⚠️ `ysResetTenantState` מאפסת
      *  אותה, ⭐ וכתיבה שאחרי ההמתנה הייתה ממלאת אותה בחותמות המוסד הקודם:
      *  ⛔ ואז `tbDirtyRows` משווה מול טבלה אחרת ומחליט מה לדחוף לפיה. */
-    if (ysTenantStale(_ep)) return { ok: false, data: null };
+    if (ctxStale(_ep)) return { ok: false, data: null };
     _tbRemote[kvKey] = map;
     return { ok: true, data: tbSortRows(kvKey, out) };
   } catch (e) { return { ok: false, data: null }; }
@@ -3841,7 +3865,7 @@ async function tbSendRows(kvKey, rows, ep) {
   /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה ⭐ והסימון
    *  שלהן אינו פר-מוסד, ⛔ אבל מפת החותמות המרוחקות כן: ⚠️ מילויה כאן
    *  היה משווה את המוסד החדש מול חותמות של הקודם. */
-  if (ysTenantStale(ep)) return {};
+  if (ctxStale(ep)) return {};
   var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
   rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
   return {};
@@ -3849,10 +3873,10 @@ async function tbSendRows(kvKey, rows, ep) {
 
 // פונקציות שמירה — כותבות גם ל-localStorage וגם ל-Supabase
 function saveCats() {
-  var _ep = ysTenantEpoch();   // ר' ההסבר ב-saveEntries — עֵד הפינוי הוא פר-מוסד
+  var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — עֵד הפינוי הוא פר-מוסד
   lsSet("tb_cats"+LS, JSON.stringify(CATS));
   sbSet("tb_cats", CATS).then(function(r){
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     if (r && r.ok) _tbMarkPushed('tb_cats');
   });
 }
@@ -3959,16 +3983,16 @@ function saveEntries() {
   var _t0 = Date.now();
   /*  ⛔ ההקשר נלכד לפני ההמתנה (סבב 88) — ⚠️ הרישום שאחריה זוקף את
    *  הצלחת הדחיפה לעֵד הפינוי ולסימון ה-⏳, ⭐ ושניהם פר-מוסד. */
-  var _ep = ysTenantEpoch();
+  var _ep = ctxEpoch();
   lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
   (async function(){
     // ⭐ הטבלאות הן המאסטר (סבב 35) — הכתיבה הכפולה לבלוק ה-kv כובתה,
     //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
     //    `TB_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
     var _rows = await pushTable('tb_entries', ENTRIES);
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_entries", ENTRIES) : null;
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     /*  ⛔ עֵד הפינוי מסומן בשכבה המשותפת ⛔ ואינו נכתב כאן שוב —
      *  ⚠️ שני אתרי סימון לאותו עֵד הם שתי הכרעות על אותה ראיה. */
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
@@ -3981,7 +4005,7 @@ function saveEntries() {
 }
 function saveArchive() {
   var _t0 = Date.now();
-  var _ep = ysTenantEpoch();   // ר' ההסבר ב-saveEntries — אותו שער בדיוק
+  var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — אותו שער בדיוק
   lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
@@ -3989,9 +4013,9 @@ function saveArchive() {
     //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. שכבת הדחיפה
     //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
     var _rows = await pushTable('tb_archive', ARCHIVE);
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) tbSyncLog('push', 'tb_archive', _rows.n);
@@ -4182,17 +4206,6 @@ function tbSyncLog(action, key, recordCount, details) {
  *  ⭐ המונה מקודם בכל החלפה, ⛔ וכל מחזור שקורא מהזיכרון לוכד אותו בכניסה
  *  ⛔ ובודק אותו לפני כל כתיבה: ⚠️ השוואת `YESHIVA` לבדה אינה מספיקה —
  *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
-var _tbEpoch = 0;
-function ysTenantEpoch() { return _tbEpoch; }
-/*  ⛔⛔ שער ההקשר של **מסלול הדחיפה** (סבב 88) — ⚠️ עד כאן המונה נבדק
- *  ב-`syncFromCloud` בלבד, ⛔ והדחיפה היא מחזור שני עם `await` משלו:
- *  ⭐ `tbSyncPushNow` · `saveEntries` · `saveArchive` כולן ממשיכות אחרי
- *  ההמתנה ⛔ ורושמות את הצלחת הדחיפה — ⚠️ עֵד הפינוי ואישור ה-⏳ —
- *  **על ההקשר שפעיל עכשיו**: ⛔ החלפה באמצע זקפה לחשבון המוסד החדש
- *  דחיפה שמעולם לא נעשתה עבורו, ⭐ ועֵד פינוי כזה מתיר למחוק מהדיסק
- *  רשומה שלא עלתה מעולם. ⛔ ההקשר נלכד בכניסה ⛔ ונבדק לפני כל כתיבה
- *  ולפני כל רישום. */
-function ysTenantStale(ep) { return ep !== ysTenantEpoch(); }
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
@@ -4201,8 +4214,7 @@ async function syncFromCloud() {
   var failed = [];
   /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
    *  אחרי כל `await`, ⭐ שזו הנקודה היחידה שבה ההקשר יכול להתחלף. */
-  var _ep = ysTenantEpoch();
-  var stale = function () { return _ep !== ysTenantEpoch(); };
+  var _ep = ctxEpoch();
   async function pull(key, label) {
     var r = await sbGetResult(key);
     if (!r.ok) failed.push(label);
@@ -4217,11 +4229,11 @@ async function syncFromCloud() {
     var cloudCats = await pull('tb_cats', 'קטגוריות');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
-    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudCats && cloudCats.length) {
       CATS = mergeCats(CATS, cloudCats);
       lsSet('tb_cats'+LS, JSON.stringify(CATS));
-      sbSet('tb_cats', CATS).then(function(r){ if (stale()) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
+      sbSet('tb_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
     }
 
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
@@ -4230,7 +4242,7 @@ async function syncFromCloud() {
     var cloudSubsEpoch = Number(await pull(SUBS_EPOCH_KEY, 'עידן תתי-משימות')) || 0;
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
-    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
       /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את המפה
        *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
@@ -4261,7 +4273,7 @@ async function syncFromCloud() {
     var _rowsE = await tbRowsGet('tb_entries');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
-    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsE.ok) failed.push('רשומות');
     else {
     var cloudEntries = _rowsE.data;
@@ -4290,7 +4302,7 @@ async function syncFromCloud() {
     var _rowsA = await tbRowsGet('tb_archive');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
-    if (stale()) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsA.ok) failed.push('ארכיון');
     else {
     hwNoteCloud('tb_archive'+LS, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
@@ -5368,16 +5380,16 @@ async function tbSyncPushNow() {
     /*  ⛔ ההקשר נלכד בכניסה (סבב 88) — ⚠️ המסלול הזה נקרא גם מהתקתוק
      *  המושהה וגם ממודול הניסיון החוזר, ⭐ ושניהם יכולים להתעורר בדיוק
      *  בזמן ההחלפה. */
-    var _ep = ysTenantEpoch();
+    var _ep = ctxEpoch();
     // ⭐ מסבב 35 הדחיפה כאן היא שורות (סבב 35) — קודם המסלול הזה דחף את
     //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
     //    יחד עם כיבוי הכתיבה הכפולה.
     var rEntries = await pushTable("tb_entries", ENTRIES);
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     var rArchive = await pushTable("tb_archive", ARCHIVE);
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     if (TB_KV_LEGACY_WRITE) { await sbSet("tb_entries", ENTRIES); await sbSet("tb_archive", ARCHIVE); }
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
     //    ו-`schedulePush`), ובלי האישור הסימון שרד דחיפה שהצליחה: המונה
@@ -5399,7 +5411,7 @@ async function tbSyncPushNow() {
     //    הקורא זקוק לתוצאה עצמה כדי להזהיר את המשתמש.
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
-    if (ysTenantStale(_ep)) return;
+    if (ctxStale(_ep)) return;
     if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
     PL_CFG.note(stampTs);
     toast("✅ נשמר בענן");
@@ -6369,7 +6381,7 @@ async function tbPullFromCloud() {
    *  `tb_entries_ramataviv`, ⛔ ומילאה את מפת החותמות בחותמות ראשון
    *  אחרי ש-`ysResetTenantState` כבר איפסה אותה.
    *  ⚠️ וזה מה שדווח מהשטח: הקטגוריות והארכיון מתערבבים בין המוסדות. */
-  var _ep = ysTenantEpoch(), _ls = LS;
+  var _ep = ctxEpoch(), _ls = LS;
   try {
     console.log("[sync] pulling data...");
 
@@ -6380,7 +6392,7 @@ async function tbPullFromCloud() {
        למקור אמת שני. ⛔ וכשל מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ מיזוג
        מול מערך ריק מוחק את מה שלא הספיק לעלות. */
     var _rowsE = await tbRowsGet('tb_entries');
-    if (ysTenantStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsE.ok) {
       var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
@@ -6393,7 +6405,7 @@ async function tbPullFromCloud() {
       }
     }
     var _rowsA = await tbRowsGet('tb_archive');
-    if (ysTenantStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
+    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsA.ok) {
       hwNoteCloud('tb_archive'+_ls, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
       var cloudArchive = _rowsA.data;
@@ -6792,7 +6804,7 @@ function ysNameOf(y) {
  *  ⛔ ומפת החותמות המרוחקות מתאפסת אף היא — ⚠️ היא נמדדה מול המוסד הקודם,
  *  ⭐ והשוואה מולה הייתה מכריעה מה לדחוף על סמך טבלה אחרת. */
 function ysResetTenantState() {
-  _tbEpoch++;
+  ctxSwitch();
   /*  ⛔ דחיפה מושהית שנקבעה במוסד הקודם מבוטלת (סבב 88) — ⚠️ היא נקבעה
    *  על נתונים שכבר אינם בזיכרון, ⭐ ומה שהיא תמצא בו כשתתעורר שייך
    *  למוסד אחר: ⛔ ובכל מקרה שער ההקשר עוצר אותה, ⚠️ וביטול התקתוק

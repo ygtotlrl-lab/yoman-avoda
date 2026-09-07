@@ -85,7 +85,7 @@ assert(kvReads.length === 0,
     «כל דבר ביניהן» — ⭐ אחרת השער מאשר גם מיזוג שנדחף לשם. */
 const ungated = APP.rowsVars.filter((v) => !new RegExp(
   'var ' + v + ' = await ' + APP.rowsGet +
-  "\\('\\w+'\\);\\s*\\n(\\s*if \\(ysTenantStale\\(_ep\\)\\)[^\\n]*\\n)?\\s*if \\(" +
+  "\\('\\w+'\\);\\s*\\n(\\s*if \\(ctxStale\\(_ep\\)\\)[^\\n]*\\n)?\\s*if \\(" +
   v + '\\.ok\\) \\{').test(SRC));
 assert(ungated.length === 0,
   '1ג · ⛔ המיזוג יושב בתוך שער ה-`ok` — נמדד בלי שער: ' +
@@ -157,14 +157,14 @@ function env(total, mode, mutSrc) {
   }
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
    *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
-  vm.runInContext(cutVar('var _tbEpoch = 0;'), sb);
+  vm.runInContext(cutVar('var _ctxEpoch = 0;'), sb);
   for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
-                   'tbSortRows', 'tbTableOf', 'tbArchivedFlag', 'ysTenantEpoch', 'ysTenantStale', 'tbRowsGet']) {
+                   'tbSortRows', 'tbTableOf', 'tbArchivedFlag', 'ctxEpoch', 'ctxSwitch', 'ctxStale', 'tbRowsGet']) {
     vm.runInContext(cut(n, mutSrc), sb, { filename: n + '.js' });
   }
   /*  ⛔ ההחלפה היא קידום המונה **האמיתי** ⛔ ולא דגל של הסביבה — ⚠️ זה
    *  בדיוק מה ש-`ysResetTenantState` עושה בהחלפת מוסד. */
-  st.bump = () => { sb.YESHIVA = 'ramataviv'; vm.runInContext('_tbEpoch++;', sb); };
+  st.bump = () => { sb.YESHIVA = 'ramataviv'; vm.runInContext('ctxSwitch();', sb); };
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sb);
   return { sb, st };
 }
@@ -239,7 +239,7 @@ console.log('— מוטציות —');
   /*  ⛔ ומוטציה שנייה: הסרת השער שאחרי ההמתנה — ⚠️ התוצאה חוזרת `ok:true`
    *  עם שורות של שני המוסדות, ⭐ תמונה מעורבת שנראית שלמה. */
   const bad = SRC.replace(".eq('yeshiva', yesh)", ".eq('yeshiva', YESHIVA)")
-                 .replace('    if (ysTenantStale(_ep)) return { ok: false, data: null };\n', '');
+                 .replace('    if (ctxStale(_ep)) return { ok: false, data: null };\n', '');
   const e = env(PAGE + 250, 'switch', bad);
   const r = await e.sb.tbRowsGet('tb_entries');
   assert(r.ok === true,
