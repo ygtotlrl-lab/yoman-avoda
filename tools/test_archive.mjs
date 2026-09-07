@@ -75,7 +75,7 @@ const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick'
   'getAllArchiveDays', 'getYearsWithData', 'getMonthsWithData', 'getDaysInMonth',
   'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
   'checkDayChange', 'gregDateStr', 'getTodayKey'];
-const VARS = ['var GREG_MONTHS_HE', 'var HMONTH_ALIAS', 'var HMO ', 'var HUNKNOWN',
+const VARS = ['var GREG_MONTHS_HE', 'var HMO ', 'var HUNKNOWN',
   'var DAY_VALUE_MAP'];
 
 function makeCtx(opts) {
@@ -218,13 +218,17 @@ function reachable(c) {
 /* ── 3. הרשומות בלי hdate — מקובצות מתוך `name` ────────────────────────── */
 {
   // הצפי נגזר מה-name שבפיקסטורה, לא מהקוד — שני צדדים עצמאיים.
-  /*  ⛔ השם ההיסטורי מול השם הקנוני (סבב 107) — ⚠️ שכבת התצוגה אוחדה
-   *  ל«מנחם אב», ⭐ ורשומות שכבר בארכיון נושאות את השם הקצר: ⛔ המיפוי
-   *  כתוב כאן ⛔ ואינו נקרא מהקוד הנבדק, ⚠️ ושני הצדדים נשארים עצמאיים. */
-  const CANON_MONTH = { 'אב': 'מנחם אב' };
+  /*  ⛔ רשימת החודשים כתובה כאן ⛔ ואינה נקראת מהקוד הנבדק — ⚠️ שני
+   *  הצדדים נשארים עצמאיים: ⭐ והארוך שבמתאימים הוא החודש, ⚠️ ש«אב» הוא
+   *  תחילית של «מנחם אב» ⛔ ו«אדר» של «אדר א׳». */
+  const MONTHS = ['תשרי', 'חשון', 'כסלו', 'טבת', 'שבט', 'אדר', 'אדר א׳', 'אדר ב׳',
+    'ניסן', 'אייר', 'סיון', 'תמוז', 'מנחם אב', 'אלול'];
   const expect = (name) => {
-    const m = name.match(/([֐-׿״׳]+)\s+(ה׳תש[֐-׿״׳]+)/);
-    return m ? { month: CANON_MONTH[m[1]] || m[1], year: m[2] } : null;
+    const m = name.match(/ה׳תש[֐-׿״׳]+/);
+    if (!m) return null;
+    const head = name.slice(0, m.index);
+    const month = MONTHS.filter((x) => head.includes(x)).sort((a, b) => b.length - a.length)[0];
+    return month ? { month, year: m[0] } : null;
   };
   for (const yesh of ['rishon', 'ramataviv']) {
     const { ctx, days } = daysOf(FX[yesh]);
@@ -314,7 +318,7 @@ function reachable(c) {
 {
   const c = makeCtx();
   const cases = [
-    ['יום כ״ט אב ה׳תשפ״ו (אוטומטי)', 'כ״ט אב ה׳תשפ״ו'],
+    ['יום כ״ט מנחם אב ה׳תשפ״ו (אוטומטי)', 'כ״ט מנחם אב ה׳תשפ״ו'],
     ['יום רביעי ג׳ אלול ה׳תשפ״ה', 'ג׳ אלול ה׳תשפ״ה'],
     ['מוצאי שבת כ״ד ניסן ה׳תשפ״ו | 11 אפריל 2026', 'כ״ד ניסן ה׳תשפ״ו'],
     ['ערב שבת י״ז סיון ה׳תשפ״ו', 'י״ז סיון ה׳תשפ״ו'],
@@ -325,17 +329,17 @@ function reachable(c) {
   for (const bad of ['', null, undefined, 'יום רביעי', '11 אפריל 2026', 'שלום עולם']) {
     eq(c.hebFromText(bad), '', `hebFromText על «${bad}» מחזירה ריק ולא ניחוש`);
   }
-  eq(c.extractYM(c.hebFromText('יום כ״ט אב ה׳תשפ״ו (אוטומטי)')).month, 'מנחם אב',
-    'התוצאה של hebFromText נקראת ע"י extractYM, והשם ההיסטורי ממופה לקנוני');
+  eq(c.extractYM(c.hebFromText('יום כ״ט מנחם אב ה׳תשפ״ו (אוטומטי)')).month, 'מנחם אב',
+    'התוצאה של hebFromText נקראת ע"י extractYM — ושם בן שתי מילים אינו נחתך');
 }
 {
   // ⛔ snapHDate טהורה — תיקון תצוגה, לא שינוי נתונים.
   const c = makeCtx();
-  const snap = { hdate: '', name: 'יום כ״ט אב ה׳תשפ״ו (אוטומטי)', gdate: '11 אוגוסט 2026' };
+  const snap = { hdate: '', name: 'יום כ״ט מנחם אב ה׳תשפ״ו (אוטומטי)', gdate: '11 אוגוסט 2026' };
   const before = JSON.stringify(snap);
-  eq(c.snapHDate(snap), 'כ״ט אב ה׳תשפ״ו', 'snapHDate נופלת-חזרה ל-name');
+  eq(c.snapHDate(snap), 'כ״ט מנחם אב ה׳תשפ״ו', 'snapHDate נופלת-חזרה ל-name');
   eq(JSON.stringify(snap), before, '⛔ snapHDate אינה נוגעת בסנאפשוט');
-  eq(c.snapHDate({ hdate: 'ב׳ אב ה׳תשפ״ו', name: 'משהו אחר' }), 'ב׳ אב ה׳תשפ״ו',
+  eq(c.snapHDate({ hdate: 'ב׳ מנחם אב ה׳תשפ״ו', name: 'משהו אחר' }), 'ב׳ מנחם אב ה׳תשפ״ו',
     'hdate תקין גובר על name');
   eq(c.snapHDate({ hdate: '', name: '' }), '', 'אין ממה לגזור — מחרוזת ריקה, והקיבוץ יפול ל«לא ידוע»');
 }
@@ -364,8 +368,8 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 {
   // המסלול הידני — `autoArchiveDay` על הקוד האמיתי.
   const c = makeCtx();
-  c.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', hdate: 'כ״ח אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
-  c.autoArchiveDay('יום שלישי', 'כ״ח אב ה׳תשפ״ו', '11 אוגוסט 2026');
+  c.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
+  c.autoArchiveDay('יום שלישי', 'כ״ח מנחם אב ה׳תשפ״ו', '11 אוגוסט 2026');
   eq(c.calls.saveArchive, 1, 'המסלול הידני שומר לענן');
   const manual = c.ARCHIVE[0];
   ok(FIELDS.every((f) => manual[f] !== undefined && manual[f] !== ''),
@@ -373,9 +377,9 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 
   // המסלול האוטומטי — `checkDayChange` על הקוד האמיתי.
   const a = makeCtx();
-  a.hebrewDate = () => 'כ״ח אב ה׳תשפ״ו';
+  a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
   a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
-  a.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', hdate: 'כ״ח אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
+  a.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
   a.checkDayChange();
   eq(a.ARCHIVE.length, 1, 'מעבר יום יצר סנאפשוט אחד');
   const auto = a.ARCHIVE[0];
@@ -411,24 +415,24 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 {
   // ⛔ בלי רשומה שנושאת תאריך — השעון הוא הנפילה-חזרה, לא שדה ריק.
   const a = makeCtx();
-  a.hebrewDate = () => 'כ״ח אב ה׳תשפ״ו';
+  a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
   a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
   a.ENTRIES = [{ id: 1, updatedAt: 10 }];
   a.checkDayChange();
   const s = a.ARCHIVE[0];
   eq(s.gdate, '11 אוגוסט 2026', 'gdate מהשעון כשאין ברשומות');
-  eq(s.hdate, 'כ״ח אב ה׳תשפ״ו', 'hdate מ-hebrewDate כשאין ברשומות');
+  eq(s.hdate, 'כ״ח מנחם אב ה׳תשפ״ו', 'hdate מ-hebrewDate כשאין ברשומות');
   eq(s.day, 'יום שלישי', 'day מהשעון כשאין ברשומות');
   eq(a.archiveKey(s), 'g:11 אוגוסט 2026', '⭐ המפתח הוא g:<gdate> ולא i:<id> — אין שורה כפולה בענן');
 }
 {
   // ⭐ מעבר יום על יום שכבר יש לו סנאפשוט — מיזוג, לא כפילות.
   const a = makeCtx();
-  a.hebrewDate = () => 'כ״ח אב ה׳תשפ״ו';
+  a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
   a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
-  a.ARCHIVE = [{ id: 900, name: 'כ״ח אב ה׳תשפ״ו', hdate: 'כ״ח אב ה׳תשפ״ו', gdate: '11 אוגוסט 2026',
+  a.ARCHIVE = [{ id: 900, name: 'כ״ח מנחם אב ה׳תשפ״ו', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', gdate: '11 אוגוסט 2026',
     day: 'יום שלישי', date: '11 אוגוסט 2026', entries: [{ id: 7, updatedAt: 5 }], count: 1, updatedAt: 5 }];
-  a.ENTRIES = [{ id: 8, gdate: '11 אוגוסט 2026', hdate: 'כ״ח אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
+  a.ENTRIES = [{ id: 8, gdate: '11 אוגוסט 2026', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
   a.checkDayChange();
   eq(a.ARCHIVE.length, 1, '⭐ סנאפשוט אחד ליום — לא נוצרה כפילות');
   eq(a.ARCHIVE[0].id, 900, 'הסנאפשוט הקיים נשמר, ולא הוחלף במזהה חדש');
@@ -438,7 +442,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 /* ── 8. arcPutSnapshot — השומר של שני המסלולים ─────────────────────────── */
 {
   const c = makeCtx();
-  eq(c.arcPutSnapshot('יום שני', 'ה׳ אב ה׳תשפ״ו', '', [{ id: 1 }], 1, null), null,
+  eq(c.arcPutSnapshot('יום שני', 'ה׳ מנחם אב ה׳תשפ״ו', '', [{ id: 1 }], 1, null), null,
     '⛔ בלי gdate אין סנאפשוט — לא נוצר סנאפשוט זבל');
   eq(c.ARCHIVE.length, 0, 'ובאמת לא נוסף דבר לארכיון');
 }
