@@ -73,7 +73,7 @@ const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick'
   'entryKey', 'archiveKey', 'parseGregLike', 'gregKeyFromParts', 'hasHebMonth',
   'normHDate', 'normHMonth', 'extractYM', 'hebFromText', 'snapHDate',
   'getAllArchiveDays', 'getYearsWithData', 'getMonthsWithData', 'getDaysInMonth',
-  'gdateOrderTs', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
+  'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
   'checkDayChange', 'gregDateStr', 'getTodayKey'];
 const VARS = ['var GREG_MONTHS_HE', 'var HMONTH_ALIAS', 'var HMO ', 'var HUNKNOWN',
   'var DAY_VALUE_MAP'];
