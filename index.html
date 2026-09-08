@@ -24,11 +24,6 @@
   var userAccepted = false;
   var reloaded = false;
   var swReg = null;                       // נקבע כשה-service worker נרשם (אם בכלל)
-  /*  ⛔ הגירה חד-פעמית (סבב 115) — ⚠️ המפתח נכתב עד שהמנגנון השני ירד,
-   *  ⛔ ואין לו קורא מאז: ⭐ היא אידמפוטנטית, וריצה שנייה אינה משנה דבר.
-   *  ⚠️ **ויורדת בסבב הבא** — ⛔ מכשיר שנטען מאז כבר אינו נושא את המפתח. */
-  try { localStorage.removeItem('tb_dismissed_version'); } catch (e) {}
-
   function doReload() {
     if (reloaded) return;
     reloaded = true;
