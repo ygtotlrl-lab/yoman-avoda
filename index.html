@@ -142,6 +142,9 @@
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  אין סרגל תחתון קבוע. */
   --toast-bottom:26px;
+  /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בארבעתן,
+   *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
+  --stale-ink:#a3341f;
 
   --primary-ink:#1E6FBF; --primary-fill:#1E6FBF;
   --primaryl:#3A8FDF; --primaryd:#0D4A8A;
@@ -155,6 +158,7 @@
  *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
 @media (prefers-color-scheme:dark){
   :root {
+    --stale-ink:#ffb4a2;
     --bg:#0d151d; --bgsec:#18242f; --bgcard:#131e29;
     --text:#e8eef5; --textmid:#c2cfdc; --textlite:#93a5b8;
     --border:#24333f;
@@ -464,8 +468,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
-   הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים לא נשענים על
-   משתני-הצבע של אף אפליקציה (הם נבדלים ביניהן) אלא יורשים צבע וגופן. */
+   הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים יורשים צבע
+   וגופן, ⛔ ואינם נשענים על אסימוני הגוון של אף אפליקציה — הם נבדלים
+   ביניהן. ⚠️ **החריג היחיד הוא `--stale-ink`** (סבב 113): ⭐ הוא מוגדר
+   בשם אחד בארבעתן, בערכה הבהירה ובכהה, ⛔ ולכן כלל שנשען עליו נשאר
+   זהה בית-לבית. */
 .tech-info{margin-top:22px;font-size:12px;opacity:.7}
 .tech-info>summary{cursor:pointer;list-style:none;display:inline-block;padding:4px 2px}
 .tech-info>summary::-webkit-details-marker{display:none}
@@ -477,6 +484,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .sync-line .sync-act{margin-top:8px}
 .sync-line button{font:inherit;font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid rgba(0,0,0,.18);background:rgba(0,0,0,.05);color:inherit;cursor:pointer}
 .sync-line button[disabled]{opacity:.5;cursor:default}
+/*  ⛔ הבאנר «הגיבוי לא רץ N ימים» נושא גוון משלו — ⚠️ שאר הבלוק יורש
+    צבע, ⭐ והוא הודעת אזהרה שחייבת להיקרא כאזהרה. ⛔ והגוון יושב
+    ב-`--stale-ink` ⛔ ולא כערך מוטבע: ⚠️ הוא מוגדר בערכה הבהירה ובכהה
+    בשם אחד, ⭐ ולכן הכלל עצמו זהה בארבע האפליקציות. */
+.bkStale{margin-top:4px;font-weight:700;color:var(--stale-ink)}
 /* ═══ סוף CSS אזור המצב ═════════════════════════════════════════════════ */
 .ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
@@ -1088,7 +1100,7 @@ function lsToastThrottled(msg) {
   var now = Date.now();
   if (now - _lsToastAt < 8000) return;
   _lsToastAt = now;
-  try { lsToast(msg, 6000); } catch (e) { }
+  try { lsToast(msg, 6000, 'bad'); } catch (e) { }
 }
 function lsGet(key, fallback) {
   try {
@@ -1470,9 +1482,9 @@ function lsBootAlert(u) {
     lsAlert(MSG_LS_CRIT + ' (' + lsFmtBytes(u.total) + ' מתוך ' + lsFmtBytes(u.quota) + ')');
   } else if (u.total >= LS_WARN_BYTES) {
     lsLog('⚠️ מעל 3MB', lsFmtBytes(u.total), u.total);
-    try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000); } catch (e) { }
+    try { lsToast(MSG_LS_WARN + ' (' + lsFmtBytes(u.total) + ')', 5000, 'bad'); } catch (e) { }
   }
-  if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000); } catch (e1) { } }
+  if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
 /* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
@@ -1555,7 +1567,12 @@ function lsSweepNow() {
   function finish(extra) {
     freed += Number(extra) || 0;
     lsRenderStatus();
-    try { lsToast(freed > 0 ? ('✅ פונו ' + lsFmtBytes(freed)) : '⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000); } catch (e) { }
+    /*  ⛔ שתי הודעות ולא אחת — ⚠️ הסיווג נגזר מהמסלול: ⭐ פינוי שהצליח
+     *  הוא הודעה נייטרלית, ⛔ ו«אין מה לפנות» היא אזהרה. */
+    try {
+      if (freed > 0) lsToast('✅ פונו ' + lsFmtBytes(freed), 4000);
+      else lsToast('⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000, 'bad');
+    } catch (e) { }
     return freed;
   }
   return p.then(finish, function () { return finish(0); });
@@ -5010,7 +5027,7 @@ function renderLog() {
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button class="edit-btn" data-act="entry-edit" data-id="' + esc(e.id) + '" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
       + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
       + '</div>';
   }).join("");
@@ -5147,7 +5164,7 @@ function toast(msg, dur, kind) {
 /*  ⛔ משך הודעת האחסון ⛔ ואינו ברירת המחדל של הטוסט — ⚠️ היא מדווחת על
    כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
 var LS_TOAST_MS = 5000;
-function lsToast(msg, dur) { try { toast(msg, dur || LS_TOAST_MS); } catch (e) {} }
+function lsToast(msg, dur, kind) { try { toast(msg, dur || LS_TOAST_MS, kind); } catch (e) {} }
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת
@@ -6199,7 +6216,7 @@ function renderArcDetail() {
     sortedE.forEach(function(e, ei) {
       var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
       html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button class="arc-entry-edit" data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
         '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
