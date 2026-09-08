@@ -383,6 +383,9 @@ const APP = {
    *  קיימת**: ⚠️ ליומן אין טבלת משתמשים ואין כניסה, ⛔ ולכן אין `role`
    *  שיוכרע — ⭐ וההצהרה ריקה ואינה נשמטת. */
   roles: [],
+  /*  ⛔ אין כאן כניסה ואין `role` שיוכרע — ⚠️ **וההיעדר מוצהר ריק**
+   *  ⛔ ואינו נשמט: ⭐ שדה חסר נקרא «לא נשאל», וריק «נמדד ואין». */
+  rolesUnused: [],
   authUser: '',
   roleMsgs: [],
   roleCmpExempt: {},
@@ -3597,6 +3600,13 @@ function roleModelGaps() {
   for (const r of roles)
     if (!new RegExp("['\"]" + r + "['\"]").test(src) && sql.indexOf("'" + r + "'") < 0)
       out.push('תפקיד מוכרז ואינו בקוד ואינו במיגרציות: ' + r);
+  /*  ⛔ דרגה שהוכרזה חסרת-נושא (סבב 114) — ⚠️ היא חיה באילוץ שבמסד
+   *  ⛔ ואין לה אתר בקוד: ⭐ הצהרה שיש לה אתר היא הצהרה שהתיישנה. */
+  for (const r of (APP.rolesUnused || [])) {
+    if (roles.indexOf(r) < 0) out.push('דרגה מוכרזת חסרת-נושא ואינה באוצר המילים: ' + r);
+    else if (new RegExp("['\"]" + r + "['\"]").test(src))
+      out.push('דרגה שהוכרזה חסרת-נושא ויש לה אתר בקוד: ' + r);
+  }
   const leg = ROLE_LEGACY.exec(src);
   if (leg) out.push('שם תפקיד שיצא משימוש, בקוד: ' + leg[1]);
   const ex = APP.roleCmpExempt || {};
