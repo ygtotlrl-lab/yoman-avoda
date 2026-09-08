@@ -38,7 +38,33 @@ const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const FIX = fs.readFileSync(path.join(ROOT, 'tools/fixtures/round31_archive.txt'), 'utf8');
 
 let passN = 0, failN = 0;
-const ok = (c, m) => { if (c) passN++; else { failN++; console.error('❌ ' + m); } };
+/*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
+ *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
+const EXPECTED = 137;
+let RAN = 0;
+/*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
+const SUBRUN = !!process.env.GATE_SUBRUN;
+process.on('exit', () => {
+  /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
+   *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
+   *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
+  if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
+  if (SUBRUN) return;
+  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
+  if (RAN < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+      'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
+    process.exitCode = 1;
+  }
+});
+
+/*  ⛔ השער מריץ שערים בעץ סינתטי — ⚠️ הם מגיעים לחלק מטענותיהם בכוונה,
+ *  ⭐ ולכן הם מוכרזים ריצת-משנה ⛔ ואינם סוגרים על הרצפה. */
+process.env.GATE_SUBRUN = '1';
+const ok = (c, m) => { RAN++; if (c) passN++; else { failN++; console.error('❌ ' + m); } };
 const eq = (a, b, m) => ok(a === b, `${m} — קיבלתי ${JSON.stringify(a)}, ציפיתי ${JSON.stringify(b)}`);
 
 /* ── חיתוך מהקובץ ──────────────────────────────────────────────────────── */
@@ -471,7 +497,7 @@ if (!process.env.RD67_MUT) {
   const _run = (dir) => _c.spawnSync(process.execPath, [_p.join(dir, 'tools', _name)],
     { cwd: dir, encoding: 'utf8', env: { ...process.env, RD67_MUT: '1' } }).status;
 
-  const _mut = (label, file, edit, expectFail) => {
+  const _mut = (label, file, edit, expectFail) => { RAN++;
     /*  ⛔ כותב על עותק — ⚠️ הרתמה מריצה שער אמיתי בתהליך נפרד, ⛔ והוא קורא את המקור מהדיסק. */
     const d = _m.mkdtempSync(_p.join(_o.tmpdir(), 'rd67-'));
     _m.cpSync(_root, d, { recursive: true, filter: (s) => !s.includes('/.git') });
