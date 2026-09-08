@@ -16,15 +16,17 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <script>
 // ═══ באנר עדכון יחיד ═══
-// היו שני באנרים במקביל: זה (תחתון, קטן) מ-updatefound של ה-service worker,
-// והעליון ברוחב מלא (id="updateBanner") מבדיקת הגרסה השעתית מול raw GitHub —
-// ושניהם הופיעו יחד. עכשיו יש ממשק אחד, window.showAppUpdateBanner(version),
-// ושני מנגנוני הזיהוי מפעילים אותו. שניהם נשמרו: בדיקת ה-raw חיונית ל-APK.
+// ⛔ מנגנון זיהוי אחד — `reg.update()` של ה-service worker: ⚠️ בדיקת
+// הגרסה השעתית מול raw GitHub ירדה, ⛔ ואין להחזיר מנגנון שני לאותה שאלה.
+// ⛔ **ולכן אין כאן מספר גרסה** — ⚠️ הוא הגיע ממנה בלבד, ⭐ ומפתח
+// שזכר גרסה שנדחתה נשאר בלי קורא.
 (function() {
   var userAccepted = false;
   var reloaded = false;
   var swReg = null;                       // נקבע כשה-service worker נרשם (אם בכלל)
-  var DISMISS_KEY = 'tb_dismissed_version';
+  /*  ⛔ הגירה חד-פעמית — ⚠️ המפתח נכתב עד שהמנגנון השני ירד, ⛔ ואין לו
+   *  קורא מאז: ⭐ היא אידמפוטנטית, וריצה שנייה אינה משנה דבר. */
+  try { localStorage.removeItem('tb_dismissed_version'); } catch (e) {}
 
   function doReload() {
     if (reloaded) return;
@@ -32,20 +34,12 @@
     location.reload();
   }
 
-  // version — הגרסה המרוחקת מבדיקת ה-raw; חסר כשהזיהוי הגיע מה-service worker
-  // (ואז אין גרסה שאפשר לזכור ב-tb_dismissed_version).
-  window.showAppUpdateBanner = function(version) {
-    var exist = document.getElementById('sw-update-banner');
-    if (exist) {
-      // עותק אחד בלבד. אם הבאנר כבר מוצג ורק עכשיו נודעה הגרסה — לזכור אותה,
-      // כדי שה-✕ ישתיק את הבדיקה השעתית על הגרסה הזו.
-      if (version) exist._updVersion = version;
-      return;
-    }
+  window.showAppUpdateBanner = function() {
+    // עותק אחד בלבד.
+    if (document.getElementById('sw-update-banner')) return;
     if (!document.body) return;
     var bar = document.createElement('div');
     bar.id = 'sw-update-banner';
-    bar._updVersion = version || null;
     bar.setAttribute('dir', 'rtl');
     bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1E6FBF,#0D4A8A);color:#fff;padding:10px 16px;border-radius:26px;box-shadow:0 6px 24px rgba(0,0,0,.28);z-index:10001;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;max-width:92vw';
     var txt = document.createElement('span');
@@ -82,17 +76,13 @@
     close.setAttribute('aria-label', 'סגור');
     close.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;padding:0 2px;font-family:Heebo,sans-serif;line-height:1';
     close.onclick = function() {
-      // dismiss — לזכור את הגרסה שנדחתה כדי לא להציק עליה שוב
-      if (bar._updVersion) {
-        if (window.lsSet) window.lsSet(DISMISS_KEY, bar._updVersion);
-      }
       if (bar.parentNode) bar.parentNode.removeChild(bar);
     };
     bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
     document.body.appendChild(bar);
   };
 
-  if (!('serviceWorker' in navigator)) return;   // בדיקת ה-raw עדיין עובדת
+  if (!('serviceWorker' in navigator)) return;   // אין SW — אין מי שיזהה עדכון
 
   window.addEventListener('load', function() {
     // מטפל ה-install של ה-service worker קורא ל-skipWaiting() מעצמו, ולכן
