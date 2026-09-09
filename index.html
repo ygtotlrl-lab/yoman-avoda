@@ -614,6 +614,7 @@ body.locked{overflow:hidden}
         <div class="qlbl">תת-משימה</div>
         <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
       </div>
+      <div class="ksave">
       <div class="inp-grid">
         <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
         <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
@@ -625,7 +626,8 @@ body.locked{overflow:hidden}
       <button class="btn-add"
         ontouchstart="this.classList.add('btn-flash')"
         ontouchend="addEntry(); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500); event.preventDefault();"
-        data-act="add-entry">+ הוסף לסדר היום</button>
+        data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
+      </div>
 
     </div>
   </div>
@@ -3262,6 +3264,7 @@ async function sbSet(key, value) {
 
 // אותה קריאה, עם התוצאה משומרת: {ok, data, error}.
 // מפתח חסר (PGRST116 מ-single()) הוא תוצאה ריקה, לא כישלון.
+var BAD_VALUE = "ערך פגום בענן";
 async function sbGetResult(key) {
   var tbl = KV_TABLE;   // ר' הנימוק ב-sbSet — הטבלה נלכדת ואינה נקראת מהגלובלי
   try {
@@ -3272,7 +3275,15 @@ async function sbGetResult(key) {
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
       return { ok: missing, data: null, error: missing ? null : (res.error.message || "שגיאת שרת") };
     }
-    return { ok: true, data: res.data ? JSON.parse(res.data.value) : null, error: null };
+    if (!res.data) return { ok: true, data: null, error: null };
+    /*  ⛔ «אין ערך» ו«ערך פגום» אינן אותה תשובה — ⚠️ שתיהן חזרו «נכשל»,
+     *  ⭐ והטוסט מנה מפתח בלי לומר מה קרה בו: ⛔ ומי שקרא אותו חיפש רשת
+     *  שלא נפלה. */
+    try { return { ok: true, data: JSON.parse(res.data.value), error: null }; }
+    catch (pe) {
+      console.error("[sync] " + BAD_VALUE + " [" + key + "]:", pe);
+      return { ok: false, data: null, error: BAD_VALUE };
+    }
   } catch(e) {
     console.error("sbGet exception [" + key + "]:", e);
     return { ok: false, data: null, error: (e && e.message) || String(e) };
@@ -4262,7 +4273,7 @@ async function syncFromCloud() {
   var _ep = ctxEpoch();
   async function pull(key, label) {
     var r = await sbGetResult(key);
-    if (!r.ok) failed.push(label);
+    if (!r.ok) failed.push(label + (r.error === BAD_VALUE ? " (" + BAD_VALUE + ")" : ""));
     return r.data;
   }
   try {
@@ -5238,6 +5249,35 @@ function uniqHas(list, val, keyFn) {
   return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
 }
 /* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
+/* ═══ Enter שומר בשדה עריכה — מודול משותף (סבב 125) ═════════════════════
+   ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
+      ⛔ ולא השדה: ⭐ שדה שנוסף לטופס קיים מקבל את המקש בלי שאיש ייגע בו,
+      ⚠️ ומטפל פר-שדה נשכח בשדה הבא שנוסף.
+   ⛔ והכפתור מסומן — ⚠️ `data-ksave` לשמירה ו-`data-kesc` לביטול: ⭐ בטופס
+      יושב יותר מכפתור אחד, ⛔ ובחירה לפי סדר הייתה מפעילה את הראשון.
+   ⛔ והניתוב הוא **מפת הפעולות** — ⚠️ הכפתור נמצא בתוך ההיקף והפעולה שלו
+      מופעלת: ⭐ מסלול שמירה שני מתיישן ברגע שהראשון משתנה.
+   ⛔ ו-`textarea` אינו נכנס — ⚠️ `Enter` בו הוא שורה חדשה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+function ksFire(scope, attr) {
+  var b = scope.querySelector('[' + attr + ']');
+  if (!b || b.disabled) return false;
+  var act = b.getAttribute('data-act');
+  var fn = DOM_ACTIONS[act];
+  if (!fn) { console.error('[ks] כפתור ' + attr + ' בלי פעולה במפה: ' + act); return false; }
+  fn(b);
+  return true;
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter' && e.key !== 'Escape') return;
+  var t = e.target;
+  if (!t || t.tagName !== 'INPUT' || !t.closest) return;
+  var scope = t.closest('.ksave');
+  if (!scope) return;
+  if (ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) e.preventDefault();
+});
+/* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 document.addEventListener('keydown', function (e) {
@@ -5774,9 +5814,9 @@ function renderSettings() {
                 }).join('')
               + '</div>';
           }
-          var addSubRow = '<div style="display:flex;gap:4px;margin-top:4px">'
+          var addSubRow = '<div class="ksave" style="display:flex;gap:4px;margin-top:4px">'
             + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
-            + '<button class="btn-mini" data-act="cat-sub-add" data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
+            + '<button class="btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
             + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
@@ -5794,9 +5834,9 @@ function renderSettings() {
             + addSubRow
             + '</div>';
         }).join('')
-      + '<div class="set-add-row" style="margin-top:8px">'
+      + '<div class="set-add-row ksave" style="margin-top:8px">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
-      + '<button class="btn-mini" data-act="cat-task-add" data-ci="' + ci + '">+ הוסף</button>'
+      + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
@@ -6255,7 +6295,7 @@ function renderArcDetail() {
   if (arcEditMode) {
     html += '<div style="border-top:2px dashed var(--accent);margin-top:10px;padding-top:10px">'+
       '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
+      '<div class="ksave" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
@@ -6263,7 +6303,7 @@ function renderArcDetail() {
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
-      '<button class="btn-mini" data-act="arc-add-entry" style="white-space:nowrap">+ הוסף</button>'+
+      '<button class="btn-mini" data-act="arc-add-entry" data-ksave style="white-space:nowrap">+ הוסף</button>'+
       '</div></div>';
   }
 
@@ -7035,14 +7075,15 @@ function editEntry(id) {
   var container = row.closest('.entry-row');
   if(!container) return;
   var div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
   div.innerHTML =
+    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;">' +
     '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
     '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button data-act="entry-save" data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="entry-edit-cancel" data-kesc style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
+    '</div>';
   container.innerHTML = '';
   container.appendChild(div);
   // קובע את הערכים ישירות ב-JS — מונע לחלוטין בעיות בריחת HTML
@@ -7087,13 +7128,13 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
+    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button data-act="arc-entry-save" data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
 }
 
@@ -7143,43 +7184,12 @@ function arcSaveEntry(gdateKey, entryId) {
   toast(MSG_SAVED);
 }
 
-// תמיכה במקש Enter בלשוניות ההזנה והעריכה
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
-  var id = e.target.id || '';
-  // שדות לשונית ההזנה: taskInput, subInput, countInput, notesInput
-  if (id === 'taskInput' || id === 'subInput' || id === 'countInput' || id === 'notesInput') {
-    e.preventDefault();
-    if (typeof addEntry === 'function') addEntry();
-    return;
-  }
-  // שדות המשימה החדשה בלשונית העריכה: snewtask-ci
-  if (id.startsWith('snewtask-')) {
-    e.preventDefault();
-    // ⛔ `ci` הוא **אינדקס במערך** שנחלץ ממזהה DOM — ⚠️ ולא מזהה רשומה:
-    //    ⭐ ולכן הוא נבדק כספרות לפני ההמרה, ⛔ ו-`NaN` אינו מגיע ל-`CATS[ci]`.
-    var ciRaw = id.replace('snewtask-', '');
-    if (!/^[0-9]+$/.test(ciRaw)) return;
-    var ci = Number(ciRaw);
-    if (typeof addTask === 'function') addTask(ci);
-    return;
-  }
-  // שדות תת-המשימה החדשה בלשונית העריכה: snewsub-ci-ti
-  if (id.startsWith('snewsub-')) {
-    e.preventDefault();
-    var parts = id.replace('snewsub-', '').split('-');
-    if (!/^[0-9]+$/.test(parts[0]) || !/^[0-9]+$/.test(parts[1])) return;
-    var ci = Number(parts[0]), ti = Number(parts[1]);
-    if (typeof addSub === 'function') addSub(ci, ti);
-    return;
-  }
-});
 </script>
 <!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68) — ⚠️ פתיחה, סגירה,
      מיקוד, Escape ונעילת הגלילה חיים במקום אחד; ⛔ בדפוס הדינמי כל דיאלוג
      מממש אותם מחדש, ודיאלוג שמפספס אחד מהם נראה תקין עד שלוחצים Escape. -->
 <div class="veil" id="modal">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
