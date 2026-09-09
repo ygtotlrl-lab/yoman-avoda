@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>יומן עבודה</title>
-<!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
-     יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,6 +21,12 @@
 (function() {
   var userAccepted = false;
   var reloaded = false;
+  /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
+   *  מפיל**: את הרענון האוטומטי שבהשתלטות. ⛔ **ולמה הוא קיים**: רענון
+   *  באמצע הקלדה מאבד את מה שהוקלד, ⚠️ ורענון על דף שאיש לא נגע בו
+   *  אינו מאבד דבר. */
+  var touched = false;
+  function markTouched() { touched = true; }
   var swReg = null;                       // נקבע כשה-service worker נרשם (אם בכלל)
   function doReload() {
     if (reloaded) return;
@@ -81,16 +85,30 @@
   if (!('serviceWorker' in navigator)) return;   // אין SW — אין מי שיזהה עדכון
 
   window.addEventListener('load', function() {
-    // מטפל ה-install של ה-service worker קורא ל-skipWaiting() מעצמו, ולכן
-    // controllerchange נורה בכל עדכון גם בלי הסכמת המשתמש — והשומר שלמטה
-    // הוא מה שמונע רענון אוטומטי באמצע העבודה.
+    ['pointerdown', 'keydown'].forEach(function(ev) {
+      window.addEventListener(ev, markTouched, { once: true, capture: true });
+    });
+
+    /*  ⛔ ההשתלטות אינה שלמה בלי הרענון — ⚠️ **הנימוק המדוד**: `skipWaiting`
+     *  ו-`clients.claim()` שניהם רצים, ⭐ וה-service worker אכן מתחלף
+     *  ומכניס `index.html` חדש למטמון — ⛔ אבל הלשונית ממשיכה להריץ את
+     *  ה-JS **שכבר בזיכרון**: ⚠️ המכשיר קיבל את הקוד החדש והמשיך להריץ
+     *  את הישן, ⭐ עד שמישהו יילחץ על הבאנר. ⛔ **ודף שאיש לא נגע בו
+     *  נטען מחדש מיד** — ⚠️ ואחרי מגע חוזרים לבאנר, ⭐ שרענון באמצע
+     *  עבודה מאבד אותה. */
     navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (!userAccepted || reloaded) return;
+      if (reloaded) return;
+      if (!userAccepted && touched) { window.showAppUpdateBanner(); return; }
       reloaded = true;
       location.reload();
     });
 
-    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+    /*  ⛔ `updateViaCache: 'none'` — ⚠️ ברירת המחדל `'imports'` מתירה
+     *  לדפדפן לענות ל-`reg.update()` מתוך מטמון ה-HTTP: ⭐ GitHub Pages
+     *  מגיש את `sw.js` עם `max-age`, ⛔ והבדיקה משווה את הקובץ מול עותק
+     *  ישן של עצמו ⛔ ומסיקה «לא השתנה» — ⚠️ כלומר מנגנון הזיהוי היחיד
+     *  שיש נשאל ומשיב על נתון שאינו הפריסה. */
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then(function(reg) {
       console.log('[sw] registered:', reg.scope);
       swReg = reg;
 
@@ -3927,10 +3945,18 @@ function delSubKey(sk, ts) {
   SUBS_META[k] = metaDel(ts);
   delete SUBS[k];
 }
-/*  ⛔ עידן ה-`SUBS` — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
- *  שראה עידן ישן **זורק** את המפה המקומית ומושך מלא, ⛔ בלי מיזוג — ⚠️ פעם
+/*  ⛔ עידן ערך מפתח-ערך — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
+ *  שראה עידן ישן **זורק** את העותק המקומי ומושך מלא, ⛔ בלי מיזוג — ⚠️ פעם
  *  אחת, ⭐ ואז חוזר למיזוג הרגיל: ⛔ בלעדיו ניקוי בענן נדרס תוך שניות בידי
- *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי. */
+ *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי.
+ *  ⛔ **ולכל ערך שהמכשיר ממזג יש עידן** — ⚠️ תיקון בקוד אינו מנקה מכשיר
+ *  שכבר מזוהם, ⭐ והעידן הוא הכלי היחיד שמגיע אליו מהענן: ⛔ ולכן שני
+ *  המפתחות יושבים כאן ⛔ ולא כל אחד ליד הקוד שלו.
+ *  ⚠️ **ו-`tb_subs_meta` חולק את עידן ה-`tb_subs`** — ⭐ שניהם נזרקים
+ *  באותו ענף, ⛔ ומספר שני לענף אחד היה מתיר למפה ולחותמות שלה להיזרק
+ *  בנפרד: ⚠️ מפה בלי החותמות שלה חוזרת במיזוג הראשון. */
+var CATS_EPOCH_KEY = 'tb_cats_epoch';
+var _catsEpochSeen = 0;
 var SUBS_EPOCH_KEY = 'tb_subs_epoch';
 var _subsEpochSeen = 0;
 function saveSubs() {
@@ -4236,13 +4262,29 @@ async function syncFromCloud() {
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
+    var cloudCatsEpoch = Number(await pull(CATS_EPOCH_KEY, 'עידן קטגוריות')) || 0;
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
-    if (cloudCats && cloudCats.length) {
-      CATS = mergeCats(CATS, cloudCats);
-      lsSet('tb_cats'+LS, JSON.stringify(CATS));
-      sbSet('tb_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
+    if (cloudCats) {
+      /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את הרשימה
+       *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
+       *  בדיוק את מה שזה עתה נוקה בו.
+       *  ⛔ **והוא נבדק לפני האורך** — ⚠️ כאן, ובניגוד ל-`SUBS`, המיזוג
+       *  מותנה ברשימה לא-ריקה: ⭐ רשימה שרוקנה בענן בכוונה מגיעה ריקה,
+       *  ⛔ ותנאי אורך שקודם לעידן היה מדלג עליה — ⚠️ והמכשיר המזוהם
+       *  היה דוחף את שלו חזרה בסבב הבא. */
+      if (cloudCatsEpoch > _catsEpochSeen) {
+        CATS = Array.isArray(cloudCats) ? cloudCats : [];
+        _catsEpochSeen = cloudCatsEpoch;
+        lsSet(CATS_EPOCH_KEY+LS, JSON.stringify(cloudCatsEpoch));
+        lsSet('tb_cats'+LS, JSON.stringify(CATS));
+        console.log('[sync] עידן קטגוריות ' + cloudCatsEpoch + ' — העותק המקומי נזרק ונמשך מלא');
+      } else if (cloudCats.length) {
+        CATS = mergeCats(CATS, cloudCats);
+        lsSet('tb_cats'+LS, JSON.stringify(CATS));
+        sbSet('tb_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
+      }
     }
 
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
@@ -6612,6 +6654,7 @@ function loadLocalData() {
     // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
     // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
     SUBS_META = lsRead("tb_subs_meta"+LS, null, 'object') || {};
+    _catsEpochSeen = Number(lsRead(CATS_EPOCH_KEY+LS, 0)) || 0;
     _subsEpochSeen = Number(lsRead(SUBS_EPOCH_KEY+LS, 0)) || 0;
     ENTRIES = lsRead("tb_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
@@ -6638,6 +6681,7 @@ function loadLocalData() {
     if (!Array.isArray(CATS)) CATS = [];
     if (!SUBS || typeof SUBS !== 'object') SUBS = {};
     if (!SUBS_META || typeof SUBS_META !== 'object') SUBS_META = {};
+    if (!isFinite(_catsEpochSeen)) _catsEpochSeen = 0;
     if (!isFinite(_subsEpochSeen)) _subsEpochSeen = 0;
     if (!Array.isArray(ENTRIES)) ENTRIES = [];
     if (!Array.isArray(ARCHIVE)) ARCHIVE = [];
@@ -6801,6 +6845,7 @@ function ysResetTenantState() {
   CATS = [];
   SUBS = {};
   SUBS_META = {};
+  _catsEpochSeen = 0;
   _subsEpochSeen = 0;
   arcSelYear = null;
   arcSelMonth = null;
