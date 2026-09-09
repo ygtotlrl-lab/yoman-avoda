@@ -96,8 +96,13 @@
      *  את הישן, ⭐ עד שמישהו יילחץ על הבאנר. ⛔ **ודף שאיש לא נגע בו
      *  נטען מחדש מיד** — ⚠️ ואחרי מגע חוזרים לבאנר, ⭐ שרענון באמצע
      *  עבודה מאבד אותה. */
+    /*  ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר,
+     *  ⭐ וה-`clients.claim()` של העובד הראשון יורה `controllerchange`
+     *  על דף שכבר מריץ את הקוד החדש: ⛔ רענון שם הוא טעינה שנייה
+     *  שאינה משנה דבר. */
+    var hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (reloaded) return;
+      if (reloaded || !hadController) return;
       if (!userAccepted && touched) { window.showAppUpdateBanner(); return; }
       reloaded = true;
       location.reload();
@@ -3945,20 +3950,25 @@ function delSubKey(sk, ts) {
   SUBS_META[k] = metaDel(ts);
   delete SUBS[k];
 }
-/*  ⛔ עידן ערך מפתח-ערך — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
- *  שראה עידן ישן **זורק** את העותק המקומי ומושך מלא, ⛔ בלי מיזוג — ⚠️ פעם
+/*  ⛔ חותמת ניקוי של ערך מפתח-ערך — ⚠️ חותמת בענן שמכריזה «העותק המקומי
+ *  מזוהם»: ⭐ מכשיר שראה חותמת ישנה **זורק** את העותק המקומי ומושך מלא,
+ *  ⛔ בלי מיזוג — ⚠️ פעם
  *  אחת, ⭐ ואז חוזר למיזוג הרגיל: ⛔ בלעדיו ניקוי בענן נדרס תוך שניות בידי
  *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי.
- *  ⛔ **ולכל ערך שהמכשיר ממזג יש עידן** — ⚠️ תיקון בקוד אינו מנקה מכשיר
- *  שכבר מזוהם, ⭐ והעידן הוא הכלי היחיד שמגיע אליו מהענן: ⛔ ולכן שני
- *  המפתחות יושבים כאן ⛔ ולא כל אחד ליד הקוד שלו.
- *  ⚠️ **ו-`tb_subs_meta` חולק את עידן ה-`tb_subs`** — ⭐ שניהם נזרקים
- *  באותו ענף, ⛔ ומספר שני לענף אחד היה מתיר למפה ולחותמות שלה להיזרק
- *  בנפרד: ⚠️ מפה בלי החותמות שלה חוזרת במיזוג הראשון. */
-var CATS_EPOCH_KEY = 'tb_cats_epoch';
-var _catsEpochSeen = 0;
-var SUBS_EPOCH_KEY = 'tb_subs_epoch';
-var _subsEpochSeen = 0;
+ *  ⛔ **ולכל ערך שהמכשיר ממזג יש סימן כזה** — ⚠️ תיקון בקוד אינו מנקה
+ *  מכשיר שכבר מזוהם, ⭐ והסימן הוא הכלי היחיד שמגיע אליו מהענן: ⛔ ולכן
+ *  שני המפתחות יושבים כאן ⛔ ולא כל אחד ליד הקוד שלו.
+ *  ⛔ **והסימן הוא חותמת ISO ולא מונה** — ⚠️ מספר סידורי אינו אומר מה
+ *  נוקה ומתי, ⭐ ומי שפותח את המסד רואה «2» ואינו יודע דבר: ⛔ וחותמת
+ *  מתעדת את עצמה. ⚠️ **והשוואת מחרוזות ISO היא השוואה כרונולוגית**,
+ *  ⭐ ואין צורך בהמרה.
+ *  ⚠️ **ו-`tb_subs_meta` חולק את חותמת ה-`tb_subs`** — ⭐ שניהם נזרקים
+ *  באותו ענף, ⛔ ושתי חותמות לענף אחד היו מתירות למפה ולחותמות שלה
+ *  להיזרק בנפרד: ⚠️ מפה בלי החותמות שלה חוזרת במיזוג הראשון. */
+var CATS_RESET_KEY = 'tb_cats_reset';
+var _catsResetSeen = '';
+var SUBS_RESET_KEY = 'tb_subs_reset';
+var _subsResetSeen = '';
 function saveSubs() {
   lsSet("tb_subs"+LS, JSON.stringify(SUBS));
   lsSet("tb_subs_meta"+LS, JSON.stringify(SUBS_META));
@@ -4262,24 +4272,24 @@ async function syncFromCloud() {
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
-    var cloudCatsEpoch = Number(await pull(CATS_EPOCH_KEY, 'עידן קטגוריות')) || 0;
+    var cloudCatsReset = String(await pull(CATS_RESET_KEY, 'חותמת ניקוי קטגוריות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudCats) {
-      /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את הרשימה
-       *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
-       *  בדיוק את מה שזה עתה נוקה בו.
-       *  ⛔ **והוא נבדק לפני האורך** — ⚠️ כאן, ובניגוד ל-`SUBS`, המיזוג
+      /*  ⛔ החותמת קודמת למיזוג — ⚠️ מכשיר שראה חותמת ישנה זורק את
+       *  הרשימה המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה
+       *  מחזירה לענן בדיוק את מה שזה עתה נוקה בו.
+       *  ⛔ **והיא נבדקת לפני האורך** — ⚠️ כאן, ובניגוד ל-`SUBS`, המיזוג
        *  מותנה ברשימה לא-ריקה: ⭐ רשימה שרוקנה בענן בכוונה מגיעה ריקה,
-       *  ⛔ ותנאי אורך שקודם לעידן היה מדלג עליה — ⚠️ והמכשיר המזוהם
+       *  ⛔ ותנאי אורך שקודם לחותמת היה מדלג עליה — ⚠️ והמכשיר המזוהם
        *  היה דוחף את שלו חזרה בסבב הבא. */
-      if (cloudCatsEpoch > _catsEpochSeen) {
+      if (cloudCatsReset > _catsResetSeen) {
         CATS = Array.isArray(cloudCats) ? cloudCats : [];
-        _catsEpochSeen = cloudCatsEpoch;
-        lsSet(CATS_EPOCH_KEY+LS, JSON.stringify(cloudCatsEpoch));
+        _catsResetSeen = cloudCatsReset;
+        lsSet(CATS_RESET_KEY+LS, JSON.stringify(cloudCatsReset));
         lsSet('tb_cats'+LS, JSON.stringify(CATS));
-        console.log('[sync] עידן קטגוריות ' + cloudCatsEpoch + ' — העותק המקומי נזרק ונמשך מלא');
+        console.log('[sync] ניקוי קטגוריות ' + cloudCatsReset + ' — העותק המקומי נזרק ונמשך מלא');
       } else if (cloudCats.length) {
         CATS = mergeCats(CATS, cloudCats);
         lsSet('tb_cats'+LS, JSON.stringify(CATS));
@@ -4290,22 +4300,22 @@ async function syncFromCloud() {
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
-    var cloudSubsEpoch = Number(await pull(SUBS_EPOCH_KEY, 'עידן תתי-משימות')) || 0;
+    var cloudSubsReset = String(await pull(SUBS_RESET_KEY, 'חותמת ניקוי תתי-משימות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
-      /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את המפה
+      /*  ⛔ החותמת קודמת למיזוג — ⚠️ מכשיר שראה חותמת ישנה זורק את המפה
        *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
        *  בדיוק את מה שזה עתה נוקה בו. */
-      if (cloudSubsEpoch > _subsEpochSeen) {
+      if (cloudSubsReset > _subsResetSeen) {
         SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
         SUBS_META = (cloudSubsMeta && typeof cloudSubsMeta === 'object') ? cloudSubsMeta : {};
-        _subsEpochSeen = cloudSubsEpoch;
-        lsSet(SUBS_EPOCH_KEY+LS, JSON.stringify(cloudSubsEpoch));
+        _subsResetSeen = cloudSubsReset;
+        lsSet(SUBS_RESET_KEY+LS, JSON.stringify(cloudSubsReset));
         lsSet('tb_subs'+LS, JSON.stringify(SUBS));
         lsSet('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
-        console.log('[sync] עידן תתי-משימות ' + cloudSubsEpoch + ' — העותק המקומי נזרק ונמשך מלא');
+        console.log('[sync] ניקוי תתי-משימות ' + cloudSubsReset + ' — העותק המקומי נזרק ונמשך מלא');
       } else {
         var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
         SUBS = ms.subs; SUBS_META = ms.meta;
@@ -6654,8 +6664,8 @@ function loadLocalData() {
     // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
     // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
     SUBS_META = lsRead("tb_subs_meta"+LS, null, 'object') || {};
-    _catsEpochSeen = Number(lsRead(CATS_EPOCH_KEY+LS, 0)) || 0;
-    _subsEpochSeen = Number(lsRead(SUBS_EPOCH_KEY+LS, 0)) || 0;
+    _catsResetSeen = String(lsRead(CATS_RESET_KEY+LS, '') || '');
+    _subsResetSeen = String(lsRead(SUBS_RESET_KEY+LS, '') || '');
     ENTRIES = lsRead("tb_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
@@ -6681,8 +6691,8 @@ function loadLocalData() {
     if (!Array.isArray(CATS)) CATS = [];
     if (!SUBS || typeof SUBS !== 'object') SUBS = {};
     if (!SUBS_META || typeof SUBS_META !== 'object') SUBS_META = {};
-    if (!isFinite(_catsEpochSeen)) _catsEpochSeen = 0;
-    if (!isFinite(_subsEpochSeen)) _subsEpochSeen = 0;
+    if (typeof _catsResetSeen !== 'string') _catsResetSeen = '';
+    if (typeof _subsResetSeen !== 'string') _subsResetSeen = '';
     if (!Array.isArray(ENTRIES)) ENTRIES = [];
     if (!Array.isArray(ARCHIVE)) ARCHIVE = [];
   }
@@ -6845,8 +6855,8 @@ function ysResetTenantState() {
   CATS = [];
   SUBS = {};
   SUBS_META = {};
-  _catsEpochSeen = 0;
-  _subsEpochSeen = 0;
+  _catsResetSeen = '';
+  _subsResetSeen = '';
   arcSelYear = null;
   arcSelMonth = null;
   arcSelDayKey = null;
