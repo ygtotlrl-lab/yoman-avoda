@@ -49,37 +49,32 @@ const APP = {
       ⛔ תא בלי `defect` חייב להישאר זהה אחרי האיחוד — הפרש הוא עצירה. */
   expects: {
     'nav-online':            'body:NET-OK|status:200',
-    'nav-offline-cached':    'body:CORE-ROOT|status:200',
-    'nav-offline-empty':     'body:html|status:503',
+    'nav-offline-cached':    'body:CORE-INDEX|status:200',
+    'nav-offline-empty':     'body:html|status:200',
     'nav-offline-query':     'body:CORE-INDEX|status:200',
-    'sub-cached-online':     'body:NET-OK|status:200',
+    'sub-cached-online':     'body:CORE-ASSET|status:200',
     'sub-cached-offline':    'body:CORE-ASSET|status:200',
-    /* ⭐ תוקן בסבב 42ג (שלב א2): תת-משאב שנכשל קיבל כאן את **דף
-       האופליין** — כלומר HTML בגוף תשובה של תג script, שגיאת תחביר בדף
-       ולא הודעה למשתמש. ⛔ דף האופליין הוא למסלול הניווט בלבד; תת-משאב
-       חסר מקבל שגיאת רשת אמיתית. */
-    'sub-missing-offline':   'network-error',
+    'sub-missing-offline':   'body:empty|status:504',
     'sub-404':               'body:NET-404|status:404',
     'sub-404-stored':        'not-stored',
     'supabase':              'passthrough',
-    'cdn-cached-online':     'body:NET-OK|status:200',
+    'cdn-cached-online':     'body:CDN-0|status:200',
     'version-probe':         'passthrough',
     'non-get':               'passthrough',
     'sweep-scope':           'sister-app-v9,%CACHE%',
   },
   defectCount: 0,
-  /*  ⚠️ ידיות המדיניות **נמדדו בסבב 40 ונשמרו** — ⛔ אינן ברירת מחדל
-   *  שנפלה מאליה, ואין לשנות אף אחת מהן «לשם אחידות» (סבב 42ג).
-   *  ⚠️ `skipHosts` כאן אינו ריק — רק ליומן יש אוטו-אפדייט שמושך
-   *  מ-raw.githubusercontent, וכלל שנכתב על מה שאינו קיים הוא הצהרה. */
+  /*  ⚠️ ידיות המדיניות **נמדדו** ברתמת קו-הבסיס — ⛔ אינן ברירת מחדל
+   *  שנפלה מאליה, ⭐ **ושבע מהן זהות בארבעתן**: ⚠️ מה שנבדל הוא
+   *  `prefix` ו-`cdnHosts` בלבד, ⛔ וכל סטייה נוספת מוצהרת בשמה. */
   cfg: {
     prefix: "'yoman-avoda-'",
-    scoped: 'false',
-    navFallback: "'request'",
-    navIgnoreSearch: 'false',
-    subStrategy: "'network-first'",
-    subMiss: "'error'",
-    offlineStatus: '503',
+    scoped: 'true',
+    navFallback: "'shell'",
+    navIgnoreSearch: 'true',
+    subStrategy: "'cache-first'",
+    subMiss: "'504'",
+    offlineStatus: '200',
     skipWaiting: 'true',
   },
 };

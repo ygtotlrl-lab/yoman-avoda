@@ -973,7 +973,7 @@ function lsUsage() {
       try { v = localStorage.getItem(k) || ''; } catch (e) { }
       var b = lsEntryBytes(k, v), a = lsAppOf(k);
       out.total += b;
-      out.keys.push({ key: k, bytes: b, app: a.id, appName: a.name });
+      out.keys.push({ key: k, bytes: b, app: a.id });
       if (!byApp[a.id]) byApp[a.id] = { id: a.id, name: a.name, bytes: 0, count: 0 };
       byApp[a.id].bytes += b; byApp[a.id].count++;
     }
@@ -1521,7 +1521,7 @@ function lsStatusHTML() {
   h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
   u.keys.slice(0, 12).forEach(function (k) {
     h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
-         '<span style="opacity:.6"> · ' + esc(k.appName) + '</span></td>' +
+         '<span style="opacity:.6"> · ' + esc(lsAppOf(k.key).name) + '</span></td>' +
          '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
   });
   if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';
@@ -4675,6 +4675,18 @@ let CATS = [];
 let SUBS = {};
 let ENTRIES = [];
 
+/*  ⛔ **נקודת הגזירה האחת של שם הקטגוריה** — ⚠️ הרשומה נושאת את האות
+ *  בלבד, ⭐ והשם נקרא מ-`CATS` הנוכחי בכל תצוגה: ⛔ שם ששמור ברשומה
+ *  מתיישן בשקט — ⚠️ קטגוריה ששמה שונה משאירה את הישן לנצח, ⭐ ורשומה
+ *  שנוצרה במוסד אחד נשאה את שמו גם אחרי מעבר למוסד השני.
+ *  ⛔ **ונפילה-חזרה לשם השמור כשהאות אינה בטבלה הנוכחית** — ⚠️ בארכיון
+ *  יושבות רשומות תחת אות שנמחקה, ⭐ ובלעדיה שם היסטורי היה יורד לאות
+ *  עירומה. */
+function catNameOf(e) {
+  var c = CATS.find(function (x) { return x.letter === e.cat; });
+  return c ? c.name : (e.catName || e.cat);
+}
+
 let selCat = null;
 let selTask = null;
 let selSub = null;
@@ -4988,7 +5000,7 @@ function addEntry() {
     //    אינו ניתן להשוואה מספרית. ר' `entryOrderTs`.
     createdAt: now.getTime(),
     day: selDay, hdate: hdate, gdate: document.getElementById("gregDateInput").value.trim(),
-    cat: selCat.letter, catName: selCat.name,
+    cat: selCat.letter,
     task: task, sub: sub, notes: notes, count: count,
     updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
     // השעה הוסרה
@@ -5033,7 +5045,7 @@ function renderLog() {
     return '<div class="entry-row" style="border-right:4px solid ' + c.bg + '">'
       + '<div class="entry-badge" style="background:' + c.bg + '"></div>'
       + '<div class="entry-body">'
-      + '<div class="e-main">' + esc(e.catName) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
+      + '<div class="e-main">' + esc(catNameOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
@@ -5353,7 +5365,7 @@ function _buildReportDiv(cb, entries){
   var src = Array.isArray(entries) ? entries
           : liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   var sortedPDF = tbSortEntries(src);
-  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
+  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catNameOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
   var globalTaskIdx = 0;
@@ -6229,7 +6241,7 @@ function renderArcDetail() {
         (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
-        '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
+        '<span style="color:var(--textmid);font-size:11px">'+esc(catNameOf(e))+'</span>'+
         '<span style="color:#bbb">←</span>'+
         '<span style="font-weight:700;color:var(--text)">'+esc(e.task)+'</span>'+
         (e.sub ? '<span style="color:#bbb">→</span><span style="color:#888">'+esc(e.sub)+'</span>' : '')+
@@ -6299,8 +6311,7 @@ function arcAddEntry(gdateKey) {
   var notesSel = document.getElementById("arc-add-notes");
   if (!catSel || !taskSel) return;
   var letter = catSel.value;
-  var cat = CATS.find(function(c){ return c.letter === letter; });
-  if (!cat) return;
+  if (!CATS.some(function(c){ return c.letter === letter; })) return;
   // ⭐ סבב 38 — אותו דפוס בדיוק כמו ב-`addEntry`: מזהה מהמודול המשותף,
   //    וחותמת יצירה נפרדת לסדר.
   var _now = Date.now();
@@ -6308,7 +6319,7 @@ function arcAddEntry(gdateKey) {
     id: newClientId(),
     createdAt: _now,
     day: d.day, hdate: d.hdate, gdate: d.gdate,
-    cat: letter, catName: cat.name,
+    cat: letter,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
     updatedAt: _now
   };
