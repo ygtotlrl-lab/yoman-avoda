@@ -43,6 +43,10 @@ const APP = {
      מהקוד — הם נרשמים כאן במפורש, בשמם. */
   legacyKeys: ['rishon_tb_entries', 'rishon_tb_archive',
                'ramataviv_tb_entries', 'ramataviv_tb_archive'],
+  /*  ⛔ מפתחות גיבוי של אחות שרשימת-ההיתר המשותפת חייבת להכיל — ⚠️ **מה
+   *  נכנס**: שם מפתח שנכתב מריפו אחר. ⛔ **ומה מפיל**: מפתח כזה שאינו
+   *  ברשימה במסד. ⭐ **ולמה היא קיימת**: הרשימה אחת לכל הפרויקט —
+   *  ⛔ **וכאן אין מפתח של אחות**, ⚠️ וההצהרה ריקה ואינה נשמטת. */
   sisterKeys: [],
   migration: null,
   migrationDoc: 'hanhala-ruchanit/migrations/022_backup_allowlist_restore_ys_cls_years.sql',
