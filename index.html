@@ -24,6 +24,11 @@
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בארבעתן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
   --stale-ink:#a3341f;
+  /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בארבעתן,
+   *  ⭐ והגוון בלבד נבדל: ⛔ רכיב שמייצג את האפליקציה נגזר ממנו
+   *  ⛔ ולא מדיו הטקסט — ⚠️ ארבעה באנרים בארבעה גוונים נראו זהים.
+   *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
+  --brand:var(--accent); --on-brand:#1A2540;
 
   --primary-ink:#1E6FBF; --primary-fill:#1E6FBF;
   --primaryl:#3A8FDF; --primaryd:#0D4A8A;
@@ -38,6 +43,8 @@
 @media (prefers-color-scheme:dark){
   :root {
     --stale-ink:#ffb4a2;
+    --on-brand:#1A2540;
+
     --bg:#0d151d; --bgsec:#18242f; --bgcard:#131e29;
     --text:#e8eef5; --textmid:#c2cfdc; --textlite:#93a5b8;
     --border:#24333f;
@@ -353,16 +360,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 }
 #updater.show{display:flex}
 #updater .in{
-  background:var(--text);color:var(--bg);border-radius:14px;padding:11px 12px 11px 16px;
+  background:var(--brand);color:var(--on-brand);border-radius:14px;padding:11px 12px 11px 16px;
   display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px var(--shadow);
   font-size:14px;font-weight:700;max-width:520px;width:100%
 }
 #updater button{
-  margin-inline-start:auto;background:var(--bg);color:var(--text);border:0;border-radius:9px;
+  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:9px;
   padding:7px 14px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13.5px;flex:none
 }
 #updater button.x{
-  margin-inline-start:0;background:none;color:var(--bg);opacity:.7;padding:0 4px;font-size:15px
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 4px;font-size:15px
 }
 /* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
