@@ -1538,7 +1538,7 @@ function staleSchemaHalt(e) {
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
-    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
+    try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
 }
@@ -4391,14 +4391,14 @@ async function syncFromCloud() {
     if (failed.length === 0) {
       toast("✅ מסונכרן");
     } else if (failed.length >= 5) {
-      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר");
+      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר", null, 'bad');
     } else {
-      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "));
+      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "), null, 'bad');
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
     _tbNetWarned = true;
-    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר");
+    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר", null, 'bad');
   }
 }
 // ═══════════════════════════════════════
@@ -4989,8 +4989,8 @@ function addEntry() {
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
   var hdate = document.getElementById("hebDateInput").value.trim();
-  if (!selCat) { toast("⚠️ יש לבחור קטגוריה"); return; }
-  if (!task)   { toast("⚠️ יש להזין משימה"); return; }
+  if (!selCat) { toast("⚠️ יש לבחור קטגוריה", null, 'bad'); return; }
+  if (!task)   { toast("⚠️ יש להזין משימה", null, 'bad'); return; }
   var now = new Date();
   var entry = {
     // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורת מזהי הרשומות במטריצה).
@@ -5368,7 +5368,7 @@ function _printCanvas(canvas, title) {
   // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נפלה בשקט
   // ("w is null") והמשתמש לא ידע למה לא קרה כלום.
   if (!w || !w.document) {
-    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב");
+    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב", null, 'bad');
     return;
   }
   w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
@@ -5396,7 +5396,7 @@ function _reportError(div, e){
     (typeof html2canvas === 'undefined')
       ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
       : "⚠️ יצירת התמונה נכשלה — נסה שוב"
-  );
+  , null, 'bad');
 }
 // מחזירה תמיד promise, ⛔ ולעולם אינה זורקת סינכרונית (נרשם בסבב 67) —
 // זריקה סינכרונית כאן הייתה משאירה את פאנל הדוח על המסך עד רענון.
@@ -5508,7 +5508,7 @@ async function tbSyncPushNow() {
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום tb_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
-      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן");
+      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן", null, 'bad');
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
@@ -5519,7 +5519,7 @@ async function tbSyncPushNow() {
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
     if (ctxStale(_ep)) return;
-    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
+    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת", null, 'bad'); return; }
     PL_CFG.note(stampTs);
     toast("✅ נשמר בענן");
 }
@@ -5704,7 +5704,7 @@ function addSub(ci, ti) {
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
    *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
-  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000); return; }
+  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000, 'bad'); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5889,7 +5889,7 @@ function addTask(ci) {
    *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
    *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
    *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
-  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000); return; }
+  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000, 'bad'); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
@@ -6705,7 +6705,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      toast("⚠️ לא הצליח לטעון סנכרון", 2000);
+      toast("⚠️ לא הצליח לטעון סנכרון", 2000, 'bad');
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -7051,7 +7051,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[startApp] נכשל', e);
-    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן");
+    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן", null, 'bad');
   }
 }
 
@@ -7169,7 +7169,7 @@ function arcSaveEntry(gdateKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב'); return; }
+  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב', null, 'bad'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -7189,7 +7189,7 @@ function arcSaveEntry(gdateKey, entryId) {
     // אין מה לשמור — לא לשקר למשתמש
     console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
-    toast('⚠️ הרשומה לא נמצאה — לא נשמר');
+    toast('⚠️ הרשומה לא נמצאה — לא נשמר', null, 'bad');
     return;
   }
   pendMark(PK_ENTRY + entryId);
