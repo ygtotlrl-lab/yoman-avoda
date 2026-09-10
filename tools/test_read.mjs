@@ -117,7 +117,7 @@ const assert = (c, m) => (c ? ok(m) : bad(m));
 console.log('— סבב 55 (יומן): מקור הקריאה —');
 
 /* ── 1. הדפוס: טבלאות בלבד, ⛔ ובלי נפילה-חזרה ──────────────────────────── */
-const calls = (SRC.match(new RegExp(APP.rowsGet + "\\('", 'g')) || []).length;
+const calls = (SRC.match(new RegExp('(?<![\\w$.])' + APP.rowsGet + "\\('", 'g')) || []).length;
 assert(calls >= APP.minRowsGet,
   `1א · ${APP.rowsGet} נקראת ב-${calls} אתרים (≥${APP.minRowsGet})`);
 
@@ -338,7 +338,7 @@ console.log('— מוטציות —');
   const good = SRC.replace("    var _rowsA = await tbRowsGet('tb_archive');",
     "    await tbRowsGet('tb_entries');\n    var _rowsA = await tbRowsGet('tb_archive');");
   assert((good.match(reKv) || []).length === 0 &&
-         (good.match(new RegExp(APP.rowsGet + "\\('", 'g')) || []).length === calls + 1,
+         (good.match(new RegExp('(?<![\\w$.])' + APP.rowsGet + "\\('", 'g')) || []).length === calls + 1,
     'מוטציית-נגד: אתר קריאה נוסף מהטבלה — אינו מפיל את 1ב');
 }
 
