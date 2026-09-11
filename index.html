@@ -38,6 +38,7 @@
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text2:#4A5A7A; --textlite:#8A9ABB;
   --radius:12px;
+  --on-primary:#FFFFFF; --ok:#1A6A3A; --ok-bg:#E6F6EC; --warn-bg:#FFFBE6;
   --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
 }
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
@@ -50,6 +51,7 @@
     --bg:#0d151d; --card-2:#18242f; --card:#131e29;
     --text:#e8eef5; --text2:#c2cfdc; --textlite:#93a5b8;
     --border:#24333f;
+    --on-primary:#FFFFFF; --ok:#84DBA6; --ok-bg:#12251C; --warn-bg:#2B2012;
     --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
     --primaryl:#5AA6EE; --primaryd:#9EC8F2;
     --accent:#FFB930; --accentl:#FFC957;
@@ -800,7 +802,6 @@ function _tbVerify(kvKey) {
 
 /*  ⛔ שם המפתח הישן פר-אפליקציה — ⚠️ וההגירה שמוחקת אותו משותפת:
  *  ⭐ הקבוע כאן הוא מה שמפריד בין הגוף הזהה לערך שנבדל. */
-var BK_AT_LEGACY_KEY = 'tb_last_backup_at' + LS;
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
@@ -1372,19 +1373,11 @@ function lsBootDeferred() {
   return p.then(finish, function () { return finish(0); });
 }
 
-/*  ⛔ הגירה מקומית חד-פעמית (סבב 136) — ⚠️ חותמת «גובה לאחרונה»
- *  הייתה נקראת בשורת המצב בלבד, ⛔ והשורה ירדה: ⭐ מפתח שנכתב
- *  ואין לו קורא צורך את תקציב האחסון ⛔ ומאכיל את הפינוי האוטומטי.
- *  ⛔ **והיא אידמפוטנטית** — ⚠️ מחיקה בלבד, ⭐ וריצה שנייה אינה משנה דבר. */
-function migrateBackupAtKey() {
-  try { lsRemove(BK_AT_LEGACY_KEY); } catch (e) { }
-}
 /* ── בדיקת העלייה ───────────────────────────────────────────────────────
    נקראת פעם אחת בכל עליית אפליקציה, לפני שהמשתמש מספיק לכתוב משהו.
    **סינכרונית בכוונה** — היא חייבת לרוץ לפני הטעינה. כשיש מפתחות שניתן
    לאמת מול הענן, ההתרעה נדחית יחד עם האימות (`lsBootDeferred`). */
 function lsBoot(opts) {
-  migrateBackupAtKey();
   var u = lsUsage(), swept = 0;
   if (u.total >= u.quota * LS_SWEEP_PCT) {
     swept = lsSweepGuarded('פינוי יזום בעלייה — ' + Math.round(u.pct * 100) + '% מהמכסה',
@@ -5260,6 +5253,10 @@ function _renderReport(div){
 /*  ⛔ `entries` אופציונלי ⛔ ואינו נקודת הפעלה שנייה — ⚠️ המשמיט מקבל את
  *  רשומות היום, ⭐ והייצוא מוסר את רשומות הארכיון: ⛔ סינון קשיח ליום
  *  הנוכחי היה מוציא דוח ריק לכל יום שאינו היום. */
+/*  ⛔ צבעי הדוח ליטרלים בכוונה ⛔ ואינם אסימוני ערכה (סבב 137) — ⚠️ הדיב
+ *  הזה נצרב לתמונה ונשלח החוצה, ⭐ והתמונה חייבת להיראות אותו דבר לכל
+ *  מי שמקבל אותה: ⛔ אסימון שמתחלף עם מצב כהה היה שולח שני דוחות שונים
+ *  לאותו יום, ⚠️ לפי הערכה של מי שלחץ. */
 function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
@@ -5672,7 +5669,7 @@ function renderSettings() {
                     + 'ondragleave="subDragLeave(event)" '
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
-                    + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
+                    + '<span style="cursor:grab;color:var(--textlite);font-size:10px;margin-left:2px">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
@@ -6085,7 +6082,7 @@ function renderArcDays(year, month) {
   var nowKey = getTodayKey();
 
   if (!days.length) {
-    el.innerHTML = '<div style="color:#bbb;font-size:12px;padding:8px">אין רשומות לחודש זה</div>';
+    el.innerHTML = '<div style="color:var(--textlite);font-size:12px;padding:8px">אין רשומות לחודש זה</div>';
     return;
   }
 
@@ -6135,11 +6132,11 @@ function renderArcDetail() {
       '<div style="font-size:11px;color:var(--text2)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
+    (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:var(--ok-bg);color:var(--ok)">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
-    html += '<div style="color:#bbb;font-size:12px;text-align:center;padding:12px">אין רשומות</div>';
+    html += '<div style="color:var(--textlite);font-size:12px;text-align:center;padding:12px">אין רשומות</div>';
   } else {
     sortedE.forEach(function(e, ei) {
       var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
@@ -6148,10 +6145,10 @@ function renderArcDetail() {
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
         '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
         '<span style="color:var(--text2);font-size:11px">'+esc(catNameOf(e))+'</span>'+
-        '<span style="color:#bbb">←</span>'+
+        '<span style="color:var(--textlite)">←</span>'+
         '<span style="font-weight:700;color:var(--text)">'+esc(e.task)+'</span>'+
-        (e.sub ? '<span style="color:#bbb">→</span><span style="color:#888">'+esc(e.sub)+'</span>' : '')+
-        (e.notes ? '<span style="color:#aaa;font-size:10px;flex:1;text-align:left"> · '+esc(e.notes)+'</span>' : '<span style="flex:1"></span>')+
+        (e.sub ? '<span style="color:var(--textlite)">→</span><span style="color:var(--textlite)">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span style="color:var(--textlite);font-size:10px;flex:1;text-align:left"> · '+esc(e.notes)+'</span>' : '<span style="flex:1"></span>')+
         (e.count ? '<span style="color:var(--accent);font-size:10px;font-weight:700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
@@ -6785,7 +6782,7 @@ function ysPickYeshiva() {
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
     body += '<button class="btn-sm" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '"' +
-            ' style="background:var(--primary-fill);color:#fff;padding:14px;font-size:16px;font-weight:800' +
+            ' style="background:var(--primary-fill);color:var(--on-primary);padding:14px;font-size:16px;font-weight:800' +
             (cur ? ';opacity:.55' : '') + '">' + esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
@@ -6852,7 +6849,7 @@ function selectYeshiva(y) {
   //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
-    '<button class="btn-sm" style="background:#3A76F0;color:white" ' +
+    '<button class="btn-sm" style="background:var(--primary-fill);color:var(--on-primary)" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
@@ -6942,13 +6939,13 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;">' +
-    '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="entry-edit-cancel" data-kesc style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
+    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:var(--warn-bg);border-radius:6px;">' +
+    '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" style="padding:4px 10px;background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="entry-edit-cancel" data-kesc style="padding:4px 10px;background:var(--textlite);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
     '</div>';
   container.innerHTML = '';
   container.appendChild(div);
@@ -6992,13 +6989,13 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
-    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" data-kesc style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:var(--warn-bg);border-radius:6px;width:100%;">' +
+    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc style="padding:4px 10px;background:var(--textlite);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
     '</div>';
 }
 
