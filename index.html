@@ -37,7 +37,7 @@
   --accent:#F0A500; --accentl:#FFB930;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text2:#4A5A7A; --textlite:#8A9ABB;
-  --radius:12px;
+  --radius:var(--r-5);
   --on-primary:#FFFFFF; --ok:#1A6A3A; --ok-bg:#E6F6EC; --warn-bg:#FFFBE6;
   --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
 }
@@ -61,26 +61,26 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
-.app{max-width:960px;margin:0 auto;padding:14px;}
+.app{max-width:960px;margin:0 auto;padding:var(--sp-6);}
 
 /* כותרת עליונה */
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
-.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);border-radius:20px;padding:0;margin-bottom:20px;
+.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
   border:none;box-shadow:0 6px 28px rgba(21,88,160,0.35);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
-.hdr-logo-wrap{padding:0 18px;display:flex;align-items:center;justify-content:center;}
+.hdr-logo-wrap{padding:0 var(--sp-6);display:flex;align-items:center;justify-content:center;}
 /* ⛔ הסטה של 2% למעלה ⛔ ואינה מספר פיקסלים — ⚠️ איזון אופטי: העין תופסת
    מרכז מעט גבוה מהחישוב, ⭐ והאחוז נגזר מגובה הלוגו ונע איתו. */
-.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:8px;background:var(--card);padding:3px;
+.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-2);
   transform:translateY(-2%);}
 /* ⛔ הלוגו יושב בתוך כפתור אמיתי ⛔ ולא נושא `role="button"` — ⚠️ מסלול
    הפעלה אחד לעכבר ולמקלדת, ⭐ ובלי מאזין `keydown` שני לצד הדלגציה. */
 .hdr-logo-btn{background:none;border:none;padding:0;cursor:pointer;display:block;line-height:0;}
-.hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:10px;}
+.hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:var(--r-4);}
 
 /* מסך בחירת הישיבה — ⛔ צבעיו הם צבעי האייקון ⛔ ואינם ערכים שנבחרו כאן:
    ⚠️ מקור האמת הוא בלוק `APP` שב-`gen-icons.mjs` — `bg.start` · `bg.end`
@@ -91,57 +91,57 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 #yeshivaSelect{position:fixed;inset:0;z-index:10000;
   background:linear-gradient(141deg,#2A4E8C 0%,#0E2145 100%);
   color:#F7F4EB;display:flex;align-items:center;justify-content:center;
-  font-family:'Heebo',sans-serif;direction:rtl;padding:24px;overflow:auto;}
+  font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
-.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto 18px;fill:#F7F4EB;}
+.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:#F7F4EB;}
 /* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
    11+6 מעל ו-10+15.4 מתחת; ⭐ ולכן הכותרת נשארת באותה נקודה בדיוק, ⛔ ואין
    להחליפו ב-`margin` — הוא היה נבלע במרווח של «בחר ישיבה» שמתחתיו */
-.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:34px;font-weight:900;
-  letter-spacing:1px;line-height:1;margin:0;padding:17px 0 25.4px;}
-.ys-pick-lead{font-size:13px;font-weight:700;opacity:0.7;margin:26px 0 12px;}
-.ys-pick-btns{display:flex;flex-direction:column;gap:12px;}
+.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;
+  letter-spacing:1px;line-height:1;margin:0;padding:var(--sp-6) 0 var(--sp-7);}
+.ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:0.7;margin:var(--sp-7) 0 var(--sp-5);}
+.ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
 /* ⚠️ הכפתור שקוף על הגרדיאנט ⛔ ואינו לבן מלא — ⭐ מסגרת בדיו היא אותו
    מוטיב של הפסים, ⛔ ומשטח לבן היה מכניס גוון שלישי למסך. */
-.ys-pick-btn{padding:17px;font-family:'Heebo',sans-serif;font-size:18px;font-weight:800;
+.ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
   color:#F7F4EB;background:rgba(247,244,235,0.08);border:2px solid rgba(247,244,235,0.45);
-  border-radius:14px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
+  border-radius:var(--r-5);cursor:pointer;transition:background 0.18s,border-color 0.18s;}
 .ys-pick-btn:hover{background:rgba(247,244,235,0.18);border-color:#F7F4EB;}
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* ⛔ המרווח הוא מה שמפריד בין בחירה לקריאה — ⚠️ כפתור שלישי צמוד נקרא
    כישיבה שלישית, ⭐ והקו מעליו הוא הגבול. */
-.ys-pick-aside{margin-top:26px;padding-top:18px;border-top:1px solid rgba(247,244,235,0.18);}
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid rgba(247,244,235,0.18);}
 /* ⚠️ מובחן משני הכפתורים שמעליו בגודל ובעובי המסגרת ⛔ ולא בצבע — ⭐ גוון
    שלישי על הגרדיאנט היה שובר את המוטיב. */
-.ys-pick-alt{padding:11px 18px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;
+.ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
   color:#F7F4EB;background:transparent;border:1px dashed rgba(247,244,235,0.4);
-  border-radius:11px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
+  border-radius:var(--r-4);cursor:pointer;transition:background 0.18s,border-color 0.18s;}
 .ys-pick-alt:hover{background:rgba(247,244,235,0.10);border-color:rgba(247,244,235,0.75);}
 .ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
-.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 12px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:4px;margin-bottom:4px;}
-.hdr-title-wrap{position:relative;display:inline-block;padding-bottom:8px;}
-.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:28px;font-weight:900;color:#FFFFFF;letter-spacing:1px;line-height:1;}
+.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.hdr-bh{font-size:var(--fs-1);color:rgba(255,255,255,0.6);letter-spacing:4px;margin-bottom:var(--sp-2);}
+.hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
+.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:#FFFFFF;letter-spacing:1px;line-height:1;}
 
 .hdr-title-wrap::after{content:none;}
 /* ⛔ הכתובית בשורה אחת ⛔ ואינה נשברת — ⚠️ שם המוסד שנשבר לשתיים מזיז
    את גוש הטקסט שהלוגו ממורכז אליו, ⭐ ומקצר את הכרטיס במסך צר בלבד. */
-.hdr-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:8px;letter-spacing:0.3px;
+.hdr-sub{font-size:var(--fs-1);color:rgba(255,255,255,0.6);margin-top:var(--sp-4);letter-spacing:0.3px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ הרכיב שישב כאן
    הוסר והשאיר חלל שנראה כטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
-.hdr-div{height:1px;background:rgba(255,255,255,0.22);margin:0 22px;}
-.hdr-yechi{padding:9px 20px 12px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.9);
+.hdr-div{height:1px;background:rgba(255,255,255,0.22);margin:0 var(--sp-7);}
+.hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:rgba(255,255,255,0.9);
   letter-spacing:0.3px;line-height:1.4;text-align:center;}
 /* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
    נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
    בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
    את הגודל המלא. */
-.hdr-sub{font-size:8px;letter-spacing:0;}
-.hdr-logo-wrap{padding:0 12px;}
+.hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
+.hdr-logo-wrap{padding:0 var(--sp-5);}
 @media (min-width:360px){
-  .hdr-sub{font-size:10px;letter-spacing:0.3px;}
-  .hdr-logo-wrap{padding:0 18px;}
+  .hdr-sub{font-size:var(--fs-1);letter-spacing:0.3px;}
+  .hdr-logo-wrap{padding:0 var(--sp-6);}
 }
 /* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
    כאן לחלל שנשאר אחרי הלוגו ושורת «יחי» לכרטיס כולו, ⭐ ושני מרכזים במרחק
@@ -153,148 +153,148 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (min-width:900px){
   .hdr-top{position:relative;}
   .hdr-logo-wrap{position:absolute;top:0;bottom:0;right:0;}
-  .hdr-mid{padding:0 18px;}
+  .hdr-mid{padding:0 var(--sp-6);}
 }
 
 /* ניווט לעומק בארכיון */
-.arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:10px 14px;
-  font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;
+.arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);
+  font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;color:var(--text);cursor:pointer;
   transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
 .arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--card-2);}
 .arc-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
-.arc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
-.arc-crumb{font-size:12px;color:var(--text2);cursor:pointer;padding:3px 8px;border-radius:6px;
+.arc-grid{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:var(--sp-4);}
+.arc-crumb{font-size:var(--fs-2);color:var(--text2);cursor:pointer;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-2);
   background:var(--card-2);border:1px solid var(--border);transition:all 0.15s;}
 .arc-crumb:hover{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);}
-.arc-crumb-sep{color:#bbb;font-size:12px;}
-.arc-day-card{background:var(--card-2);border-radius:var(--radius);padding:14px;margin-bottom:10px;border:1.5px solid var(--border);}
+.arc-crumb-sep{color:#bbb;font-size:var(--fs-2);}
+.arc-day-card{background:var(--card-2);border-radius:var(--radius);padding:var(--sp-6);margin-bottom:var(--sp-5);border:1.5px solid var(--border);}
 .arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
-.arc-entry-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px;}
-.arc-entry-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:14px;padding:0 4px;line-height:1;flex-shrink:0;}
+.arc-entry-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) 0;border-top:1px solid var(--border);font-size:var(--fs-2);}
+.arc-entry-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:1;flex-shrink:0;}
 .arc-entry-del:hover{color:#cc3333;}
 
 /* לשוניות */
-.tabs{display:flex;gap:6px;margin-bottom:12px;}
+.tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .tab-btn{flex:1;background:var(--card);color:var(--text2);border:2px solid var(--border);
-  border-radius:11px;padding:10px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
+  border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
 .tab-btn:hover{background:var(--card-2);color:var(--primary-ink);border-color:var(--primary-ink);}
 .tab-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
 
 /* כרטיס */
-.card{background:var(--card);border-radius:16px;padding:18px;margin-bottom:12px;
+.card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
-.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:var(--primary-ink);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
-.card-ttl::before{content:"▸";color:var(--accent);font-size:13px;}
+.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--primary-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
+.card-ttl::before{content:"▸";color:var(--accent);font-size:var(--fs-3);}
 
 /* תאריך */
-.date-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.date-lbl{font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;}
-.day-chips{display:flex;gap:4px;flex-wrap:wrap;}
-.day-chip{background:var(--card-2);color:var(--text2);border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;
+.date-row{display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap;}
+.date-lbl{font-size:var(--fs-1);font-weight:700;color:var(--text2);white-space:nowrap;}
+.day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
+.day-chip{background:var(--card-2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
 .day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .day-chip.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
-.heb-inp{border:1.5px solid var(--border);border-radius:9px;padding:6px 11px;font-family:'Frank Ruhl Libre',serif;font-size:14px;
+.heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
   font-weight:700;background:var(--card);direction:rtl;min-width:155px;flex:1;color:var(--text);}
 .heb-inp:focus{outline:none;border-color:var(--primary-ink);}
 
 /* רשת הקטגוריות */
 /* ⛔ שתי עמודות בברירת המחדל — ⚠️ ארבע נכנסות רק מנקודת השבירה שמעל. */
-.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px;}
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
 @media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
-.cat-btn{border:2px solid;border-radius:11px;padding:10px 8px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;
+.cat-btn{border:2px solid;border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all 0.2s;text-align:center;line-height:1.4;background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
-.cat-btn strong{font-size:15px;font-family:'Frank Ruhl Libre',serif;}
+.cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
 
 /* כפתורים מהירים */
-.qsec{margin-bottom:10px;min-height:32px;}
-.qlbl{font-size:10px;font-weight:700;color:var(--textlite);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase;}
-.qrow{display:flex;flex-wrap:wrap;gap:4px;}
-.qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:16px;padding:4px 10px;font-size:11px;
+.qsec{margin-bottom:var(--sp-5);min-height:32px;}
+.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--textlite);margin-bottom:var(--sp-2);letter-spacing:1px;text-transform:uppercase;}
+.qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
+.qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--text2);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .qbtn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);font-weight:700;}
 .qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.hint{color:var(--textlite);font-size:11px;}
+.hint{color:var(--textlite);font-size:var(--fs-1);}
 
 /* שדות קלט */
-.inp-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:10px;}
+.inp-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-4);margin-bottom:var(--sp-5);}
 @media (min-width:640px){.inp-grid{grid-template-columns:1fr 1fr;}}
 .hide-mobile{display:none !important;}
 @media (min-width:900px){.hide-mobile{display:inline-block !important;}}
-.fld{display:flex;flex-direction:column;gap:3px;}
-.fld label{font-size:10px;font-weight:700;color:var(--text2);}
-.fld input{border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;font-family:'Heebo',sans-serif;font-size:13px;
+.fld{display:flex;flex-direction:column;gap:var(--sp-2);}
+.fld label{font-size:var(--fs-1);font-weight:700;color:var(--text2);}
+.fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
   color:var(--text);background:var(--card);direction:rtl;transition:border-color 0.2s;}
 .fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
 
 /* כפתור ההוספה הגדול */
 .btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
-  border-radius:var(--radius);padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:16px;font-weight:700;
+  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
 .btn-add.btn-flash{background:linear-gradient(135deg,var(--success),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
 
 /* יומן */
-.log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.log-cnt{background:var(--primary-fill);color:#fff;border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
-.entry-row{background:var(--card);border-radius:10px;padding:10px 13px;display:grid;grid-template-columns:auto 1fr auto;
-  gap:9px;align-items:start;margin-bottom:6px;box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
+.log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
+.log-cnt{background:var(--primary-fill);color:#fff;border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
+.entry-row{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-5);display:grid;grid-template-columns:auto 1fr auto;
+  gap:var(--sp-4);align-items:start;margin-bottom:var(--sp-3);box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.entry-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;
-  font-family:'Frank Ruhl Libre',serif;font-size:14px;font-weight:900;flex-shrink:0;}
-.entry-body{display:flex;flex-direction:column;gap:2px;}
-.e-main{font-size:13px;font-weight:700;color:var(--text);}
-.e-sub{font-size:11px;color:var(--text2);}
-.e-meta{font-size:10px;color:var(--textlite);}
-.del-btn{background:none;border:none;color:#CCC;font-size:15px;cursor:pointer;padding:2px 5px;border-radius:5px;transition:all 0.15s;flex-shrink:0;}
+.entry-badge{width:28px;height:28px;border-radius:var(--r-2);display:flex;align-items:center;justify-content:center;
+  font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);font-weight:900;flex-shrink:0;}
+.entry-body{display:flex;flex-direction:column;gap:var(--sp-1);}
+.e-main{font-size:var(--fs-3);font-weight:700;color:var(--text);}
+.e-sub{font-size:var(--fs-1);color:var(--text2);}
+.e-meta{font-size:var(--fs-1);color:var(--textlite);}
+.del-btn{background:none;border:none;color:#CCC;font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all 0.15s;flex-shrink:0;}
 .del-btn:hover{background:#FFE8E8;color:#CC3333;}
-.empty{text-align:center;padding:26px;color:var(--textlite);font-size:13px;line-height:2;}
-.exp-row{display:flex;gap:7px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;}
-.btn-sm{border:none;border-radius:9px;padding:8px 14px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.empty{text-align:center;padding:var(--sp-7);color:var(--textlite);font-size:var(--fs-3);line-height:2;}
+.exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
+.btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all 0.2s;}
 
 .btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:#fff;}
 .btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
 
 /* הגדרות */
-.set-card{background:var(--card);border-radius:11px;padding:13px;border:1.5px solid var(--border);margin-bottom:10px;cursor:grab;transition:box-shadow 0.2s;}
+.set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow 0.2s;}
 .set-card.dragging{opacity:0.5;box-shadow:0 8px 24px var(--shadow);}
 .set-card:active{cursor:grabbing;}
-.drag-handle{font-size:18px;color:#CCC;cursor:grab;margin-left:8px;flex-shrink:0;}
+.drag-handle{font-size:var(--fs-5);color:#CCC;cursor:grab;margin-left:var(--sp-4);flex-shrink:0;}
 .drag-handle:active{cursor:grabbing;}
-.set-hdr{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
-.set-badge{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:900;flex-shrink:0;}
-.set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Heebo',sans-serif;font-size:13px;direction:rtl;color:var(--text);}
+.set-hdr{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
+.set-badge{width:30px;height:30px;border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;
+  font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900;flex-shrink:0;}
+.set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);direction:rtl;color:var(--text);}
 .set-name-inp:focus{outline:none;border-color:var(--primary-ink);}
-.set-lbl{font-size:10px;color:var(--textlite);margin-bottom:5px;}
+.set-lbl{font-size:var(--fs-1);color:var(--textlite);margin-bottom:var(--sp-3);}
 
-.chip{display:flex;align-items:center;gap:3px;background:var(--card-2);border:1px solid var(--border);
-  border-radius:14px;padding:3px 8px 3px 5px;font-size:11px;cursor:grab;}
-.chip.chip-sub{background:var(--card);font-size:10px;border-color:#D8E4F0;}
+.chip{display:flex;align-items:center;gap:var(--sp-2);background:var(--card-2);border:1px solid var(--border);
+  border-radius:var(--r-5);padding:var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);font-size:var(--fs-1);cursor:grab;}
+.chip.chip-sub{background:var(--card);font-size:var(--fs-1);border-color:#D8E4F0;}
 
-.drag-over{outline:2px dashed var(--primary-ink);border-radius:8px;}
-.chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:12px;padding:0;line-height:1;}
+.drag-over{outline:2px dashed var(--primary-ink);border-radius:var(--r-3);}
+.chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:var(--fs-2);padding:0;line-height:1;}
 .chip button:hover{color:#CC3333;}
-.sub-chips{display:flex;flex-wrap:wrap;gap:4px;padding-right:8px;min-height:10px;}
+.sub-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);padding-right:var(--sp-4);min-height:10px;}
 
-.task-block{background:var(--card);border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:grab;transition:box-shadow 0.15s;}
+.task-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);cursor:grab;transition:box-shadow 0.15s;}
 .task-block:hover{box-shadow:0 2px 10px var(--shadow);}
 .task-block.dragging{opacity:0.4;}
-.task-block-hdr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-.task-drag-icon{color:#ccc;font-size:14px;cursor:grab;flex-shrink:0;}
-.task-name{flex:1;font-size:12px;font-weight:700;color:var(--text);}
-.task-del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;padding:0;line-height:1;flex-shrink:0;}
+.task-block-hdr{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2);}
+.task-drag-icon{color:#ccc;font-size:var(--fs-3);cursor:grab;flex-shrink:0;}
+.task-name{flex:1;font-size:var(--fs-2);font-weight:700;color:var(--text);}
+.task-del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:var(--fs-3);padding:0;line-height:1;flex-shrink:0;}
 .task-del-btn:hover{color:#cc3333;}
-.set-add-row{display:flex;gap:6px;}
-.set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 9px;font-family:'Heebo',sans-serif;font-size:12px;direction:rtl;color:var(--text);}
+.set-add-row{display:flex;gap:var(--sp-3);}
+.set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);direction:rtl;color:var(--text);}
 .set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
-.btn-mini{background:var(--primary-fill);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.btn-mini{background:var(--primary-fill);color:#fff;border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
 .btn-mini:hover{background:var(--primaryl);}
 .btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
-  border-radius:var(--radius);padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all 0.2s;}
+  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-5);transition:all 0.2s;}
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
 /* טוסט */
@@ -309,38 +309,38 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
 .inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);color:#fff;
-  border-radius:14px;padding:14px 16px;margin-bottom:14px}
-.inf-hd b{font-size:15px;font-weight:800;display:block}
-.inf-hd span{font-size:12px;opacity:.85}
-.inf-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 2px 10px var(--shadow);padding:12px 14px;margin-bottom:14px}
-.inf-card>h4{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--primaryd)}
-.inf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
-.inf-bar button{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;
+  border-radius:var(--r-5);padding:var(--sp-6) var(--sp-6);margin-bottom:var(--sp-6)}
+.inf-hd b{font-size:var(--fs-4);font-weight:800;display:block}
+.inf-hd span{font-size:var(--fs-2);opacity:.85}
+.inf-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-5);
+  box-shadow:0 2px 10px var(--shadow);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
+.inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--primaryd)}
+.inf-bar{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:center;margin-bottom:var(--sp-5)}
+.inf-bar button{font:inherit;font-size:var(--fs-2);font-weight:700;padding:var(--sp-3) var(--sp-5);border-radius:var(--r-3);
   border:1px solid var(--border);background:var(--card-2);color:var(--text);cursor:pointer}
-.inf-cat{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
-.inf-cat>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--card-2);
-  font-weight:800;font-size:13px;color:var(--primaryd)}
+.inf-cat{border:1px solid var(--border);border-radius:var(--r-4);margin-bottom:var(--sp-4);overflow:hidden}
+.inf-cat>summary{cursor:pointer;list-style:none;padding:var(--sp-4) var(--sp-5);background:var(--card-2);
+  font-weight:800;font-size:var(--fs-3);color:var(--primaryd)}
 .inf-cat>summary::-webkit-details-marker{display:none}
-.inf-ord{padding:5px 12px;background:var(--card-2);font-size:12px;color:var(--text2);
+.inf-ord{padding:var(--sp-3) var(--sp-5);background:var(--card-2);font-size:var(--fs-2);color:var(--text2);
   border-top:1px solid var(--border)}
 .inf-wrap{overflow-x:auto}
-.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
-.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:6px 8px;
+.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:var(--fs-2)}
+.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
   vertical-align:top;text-align:right;line-height:1.6;overflow-wrap:anywhere}
-.inf-tbl th{background:var(--card-2);font-weight:800;font-size:11.5px;color:var(--text2)}
+.inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text2)}
 .inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
 .inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
-.inf-dot{display:inline-block;width:11px;height:11px;border-radius:50%}
+.inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
 .inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
-.inf code{background:var(--card-2);border-radius:5px;padding:0 4px;font-size:.94em}
-.inf-li{border-top:1px solid var(--border);padding:7px 2px;font-size:12px;line-height:1.7}
+.inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
+.inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:1.7}
 .inf-li:first-child{border-top:0}
 .inf-li b{color:var(--primaryd)}
-.inf-tag{display:inline-block;background:var(--card-2);border-radius:6px;padding:1px 7px;
-  font-size:11px;font-weight:700;margin-inline-start:4px}
-.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:12px;padding:14px;
-  font-size:13px;color:#8a2b2b;line-height:1.8}
+.inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
+  font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}
+.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:var(--r-5);padding:var(--sp-6);
+  font-size:var(--fs-3);color:#8a2b2b;line-height:1.8}
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
@@ -350,8 +350,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
-.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toast{background:#1a1a1a;color:#fff;border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
 .toast.bad{background:#b91c1c;color:#fff}
 .toast.good{background:#15803d;color:#fff}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -360,21 +360,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 #updater{
   position:fixed;inset-inline:0;z-index:10001;
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
-  display:none;justify-content:center;padding:10px 14px
-}
+  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
 #updater.show{display:flex}
 #updater .in{
-  background:var(--brand);color:var(--on-brand);border-radius:14px;padding:11px 12px 11px 16px;
-  display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px var(--shadow);
-  font-size:14px;font-weight:700;max-width:520px;width:100%
+  background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--shadow);
+  font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
 #updater button{
-  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:9px;
-  padding:7px 14px;font-family:inherit;font-weight:700;cursor:pointer;font-size:13.5px;flex:none
+  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:var(--r-4);
+  padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
 }
 #updater button.x{
-  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 4px;font-size:15px
-}
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 var(--sp-2);font-size:var(--fs-4)}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;z-index:10050;background:rgba(10,20,30,.5);
@@ -382,21 +380,139 @@ body.locked{overflow:hidden}
 .veil.open{display:flex}
 @media (min-width:640px){.veil{align-items:center}}
 .sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--card);
-  color:var(--text);border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
+  color:var(--text);border-radius:var(--r-6) var(--r-6) 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
   font-family:'Heebo',sans-serif;direction:rtl}
-@media (min-width:640px){.sheet{border-radius:20px}}
-.sheet-hd{display:flex;align-items:center;gap:10px;padding:15px 18px;
+@media (min-width:640px){.sheet{border-radius:var(--r-6)}}
+.sheet-hd{display:flex;align-items:center;gap:var(--sp-5);padding:var(--sp-6) var(--sp-6);
   border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:var(--card);z-index:2}
-.sheet-hd h3{font-size:16px;flex:1;margin:0;font-weight:800}
-.sheet-hd .x{background:none;border:0;font-size:22px;line-height:1;color:#777;
-  cursor:pointer;padding:2px 6px;border-radius:8px}
-.sheet-bd{padding:16px 18px;font-size:14px;line-height:1.6;color:#555}
-.sheet-ft{padding:12px 18px 18px;display:flex;gap:9px}
+.sheet-hd h3{font-size:var(--fs-4);flex:1;margin:0;font-weight:800}
+.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:1;color:#777;
+  cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-3)}
+.sheet-bd{padding:var(--sp-6) var(--sp-6);font-size:var(--fs-3);line-height:1.6;color:#555}
+.sheet-ft{padding:var(--sp-5) var(--sp-6) var(--sp-6);display:flex;gap:var(--sp-4)}
 .sheet-ft:empty{display:none}
-.sheet-ft button{flex:1;padding:10px;border-radius:10px;border:1.5px solid #ccc;
-  background:#f5f5f5;color:#333;font-family:Heebo;font-size:14px;font-weight:600;cursor:pointer}
+.sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid #ccc;
+  background:#f5f5f5;color:#333;font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
 .sheet-ft button.danger{border:none;background:#E53935;color:#fff}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
+/* ═══ סולמות הגודל, הריווח והרדיוס — מודול משותף (סבב 138) ═══════════════
+   ⛔ שלושה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך מספרי חזותי
+      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
+      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
+      ביניהם.
+   ⛔ **ומספר הדרגות נגזר מהערכים שהיו בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
+      משוקלל בסולם לוגריתמי על כל הערכים שבארבעת הריפו, ⭐ ותקרה של שבע.
+   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
+      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בארבעתן.
+   ⛔ **והמחלקות שכאן הן אלה שחיות בארבעתן** — ⚠️ מחלקה שחיה בחלקן יושבת
+      בבלוק הפרטי שמתחת: ⭐ מחלקה בבלוק משותף שאין לה קורא באחת מהן היא
+      סלקטור בלי קורא, ⛔ והשער מפיל עליה.
+   ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
+      ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
+      מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+--fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
+--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
+--r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px
+}
+.u-ai-c{align-items:center}
+.u-d-flex{display:flex}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
+.u-fw-700{font-weight:700}
+.u-fx-1{flex:1}
+.u-g-5{gap:var(--sp-5)}
+.u-mt-2{margin-top:var(--sp-2)}
+.u-mt-5{margin-top:var(--sp-5)}
+/* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
+/* ══ מחלקות הסולם הפרטיות — אינן חיות בארבעתן ═══════════════════════════
+   ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
+   המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-bd-1-solid-border{border:1px solid var(--border)}
+.u-bd-15-solid-border{border:1.5px solid var(--border)}
+.u-bd-none{border:none}
+.u-bdr-cat{border-right:4px solid var(--cat)}
+.u-bg-card-2{background:var(--card-2)}
+.u-bg-cat{background:var(--cat)}
+.u-bg-none{background:none}
+.u-bg-ok-bg{background:var(--ok-bg)}
+.u-bg-primary-fill{background:var(--primary-fill)}
+.u-bg-warn-bg{background:var(--warn-bg)}
+.u-bt-2-dashed-accent{border-top:2px dashed var(--accent)}
+.u-c-ok{color:var(--ok)}
+.u-c-on-primary{color:var(--on-primary)}
+.u-c-primary-ink{color:var(--primary-ink)}
+.u-c-text{color:var(--text)}
+.u-c-text2{color:var(--text2)}
+.u-c-textlite{color:var(--textlite)}
+.u-cat-0{--cat:#888888}
+.u-cat-1{--cat:#E8622A}
+.u-cat-2{--cat:#E8A020}
+.u-cat-3{--cat:#4BAD5B}
+.u-cat-4{--cat:#2A9E8E}
+.u-cat-5{--cat:#3A7EC6}
+.u-cat-6{--cat:#6A4FC6}
+.u-cat-7{--cat:#C64F9E}
+.u-cat-8{--cat:#7A7A7A}
+.u-cur-grab{cursor:grab}
+.u-cur-p{cursor:pointer}
+.u-d-block{display:block}
+.u-d-none{display:none}
+.u-fd-col{flex-direction:column}
+.u-ff-frank{font-family:'Frank Ruhl Libre',serif}
+.u-ff-heebo{font-family:Heebo}
+.u-ff-heebo-sans-serif{font-family:Heebo,sans-serif}
+.u-fs-1{font-size:var(--fs-1)}
+.u-fs-4{font-size:var(--fs-4)}
+.u-fsh-0{flex-shrink:0}
+.u-fw-400{font-weight:400}
+.u-fw-800{font-weight:800}
+.u-fw-900{font-weight:900}
+.u-fwr-wrap{flex-wrap:wrap}
+.u-fx-2{flex:2}
+.u-fx-3{flex:3}
+.u-g-2{gap:var(--sp-2)}
+.u-g-3{gap:var(--sp-3)}
+.u-g-4{gap:var(--sp-4)}
+.u-h-12{height:12px}
+.u-m-0{margin:0}
+.u-m-2-0-1-0{margin:var(--sp-2) 0 var(--sp-1) 0}
+.u-mb-3{margin-bottom:var(--sp-3)}
+.u-mb-4{margin-bottom:var(--sp-4)}
+.u-mb-5{margin-bottom:var(--sp-5)}
+.u-minh-28{min-height:28px}
+.u-minw-130{min-width:130px}
+.u-minw-520{min-width:520px}
+.u-minw-80{min-width:80px}
+.u-ml-1{margin-left:var(--sp-1)}
+.u-mt-4{margin-top:var(--sp-4)}
+.u-op-55{opacity:.55}
+.u-op-8{opacity:.8}
+.u-p-1-2{padding:var(--sp-1) var(--sp-2)}
+.u-p-2{padding:var(--sp-2)}
+.u-p-2-4{padding:var(--sp-2) var(--sp-4)}
+.u-p-2-5{padding:var(--sp-2) var(--sp-5)}
+.u-p-3{padding:var(--sp-3)}
+.u-p-3-4{padding:var(--sp-3) var(--sp-4)}
+.u-p-3-5{padding:var(--sp-3) var(--sp-5)}
+.u-p-4{padding:var(--sp-4)}
+.u-p-5{padding:var(--sp-5)}
+.u-p-6{padding:var(--sp-6)}
+.u-pt-5{padding-top:var(--sp-5)}
+.u-r-1{border-radius:var(--r-1)}
+.u-r-2{border-radius:var(--r-2)}
+.u-r-3{border-radius:var(--r-3)}
+.u-ta-c{text-align:center}
+.u-ta-l{text-align:left}
+.u-w-100{width:100px}
+.u-w-100p{width:100%}
+.u-w-12{width:12px}
+.u-w-55{width:55px}
+.u-w-60{width:60px}
+.u-ws-nw{white-space:nowrap}
+/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
 </style>
 <!-- ⚠️ גרסאות CDN נעוצות במדויק — אין לחזור ל-'@2'/'@4' צפים: שחרור בצד הספק
      שובר את האפליקציה בלי שינוי קוד, וזה בלתי ניתן לשחזור מהריפו.
@@ -452,7 +568,7 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- ENTRY -->
-  <div class="panel" id="panel-entry" style="display:block">
+  <div class="u-d-block panel" id="panel-entry">
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -474,7 +590,7 @@ body.locked{overflow:hidden}
              yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
              ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
              שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-        <input aria-label="תאריך לועזי" class="heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." style="min-width:130px;" oninput="onGregDateChange()" />
+        <input aria-label="תאריך לועזי" class="u-minw-130 heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." oninput="onGregDateChange()" />
       </div>
     </div>
 
@@ -508,10 +624,10 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- LOG -->
-  <div class="panel" id="panel-log" style="display:none">
+  <div class="u-d-none panel" id="panel-log">
     <div class="card">
       <div class="log-hd">
-        <div class="card-ttl" style="margin:0">רשומות יומן</div>
+        <div class="u-m-0 card-ttl">רשומות יומן</div>
         <div class="log-cnt" id="logCount">0</div>
       </div>
       <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
@@ -523,7 +639,7 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- SETTINGS -->
-  <div class="panel" id="panel-settings" style="display:none">
+  <div class="u-d-none panel" id="panel-settings">
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
@@ -533,18 +649,18 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- ARCHIVE -->
-  <div class="panel" id="panel-archive" style="display:none">
+  <div class="u-d-none panel" id="panel-archive">
     <div class="card">
       <!-- Breadcrumb -->
-      <div id="arc-breadcrumb" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;min-height:28px;"></div>
+      <div id="arc-breadcrumb" class="u-d-flex u-ai-c u-g-3 u-mb-5 u-fwr-wrap u-minh-28"></div>
       <!-- Level: years -->
-      <div id="arc-years" style="display:block"></div>
+      <div id="arc-years" class="u-d-block"></div>
       <!-- Level: months -->
-      <div id="arc-months" style="display:none"></div>
+      <div id="arc-months" class="u-d-none"></div>
       <!-- Level: days -->
-      <div id="arc-days" style="display:none"></div>
+      <div id="arc-days" class="u-d-none"></div>
       <!-- Level: day detail / edit -->
-      <div id="arc-detail" style="display:none"></div>
+      <div id="arc-detail" class="u-d-none"></div>
     </div>
   </div>
 
@@ -4470,16 +4586,15 @@ function hebrewDate(jsDate) {
 }
 // ═══ סוף אזור התאריך העברי ═══════════════════════════════════════════════
 
-const CAT_COLORS = {
-  "א":{bg:"#E8622A",fg:"white"}, // אדום-כתום
-  "ב":{bg:"#E8A020",fg:"white"}, // כתום-זהב
-  "ג":{bg:"#4BAD5B",fg:"white"}, // ירוק
-  "ד":{bg:"#2A9E8E",fg:"white"}, // טורקיז
-  "ה":{bg:"#3A7EC6",fg:"white"}, // כחול
-  "ו":{bg:"#6A4FC6",fg:"white"}, // סגול
-  "ז":{bg:"#C64F9E",fg:"white"}, // ורוד-סגול
-  "ח":{bg:"#7A7A7A",fg:"white"}, // אפור
-};
+/*  ⛔ הפלטה יושבת ב-CSS ⛔ ואינה חוזרת כאן — ⚠️ שתי רשימות לאותם שמונה
+ *  גוונים הן שני מקורות אמת, ⭐ ומי ששינה גוון באחת השאיר את השנייה
+ *  מתארת את מה שהיה: ⛔ כאן נשארות האותיות בסדרן, ⚠️ והמחלקה שנגזרת ממנה
+ *  היא מה שמציב את `--cat`. */
+const CAT_LETTERS = 'אבגדהוזח';
+function catCls(letter) {
+  var i = CAT_LETTERS.indexOf(letter);
+  return 'u-cat-' + (i < 0 ? 0 : i + 1);
+}
 
 /*  ⛔ אין ערך קבוע שנכנס למיזוג עם הענן — ⚠️ **הנימוק המדוד**: שבע
  *  קטגוריות ו-17 מפתחות תת-משימה של ראשון לציון היו מוזרקים בכל טעינה,
@@ -4681,13 +4796,10 @@ function buildCatGrid() {
     return;
   }
   live.forEach(function(cat) {
-    var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
     var btn = document.createElement("button");
-    btn.className = "cat-btn";
-    btn.style.borderColor = c.bg;
-    btn.style.backgroundColor = (selCat && selCat.letter === cat.letter) ? c.bg : "";
-    btn.style.color = (selCat && selCat.letter === cat.letter) ? c.fg : c.bg;
-    btn.innerHTML = "<span style=\"font-size:13px;font-weight:700\">" + esc(cat.name) + "</span>";
+    btn.className = "cat-btn " + catCls(cat.letter) +
+      ((selCat && selCat.letter === cat.letter) ? " sel" : "");
+    btn.innerHTML = "<span class=\"u-fs-2 u-fw-700\">" + esc(cat.name) + "</span>";
     btn.dataset.act = 'pick-cat';
     btn.dataset.letter = cat.letter;
     g.appendChild(btn);
@@ -4878,16 +4990,15 @@ function renderLog() {
   }
   filtered = tbSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
-    var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
     var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
-    return '<div class="entry-row" style="border-right:4px solid ' + c.bg + '">'
-      + '<div class="entry-badge" style="background:' + c.bg + '"></div>'
+    return '<div class="entry-row u-bdr-cat ' + catCls(e.cat) + '">'
+      + '<div class="entry-badge u-bg-cat"></div>'
       + '<div class="entry-body">'
       + '<div class="e-main">' + esc(catNameOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2">✏️</button>'
       + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
       + '</div>';
   }).join("");
@@ -5257,10 +5368,19 @@ function _renderReport(div){
  *  הזה נצרב לתמונה ונשלח החוצה, ⭐ והתמונה חייבת להיראות אותו דבר לכל
  *  מי שמקבל אותה: ⛔ אסימון שמתחלף עם מצב כהה היה שולח שני דוחות שונים
  *  לאותו יום, ⚠️ לפי הערכה של מי שלחץ. */
+/*  ⛔ הדוח נצרב לתמונה ⛔ ולכן צבעיו ליטרלים — ⚠️ אסימון ערכה היה משנה
+ *  את התמונה לפי המצב של מי שלחץ, ⭐ ושני מקבלים היו רואים שני דוחות.
+ *  ⛔ **וכל ליטרל כאן הוא ערכו הבהיר של אסימון**, ⚠️ ומוצלב מולו בשער:
+ *  `#1A2540` ⟵ `--text` · `#4A5A7A` ⟵ `--text2` · `#8A9ABB` ⟵ `--textlite` ·
+ *  `#D0DAF0` ⟵ `--border` · `#E4EBF5` ⟵ `--card-2` · `#F0F4FA` ⟵ `--bg` ·
+ *  `#FFFFFF` ⟵ `--card`. ⭐ **וששת התווים מלאים** ⛔ ואינם קיצור בן שלושה:
+ *  ⚠️ ההצלבה משווה טקסט, ⛔ ו-`#fff` אינו `#FFFFFF`.
+ *  ⚠️ **ובמצב כהה הדוח יוצא בהיר אף הוא** — ⭐ זו התמונה שנשלחת, ⛔ והיא
+ *  אינה נגזרת מהמצב של מי שצילם אותה. */
 function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
-  div.style.cssText='position:fixed;top:0;left:0;background:#fff;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
+  div.style.cssText='position:fixed;top:0;left:0;background:#FFFFFF;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
@@ -5277,30 +5397,29 @@ function _buildReportDiv(cb, entries){
   var globalTaskIdx = 0;
   catLetters.forEach(function(letter){
     var data=byCAT[letter];
-    var c=(typeof CAT_COLORS!=='undefined'&&CAT_COLORS[letter])||{bg:'#555',fg:'white'};
     var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
     var cri=0;
     tgs.forEach(function(tg,ti){
-      var bg=(globalTaskIdx%2===0)?'#fff':'#f0f0f0'; globalTaskIdx++;
+      var bg=(globalTaskIdx%2===0)?'#FFFFFF':'#F0F4FA'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:65px">'+data.name+'</td>';
-        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat" style="color:#FFFFFF;font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #D0DAF0;padding:8px;min-width:65px">'+data.name+'</td>';
+        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #D0DAF0;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
         rows+='</tr>';cri++;
       });
     });
   });
   var li=logoUrl?'<img src="'+logoUrl+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
-  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:14px;">'+li
-    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#999;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
-    +'<div style="font-size:26px;font-weight:900;color:#1A2B5E;">יומן עבודה</div>'
-    +'<div style="font-size:11px;color:#555;">'+instTitle+'</div></div>'
-    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2B5E;">'+dayLabel+'</div>'
-    +'<div style="font-size:11px;color:#444;">'+today+'</div><div style="font-size:10px;color:#888;">'+todayGreg+'</div></div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2B5E;color:white;">'
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2540;padding-bottom:12px;margin-bottom:14px;">'+li
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#8A9ABB;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
+    +'<div style="font-size:26px;font-weight:900;color:#1A2540;">יומן עבודה</div>'
+    +'<div style="font-size:11px;color:#4A5A7A;">'+instTitle+'</div></div>'
+    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2540;">'+dayLabel+'</div>'
+    +'<div style="font-size:11px;color:#1A2540;">'+today+'</div><div style="font-size:10px;color:#8A9ABB;">'+todayGreg+'</div></div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2540;color:#FFFFFF;">'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">קטגוריה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">משימה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
@@ -5309,7 +5428,7 @@ function _buildReportDiv(cb, entries){
     +'</tr></thead><tbody>'+rows+'</tbody></table>';
     // סה״כ = בדיוק השורות שבטבלה (רשומות היום הנבחר). קודם נספרו כל ENTRIES,
     // כך שהדוח שנשלח להנהלה הציג סיכום שלא תאם את השורות שבו.
-    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
+    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#8A9ABB;border-top:1px solid #E4EBF5;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
   div.style.left='0';cb(div);
 }
 
@@ -5624,7 +5743,6 @@ function renderSettings() {
   ed.innerHTML = "";
   CATS.forEach(function(cat, ci) {
     if (!isLive(cat)) return;   // ci חייב להישאר האינדקס הגולמי — עליו בנויים מפתחות SUBS
-    var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
     var div = document.createElement("div");
     div.className = "set-card";
     div.draggable = true;
@@ -5650,9 +5768,9 @@ function renderSettings() {
       renderSettings();
       buildCatGrid();
     });
-    var hdr = '<div class="set-hdr">'
+    var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
       + '<span class="drag-handle">⠿</span>'
-      + '<div class="set-badge" style="background:' + c.bg + '"></div>'
+      + '<div class="set-badge u-bg-cat"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
@@ -5660,7 +5778,7 @@ function renderSettings() {
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
           var subsSection = '';
           if(subs.length > 0) {
-            subsSection = '<div class="set-lbl" style="font-size:9px;margin:4px 0 2px 0;color:var(--textlite)">תתי משימות:</div>'
+            subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-textlite set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" draggable="true" '
@@ -5669,17 +5787,17 @@ function renderSettings() {
                     + 'ondragleave="subDragLeave(event)" '
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
-                    + '<span style="cursor:grab;color:var(--textlite);font-size:10px;margin-left:2px">⠿</span>'
+                    + '<span class="u-cur-grab u-c-textlite u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
           }
-          var addSubRow = '<div class="ksave" style="display:flex;gap:4px;margin-top:4px">'
-            + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
-            + '<button class="btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
+          var addSubRow = '<div class="u-d-flex u-g-2 u-mt-2 ksave">'
+            + '<input aria-label="תת-משימה חדשה" class="u-fs-1 set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
+            + '<button class="u-fs-1 u-p-2-4 u-ws-nw btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
             + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
@@ -5690,14 +5808,14 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
             + addSubRow
             + '</div>';
         }).join('')
-      + '<div class="set-add-row ksave" style="margin-top:8px">'
+      + '<div class="u-mt-4 set-add-row ksave">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
       + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
@@ -6016,7 +6134,7 @@ function renderArcYears() {
     return a > b ? 1 : -1;
   });
 
-  var html = '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">בחר שנה:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר שנה:</div><div class="arc-grid">';
   yearList.forEach(function(y) {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
@@ -6054,7 +6172,7 @@ function renderArcMonths(year) {
     return ia - ib;
   });
 
-  var html = '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
   monthList.forEach(function(m) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
@@ -6082,11 +6200,11 @@ function renderArcDays(year, month) {
   var nowKey = getTodayKey();
 
   if (!days.length) {
-    el.innerHTML = '<div style="color:var(--textlite);font-size:12px;padding:8px">אין רשומות לחודש זה</div>';
+    el.innerHTML = '<div class="u-c-textlite u-fs-2 u-p-4">אין רשומות לחודש זה</div>';
     return;
   }
 
-  var html = '<div style="font-size:11px;color:var(--text2);margin-bottom:8px">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
   days.forEach(function(d) {
     // Show day-of-month only (first token of hdate = גמטריה)
     var parts = (d.hdate||"").split(" ");
@@ -6096,7 +6214,7 @@ function renderArcDays(year, month) {
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
           + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
-          + dayNum + '<br><small style="font-size:9px;font-weight:400;opacity:0.8">' + (d.entries.length) + ' רש׳</small></button>';
+          + dayNum + '<br><small class="u-fs-1 u-fw-400 u-op-8">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6126,47 +6244,46 @@ function renderArcDetail() {
   var sortedE = tbSortEntries(d.entries);
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-    '<div style="flex:1">'+
-      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary-ink)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
-      '<div style="font-size:11px;color:var(--text2)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
+    '<div class="u-d-flex u-ai-c u-g-4 u-mb-5">'+
+    '<div class="u-fx-1">'+
+      '<div class="u-ff-frank u-fs-4 u-fw-900 u-c-primary-ink">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div class="u-fs-1 u-c-text2">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
-    '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:var(--ok-bg);color:var(--ok)">📄 PDF</button>' : '')+
+    '<button class="u-fs-1 u-p-3-5 btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
+    (d.snapId ? '<button class="u-fs-1 u-p-3-5 u-bg-ok-bg u-c-ok btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
-    html += '<div style="color:var(--textlite);font-size:12px;text-align:center;padding:12px">אין רשומות</div>';
+    html += '<div class="u-c-textlite u-fs-2 u-ta-c u-p-5">אין רשומות</div>';
   } else {
     sortedE.forEach(function(e, ei) {
-      var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
-      html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+      html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
+        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
-        '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
-        '<span style="color:var(--text2);font-size:11px">'+esc(catNameOf(e))+'</span>'+
-        '<span style="color:var(--textlite)">←</span>'+
-        '<span style="font-weight:700;color:var(--text)">'+esc(e.task)+'</span>'+
-        (e.sub ? '<span style="color:var(--textlite)">→</span><span style="color:var(--textlite)">'+esc(e.sub)+'</span>' : '')+
-        (e.notes ? '<span style="color:var(--textlite);font-size:10px;flex:1;text-align:left"> · '+esc(e.notes)+'</span>' : '<span style="flex:1"></span>')+
-        (e.count ? '<span style="color:var(--accent);font-size:10px;font-weight:700">×'+esc(e.count)+'</span>' : '')+
+        '<div class="u-w-12 u-h-12 u-r-1 u-bg-cat u-fsh-0"></div>'+
+        '<span class="u-c-text2 u-fs-1">'+esc(catNameOf(e))+'</span>'+
+        '<span class="u-c-textlite">←</span>'+
+        '<span class="u-fw-700 u-c-text">'+esc(e.task)+'</span>'+
+        (e.sub ? '<span class="u-c-textlite">→</span><span class="u-c-textlite">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span class="u-c-textlite u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
+        (e.count ? '<span class="u-c-primary-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
   }
 
   // מצב עריכה: הוספת רשומה
   if (arcEditMode) {
-    html += '<div style="border-top:2px dashed var(--accent);margin-top:10px;padding-top:10px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
-      '<div class="ksave" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
-      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+    html += '<div class="u-bt-2-dashed-accent u-mt-5 u-pt-5">'+
+      '<div class="u-fs-1 u-fw-700 u-c-primary-ink u-mb-3">+ הוסף רשומה</div>'+
+      '<div class="u-d-flex u-g-3 u-fwr-wrap u-ai-c ksave">'+
+      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
-      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
-      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
-      '<button class="btn-mini" data-act="arc-add-entry" data-ksave style="white-space:nowrap">+ הוסף</button>'+
+      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2 u-w-100" />'+
+      '<button class="u-ws-nw btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
       '</div></div>';
   }
 
@@ -6479,7 +6596,7 @@ function _infHtml(d) {
    *  מה שייבדק, ⭐ ותאריך ריק הוא הצהרה שהסריקה טרם נעשתה: ⛔ ריכוז תאים
    *  שאינם ✅ כבר יושב בפרק א, ⚠️ ופרק שני לאותו נתון הוא מקור אמת שני. */
   h += '<div class="inf-card"><h4>הסריקה — ארבעת המימדים</h4>' +
-       '<div class="inf-wrap"><table class="inf-tbl" style="min-width:520px">' +
+       '<div class="inf-wrap"><table class="u-minw-520 inf-tbl">' +
        '<colgroup><col class="c-t"><col class="c-s"></colgroup>' +
        '<thead><tr><th>מימד</th><th>מה נבדק</th></tr></thead><tbody>';
   YS_INF_DIMS.forEach(function (x) {
@@ -6778,12 +6895,12 @@ function ysResetTenantState() {
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
 function ysPickYeshiva() {
-  var body = '<div style="display:flex;flex-direction:column;gap:10px">';
+  var body = '<div class="u-d-flex u-fd-col u-g-5">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
-    body += '<button class="btn-sm" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '"' +
-            ' style="background:var(--primary-fill);color:var(--on-primary);padding:14px;font-size:16px;font-weight:800' +
-            (cur ? ';opacity:.55' : '') + '">' + esc(YESHIVOT[i].name) +
+    body += '<button class="btn-sm u-bg-primary-fill u-c-on-primary u-p-6 u-fs-4 u-fw-800' +
+            (cur ? ' u-op-55' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
+            esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
   body += '</div>';
@@ -6849,7 +6966,7 @@ function selectYeshiva(y) {
   //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
-    '<button class="btn-sm" style="background:var(--primary-fill);color:var(--on-primary)" ' +
+    '<button class="u-bg-primary-fill u-c-on-primary btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
@@ -6939,13 +7056,13 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:var(--warn-bg);border-radius:6px;">' +
-    '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" style="padding:4px 10px;background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="entry-edit-cancel" data-kesc style="padding:4px 10px;background:var(--textlite);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>' +
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-bg u-r-2 ksave">' +
+    '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">ביטול</button>' +
     '</div>';
   container.innerHTML = '';
   container.appendChild(div);
@@ -6989,13 +7106,13 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div class="ksave" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:var(--warn-bg);border-radius:6px;width:100%;">' +
-    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid var(--border);border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" data-kesc style="padding:4px 10px;background:var(--textlite);color:var(--on-primary);border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-bg u-r-2 u-w-100p ksave">' +
+    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">בטל</button>' +
     '</div>';
 }
 
