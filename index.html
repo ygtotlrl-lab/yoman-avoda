@@ -36,7 +36,7 @@
   --primaryl:#3A8FDF; --primaryd:#0D4A8A;
   --accent:#F0A500; --accentl:#FFB930;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
-  --text:#1A2540; --text2:#4A5A7A; --textlite:#8A9ABB;
+  --text:#1A2540; --text2:#4A5A7A; --text3:#8A9ABB;
   --radius:var(--r-5);
   --on-primary:#FFFFFF; --ok:#1A6A3A; --ok-bg:#E6F6EC; --warn-bg:#FFFBE6;
   --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
@@ -49,7 +49,7 @@
     --on-brand:#1A2540;
 
     --bg:#0d151d; --card-2:#18242f; --card:#131e29;
-    --text:#e8eef5; --text2:#c2cfdc; --textlite:#93a5b8;
+    --text:#e8eef5; --text2:#c2cfdc; --text3:#93a5b8;
     --border:#24333f;
     --on-primary:#FFFFFF; --ok:#84DBA6; --ok-bg:#12251C; --warn-bg:#2B2012;
     --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
@@ -210,14 +210,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* כפתורים מהירים */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
-.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--textlite);margin-bottom:var(--sp-2);letter-spacing:1px;text-transform:uppercase;}
+.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text3);margin-bottom:var(--sp-2);letter-spacing:1px;text-transform:uppercase;}
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--text2);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .qbtn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);font-weight:700;}
 .qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.hint{color:var(--textlite);font-size:var(--fs-1);}
+.hint{color:var(--text3);font-size:var(--fs-1);}
 
 /* שדות קלט */
 .inp-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-4);margin-bottom:var(--sp-5);}
@@ -248,10 +248,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .entry-body{display:flex;flex-direction:column;gap:var(--sp-1);}
 .e-main{font-size:var(--fs-3);font-weight:700;color:var(--text);}
 .e-sub{font-size:var(--fs-1);color:var(--text2);}
-.e-meta{font-size:var(--fs-1);color:var(--textlite);}
+.e-meta{font-size:var(--fs-1);color:var(--text3);}
 .del-btn{background:none;border:none;color:#CCC;font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all 0.15s;flex-shrink:0;}
 .del-btn:hover{background:#FFE8E8;color:#CC3333;}
-.empty{text-align:center;padding:var(--sp-7);color:var(--textlite);font-size:var(--fs-3);line-height:2;}
+.empty{text-align:center;padding:var(--sp-7);color:var(--text3);font-size:var(--fs-3);line-height:2;}
 .exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all 0.2s;}
 
@@ -269,7 +269,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900;flex-shrink:0;}
 .set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);direction:rtl;color:var(--text);}
 .set-name-inp:focus{outline:none;border-color:var(--primary-ink);}
-.set-lbl{font-size:var(--fs-1);color:var(--textlite);margin-bottom:var(--sp-3);}
+.set-lbl{font-size:var(--fs-1);color:var(--text3);margin-bottom:var(--sp-3);}
 
 .chip{display:flex;align-items:center;gap:var(--sp-2);background:var(--card-2);border:1px solid var(--border);
   border-radius:var(--r-5);padding:var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);font-size:var(--fs-1);cursor:grab;}
@@ -446,7 +446,7 @@ body.locked{overflow:hidden}
 .u-c-primary-ink{color:var(--primary-ink)}
 .u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text2)}
-.u-c-textlite{color:var(--textlite)}
+.u-c-text3{color:var(--text3)}
 .u-cat-0{--cat:#888888}
 .u-cat-1{--cat:#E8622A}
 .u-cat-2{--cat:#E8A020}
@@ -5371,7 +5371,7 @@ function _renderReport(div){
 /*  ⛔ הדוח נצרב לתמונה ⛔ ולכן צבעיו ליטרלים — ⚠️ אסימון ערכה היה משנה
  *  את התמונה לפי המצב של מי שלחץ, ⭐ ושני מקבלים היו רואים שני דוחות.
  *  ⛔ **וכל ליטרל כאן הוא ערכו הבהיר של אסימון**, ⚠️ ומוצלב מולו בשער:
- *  `#1A2540` ⟵ `--text` · `#4A5A7A` ⟵ `--text2` · `#8A9ABB` ⟵ `--textlite` ·
+ *  `#1A2540` ⟵ `--text` · `#4A5A7A` ⟵ `--text2` · `#8A9ABB` ⟵ `--text3` ·
  *  `#D0DAF0` ⟵ `--border` · `#E4EBF5` ⟵ `--card-2` · `#F0F4FA` ⟵ `--bg` ·
  *  `#FFFFFF` ⟵ `--card`. ⭐ **וששת התווים מלאים** ⛔ ואינם קיצור בן שלושה:
  *  ⚠️ ההצלבה משווה טקסט, ⛔ ו-`#fff` אינו `#FFFFFF`.
@@ -5778,7 +5778,7 @@ function renderSettings() {
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
           var subsSection = '';
           if(subs.length > 0) {
-            subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-textlite set-lbl">תתי משימות:</div>'
+            subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-text3 set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" draggable="true" '
@@ -5787,7 +5787,7 @@ function renderSettings() {
                     + 'ondragleave="subDragLeave(event)" '
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
-                    + '<span class="u-cur-grab u-c-textlite u-fs-1 u-ml-1">⠿</span>'
+                    + '<span class="u-cur-grab u-c-text3 u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
@@ -6200,7 +6200,7 @@ function renderArcDays(year, month) {
   var nowKey = getTodayKey();
 
   if (!days.length) {
-    el.innerHTML = '<div class="u-c-textlite u-fs-2 u-p-4">אין רשומות לחודש זה</div>';
+    el.innerHTML = '<div class="u-c-text3 u-fs-2 u-p-4">אין רשומות לחודש זה</div>';
     return;
   }
 
@@ -6254,7 +6254,7 @@ function renderArcDetail() {
     '</div>';
 
   if (!sortedE.length) {
-    html += '<div class="u-c-textlite u-fs-2 u-ta-c u-p-5">אין רשומות</div>';
+    html += '<div class="u-c-text3 u-fs-2 u-ta-c u-p-5">אין רשומות</div>';
   } else {
     sortedE.forEach(function(e, ei) {
       html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
@@ -6262,10 +6262,10 @@ function renderArcDetail() {
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
         '<div class="u-w-12 u-h-12 u-r-1 u-bg-cat u-fsh-0"></div>'+
         '<span class="u-c-text2 u-fs-1">'+esc(catNameOf(e))+'</span>'+
-        '<span class="u-c-textlite">←</span>'+
+        '<span class="u-c-text3">←</span>'+
         '<span class="u-fw-700 u-c-text">'+esc(e.task)+'</span>'+
-        (e.sub ? '<span class="u-c-textlite">→</span><span class="u-c-textlite">'+esc(e.sub)+'</span>' : '')+
-        (e.notes ? '<span class="u-c-textlite u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
+        (e.sub ? '<span class="u-c-text3">→</span><span class="u-c-text3">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span class="u-c-text3 u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
         (e.count ? '<span class="u-c-primary-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
