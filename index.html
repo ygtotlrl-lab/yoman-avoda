@@ -38,8 +38,11 @@
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text2:#4A5A7A; --text3:#8A9ABB;
   --radius:var(--r-5);
-  --on-primary:#FFFFFF; --ok:#1A6A3A; --ok-bg:#E6F6EC; --warn-bg:#FFFBE6;
-  --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
+  --on-primary:#FFFFFF;
+  --ok:#1A6A3A; --ok-soft:#E6F6EC;
+  --warn:#B45309; --warn-soft:#FFFBE6;
+  --bad:#B91C1C; --bad-soft:#FFE8E8;
+  --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
 }
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
  *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
@@ -51,11 +54,13 @@
     --bg:#0d151d; --card-2:#18242f; --card:#131e29;
     --text:#e8eef5; --text2:#c2cfdc; --text3:#93a5b8;
     --border:#24333f;
-    --on-primary:#FFFFFF; --ok:#84DBA6; --ok-bg:#12251C; --warn-bg:#2B2012;
+    --on-primary:#FFFFFF;
+    --ok:#84DBA6; --ok-soft:#12251C;
+    --warn:#FBBF24; --warn-soft:#2B2012;
+    --bad:#F87171; --bad-soft:#2D1717;
     --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
     --primaryl:#5AA6EE; --primaryd:#9EC8F2;
     --accent:#FFB930; --accentl:#FFC957;
-    --success:#4ade80;
     --shadow:rgba(0,0,0,0.45);
   }
 }
@@ -172,7 +177,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
 .arc-entry-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) 0;border-top:1px solid var(--border);font-size:var(--fs-2);}
 .arc-entry-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:1;flex-shrink:0;}
-.arc-entry-del:hover{color:#cc3333;}
+.arc-entry-del:hover{color:var(--bad);}
 
 /* לשוניות */
 .tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
@@ -235,7 +240,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
-.btn-add.btn-flash{background:linear-gradient(135deg,var(--success),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
+.btn-add.btn-flash{background:linear-gradient(135deg,var(--ok),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
@@ -250,13 +255,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .e-sub{font-size:var(--fs-1);color:var(--text2);}
 .e-meta{font-size:var(--fs-1);color:var(--text3);}
 .del-btn{background:none;border:none;color:#CCC;font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all 0.15s;flex-shrink:0;}
-.del-btn:hover{background:#FFE8E8;color:#CC3333;}
+.del-btn:hover{background:var(--bad-soft);color:var(--bad);}
 .empty{text-align:center;padding:var(--sp-7);color:var(--text3);font-size:var(--fs-3);line-height:2;}
 .exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all 0.2s;}
 
 .btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:#fff;}
-.btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
+.btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);} .btn-red:hover{background:var(--bad);color:var(--bad-soft);}
 
 /* הגדרות */
 .set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow 0.2s;}
@@ -277,7 +282,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 .drag-over{outline:2px dashed var(--primary-ink);border-radius:var(--r-3);}
 .chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:var(--fs-2);padding:0;line-height:1;}
-.chip button:hover{color:#CC3333;}
+.chip button:hover{color:var(--bad);}
 .sub-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);padding-right:var(--sp-4);min-height:10px;}
 
 .task-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);cursor:grab;transition:box-shadow 0.15s;}
@@ -287,7 +292,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .task-drag-icon{color:#ccc;font-size:var(--fs-3);cursor:grab;flex-shrink:0;}
 .task-name{flex:1;font-size:var(--fs-2);font-weight:700;color:var(--text);}
 .task-del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:var(--fs-3);padding:0;line-height:1;flex-shrink:0;}
-.task-del-btn:hover{color:#cc3333;}
+.task-del-btn:hover{color:var(--bad);}
 .set-add-row{display:flex;gap:var(--sp-3);}
 .set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);direction:rtl;color:var(--text);}
 .set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
@@ -332,19 +337,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
 .inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
-.inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
+.inf-dot.ok{background:var(--ok)}.inf-dot.gap{background:var(--warn)}.inf-dot.bad{background:var(--bad)}
 .inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
 .inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:1.7}
 .inf-li:first-child{border-top:0}
 .inf-li b{color:var(--primaryd)}
 .inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
   font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}
-.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:var(--r-5);padding:var(--sp-6);
-  font-size:var(--fs-3);color:#8a2b2b;line-height:1.8}
+.inf-err{background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r-5);padding:var(--sp-6);
+  font-size:var(--fs-3);color:var(--bad);line-height:1.8}
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
-   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
-   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+   זהה בית-לבית בארבע האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
+   המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
       אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
@@ -352,8 +357,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
 #toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
 .toast{background:#1a1a1a;color:#fff;border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
-.toast.bad{background:#b91c1c;color:#fff}
-.toast.good{background:#15803d;color:#fff}
+.toast.bad{background:var(--bad);color:var(--bad-soft)}
+.toast.good{background:var(--ok);color:var(--ok-soft)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ================================================================= מעדכן */
@@ -393,7 +398,7 @@ body.locked{overflow:hidden}
 .sheet-ft:empty{display:none}
 .sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid #ccc;
   background:#f5f5f5;color:#333;font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
-.sheet-ft button.danger{border:none;background:#E53935;color:#fff}
+.sheet-ft button.danger{border:none;background:var(--bad);color:var(--bad-soft)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
 /* ═══ סולמות הגודל, הריווח והרדיוס — מודול משותף (סבב 138) ═══════════════
    ⛔ שלושה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך מספרי חזותי
@@ -437,9 +442,9 @@ body.locked{overflow:hidden}
 .u-bg-card-2{background:var(--card-2)}
 .u-bg-cat{background:var(--cat)}
 .u-bg-none{background:none}
-.u-bg-ok-bg{background:var(--ok-bg)}
+.u-bg-ok-soft{background:var(--ok-soft)}
 .u-bg-primary-fill{background:var(--primary-fill)}
-.u-bg-warn-bg{background:var(--warn-bg)}
+.u-bg-warn-soft{background:var(--warn-soft)}
 .u-bt-2-dashed-accent{border-top:2px dashed var(--accent)}
 .u-c-ok{color:var(--ok)}
 .u-c-on-primary{color:var(--on-primary)}
@@ -6250,7 +6255,7 @@ function renderArcDetail() {
       '<div class="u-fs-1 u-c-text2">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="u-fs-1 u-p-3-5 btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="u-fs-1 u-p-3-5 u-bg-ok-bg u-c-ok btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
+    (d.snapId ? '<button class="u-fs-1 u-p-3-5 u-bg-ok-soft u-c-ok btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
@@ -7056,7 +7061,7 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-bg u-r-2 ksave">' +
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
     '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
@@ -7106,7 +7111,7 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-bg u-r-2 u-w-100p ksave">' +
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
