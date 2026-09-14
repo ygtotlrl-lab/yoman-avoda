@@ -199,7 +199,7 @@ function env(total, mode, mutSrc) {
   };
   const sb = {
     console, JSON, Date, Math, String, Number, Array, Object, Boolean, isFinite, parseInt, Promise, RegExp, Error,
-    YESHIVA: 'rishon', KV_TABLE: 'kv_rishon',
+    YESHIVA: 'rishon', KV_TABLE: 'tb_kv_rishon',
     getSB: () => client, withTimeout: (p) => p,
     /*  ⛔ המוסד שהסביבה מחזירה בכל עמוד נרשם (סבב 89) — ⚠️ הסגור נקרא
      *  פעם אחת לכל עמוד, ⭐ וזה מה שמאפשר למדוד עם מי הוא בא במגע. */

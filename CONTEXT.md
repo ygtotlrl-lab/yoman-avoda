@@ -5,7 +5,7 @@
 - **GitHub Pages:** `https://ygtotlrl-lab.github.io/yoman-avoda/`
 - **טוקן:** מנוהל ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ
 - **קובץ ראשי:** `index.html`
-- **Supabase:** project `kxbtskqobynewvnckaaz` | טבלאות `kv_rishon` / `kv_ramataviv`
+- **Supabase:** project `kxbtskqobynewvnckaaz` | טבלאות `tb_kv_rishon` / `tb_kv_ramataviv`
   ו-`tb_entries` (ראה למטה)
 
 ---

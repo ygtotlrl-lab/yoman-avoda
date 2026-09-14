@@ -28,7 +28,7 @@ const APP = {
   checks: [
     [/var TB_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (TB_KV_LEGACY_WRITE=false)'],
     [/kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את tb_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
-    [/function tbSyncLog\(/, 'עוטף sync_log קיים (tbSyncLog)'],
+    [/function tbSyncLog\(/, 'עוטף sh_sync_log קיים (tbSyncLog)'],
     [/var p = parseGregLike\(g\);/, '_tbGdateTs מפענחת דרך parseGregLike (סגירת פער סבב 31)'],
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
     [/hwNoteCloud\('tb_archive'\+LS, _rowsA\.data\)/, 'הראיה העננית ניזונה ממשיכת tb_archive'],

@@ -190,7 +190,7 @@ function makeEnv(opts = {}) {
   const sandbox = {
     console, JSON, Date, Math, String, Number, Array, Object, Boolean, isFinite, parseInt, Promise, RegExp, Error,
     YESHIVA: opts.yeshiva || 'rishon',
-    KV_TABLE: 'kv_rishon',
+    KV_TABLE: 'tb_kv_rishon',
     LS: '_rishon',
     PK_ENTRY: 'entry:', PK_ARC: 'arc:',
     getSB: () => (opts.noClient ? null : client),
