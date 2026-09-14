@@ -27,7 +27,6 @@ import crypto from 'node:crypto';
 const APP = {
   checks: [
     [/var TB_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (TB_KV_LEGACY_WRITE=false)'],
-    [/var TB_ARC_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-tb_archive כבויה'],
     [/kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את tb_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
     [/function tbSyncLog\(/, 'עוטף sync_log קיים (tbSyncLog)'],
     [/var p = parseGregLike\(g\);/, '_tbGdateTs מפענחת דרך parseGregLike (סגירת פער סבב 31)'],

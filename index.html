@@ -3728,24 +3728,15 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
       (`tb_entries`+LS / `tb_archive`+LS) ואת אותם שני מערכים, ולכן מודול
       האחסון הקפוא, מודול ה-⏳ ומדיניות הפינוי אינם מושפעים כלל.
 
-   ⛔ `TB_ARC_UNIFIED = false` הוא נתיב החזרה (סבב 32) — הקריאה והכתיבה
-      חוזרות ל-`tb_archive`, שממשיכה להתעדכן כל עוד `TB_ARC_LEGACY_WRITE`
-      דולק. זו הסיבה שהכתיבה הכפולה קיימת, וזה מה שהופך את החזרה להחלפת דגל
-      במקום שחזור נתונים — בדיוק כמו הכתיבה הכפולה ל-`kv` בסבב 30.
-   ⛔ אין למחוק את `tb_archive` בסבב 32 — הטריגר הוא שבועיים של
-      עבודה תקינה על הטבלה המאוחדת, וגם אז מפסיקים קודם את הכתיבה הכפולה
-      ורק בסבב שאחריו מוחקים. ר' `migrations/005`.
+   ⛔ אין להחזיר כתיבה כפולה ל-`tb_archive` — הטבלה נגרעה מהמסד, ⚠️ וכתיבה
+      אליה נכשלת בכל קריאה: ⭐ `tb_archive` הוא **מפתח localStorage** בלבד,
+      ⛔ ואינו שם של טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
 var TB_ROWS = true;
 var TB_ARC_UNIFIED = true;
-/* ⭐ סבב 35 — הטבלאות הן המאסטר, והכתיבה הכפולה כובתה: `TB_ARC_LEGACY_WRITE`
-   (הטבלה הישנה `tb_archive`) ו-`TB_KV_LEGACY_WRITE` (מפתחות ה-`kv`
-   `tb_entries`/`tb_archive`) כבויים. השקילות אומתה ב-17.8 (720/171, אפס
-   אי-התאמות). ⛔ המחיקה עצמה ב-30.8, פעולת מנהל — לא כאן (סבב 35) — חלון
-   שבועיים בין כיבוי למחיקה הוא מה שמאפשר לגלות טעות בזמן.
-   ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta` אינם חלק מהכיבוי —
-   ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
-var TB_ARC_LEGACY_WRITE = false;
+/* ⭐ הטבלאות הן המאסטר, והכתיבה הכפולה ל-`kv` כבויה
+   (`TB_KV_LEGACY_WRITE`) — ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta` אינם חלק
+   מהכיבוי: ⛔ ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
 var TB_KV_LEGACY_WRITE = false;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
@@ -3763,8 +3754,8 @@ function tbRecKey(kvKey, rec) {
 }
 function tbPendPrefix(kvKey) { return (kvKey === 'tb_archive') ? PK_ARC : PK_ENTRY; }
 // `tbl` אופציונלי — הטבלה שאליה השורה נועדה. ⛔ `archived` נכתב רק כשהיעד
-// הוא `tb_entries` (סבב 32) — ל-`tb_archive` אין את העמודה, ושדה עודף
-// ב-`upsert` מפיל את הכתיבה כולה ומחזיר `ok:false`.
+// הוא `tb_entries` — ⚠️ שדה שאינו עמודה ב-`upsert` מפיל את הכתיבה כולה
+// ומחזיר `ok:false`.
 function tbRowOf(kvKey, rec, tbl) {
   var k = tbRecKey(kvKey, rec);
   if (k == null) return null;
@@ -3777,9 +3768,9 @@ function tbRowOf(kvKey, rec, tbl) {
     deleted: !!(rec && rec.deleted),
     data: rec
   };
-  // ⚠️ `gdate` נשמר גם בטבלה המאוחדת (סבב 32) — הוא היה עמודה של
-  //    `tb_archive`, והשמטתו הייתה הופכת את ההעברה לחלקית ואת נתיב החזרה
-  //    למשוחזר-מהנתונים במקום למועתק. הוא נשאר `null` לרשומות יומן.
+  // ⚠️ `gdate` נשמר לסנאפשוט — ⛔ הוא עמודת הסינון של הארכיון בענן,
+  //    והשמטתו הייתה מחייבת לשחזר אותו מהנתונים בכל משיכה. הוא נשאר
+  //    `null` לרשומות יומן.
   if (kvKey === 'tb_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
   if (target === 'tb_entries') row.archived = tbArchivedFlag(kvKey);
   return row;
@@ -3903,21 +3894,6 @@ async function tbSendRows(kvKey, rows, ep) {
   if (!sb) throw new Error('failed to reach cloud');
   var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
   if (!res || res.error) return res || { error: { message: 'upsert failed' } };
-  // ⚠️ כתיבה כפולה לטבלה הישנה — נתיב החזרה בלבד (סבב 32). היא **אינה**
-  //    קובעת את ההצלחה: אילו הייתה, טבלה ישנה שכבר נמחקה הייתה מפילה את
-  //    עֵד הפינוי ואת אישור ה-⏳ על כתיבה שהצליחה במלואה. הראיה שנדרשת
-  //    לשניהם היא הטבלה המאוחדת ובלוק ה-`kv`, ושתיהן נבדקות במקומן.
-  if (TB_ARC_UNIFIED && TB_ARC_LEGACY_WRITE && kvKey === 'tb_archive') {
-    var legacy = rows.map(function (r) {
-      var c = {};
-      Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
-      return c;
-    });
-    /*  ⛔ כשל הכתיבה הכפולה נרשם ואינו נבלע (סבב 79) — ⚠️ המסלול הזה הוא
-     *  נתיב-חזרה שכבוי ברוב הזמן, ⭐ וכשל שקט בו נראה בדיוק כמו הצלחה. */
-    try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
-    catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
-  }
   /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה ⭐ והסימון
    *  שלהן אינו פר-מוסד, ⛔ אבל מפת החותמות המרוחקות כן: ⚠️ מילויה כאן
    *  היה משווה את המוסד החדש מול חותמות של הקודם. */
@@ -4078,9 +4054,8 @@ function saveArchive() {
   lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
-    // ⭐ מסבב 32 הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר
-    //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. שכבת הדחיפה
-    //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
+    // ⭐ הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר הארכוב
+    //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('tb_archive', ARCHIVE);
     if (ctxStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;

@@ -214,7 +214,6 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);   // דרוש ל-parseGregLike (סבב 31)
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
-  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
     vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
   // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».

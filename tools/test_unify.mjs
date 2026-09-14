@@ -49,7 +49,7 @@ const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
  *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
  *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
  *  טענה משותפת שאבדה. */
-const FLOOR = { shared: 0, app: 72, appWhy: 'דגל archived כמפריד בין החי לארכיון — קיים ביומן בלבד' };
+const FLOOR = { shared: 0, app: 65, appWhy: 'דגל archived כמפריד בין החי לארכיון — קיים ביומן בלבד' };
 const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
 /*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
@@ -160,7 +160,6 @@ function makeEnv(opts = {}) {
     rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [],
     // ברירת מחדל: המיגרציה רצה. `noArchivedCol` מדמה את המצב שלפניה.
     cols: { tb_entries: opts.noArchivedCol ? COLS_LEGACY : COLS_UNIFIED, tb_archive: COLS_LEGACY },
-    legacyFails: !!opts.legacyFails,
   };
   const client = {
     from(t) {
@@ -228,7 +227,6 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);
   vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
   vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
-  vm.runInContext(cutVar('var TB_ARC_LEGACY_WRITE = false;'), sandbox);
   vm.runInContext(cutVar('var TB_ROW_TABLES = '), sandbox);
   // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
@@ -246,9 +244,6 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var PUSH_TABLES = '), sandbox);
   vm.runInContext(cutObj('var PUSH_CFG = {'), sandbox);
   if (opts.unified === false) sandbox.TB_ARC_UNIFIED = false;
-  // ⭐ סבב 35: הדגל כבוי בקוד הרץ; בדיקות נתיב-החזרה (5ו-5יא) מדליקות אותו
-  //    כאן במפורש כדי שהנתיב יישאר מכוסה עד המחיקה ב-30.8.
-  sandbox.TB_ARC_LEGACY_WRITE = (opts.legacyWrite === false) ? false : true;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
   env.sb = sandbox;
   return env;
@@ -354,37 +349,25 @@ async function t4() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   5 · הדחיפה — טבלה מאוחדת + כתיבה כפולה לנתיב החזרה
+   5 · הדחיפה — טבלה אחת, ובה הדגל
    ══════════════════════════════════════════════════════════════════════════ */
 async function t5() {
   const env = makeEnv();
   const r = await env.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
   eq(r.ok, true, '5א · הדחיפה הצליחה');
-  eq(env.upserts.length, 2, '5ב · ⭐ שתי כתיבות — המאוחדת והישנה');
-  eq(env.upserts[0].table, 'tb_entries', '5ג · הראשונה לטבלה המאוחדת');
+  /*  ⛔ כתיבה אחת ⛔ ולא שתיים — ⚠️ הכתיבה הכפולה לטבלה הישנה ירדה עם
+   *  הטבלה עצמה: ⭐ ומה שמפריד בין החי לארכיון הוא הדגל. */
+  eq(env.upserts.length, 1, '5ב · ⛔ כתיבה אחת בלבד — אין טבלה שנייה');
+  eq(env.upserts[0].table, 'tb_entries', '5ג · והיא לטבלה המאוחדת');
   eq(env.upserts[0].rows[0].archived, true, '5ד · עם הדגל');
   eq(env.upserts[0].opts.onConflict, 'client_id', '5ה · ⚠️ upsert על client_id — אידמפוטנטי');
-  eq(env.upserts[1].table, 'tb_archive', '5ו · ⭐ והשנייה לטבלה הישנה — נתיב החזרה');
-  eq('archived' in env.upserts[1].rows[0], false, '5ז · ⛔ בלי העמודה שאין לה');
-  eq(env.upserts[1].rows[0].client_id, env.upserts[0].rows[0].client_id,
-    '5ח · ⭐ ואותו client_id בשתיהן — מה שהופך את החזרה לסימטרית');
+  eq(env.sb._tbRemote.tb_archive['g:3/09/2025'], 100, '5ו · ומפת החותמות התעדכנה');
 
-  // רשומת יומן — כתיבה אחת בלבד
+  // רשומת יומן — אותה טבלה, בלי הדגל
   const env2 = makeEnv();
   await env2.sb.pushTable('tb_entries', [E(1, 100)]);
-  eq(env2.upserts.length, 1, '5ט · ⛔ רשומת יומן אינה נכתבת פעמיים');
-
-  // ⛔ כשל בכתיבה הישנה אינו הופך את הדחיפה לכושלת — הטבלה החדשה היא המקור
-  const env3 = makeEnv({ legacyFails: true });
-  const r3 = await env3.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
-  eq(r3.ok, true, '5י · ⛔ כשל בטבלה הישנה אינו מפיל את הדחיפה');
-  eq(env3.sb._tbRemote.tb_archive['g:3/09/2025'], 100, '5יא · ומפת החותמות כן התעדכנה');
-
-  // כיבוי הכתיבה הכפולה — הצעד הראשון לקראת מחיקת הטבלה
-  const env4 = makeEnv({ legacyWrite: false });
-  await env4.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
-  eq(env4.upserts.length, 1, '5יב · ⭐ TB_ARC_LEGACY_WRITE=false ⇒ כתיבה אחת בלבד');
-  eq(env4.upserts[0].table, 'tb_entries', '5יג · ולטבלה המאוחדת');
+  eq(env2.upserts.length, 1, '5ז · ⛔ רשומת יומן אינה נכתבת פעמיים');
+  eq(env2.upserts[0].rows[0].archived, false, '5ח · ובלי הדגל');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -451,8 +434,6 @@ function t8() {
   ok(/on conflict \(client_id\) do nothing/.test(body5),
     '8ז · ⛔ `do nothing` ולא `do update` — הרצה חוזרת אינה דורסת שורה חדשה');
   ok(/,\s*true\b/.test(body5), '8ח · והדגל נכתב true');
-  ok(!/\b(delete\s+from|truncate|drop\s+table)\b[^;]*tb_archive/i.test(body5),
-    '8ט · ⛔ ו-005 אינו מוחק את tb_archive — היא נתיב החזרה');
 
   // 005 — שקילות דו-כיוונית
   ok(/missing_in_unified/.test(M5), '8י · ⭐ כיוון א נמדד — מה שלא הגיע');
@@ -461,9 +442,8 @@ function t8() {
   ok(/raise exception/.test(M5) && /raise notice/.test(M5),
     '8יג · ⚠️ והחומרה אינה סימטרית — אובדן זורק, עודף מדווח');
 
-  // נתיב חזרה וטריגר כתובים
+  // נתיב החזרה של האיחוד — הדגל שבקוד
   ok(/TB_ARC_UNIFIED/.test(M5), '8יד · נתיב החזרה מפנה לדגל שבקוד');
-  ok(/שבועיים/.test(M5), '8טו · והטריגר למחיקת tb_archive כתוב');
   ok(/002/.test(M4) && /003/.test(M4) && /004/.test(M4) && /005/.test(M4),
     '8טז · ⛔ וסדר ההרצה של ארבע המיגרציות כתוב ב-004');
 }
