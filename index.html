@@ -740,17 +740,83 @@ var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(
 
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
-// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
+// בגיוס בהחלטת מנהל — ⚠️ ולכן היא פר-אפליקציה ואינה בבלוק החתום.
 var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_SAVED     = '✅ נשמר בהצלחה';
-// נוסח משותף לארבע האפליקציות (סבב 12 שלב 4). שמירה מקומית שטרם אושרה
-// בענן **חייבת** להיאמר אחרת משמירה שאושרה — אחרת "נשמר" נראה בדיוק אותו
-// דבר בשני המצבים, וזו ההטעיה שהסבב הזה בא למנוע.
+/* ═══ מחרוזות ההודעה המשותפות — מודול משותף (סבב 141) ════════════════════
+   ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
+   ⚠️ עד כאן הצהירה **הערה** «מילה במילה זהות», ⛔ ואיש לא מדד — ⭐ ונמדד
+   ששני שמות נשאו טקסט אחר, ⚠️ ושאחת-עשרה הודעות נכתבו כליטרל בשניים
+   ובשלושה ריפו בלי שם כלל.
+   ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
+   אותה בכל זאת: ⭐ המושג חי בארבעתן, ⛔ ורשימה שנגזרת ממי שמציג אותה
+   היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
+   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN`
+   נבדלים בגיוס בהחלטת מנהל, ⭐ והם נשארים פר-אפליקציה עם נימוקם במקומם.
+   ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
+   «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
+   נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
+   ═══════════════════════════════════════════════════════════════════════ */
+var MSG_SAVED = '✅ נשמר בהצלחה';
 var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
-var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
-// סבב 17: נוסח אחיד לארבע האפליקציות — כאן לא הייתה הודעת התאוששות כלל.
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
+var MSG_DELETE = 'מחק';
+var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
+var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
+var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
+var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
+var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
+var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
+var MSG_SERVER_ERR = 'שגיאת שרת';
+var MSG_SWITCHED_TO = 'הוחלף ל';
+var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+/* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
+/* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
+   ⛔ ההודעה היא קבוע ⛔ ואינה ליטרל באתר התצוגה — ⚠️ טקסט שנכתב במקום
+   שבו הוא נאמר נכתב שוב במסך הבא, ⭐ ושני ניסוחים לאותו מצב הם שני
+   מסלולים בעיני הקורא.
+   ⚠️ **ומה שיותר מאפליקציה אחת אומרת אינו כאן** — ⛔ הוא בבלוק החתום,
+   ⭐ ששם החתימה היא מה שמודד את זהות הנוסח. */
+var MSG_SYNCING = '🔄 מסנכרן...';
+var MSG_SYNCED = '✅ מסונכרן';
+var MSG_SYNC_FAIL_LOCAL = '⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
+var MSG_SYNC_PARTIAL = '⚠️ סנכרון חלקי — נכשל: ';
+var MSG_OFFLINE_LOCAL = '⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר';
+var MSG_DAY_ARCHIVED = '📅 יום חדש! הרשומות הועברו לארכיון אוטומטית';
+var MSG_PICK_CATEGORY = '⚠️ יש לבחור קטגוריה';
+var MSG_NEED_TASK = '⚠️ יש להזין משימה';
+var MSG_ADDED_SAVING = '✅ נוסף — שומר בענן…';
+var MSG_ROWS_DELETED = '✅ הרשומות נמחקו';
+var MSG_NO_ROWS = 'אין רשומות';
+var MSG_PDF_PREP = 'מכין PDF...';
+var MSG_POPUP_BLOCKED = '⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב';
+var MSG_PDF_OPENED = '📄 PDF נפתח!';
+var MSG_IMG_OFFLINE = '⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
+var MSG_IMG_FAIL = '⚠️ יצירת התמונה נכשלה — נסה שוב';
+var MSG_LOCAL_ONLY = '⚠️ נשמר במכשיר בלבד — הענן לא עודכן';
+var MSG_CLOUD_NO_FANOUT = '⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת';
+var MSG_SAVED_CLOUD = '✅ נשמר בענן';
+var MSG_SUBTASK_EXISTS = '⚠️ תת-המשימה כבר קיימת';
+var MSG_TASK_EXISTS = '⚠️ המשימה כבר קיימת בקטגוריה';
+var MSG_INFRA_TABLE = 'טבלת התשתית';
+var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
+var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
+var MSG_ALREADY_AT = 'כבר במוסד ';
+var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
+var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
+var MSG_IMG_PREP = 'מכין תמונה...';
+var MSG_EDIT_FORM_CLOSED = '⚠️ טופס העריכה נסגר — נסה שוב';
+var MSG_ROW_GONE = '⚠️ הרשומה לא נמצאה — לא נשמר';
+var MSG_CLEAR_ALL_TITLE = '🗑 מחיקת כל הרשומות';
+var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנוכחי?';
+/* ══ סוף הודעות פר-אפליקציה ═════════════════════════════════════════════ */
 /* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
    ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
    מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
@@ -1559,7 +1625,6 @@ window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 /* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
@@ -3207,7 +3272,7 @@ async function sbSet(key, value) {
     if (ctxStale(_ep)) return { ok: false, error: "ההקשר התחלף", ctxStale: true };
     if (res.error) {
       console.error('[sync] sbSet error', key, res.error.message, res.error);
-      return { ok: false, error: res.error.message || "שגיאת שרת" };
+      return { ok: false, error: res.error.message || MSG_SERVER_ERR };
     }
     console.log('[sync] sbSet ok', key);
     return { ok: true, error: null };
@@ -3227,7 +3292,7 @@ async function sbGetResult(key) {
     if (res.error) {
       var missing = res.error.code === "PGRST116";
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
-      return { ok: missing, data: null, error: missing ? null : (res.error.message || "שגיאת שרת") };
+      return { ok: missing, data: null, error: missing ? null : (res.error.message || MSG_SERVER_ERR) };
     }
     if (!res.data) return { ok: true, data: null, error: null };
     var pr = kvParse(key, res.data.value);
@@ -4213,7 +4278,7 @@ function tbSyncLog(action, key, recordCount, details) {
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
-  toast("🔄 מסנכרן...", 3000);
+  toast(MSG_SYNCING, 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
   /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
@@ -4358,16 +4423,16 @@ async function syncFromCloud() {
     renderSettings();
     if (failed.length === 0 && !_tbPullLogged) { _tbPullLogged = true; tbSyncLog('pull', null, null); }
     if (failed.length === 0) {
-      toast("✅ מסונכרן");
+      toast(MSG_SYNCED);
     } else if (failed.length >= 5) {
-      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר", null, 'bad');
+      toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
     } else {
-      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "), null, 'bad');
+      toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'bad');
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
     _tbNetWarned = true;
-    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר", null, 'bad');
+    toast(MSG_OFFLINE_LOCAL, null, 'bad');
   }
 }
 // ═══════════════════════════════════════
@@ -4737,7 +4802,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
-    toast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
+    toast(MSG_DAY_ARCHIVED);
   }
   lsSet("tb_last_day"+LS, today);
 }
@@ -4968,8 +5033,8 @@ function addEntry() {
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
   var hdate = document.getElementById("hebDateInput").value.trim();
-  if (!selCat) { toast("⚠️ יש לבחור קטגוריה", null, 'bad'); return; }
-  if (!task)   { toast("⚠️ יש להזין משימה", null, 'bad'); return; }
+  if (!selCat) { toast(MSG_PICK_CATEGORY, null, 'bad'); return; }
+  if (!task)   { toast(MSG_NEED_TASK, null, 'bad'); return; }
   var now = new Date();
   var entry = {
     // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורת מזהי הרשומות במטריצה).
@@ -4993,7 +5058,7 @@ function addEntry() {
   clearForm();
   // השמירה המקומית הושלמה בנקודה זו; דחיפת הענן עוד לא התחילה —
   // schedulePush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
-  toast("✅ נוסף — שומר בענן…");
+  toast(MSG_ADDED_SAVING);
   schedulePush();
 }
 
@@ -5048,7 +5113,7 @@ function delEntry(id) {
 }
 
 function clearAll() {
-  ask("🗑 מחיקת כל הרשומות", "האם למחוק את כל רשומות היום הנוכחי?", 'מחק').then(function (yes) {
+  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE).then(function (yes) {
     if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();
@@ -5057,7 +5122,7 @@ function clearAll() {
     saveEntries(); renderLog();
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
-    toast("✅ הרשומות נמחקו");
+    toast(MSG_ROWS_DELETED);
     schedulePush();
   });
 }
@@ -5318,14 +5383,14 @@ function instName() {
  *  שתי הזדמנויות שאחד מהם ייסחף. */
 function exportPDF() {
   var live = liveOnly(ENTRIES);
-  if (!live.length) { toast("אין רשומות"); return; }
+  if (!live.length) { toast(MSG_NO_ROWS); return; }
   /*  ⛔ הכותרת נגזרת **לפני** הרינדור הא-סינכרוני — ⚠️ מסלול הארכיון מחליף
    *  את `ENTRIES` ואת שדה התאריך ומשחזר אותם מיד אחרי הקריאה, ⭐ והרינדור
    *  מסתיים אחרי השחזור: ⛔ קריאה מאוחרת הייתה מקבלת את תאריך היום. */
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var fileTitle = "יומן עבודה " + today + " " + todayGreg;
-  toast("מכין PDF...");
+  toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
       div.style.left = '-9999px';
@@ -5341,7 +5406,7 @@ function _printCanvas(canvas, title) {
   // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נפלה בשקט
   // ("w is null") והמשתמש לא ידע למה לא קרה כלום.
   if (!w || !w.document) {
-    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב", null, 'bad');
+    toast(MSG_POPUP_BLOCKED, null, 'bad');
     return;
   }
   w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
@@ -5352,7 +5417,7 @@ function _printCanvas(canvas, title) {
     + '</body></html>');
   w.document.close();
   setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
-  toast("📄 PDF נפתח!");
+  toast(MSG_PDF_OPENED);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -5367,8 +5432,8 @@ function _reportError(div, e){
   console.error('[report] rendering failed:', e);
   toast(
     (typeof html2canvas === 'undefined')
-      ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
-      : "⚠️ יצירת התמונה נכשלה — נסה שוב"
+      ? MSG_IMG_OFFLINE
+      : MSG_IMG_FAIL
   , null, 'bad');
 }
 // מחזירה תמיד promise, ⛔ ולעולם אינה זורקת סינכרונית (נרשם בסבב 67) —
@@ -5493,7 +5558,7 @@ async function tbSyncPushNow() {
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום tb_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
-      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן", null, 'bad');
+      toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
@@ -5504,9 +5569,9 @@ async function tbSyncPushNow() {
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
     if (ctxStale(_ep)) return;
-    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת", null, 'bad'); return; }
+    if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
-    toast("✅ נשמר בענן");
+    toast(MSG_SAVED_CLOUD);
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -5689,7 +5754,7 @@ function addSub(ci, ti) {
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
    *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
-  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000, 'bad'); return; }
+  if (uniqHas(SUBS[sk], val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5870,7 +5935,7 @@ function addTask(ci) {
    *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
    *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
    *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
-  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000, 'bad'); return; }
+  if (uniqHas(CATS[ci].tasks, val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
@@ -6640,7 +6705,7 @@ window._infOpen = false;
  *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
 async function ysInfraOpen() {
   window._infOpen = false;
-  openModal('טבלת התשתית',
+  openModal(MSG_INFRA_TABLE,
     '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
@@ -6685,7 +6750,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      toast("⚠️ לא הצליח לטעון סנכרון", 2000, 'bad');
+      toast(MSG_SYNC_LOAD_FAIL, 2000, 'bad');
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -6929,7 +6994,7 @@ function ysPickYeshiva() {
             (cur ? ' ✓' : '') + '</button>';
   }
   body += '</div>';
-  openModal('החלפת ישיבה', body, '');
+  openModal(MSG_SWITCH_YESHIVA, body, '');
 }
 
 /*  ⛔ המעבר מאפס את המצב **לפני** הטעינה מחדש (סבב 81) — ⚠️ סדר הפוך
@@ -6941,13 +7006,13 @@ function ysPickYeshiva() {
 function ysConfirmSwitch(y) {
   if (!ysNameOf(y)) return;
   closeModal();
-  if (idEq(y, YESHIVA)) { toast('כבר במוסד ' + ysNameOf(y)); return; }
+  if (idEq(y, YESHIVA)) { toast(MSG_ALREADY_AT + ysNameOf(y)); return; }
   selectYeshiva(y);
   /*  ⛔ הארכיון חוזר לשורש דרך נקודת הניווט היחידה — ⚠️ שנת הקידוח
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
-  toast('הוחלף ל' + ysNameOf(y));
+  toast(MSG_SWITCHED_TO + ysNameOf(y));
 }
 
 /*  ⛔ `again` מסמן מעבר בין מוסדות ⛔ ולא עלייה (סבב 81) — ⚠️ כל
@@ -7031,7 +7096,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[startApp] נכשל', e);
-    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן", null, 'bad');
+    toast(MSG_BOOT_FAIL, null, 'bad');
   }
 }
 
@@ -7043,8 +7108,8 @@ function selectYeshiva(y) {
 function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){ toast("אין רשומות לשיתוף להיום"); return; }
-  toast("מכין תמונה...");
+  if(!todayEntries.length){ toast(MSG_NOTHING_TO_SHARE); return; }
+  toast(MSG_IMG_PREP);
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
@@ -7147,7 +7212,7 @@ function arcSaveEntry(gdateKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב', null, 'bad'); return; }
+  if (vals.task === null) { toast(MSG_EDIT_FORM_CLOSED, null, 'bad'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -7167,7 +7232,7 @@ function arcSaveEntry(gdateKey, entryId) {
     // אין מה לשמור — לא לשקר למשתמש
     console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
-    toast('⚠️ הרשומה לא נמצאה — לא נשמר', null, 'bad');
+    toast(MSG_ROW_GONE, null, 'bad');
     return;
   }
   pendMark(PK_ENTRY + entryId);

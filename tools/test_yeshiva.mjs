@@ -298,7 +298,7 @@ mutate('נ2ב · ⭐ מוטציית-נגד: שורה שנוספה בלי איש�
                    "  console.log('switch');\n  selectYeshiva(y);\n"), ['__none__']);
 
 mutate('מ3 · מוטציה: הבורר עוקף את openModal — טענה ב נופלת',
-  (s) => s.replace("  openModal('החלפת ישיבה', body, '');",
+  (s) => s.replace("  openModal(MSG_SWITCH_YESHIVA, body, '');",
                    "  document.getElementById('modal-body').innerHTML = body;"), ['modal']);
 
 mutate('מ4 · מוטציה: צבע המדרג זז בגוון אחד — טענה ה נופלת',
@@ -322,8 +322,8 @@ mutate('נ1 · ⭐ מוטציית-נגד: שורת איפוס **נוספת** ⛔
 /*  ⭐ מוטציית-נגד חיה: ניסוח ההודעה שאחרי ההחלפה — ⛔ מחרוזת שקיימת בקובץ,
  *  ⚠️ ולא כזו שנעלמה ממנו: ⛔ מוטציה שהחלפתה אינה מחליפה דבר אינה רצה. */
 mutate('נ2 · ⭐ מוטציית-נגד: ניסוח ההודעה שאחרי ההחלפה ⛔ אינו מפיל את טענה ג',
-  (s) => s.replace("toast('הוחלף ל' + ysNameOf(y));",
-                   "toast('המוסד הוחלף ל' + ysNameOf(y));"), ['__none__']);
+  (s) => s.replace("var MSG_SWITCHED_TO = 'הוחלף ל';",
+                   "var MSG_SWITCHED_TO = 'המוסד הוחלף ל';"), ['__none__']);
 
 rmSync(tmp, { recursive: true, force: true });
 }

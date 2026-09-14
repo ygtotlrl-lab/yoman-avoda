@@ -135,6 +135,10 @@ const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick'
   'getAllArchiveDays', 'getYearsWithData', 'getMonthsWithData', 'getDaysInMonth',
   'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
   'checkDayChange', 'gregDateStr', 'getTodayKey'];
+/*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
+ *  הצהרותיהן, ⭐ שאם לא כן מטפל שמציג הודעה זורק `ReferenceError`,
+ *  ⛔ והכשל נקרא ככשל התנהגות ולא כחוסר בסביבה. */
+const MSG_DECLS = (SRC.match(/^var MSG_[A-Z_0-9]* = '(?:[^'\\]|\\.)*';$/gm) || []).join('\n');
 const VARS = ['var GREG_MONTHS_HE', 'var HMO ', 'var HUNKNOWN',
   'var DAY_VALUE_MAP'];
 
@@ -168,7 +172,7 @@ function makeCtx(opts) {
     _store: store,
   };
   vm.createContext(sandbox);
-  vm.runInContext(VARS.map(cutVar).join('\n') + '\n' + FN.map(cut).join('\n'), sandbox);
+  vm.runInContext(MSG_DECLS + '\n' + VARS.map(cutVar).join('\n') + '\n' + FN.map(cut).join('\n'), sandbox);
   /*  ⛔ מנוע התאריך העברי **האמיתי** ⛔ ולא בדל (סבב 89) — ⚠️ הנפילה-חזרה
    *  השלישית של `snapHDate` ממירה לועזי לעברי, ⭐ ובדל היה מודד את הבדל
    *  ולא את ההמרה: ⛔ העוגנים הם אותם שני סמנים מוצהרים שהשער של התאריך
