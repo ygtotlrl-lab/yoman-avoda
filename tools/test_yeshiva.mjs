@@ -32,8 +32,6 @@ import { tmpdir } from 'node:os';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  /*  ⚠️ רצפת הטענות — ⛔ פחות מזה פירושו שהתהליך נסגר באמצע. */
-  expected: 6,
   name: 'yoman-avoda',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
@@ -59,19 +57,31 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 let pass = 0, fail = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
- *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה המהירה, ⛔ ופחות ממנה הוא
- *  כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
+ *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
+ *  הוא כשל — ⚠️ והמאזין על `exit` תופס גם יציאה שקדמה להמתנה. */
 const GATE_ID = new URL(import.meta.url).pathname.split('/').pop();
-const EXPECTED = APP.expected;
+/*  ⛔ ריצפת הטענות — ⚠️ **מה נכנס**: המשותפת, שהיא מספר זהה בארבעת הריפו,
+ *  ⛔ והפרטית עם היכולת שמוסיפה אותה; ⛔ **ומה מפיל**: משותפת שנבדלת בין
+ *  הריפו, פרטית בלי נימוק, וסכום אפס. ⭐ **ולמה לא מספר אחד**: הוא מסתיר
+ *  טענה משותפת שאבדה. */
+const FLOOR = { shared: 0, app: 6, appWhy: 'החלפת המוסד ומסך הבחירה — שתי ישיבות ביומן בלבד' };
+const EXPECTED = FLOOR.shared + FLOOR.app;
 let RAN = 0;
+/*  ⛔ המונה נלכד בכניסה לשלב המוטציות (סבב 119) — ⚠️ `null` הוא תהליך
+ *  שלא הגיע לשם, ⛔ ואפס הוא שער שכל גופו מוטציות: ⭐ ההבחנה היא מה
+ *  שמבדיל ריצה חלקית מדילוג מוצהר. */
+let PRE_MUT = null;
+const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
  *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
 const SUBRUN = !!process.env.GATE_SUBRUN;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
- *  שרצו; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית — ⛔ ויותר ממנו —
- *  ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה מתעדכנת מפסיקה
- *  למדוד את מה שנוסף. ⚠️ **והתקרה ברמה המהירה בלבד** — ⛔ המוטציות
- *  מוסיפות טענות בכוונה, ⭐ ושער שמספרו משתנה גם בלעדיהן מוכרז
+ *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
+ *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
+ *  מתעדכנת מפסיקה למדוד את מה שנוסף. ⛔ **וההשהיה על שלב המוטציות בלבד
+ *  (סבב 119)** — ⚠️ `mutStage` לוכדת את המונה בכניסה אליו, ⭐ ומה שהוא
+ *  מוסיף אינו נספר בתקרה: ⛔ השהיה על הרמה המלאה כולה השאירה תשעה שערים
+ *  בלי מדידה באף כיוון. ⚠️ ושער שמספרו משתנה גם בלי המוטציות מוכרז
  *  ב-`APP.floorRange` ומקבל את הטווח ב-`GATE_FLOOR_RANGE`. */
 const FLOOR_MAX = (() => {
   const r = /^(\d+)-(\d+)$/.exec(process.env.GATE_FLOOR_RANGE || '');
@@ -83,14 +93,22 @@ process.on('exit', () => {
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
-  console.log(`רצו ${RAN} מתוך ${EXPECTED}`);
-  if (RAN < EXPECTED) {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN} טענות מתוך ${EXPECTED} מוצהרות — ` +
+  /*  ⛔ אפס שנמדד בכניסה לשלב המוטציות הוא דילוג מוצהר (סבב 119) —
+   *  ⚠️ שער שכל גופו מוטציות אינו רץ ברמה המהירה, ⭐ ואפס כזה אינו
+   *  ריצה חלקית: ⛔ ו-`null` — תהליך שלא הגיע לשם — כן. */
+  if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
+    console.log(`⏭ ${GATE_ID}: כל גופו רץ ברמה המלאה — לא נמדד כאן`);
+    return;
+  }
+  const N = PRE_MUT || RAN;
+  console.log(`רצו ${N} מתוך ${EXPECTED}`);
+  if (N < EXPECTED) {
+    console.error(`❌ ${GATE_ID}: רצו ${N} טענות מתוך ${EXPECTED} מוצהרות — ` +
       'מה עושים: ודא `await` בקריאה הראשית, ⛔ ויציאה שאינה קודמת להמתנה.');
     process.exitCode = 1;
-  } else if (RAN > FLOOR_MAX && process.env.GATE_MUT !== '1') {
-    console.error(`❌ ${GATE_ID}: רצו ${RAN}, והריצפה ${EXPECTED} — ` +
-      'עדכן את `EXPECTED`.');
+  } else if (N > FLOOR_MAX) {
+    console.error(`❌ ${GATE_ID}: רצו ${N}, והריצפה ${EXPECTED} — ` +
+      'עדכן את `FLOOR`.');
     process.exitCode = 1;
   }
 });
@@ -178,13 +196,16 @@ function audit(root) {
     v.push({ kind: 'palette', msg: 'לא נחלצו ערכי `APP` מ-`gen-icons`' });
   } else {
     const ang = Math.round(180 - Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180 / Math.PI);
-    const want = `linear-gradient(${ang}deg,${hex(start)} 0%,${hex(end)} 100%)`;
+    const want = `linear-gradient(${ang}deg,var(--deep-1) 0%,var(--deep-2) 100%)`;
     if (page.indexOf(want) < 0)
       v.push({ kind: 'palette', msg: `מדרג מסך הבחירה — הצפוי «${want}»` });
-    if (page.indexOf('color:' + hex(ink) + ';') < 0)
-      v.push({ kind: 'palette', msg: `צבע הדיו — הצפוי «color:${hex(ink)};»` });
-    if (page.indexOf('fill:' + hex(ink) + ';') < 0)
-      v.push({ kind: 'palette', msg: `מילוי הסמל — הצפוי «fill:${hex(ink)};»` });
+    for (const [tok, val] of [['--deep-1', hex(start)], ['--deep-2', hex(end)], ['--on-deep', hex(ink)]])
+      if (page.indexOf(tok + ':' + val + ';') < 0)
+        v.push({ kind: 'palette', msg: `ערך האסימון ${tok} — הצפוי «${tok}:${val};»` });
+    if (page.indexOf('color:var(--on-deep);') < 0)
+      v.push({ kind: 'palette', msg: 'צבע הדיו — הצפוי «color:var(--on-deep);»' });
+    if (page.indexOf('fill:var(--on-deep);') < 0)
+      v.push({ kind: 'palette', msg: 'מילוי הסמל — הצפוי «fill:var(--on-deep);»' });
   }
 
   /* ו. מוטיב הפסים — ארבעת המלבנים כפי שהם ב-`APP.mark.shapes` */
@@ -229,6 +250,7 @@ t(n++, !base.some((x) => x.kind === 'mark'),
   `ו. ארבעת פסי הסמל זהים ל-APP.mark.shapes ${of('mark')}`);
 
 if (RUN_MUT) {
+  mutStage();
 /* ── מוטציות — על עותק בתיקייה זמנית ───────────────────────────────────── */
 /*  ⛔ כותב על עותק — ⚠️ השער האמיתי רץ בתהליך נפרד, ⛔ והוא קורא את `index.html` מהדיסק. */
 const tmp = mkdtempSync(join(tmpdir(), 'r81ysv-'));
@@ -276,11 +298,11 @@ mutate('נ2ב · ⭐ מוטציית-נגד: שורה שנוספה בלי איש�
                    "  console.log('switch');\n  selectYeshiva(y);\n"), ['__none__']);
 
 mutate('מ3 · מוטציה: הבורר עוקף את openModal — טענה ב נופלת',
-  (s) => s.replace("  openModal('החלפת ישיבה', body, '');",
+  (s) => s.replace("  openModal(MSG_SWITCH_YESHIVA, body, '');",
                    "  document.getElementById('modal-body').innerHTML = body;"), ['modal']);
 
 mutate('מ4 · מוטציה: צבע המדרג זז בגוון אחד — טענה ה נופלת',
-  (s) => s.replace('linear-gradient(141deg,#2A4E8C 0%', 'linear-gradient(141deg,#2A4E8D 0%'),
+  (s) => s.split('--deep-1:#2A4E8C;').join('--deep-1:#2A4E8D;'),
   ['palette']);
 
 mutate('מ5 · מוטציה: רוחב פס אחד בסמל משתנה — טענה ו נופלת',
@@ -300,8 +322,8 @@ mutate('נ1 · ⭐ מוטציית-נגד: שורת איפוס **נוספת** ⛔
 /*  ⭐ מוטציית-נגד חיה: ניסוח ההודעה שאחרי ההחלפה — ⛔ מחרוזת שקיימת בקובץ,
  *  ⚠️ ולא כזו שנעלמה ממנו: ⛔ מוטציה שהחלפתה אינה מחליפה דבר אינה רצה. */
 mutate('נ2 · ⭐ מוטציית-נגד: ניסוח ההודעה שאחרי ההחלפה ⛔ אינו מפיל את טענה ג',
-  (s) => s.replace("toast('הוחלף ל' + ysNameOf(y));",
-                   "toast('המוסד הוחלף ל' + ysNameOf(y));"), ['__none__']);
+  (s) => s.replace("var MSG_SWITCHED_TO = 'הוחלף ל';",
+                   "var MSG_SWITCHED_TO = 'המוסד הוחלף ל';"), ['__none__']);
 
 rmSync(tmp, { recursive: true, force: true });
 }

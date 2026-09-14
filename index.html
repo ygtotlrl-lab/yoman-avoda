@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>יומן עבודה</title>
-<!-- מזהה גרסה מפורש — חובה לקדם בכל שינוי קוד (יחד עם CACHE_NAME ב-sw.js).
-     יושב כאן בראש הקובץ כדי שבדיקת העדכון תקרא רק את ה-KB הראשונים ולא ~950KB. -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,111 +12,6 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
-<script>
-// ═══ באנר עדכון יחיד ═══
-// ⛔ מנגנון זיהוי אחד — `reg.update()` של ה-service worker: ⚠️ בדיקת
-// הגרסה השעתית מול raw GitHub ירדה, ⛔ ואין להחזיר מנגנון שני לאותה שאלה.
-// ⛔ **ולכן אין כאן מספר גרסה** — ⚠️ הוא הגיע ממנה בלבד, ⭐ ומפתח
-// שזכר גרסה שנדחתה נשאר בלי קורא.
-(function() {
-  var userAccepted = false;
-  var reloaded = false;
-  var swReg = null;                       // נקבע כשה-service worker נרשם (אם בכלל)
-  function doReload() {
-    if (reloaded) return;
-    reloaded = true;
-    location.reload();
-  }
-
-  window.showAppUpdateBanner = function() {
-    // עותק אחד בלבד.
-    if (document.getElementById('sw-update-banner')) return;
-    if (!document.body) return;
-    var bar = document.createElement('div');
-    bar.id = 'sw-update-banner';
-    bar.setAttribute('dir', 'rtl');
-    bar.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#1E6FBF,#0D4A8A);color:#fff;padding:10px 16px;border-radius:26px;box-shadow:0 6px 24px rgba(0,0,0,.28);z-index:10001;font-family:Heebo,sans-serif;font-size:13px;font-weight:700;max-width:92vw';
-    var txt = document.createElement('span');
-    txt.textContent = '🔄 גרסה חדשה זמינה';
-    var btn = document.createElement('button');
-    btn.textContent = 'עדכן עכשיו';
-    btn.style.cssText = 'background:#fff;color:#1E6FBF;border:none;border-radius:20px;padding:7px 16px;font-family:Heebo,sans-serif;font-size:12px;font-weight:700;cursor:pointer';
-    btn.onclick = function() {
-      userAccepted = true;
-      btn.disabled = true;
-      btn.textContent = 'מעדכן...';
-      // א. יש worker ממתין — לבקש ממנו להשתלט, ואז לטעון מחדש
-      if (swReg && swReg.waiting) {
-        swReg.waiting.postMessage({type: 'SKIP_WAITING'});
-        setTimeout(doReload, 1500);
-        return;
-      }
-      // ב. הזיהוי הגיע מבדיקת הגרסה — לבקש עדכון SW ולטעון מחדש בכל מקרה.
-      // ה-SW הוא network-first, ולכן הטעינה מביאה את הקובץ החדש גם בלי SW חדש.
-      if (swReg && typeof swReg.update === 'function') {
-        setTimeout(doReload, 3000);       // גיבוי קשיח — לא להישאר תקוע על "מעדכן..."
-        try {
-          swReg.update().then(function() {
-            if (swReg.waiting) swReg.waiting.postMessage({type: 'SKIP_WAITING'});
-            setTimeout(doReload, 800);
-          }, doReload);
-          return;
-        } catch (e) { /* נופלים ל-doReload שלמטה */ }
-      }
-      doReload();
-    };
-    var close = document.createElement('button');
-    close.textContent = '✕';
-    close.setAttribute('aria-label', 'סגור');
-    close.style.cssText = 'background:none;border:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;padding:0 2px;font-family:Heebo,sans-serif;line-height:1';
-    close.onclick = function() {
-      if (bar.parentNode) bar.parentNode.removeChild(bar);
-    };
-    bar.appendChild(txt); bar.appendChild(btn); bar.appendChild(close);
-    document.body.appendChild(bar);
-  };
-
-  if (!('serviceWorker' in navigator)) return;   // אין SW — אין מי שיזהה עדכון
-
-  window.addEventListener('load', function() {
-    // מטפל ה-install של ה-service worker קורא ל-skipWaiting() מעצמו, ולכן
-    // controllerchange נורה בכל עדכון גם בלי הסכמת המשתמש — והשומר שלמטה
-    // הוא מה שמונע רענון אוטומטי באמצע העבודה.
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (!userAccepted || reloaded) return;
-      reloaded = true;
-      location.reload();
-    });
-
-    navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      console.log('[sw] registered:', reg.scope);
-      swReg = reg;
-
-      if (reg.waiting && navigator.serviceWorker.controller) { window.showAppUpdateBanner(); }
-
-      reg.addEventListener('updatefound', function() {
-        var nw = reg.installing;
-        if (!nw) return;
-        nw.addEventListener('statechange', function() {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            window.showAppUpdateBanner();
-          }
-        });
-      });
-
-      function checkForUpdate() {
-        try { reg.update().catch(function() {}); } catch (e) {}
-      }
-      checkForUpdate();
-      setInterval(checkForUpdate, 30 * 60 * 1000);
-    }).catch(function(err) {
-      console.warn('[sw] registration failed:', err);
-    });
-  });
-})();
-
-
-</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
@@ -130,53 +23,79 @@
   --toast-bottom:26px;
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בארבעתן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
-  --stale-ink:#a3341f;
+  /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בארבעתן,
+   *  ⭐ והגוון בלבד נבדל: ⛔ רכיב שמייצג את האפליקציה נגזר ממנו
+   *  ⛔ ולא מדיו הטקסט — ⚠️ ארבעה באנרים בארבעה גוונים נראו זהים.
+   *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
+  /*  ⛔ הדיו קבוע בשני המצבים ⛔ ואינו נגזר — ⚠️ המשטח נבדל: `--accent`
+   *  הוא #F0A500 בבהיר ו-#FFB930 בכהה, ⭐ ושני הגוונים בהירים: ⛔ ולכן
+   *  דיו כהה אחד הוא הנכון בשניהם — ⚠️ נמדד 7.30 ו-8.85. */
+  --brand:var(--accent); --on-brand:#1A2540;
 
   --primary-ink:#1E6FBF; --primary-fill:#1E6FBF;
   --primaryl:#3A8FDF; --primaryd:#0D4A8A;
-  --accent:#F0A500; --accentl:#FFB930; --accentd:#C07800;
-  --bg:#F0F4FA; --bgsec:#E4EBF5; --bgcard:#FFFFFF;
-  --text:#1A2540; --textmid:#4A5A7A; --textlite:#8A9ABB;
-  --border:#D0DAF0; --success:#1A9A5A; --shadow:rgba(30,60,120,0.10);
+  --accent:#F0A500; --accentl:#FFB930;
+  --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
+  --text:#1A2540; --text2:#4A5A7A; --text3:#8A9ABB;
+  --radius:var(--r-5);
+  --on-primary:#FFFFFF;
+  --ok:#1A6A3A; --ok-soft:#E6F6EC;
+  --warn:#B45309; --warn-soft:#FFFBE6;
+  --bad:#B91C1C; --bad-soft:#FFE8E8;
+  --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
+  --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+  --on-deep:#F7F4EB; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
+  --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+  --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
+  --shadow-accent:rgba(240,165,0,0.40); --ok-2:#2ABB6A;
 }
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
  *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
  *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
 @media (prefers-color-scheme:dark){
   :root {
-    --stale-ink:#ffb4a2;
-    --bg:#0d151d; --bgsec:#18242f; --bgcard:#131e29;
-    --text:#e8eef5; --textmid:#c2cfdc; --textlite:#93a5b8;
+    --on-brand:#1A2540;
+
+    --bg:#0d151d; --card-2:#18242f; --card:#131e29;
+    --text:#e8eef5; --text2:#c2cfdc; --text3:#93a5b8;
     --border:#24333f;
+    --on-primary:#FFFFFF;
+    --ok:#84DBA6; --ok-soft:#12251C;
+    --warn:#FBBF24; --warn-soft:#2B2012;
+    --bad:#F87171; --bad-soft:#2D1717;
     --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
     --primaryl:#5AA6EE; --primaryd:#9EC8F2;
-    --accent:#FFB930; --accentl:#FFC957; --accentd:#F0A500;
-    --success:#4ade80;
+    --accent:#FFB930; --accentl:#FFC957;
     --shadow:rgba(0,0,0,0.45);
+    --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+    --on-deep:#F7F4EB; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
+    --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+    --shadow-brand:rgba(0,0,0,0.45); --shadow-brand-soft:rgba(0,0,0,0.25);
+    --shadow-accent:rgba(0,0,0,0.45); --ok-2:#84DBA6;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
-.app{max-width:960px;margin:0 auto;padding:14px;}
+.app{max-width:960px;margin:0 auto;padding:var(--sp-6);}
 
 /* כותרת עליונה */
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
-.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);border-radius:20px;padding:0;margin-bottom:20px;
-  border:none;box-shadow:0 6px 28px rgba(21,88,160,0.35);display:flex;flex-direction:column;height:180px;overflow:hidden;}
+.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
+  border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
-.hdr-logo-wrap{padding:0 18px;display:flex;align-items:center;justify-content:center;}
+.hdr-logo-wrap{padding:0 var(--sp-6);display:flex;align-items:center;justify-content:center;}
 /* ⛔ הסטה של 2% למעלה ⛔ ואינה מספר פיקסלים — ⚠️ איזון אופטי: העין תופסת
    מרכז מעט גבוה מהחישוב, ⭐ והאחוז נגזר מגובה הלוגו ונע איתו. */
-.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:8px;background:var(--bgcard);padding:3px;
+.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-2);
   transform:translateY(-2%);}
 /* ⛔ הלוגו יושב בתוך כפתור אמיתי ⛔ ולא נושא `role="button"` — ⚠️ מסלול
    הפעלה אחד לעכבר ולמקלדת, ⭐ ובלי מאזין `keydown` שני לצד הדלגציה. */
 .hdr-logo-btn{background:none;border:none;padding:0;cursor:pointer;display:block;line-height:0;}
-.hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:10px;}
+.hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:var(--r-4);}
 
 /* מסך בחירת הישיבה — ⛔ צבעיו הם צבעי האייקון ⛔ ואינם ערכים שנבחרו כאן:
    ⚠️ מקור האמת הוא בלוק `APP` שב-`gen-icons.mjs` — `bg.start` · `bg.end`
@@ -184,60 +103,60 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    `mark.shapes` אות באות. ⛔ מי שמשנה ערך כאן בלי לשנות שם מייצר מקור
    שני לאותו צבע, והשער משווה את חמשת הערכים. ⚠️ ואין כאן `--primary`
    ו-`--bg` של פנים האפליקציה: ⛔ הם הכחול הבהיר, ⭐ והם אינם גוון האייקון. */
-#yeshivaSelect{position:fixed;inset:0;z-index:10000;
-  background:linear-gradient(141deg,#2A4E8C 0%,#0E2145 100%);
-  color:#F7F4EB;display:flex;align-items:center;justify-content:center;
-  font-family:'Heebo',sans-serif;direction:rtl;padding:24px;overflow:auto;}
+#yeshivaSelect{position:fixed;inset:0;z-index:var(--z-7);
+  background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
+  color:var(--on-deep);display:flex;align-items:center;justify-content:center;
+  font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
-.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto 18px;fill:#F7F4EB;}
+.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
 /* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
    11+6 מעל ו-10+15.4 מתחת; ⭐ ולכן הכותרת נשארת באותה נקודה בדיוק, ⛔ ואין
    להחליפו ב-`margin` — הוא היה נבלע במרווח של «בחר ישיבה» שמתחתיו */
-.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:34px;font-weight:900;
-  letter-spacing:1px;line-height:1;margin:0;padding:17px 0 25.4px;}
-.ys-pick-lead{font-size:13px;font-weight:700;opacity:0.7;margin:26px 0 12px;}
-.ys-pick-btns{display:flex;flex-direction:column;gap:12px;}
+.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;
+  letter-spacing:var(--ls-2);line-height:var(--lh-1);margin:0;padding:var(--sp-6) 0 var(--sp-7);}
+.ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:var(--op-5);margin:var(--sp-7) 0 var(--sp-5);}
+.ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
 /* ⚠️ הכפתור שקוף על הגרדיאנט ⛔ ואינו לבן מלא — ⭐ מסגרת בדיו היא אותו
    מוטיב של הפסים, ⛔ ומשטח לבן היה מכניס גוון שלישי למסך. */
-.ys-pick-btn{padding:17px;font-family:'Heebo',sans-serif;font-size:18px;font-weight:800;
-  color:#F7F4EB;background:rgba(247,244,235,0.08);border:2px solid rgba(247,244,235,0.45);
-  border-radius:14px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
-.ys-pick-btn:hover{background:rgba(247,244,235,0.18);border-color:#F7F4EB;}
+.ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
+  color:var(--on-deep);background:var(--fill-deep);border:2px solid var(--edge-deep);
+  border-radius:var(--r-5);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
+.ys-pick-btn:hover{background:var(--fill-deep-2);border-color:var(--on-deep);}
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* ⛔ המרווח הוא מה שמפריד בין בחירה לקריאה — ⚠️ כפתור שלישי צמוד נקרא
    כישיבה שלישית, ⭐ והקו מעליו הוא הגבול. */
-.ys-pick-aside{margin-top:26px;padding-top:18px;border-top:1px solid rgba(247,244,235,0.18);}
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);}
 /* ⚠️ מובחן משני הכפתורים שמעליו בגודל ובעובי המסגרת ⛔ ולא בצבע — ⭐ גוון
    שלישי על הגרדיאנט היה שובר את המוטיב. */
-.ys-pick-alt{padding:11px 18px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;
-  color:#F7F4EB;background:transparent;border:1px dashed rgba(247,244,235,0.4);
-  border-radius:11px;cursor:pointer;transition:background 0.18s,border-color 0.18s;}
-.ys-pick-alt:hover{background:rgba(247,244,235,0.10);border-color:rgba(247,244,235,0.75);}
+.ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
+  color:var(--on-deep);background:transparent;border:1px dashed var(--edge-deep);
+  border-radius:var(--r-4);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
+.ys-pick-alt:hover{background:var(--fill-deep);border-color:var(--edge-deep-2);}
 .ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
-.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 12px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:4px;margin-bottom:4px;}
-.hdr-title-wrap{position:relative;display:inline-block;padding-bottom:8px;}
-.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:28px;font-weight:900;color:#FFFFFF;letter-spacing:1px;line-height:1;}
+.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.hdr-bh{font-size:var(--fs-1);color:var(--on-dark-3);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
+.hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
+.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--on-primary);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 
 .hdr-title-wrap::after{content:none;}
 /* ⛔ הכתובית בשורה אחת ⛔ ואינה נשברת — ⚠️ שם המוסד שנשבר לשתיים מזיז
    את גוש הטקסט שהלוגו ממורכז אליו, ⭐ ומקצר את הכרטיס במסך צר בלבד. */
-.hdr-sub{font-size:10px;color:rgba(255,255,255,0.6);margin-top:8px;letter-spacing:0.3px;
+.hdr-sub{font-size:var(--fs-1);color:var(--on-dark-3);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ הרכיב שישב כאן
    הוסר והשאיר חלל שנראה כטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
-.hdr-div{height:1px;background:rgba(255,255,255,0.22);margin:0 22px;}
-.hdr-yechi{padding:9px 20px 12px;font-size:11px;font-weight:800;color:rgba(255,255,255,0.9);
-  letter-spacing:0.3px;line-height:1.4;text-align:center;}
+.hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--sp-7);}
+.hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
+  letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
 /* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
    נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
    בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
    את הגודל המלא. */
-.hdr-sub{font-size:8px;letter-spacing:0;}
-.hdr-logo-wrap{padding:0 12px;}
+.hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
+.hdr-logo-wrap{padding:0 var(--sp-5);}
 @media (min-width:360px){
-  .hdr-sub{font-size:10px;letter-spacing:0.3px;}
-  .hdr-logo-wrap{padding:0 18px;}
+  .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
+  .hdr-logo-wrap{padding:0 var(--sp-6);}
 }
 /* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
    כאן לחלל שנשאר אחרי הלוגו ושורת «יחי» לכרטיס כולו, ⭐ ושני מרכזים במרחק
@@ -249,148 +168,148 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (min-width:900px){
   .hdr-top{position:relative;}
   .hdr-logo-wrap{position:absolute;top:0;bottom:0;right:0;}
-  .hdr-mid{padding:0 18px;}
+  .hdr-mid{padding:0 var(--sp-6);}
 }
 
 /* ניווט לעומק בארכיון */
-.arc-btn{background:var(--bgcard);border:2px solid var(--border);border-radius:12px;padding:10px 14px;
-  font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;
-  transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
-.arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--bgsec);}
-.arc-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);
+  font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;color:var(--text);cursor:pointer;
+  transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
+.arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--card-2);}
+.arc-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
-.arc-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
-.arc-crumb{font-size:12px;color:var(--textmid);cursor:pointer;padding:3px 8px;border-radius:6px;
-  background:var(--bgsec);border:1px solid var(--border);transition:all 0.15s;}
-.arc-crumb:hover{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);}
-.arc-crumb-sep{color:#bbb;font-size:12px;}
-.arc-day-card{background:var(--bgsec);border-radius:12px;padding:14px;margin-bottom:10px;border:1.5px solid var(--border);}
-.arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
-.arc-entry-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px;}
-.arc-entry-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:14px;padding:0 4px;line-height:1;flex-shrink:0;}
-.arc-entry-del:hover{color:#cc3333;}
+.arc-grid{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:var(--sp-4);}
+.arc-crumb{font-size:var(--fs-2);color:var(--text2);cursor:pointer;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-2);
+  background:var(--card-2);border:1px solid var(--border);transition:all var(--dur-2);}
+.arc-crumb:hover{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);}
+.arc-crumb-sep{color:var(--text3);font-size:var(--fs-2);}
+.arc-day-card{background:var(--card-2);border-radius:var(--radius);padding:var(--sp-6);margin-bottom:var(--sp-5);border:1.5px solid var(--border);}
+.arc-day-card.editing{border-color:var(--accent);background:var(--warn-soft);}
+.arc-entry-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) 0;border-top:1px solid var(--border);font-size:var(--fs-2);}
+.arc-entry-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:var(--lh-1);flex-shrink:0;}
+.arc-entry-del:hover{color:var(--bad);}
 
 /* לשוניות */
-.tabs{display:flex;gap:6px;margin-bottom:12px;}
-.tab-btn{flex:1;background:var(--bgcard);color:var(--textmid);border:2px solid var(--border);
-  border-radius:11px;padding:10px;font-family:'Heebo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
-.tab-btn:hover{background:var(--bgsec);color:var(--primary-ink);border-color:var(--primary-ink);}
-.tab-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
+.tab-btn{flex:1;background:var(--card);color:var(--text2);border:2px solid var(--border);
+  border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);}
+.tab-btn:hover{background:var(--card-2);color:var(--primary-ink);border-color:var(--primary-ink);}
+.tab-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
 /* כרטיס */
-.card{background:var(--bgcard);border-radius:16px;padding:18px;margin-bottom:12px;
+.card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
-.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;color:var(--primary-ink);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
-.card-ttl::before{content:"▸";color:var(--accent);font-size:13px;}
+.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--primary-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
+.card-ttl::before{content:"▸";color:var(--accent);font-size:var(--fs-3);}
 
 /* תאריך */
-.date-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.date-lbl{font-size:11px;font-weight:700;color:var(--textmid);white-space:nowrap;}
-.day-chips{display:flex;gap:4px;flex-wrap:wrap;}
-.day-chip{background:var(--bgsec);color:var(--textmid);border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;
-  font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.date-row{display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap;}
+.date-lbl{font-size:var(--fs-1);font-weight:700;color:var(--text2);white-space:nowrap;}
+.day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
+.day-chip{background:var(--card-2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);
+  font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all var(--dur-3);white-space:nowrap;}
 .day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.day-chip.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
-.heb-inp{border:1.5px solid var(--border);border-radius:9px;padding:6px 11px;font-family:'Frank Ruhl Libre',serif;font-size:14px;
-  font-weight:700;background:var(--bgcard);direction:rtl;min-width:155px;flex:1;color:var(--text);}
+.day-chip.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 2px 8px var(--shadow-brand);}
+.heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
+  font-weight:700;background:var(--card);direction:rtl;min-width:155px;flex:1;color:var(--text);}
 .heb-inp:focus{outline:none;border-color:var(--primary-ink);}
 
 /* רשת הקטגוריות */
 /* ⛔ שתי עמודות בברירת המחדל — ⚠️ ארבע נכנסות רק מנקודת השבירה שמעל. */
-.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:12px;}
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
 @media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
-.cat-btn{border:2px solid;border-radius:11px;padding:10px 8px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;text-align:center;line-height:1.4;background:var(--bgcard);box-shadow:0 1px 4px var(--shadow);}
+.cat-btn{border:2px solid;border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
+  cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
-.cat-btn strong{font-size:15px;font-family:'Frank Ruhl Libre',serif;}
+.cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
 
 /* כפתורים מהירים */
-.qsec{margin-bottom:10px;min-height:32px;}
-.qlbl{font-size:10px;font-weight:700;color:var(--textlite);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase;}
-.qrow{display:flex;flex-wrap:wrap;gap:4px;}
-.qbtn{background:var(--bgsec);border:1.5px solid var(--border);border-radius:16px;padding:4px 10px;font-size:11px;
-  font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--textmid);white-space:nowrap;}
+.qsec{margin-bottom:var(--sp-5);min-height:32px;}
+.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text3);margin-bottom:var(--sp-2);letter-spacing:var(--ls-2);text-transform:uppercase;}
+.qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
+.qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
+  font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text2);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.qbtn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);font-weight:700;}
+.qbtn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);font-weight:700;}
 .qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.hint{color:var(--textlite);font-size:11px;}
+.hint{color:var(--text3);font-size:var(--fs-1);}
 
 /* שדות קלט */
-.inp-grid{display:grid;grid-template-columns:1fr;gap:9px;margin-bottom:10px;}
+.inp-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-4);margin-bottom:var(--sp-5);}
 @media (min-width:640px){.inp-grid{grid-template-columns:1fr 1fr;}}
 .hide-mobile{display:none !important;}
 @media (min-width:900px){.hide-mobile{display:inline-block !important;}}
-.fld{display:flex;flex-direction:column;gap:3px;}
-.fld label{font-size:10px;font-weight:700;color:var(--textmid);}
-.fld input{border:1.5px solid var(--border);border-radius:9px;padding:7px 11px;font-family:'Heebo',sans-serif;font-size:13px;
-  color:var(--text);background:var(--bgcard);direction:rtl;transition:border-color 0.2s;}
-.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
+.fld{display:flex;flex-direction:column;gap:var(--sp-2);}
+.fld label{font-size:var(--fs-1);font-weight:700;color:var(--text2);}
+.fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
+  color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
+.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
 
 /* כפתור ההוספה הגדול */
-.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
-  border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:16px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
-.btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
-.btn-add.btn-flash{background:linear-gradient(135deg,var(--success),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
+.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:var(--on-primary);border:none;
+  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
+  cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
+.btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-accent);}
+.btn-add.btn-flash{background:linear-gradient(135deg,var(--ok),var(--ok-2)) !important;color:var(--on-primary) !important;transform:scale(0.97);}
 
 /* יומן */
-.log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
-.log-cnt{background:var(--primary-fill);color:#fff;border-radius:18px;padding:4px 12px;font-size:12px;font-weight:700;}
-.entry-row{background:var(--bgcard);border-radius:10px;padding:10px 13px;display:grid;grid-template-columns:auto 1fr auto;
-  gap:9px;align-items:start;margin-bottom:6px;box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
+.log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
+.log-cnt{background:var(--primary-fill);color:var(--on-primary);border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
+.entry-row{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-5);display:grid;grid-template-columns:auto 1fr auto;
+  gap:var(--sp-4);align-items:start;margin-bottom:var(--sp-3);box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein var(--dur-4);}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.entry-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;
-  font-family:'Frank Ruhl Libre',serif;font-size:14px;font-weight:900;flex-shrink:0;}
-.entry-body{display:flex;flex-direction:column;gap:2px;}
-.e-main{font-size:13px;font-weight:700;color:var(--text);}
-.e-sub{font-size:11px;color:var(--textmid);}
-.e-meta{font-size:10px;color:var(--textlite);}
-.del-btn{background:none;border:none;color:#CCC;font-size:15px;cursor:pointer;padding:2px 5px;border-radius:5px;transition:all 0.15s;flex-shrink:0;}
-.del-btn:hover{background:#FFE8E8;color:#CC3333;}
-.empty{text-align:center;padding:26px;color:var(--textlite);font-size:13px;line-height:2;}
-.exp-row{display:flex;gap:7px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap;}
-.btn-sm{border:none;border-radius:9px;padding:8px 14px;font-family:'Heebo',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+.entry-badge{width:28px;height:28px;border-radius:var(--r-2);display:flex;align-items:center;justify-content:center;
+  font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);font-weight:900;flex-shrink:0;}
+.entry-body{display:flex;flex-direction:column;gap:var(--sp-1);}
+.e-main{font-size:var(--fs-3);font-weight:700;color:var(--text);}
+.e-sub{font-size:var(--fs-1);color:var(--text2);}
+.e-meta{font-size:var(--fs-1);color:var(--text3);}
+.del-btn{background:none;border:none;color:var(--text3);font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all var(--dur-2);flex-shrink:0;}
+.del-btn:hover{background:var(--bad-soft);color:var(--bad);}
+.empty{text-align:center;padding:var(--sp-7);color:var(--text3);font-size:var(--fs-3);line-height:var(--lh-6);}
+.exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
+.btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all var(--dur-3);}
 
-.btn-blue{background:var(--bgsec);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:#fff;}
-.btn-red{background:#FEF0F0;color:#CC3333;border:1px solid #F0C0C0;} .btn-red:hover{background:#CC3333;color:white;}
+.btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:var(--on-primary);}
+.btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);} .btn-red:hover{background:var(--bad);color:var(--bad-soft);}
 
 /* הגדרות */
-.set-card{background:var(--bgcard);border-radius:11px;padding:13px;border:1.5px solid var(--border);margin-bottom:10px;cursor:grab;transition:box-shadow 0.2s;}
-.set-card.dragging{opacity:0.5;box-shadow:0 8px 24px var(--shadow);}
+.set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow var(--dur-3);}
+.set-card.dragging{opacity:var(--op-3);box-shadow:0 8px 24px var(--shadow);}
 .set-card:active{cursor:grabbing;}
-.drag-handle{font-size:18px;color:#CCC;cursor:grab;margin-left:8px;flex-shrink:0;}
+.drag-handle{font-size:var(--fs-5);color:var(--text3);cursor:grab;margin-left:var(--sp-4);flex-shrink:0;}
 .drag-handle:active{cursor:grabbing;}
-.set-hdr{display:flex;align-items:center;gap:9px;margin-bottom:8px;}
-.set-badge{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;
-  font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:900;flex-shrink:0;}
-.set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:'Heebo',sans-serif;font-size:13px;direction:rtl;color:var(--text);}
+.set-hdr{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
+.set-badge{width:30px;height:30px;border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;
+  font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900;flex-shrink:0;}
+.set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);direction:rtl;color:var(--text);}
 .set-name-inp:focus{outline:none;border-color:var(--primary-ink);}
-.set-lbl{font-size:10px;color:var(--textlite);margin-bottom:5px;}
+.set-lbl{font-size:var(--fs-1);color:var(--text3);margin-bottom:var(--sp-3);}
 
-.chip{display:flex;align-items:center;gap:3px;background:var(--bgsec);border:1px solid var(--border);
-  border-radius:14px;padding:3px 8px 3px 5px;font-size:11px;cursor:grab;}
-.chip.chip-sub{background:var(--bgcard);font-size:10px;border-color:#D8E4F0;}
+.chip{display:flex;align-items:center;gap:var(--sp-2);background:var(--card-2);border:1px solid var(--border);
+  border-radius:var(--r-5);padding:var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);font-size:var(--fs-1);cursor:grab;}
+.chip.chip-sub{background:var(--card);font-size:var(--fs-1);border-color:var(--border);}
 
-.drag-over{outline:2px dashed var(--primary-ink);border-radius:8px;}
-.chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:12px;padding:0;line-height:1;}
-.chip button:hover{color:#CC3333;}
-.sub-chips{display:flex;flex-wrap:wrap;gap:4px;padding-right:8px;min-height:10px;}
+.drag-over{outline:2px dashed var(--primary-ink);border-radius:var(--r-3);}
+.chip button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-2);padding:0;line-height:var(--lh-1);}
+.chip button:hover{color:var(--bad);}
+.sub-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);padding-right:var(--sp-4);min-height:10px;}
 
-.task-block{background:var(--bgcard);border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:grab;transition:box-shadow 0.15s;}
+.task-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);cursor:grab;transition:box-shadow var(--dur-2);}
 .task-block:hover{box-shadow:0 2px 10px var(--shadow);}
-.task-block.dragging{opacity:0.4;}
-.task-block-hdr{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
-.task-drag-icon{color:#ccc;font-size:14px;cursor:grab;flex-shrink:0;}
-.task-name{flex:1;font-size:12px;font-weight:700;color:var(--text);}
-.task-del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;padding:0;line-height:1;flex-shrink:0;}
-.task-del-btn:hover{color:#cc3333;}
-.set-add-row{display:flex;gap:6px;}
-.set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:7px;padding:5px 9px;font-family:'Heebo',sans-serif;font-size:12px;direction:rtl;color:var(--text);}
+.task-block.dragging{opacity:var(--op-2);}
+.task-block-hdr{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2);}
+.task-drag-icon{color:var(--text3);font-size:var(--fs-3);cursor:grab;flex-shrink:0;}
+.task-name{flex:1;font-size:var(--fs-2);font-weight:700;color:var(--text);}
+.task-del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-3);padding:0;line-height:var(--lh-1);flex-shrink:0;}
+.task-del-btn:hover{color:var(--bad);}
+.set-add-row{display:flex;gap:var(--sp-3);}
+.set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);direction:rtl;color:var(--text);}
 .set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
-.btn-mini{background:var(--primary-fill);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.btn-mini{background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
 .btn-mini:hover{background:var(--primaryl);}
-.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
-  border-radius:12px;padding:12px;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:12px;transition:all 0.2s;}
+.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:var(--on-primary);border:none;
+  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-5);transition:all var(--dur-3);}
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
 /* טוסט */
@@ -404,101 +323,226 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
-.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);color:#fff;
-  border-radius:14px;padding:14px 16px;margin-bottom:14px}
-.inf-hd b{font-size:15px;font-weight:800;display:block}
-.inf-hd span{font-size:12px;opacity:.85}
-.inf-card{background:var(--bgcard);border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 2px 10px var(--shadow);padding:12px 14px;margin-bottom:14px}
-.inf-card>h4{font-size:14px;font-weight:800;margin-bottom:10px;color:var(--primaryd)}
-.inf-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
-.inf-bar button{font:inherit;font-size:12px;font-weight:700;padding:5px 12px;border-radius:8px;
-  border:1px solid var(--border);background:var(--bgsec);color:var(--text);cursor:pointer}
-.inf-cat{border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
-.inf-cat>summary{cursor:pointer;list-style:none;padding:8px 12px;background:var(--bgsec);
-  font-weight:800;font-size:13px;color:var(--primaryd)}
+.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);color:var(--on-primary);
+  border-radius:var(--r-5);padding:var(--sp-6) var(--sp-6);margin-bottom:var(--sp-6)}
+.inf-hd b{font-size:var(--fs-4);font-weight:800;display:block}
+.inf-hd span{font-size:var(--fs-2);opacity:var(--op-7)}
+.inf-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-5);
+  box-shadow:0 2px 10px var(--shadow);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
+.inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--primaryd)}
+.inf-bar{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:center;margin-bottom:var(--sp-5)}
+.inf-bar button{font:inherit;font-size:var(--fs-2);font-weight:700;padding:var(--sp-3) var(--sp-5);border-radius:var(--r-3);
+  border:1px solid var(--border);background:var(--card-2);color:var(--text);cursor:pointer}
+.inf-cat{border:1px solid var(--border);border-radius:var(--r-4);margin-bottom:var(--sp-4);overflow:hidden}
+.inf-cat>summary{cursor:pointer;list-style:none;padding:var(--sp-4) var(--sp-5);background:var(--card-2);
+  font-weight:800;font-size:var(--fs-3);color:var(--primaryd)}
 .inf-cat>summary::-webkit-details-marker{display:none}
-.inf-ord{padding:5px 12px;background:var(--bgsec);font-size:12px;color:var(--textmid);
+.inf-ord{padding:var(--sp-3) var(--sp-5);background:var(--card-2);font-size:var(--fs-2);color:var(--text2);
   border-top:1px solid var(--border)}
 .inf-wrap{overflow-x:auto}
-.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:12px}
-.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:6px 8px;
-  vertical-align:top;text-align:right;line-height:1.6;overflow-wrap:anywhere}
-.inf-tbl th{background:var(--bgsec);font-weight:800;font-size:11.5px;color:var(--textmid)}
+.inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:var(--fs-2)}
+.inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
+  vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
+.inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text2)}
 .inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
 .inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
-.inf-dot{display:inline-block;width:11px;height:11px;border-radius:50%}
-.inf-dot.ok{background:#1A9A5A}.inf-dot.gap{background:#F0A500}.inf-dot.bad{background:#D33}
-.inf code{background:var(--bgsec);border-radius:5px;padding:0 4px;font-size:.94em}
-.inf-li{border-top:1px solid var(--border);padding:7px 2px;font-size:12px;line-height:1.7}
+.inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
+.inf-dot.ok{background:var(--ok)}.inf-dot.gap{background:var(--warn)}.inf-dot.bad{background:var(--bad)}
+.inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
+.inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:var(--lh-5)}
 .inf-li:first-child{border-top:0}
 .inf-li b{color:var(--primaryd)}
-.inf-tag{display:inline-block;background:var(--bgsec);border-radius:6px;padding:1px 7px;
-  font-size:11px;font-weight:700;margin-inline-start:4px}
-.inf-err{background:#fff4f4;border:1px solid #e7b4b4;border-radius:12px;padding:14px;
-  font-size:13px;color:#8a2b2b;line-height:1.8}
+.inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
+  font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}
+.inf-err{background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r-5);padding:var(--sp-6);
+  font-size:var(--fs-3);color:var(--bad);line-height:var(--lh-5)}
 /* ══════════════════════════════════════════════════════════════════════════ */
-/* ═══ שכבת הטוסט — CSS משותף (סבב 87ב) ════════════════════════════════════
-   זהה בית-לבית בארבע האפליקציות. ⛔ הכללים אינם נשענים על משתני-הצבע של
-   אף אפליקציה — ⚠️ הם נבדלים ביניהן, ⭐ ולכן הצבעים כתובים במפורש.
+/* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
+   זהה בית-לבית בארבע האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
+   המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
       אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:8px;justify-items:center;pointer-events:none;padding:0 14px}
-.toast{background:#1a1a1a;color:#fff;border-radius:99px;padding:10px 20px;font-size:.86rem;font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
-.toast.bad{background:#b91c1c;color:#fff}
-.toast.good{background:#15803d;color:#fff}
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toast{background:var(--chip);color:var(--on-chip);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
+.toast.bad{background:var(--bad);color:var(--bad-soft)}
+.toast.good{background:var(--ok);color:var(--ok-soft)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
-/* ═══ אזור מצב — CSS משותף (סבב 15/17) ══════════════════════════════════
-   זהה בית-לבית בארבע האפליקציות. שני הרכיבים שיושבים בתחתית כל מסך
-   הגדרות: בלוק "☁️ סנכרון" ורכיב "מידע טכני ›". הכללים יורשים צבע
-   וגופן, ⛔ ואינם נשענים על אסימוני הגוון של אף אפליקציה — הם נבדלים
-   ביניהן. ⚠️ **החריג היחיד הוא `--stale-ink`** (סבב 113): ⭐ הוא מוגדר
-   בשם אחד בארבעתן, בערכה הבהירה ובכהה, ⛔ ולכן כלל שנשען עליו נשאר
-   זהה בית-לבית. */
-.tech-info{margin-top:22px;font-size:12px;opacity:.7}
-.tech-info>summary{cursor:pointer;list-style:none;display:inline-block;padding:4px 2px}
-.tech-info>summary::-webkit-details-marker{display:none}
-.tech-info[open]{opacity:1}
-.tech-info .ls-status button{display:none!important}
-.sync-box{margin-top:22px;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:12px 14px;background:rgba(0,0,0,.02)}
-.sync-box-ttl{font-weight:800;font-size:14px;margin-bottom:6px}
-.sync-line{font-size:13px;line-height:1.8;margin-top:10px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08)}
-.sync-line .sync-act{margin-top:8px}
-.sync-line button{font:inherit;font-size:12px;padding:5px 14px;border-radius:8px;border:1px solid rgba(0,0,0,.18);background:rgba(0,0,0,.05);color:inherit;cursor:pointer}
-.sync-line button[disabled]{opacity:.5;cursor:default}
-/*  ⛔ הבאנר «הגיבוי לא רץ N ימים» נושא גוון משלו — ⚠️ שאר הבלוק יורש
-    צבע, ⭐ והוא הודעת אזהרה שחייבת להיקרא כאזהרה. ⛔ והגוון יושב
-    ב-`--stale-ink` ⛔ ולא כערך מוטבע: ⚠️ הוא מוגדר בערכה הבהירה ובכהה
-    בשם אחד, ⭐ ולכן הכלל עצמו זהה בארבע האפליקציות. */
-.bkStale{margin-top:4px;font-weight:700;color:var(--stale-ink)}
-/* ═══ סוף CSS אזור המצב ═════════════════════════════════════════════════ */
-.ls-crit-line{margin-top:18px;font-size:12px;font-weight:600;color:#b3261e}
+/* ================================================================= מעדכן */
+#updater{
+  position:fixed;inset-inline:0;z-index:var(--z-6);
+  bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
+  display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
+#updater.show{display:flex}
+#updater .in{
+  background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--shadow);
+  font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
+}
+#updater button{
+  margin-inline-start:auto;background:var(--on-brand);color:var(--brand);border:0;border-radius:var(--r-4);
+  padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
+}
+#updater button.x{
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
-.veil{position:fixed;inset:0;z-index:10050;background:rgba(10,20,30,.5);
+.veil{position:fixed;inset:0;z-index:var(--z-4);background:var(--veil);
   display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .veil.open{display:flex}
 @media (min-width:640px){.veil{align-items:center}}
-.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--bgcard);
-  color:var(--text);border-radius:20px 20px 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
+.sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--card);
+  color:var(--text);border-radius:var(--r-6) var(--r-6) 0 0;box-shadow:0 12px 40px var(--sh-3);
   font-family:'Heebo',sans-serif;direction:rtl}
-@media (min-width:640px){.sheet{border-radius:20px}}
-.sheet-hd{display:flex;align-items:center;gap:10px;padding:15px 18px;
-  border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:var(--bgcard);z-index:2}
-.sheet-hd h3{font-size:16px;flex:1;margin:0;font-weight:800}
-.sheet-hd .x{background:none;border:0;font-size:22px;line-height:1;color:#777;
-  cursor:pointer;padding:2px 6px;border-radius:8px}
-.sheet-bd{padding:16px 18px;font-size:14px;line-height:1.6;color:#555}
-.sheet-ft{padding:12px 18px 18px;display:flex;gap:9px}
+@media (min-width:640px){.sheet{border-radius:var(--r-6)}}
+.sheet-hd{display:flex;align-items:center;gap:var(--sp-5);padding:var(--sp-6) var(--sp-6);
+  border-bottom:1px solid var(--sh-1);position:sticky;top:0;background:var(--card);z-index:var(--z-1)}
+.sheet-hd h3{font-size:var(--fs-4);flex:1;margin:0;font-weight:800}
+.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:var(--lh-1);color:var(--text2);
+  cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-3)}
+.sheet-bd{padding:var(--sp-6) var(--sp-6);font-size:var(--fs-3);line-height:var(--lh-4);color:var(--text2)}
+.sheet-ft{padding:var(--sp-5) var(--sp-6) var(--sp-6);display:flex;gap:var(--sp-4)}
 .sheet-ft:empty{display:none}
-.sheet-ft button{flex:1;padding:10px;border-radius:10px;border:1.5px solid #ccc;
-  background:#f5f5f5;color:#333;font-family:Heebo;font-size:14px;font-weight:600;cursor:pointer}
-.sheet-ft button.danger{border:none;background:#E53935;color:#fff}
+.sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid var(--text3);
+  background:var(--card-2);color:var(--text);font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
+.sheet-ft button.danger{border:none;background:var(--bad);color:var(--bad-soft)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
+/* ═══ סולמות הערך החזותי — מודול משותף (סבב 141) ═════════════════════════
+   ⛔ שמונה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך חזותי
+      נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
+      הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
+      ביניהם.
+   ⛔ **ומספר הדרגות נגזר מהערכים שהיו בפועל** ⛔ ואינו נבחר — ⚠️ אשכול
+      משוקלל בסולם לוגריתמי על כל הערכים שבארבעת הריפו, ⭐ ותקרה של שבע.
+   ⛔ **ודרגה שאין לה קורא באפליקציה אחת נשארת** — ⚠️ הסולם הוא תשתית,
+      ⭐ ולא מפקד של מה שמשמש היום: ⛔ דרגה יורדת רק כשאין לה קורא בארבעתן.
+   ⛔ **והמחלקות שכאן הן אלה שחיות בארבעתן** — ⚠️ מחלקה שחיה בחלקן יושבת
+      בבלוק הפרטי שמתחת: ⭐ מחלקה בבלוק משותף שאין לה קורא באחת מהן היא
+      סלקטור בלי קורא, ⛔ והשער מפיל עליה.
+   ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
+      ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
+      מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
+   ⛔ **ו-`--z-*` הוא סדר ולא גודל** — ⚠️ הדרגה נבחרת לפי **תפקיד**
+      השכבה — תוכן · סרגל · תפריט · מודאל · טוסט · באנר · נעילה — ⭐ ולא
+      לפי המספר שהיה שם: ⛔ מספר שנבחר לכל אתר הוא מרוץ שאיש אינו מכריע בו.
+   ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
+      אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
+      הם שני חיפושים.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב.
+   ═══════════════════════════════════════════════════════════════════════ */
+:root{
+--fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
+--sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
+--r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px;
+--z-1:1;--z-2:10;--z-3:20;--z-4:30;--z-5:40;--z-6:50;--z-7:60;
+--dur-1:.12s;--dur-2:.15s;--dur-3:.2s;--dur-4:.3s;--dur-5:.6s;--dur-6:.7s;--ease:cubic-bezier(.2,.8,.3,1);
+--op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
+--lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
+--ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
+--chip:#1A1A1A;--on-chip:#FFFFFF;--veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
+--alert:#B3261E;--on-alert:#FFFFFF;
+--sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
+--on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
+}
+.u-ai-c{align-items:center}
+.u-d-flex{display:flex}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
+.u-fw-700{font-weight:700}
+.u-fx-1{flex:1}
+.u-g-5{gap:var(--sp-5)}
+.u-mt-2{margin-top:var(--sp-2)}
+.u-mt-5{margin-top:var(--sp-5)}
+/* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
+/* ══ מחלקות הסולם הפרטיות — אינן חיות בארבעתן ═══════════════════════════
+   ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
+   המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
+.u-bd-1-solid-border{border:1px solid var(--border)}
+.u-bd-15-solid-border{border:1.5px solid var(--border)}
+.u-bd-none{border:none}
+.u-bdr-cat{border-right:4px solid var(--cat)}
+.u-bg-card-2{background:var(--card-2)}
+.u-bg-cat{background:var(--cat)}
+.u-bg-none{background:none}
+.u-bg-ok-soft{background:var(--ok-soft)}
+.u-bg-primary-fill{background:var(--primary-fill)}
+.u-bg-warn-soft{background:var(--warn-soft)}
+.u-bt-2-dashed-accent{border-top:2px dashed var(--accent)}
+.u-c-ok{color:var(--ok)}
+.u-c-on-primary{color:var(--on-primary)}
+.u-c-primary-ink{color:var(--primary-ink)}
+.u-c-text{color:var(--text)}
+.u-c-text2{color:var(--text2)}
+.u-c-text3{color:var(--text3)}
+.u-cat-0{--cat:#888888}
+.u-cat-1{--cat:#E8622A}
+.u-cat-2{--cat:#E8A020}
+.u-cat-3{--cat:#4BAD5B}
+.u-cat-4{--cat:#2A9E8E}
+.u-cat-5{--cat:#3A7EC6}
+.u-cat-6{--cat:#6A4FC6}
+.u-cat-7{--cat:#C64F9E}
+.u-cat-8{--cat:#7A7A7A}
+.u-cur-grab{cursor:grab}
+.u-cur-p{cursor:pointer}
+.u-d-block{display:block}
+.u-d-none{display:none}
+.u-fd-col{flex-direction:column}
+.u-ff-frank{font-family:'Frank Ruhl Libre',serif}
+.u-ff-heebo{font-family:Heebo}
+.u-ff-heebo-sans-serif{font-family:Heebo,sans-serif}
+.u-fs-1{font-size:var(--fs-1)}
+.u-fs-4{font-size:var(--fs-4)}
+.u-fsh-0{flex-shrink:0}
+.u-fw-400{font-weight:400}
+.u-fw-800{font-weight:800}
+.u-fw-900{font-weight:900}
+.u-fwr-wrap{flex-wrap:wrap}
+.u-fx-2{flex:2}
+.u-fx-3{flex:3}
+.u-g-2{gap:var(--sp-2)}
+.u-g-3{gap:var(--sp-3)}
+.u-g-4{gap:var(--sp-4)}
+.u-h-12{height:12px}
+.u-m-0{margin:0}
+.u-m-2-0-1-0{margin:var(--sp-2) 0 var(--sp-1) 0}
+.u-mb-3{margin-bottom:var(--sp-3)}
+.u-mb-4{margin-bottom:var(--sp-4)}
+.u-mb-5{margin-bottom:var(--sp-5)}
+.u-minh-28{min-height:28px}
+.u-minw-130{min-width:130px}
+.u-minw-520{min-width:520px}
+.u-minw-80{min-width:80px}
+.u-ml-1{margin-left:var(--sp-1)}
+.u-mt-4{margin-top:var(--sp-4)}
+.u-op-55{opacity:var(--op-4)}
+.u-op-8{opacity:var(--op-6)}
+.u-p-1-2{padding:var(--sp-1) var(--sp-2)}
+.u-p-2{padding:var(--sp-2)}
+.u-p-2-4{padding:var(--sp-2) var(--sp-4)}
+.u-p-2-5{padding:var(--sp-2) var(--sp-5)}
+.u-p-3{padding:var(--sp-3)}
+.u-p-3-4{padding:var(--sp-3) var(--sp-4)}
+.u-p-3-5{padding:var(--sp-3) var(--sp-5)}
+.u-p-4{padding:var(--sp-4)}
+.u-p-5{padding:var(--sp-5)}
+.u-p-6{padding:var(--sp-6)}
+.u-pt-5{padding-top:var(--sp-5)}
+.u-r-1{border-radius:var(--r-1)}
+.u-r-2{border-radius:var(--r-2)}
+.u-r-3{border-radius:var(--r-3)}
+.u-ta-c{text-align:center}
+.u-ta-l{text-align:left}
+.u-w-100{width:100px}
+.u-w-100p{width:100%}
+.u-w-12{width:12px}
+.u-w-55{width:55px}
+.u-w-60{width:60px}
+.u-ws-nw{white-space:nowrap}
+/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
 </style>
 <!-- ⚠️ גרסאות CDN נעוצות במדויק — אין לחזור ל-'@2'/'@4' צפים: שחרור בצד הספק
      שובר את האפליקציה בלי שינוי קוד, וזה בלתי ניתן לשחזור מהריפו.
@@ -554,7 +598,7 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- ENTRY -->
-  <div class="panel" id="panel-entry" style="display:block">
+  <div class="u-d-block panel" id="panel-entry">
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -576,7 +620,7 @@ body.locked{overflow:hidden}
              yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
              ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
              שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-        <input aria-label="תאריך לועזי" class="heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." style="min-width:130px;" oninput="onGregDateChange()" />
+        <input aria-label="תאריך לועזי" class="u-minw-130 heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." oninput="onGregDateChange()" />
       </div>
     </div>
 
@@ -591,6 +635,7 @@ body.locked{overflow:hidden}
         <div class="qlbl">תת-משימה</div>
         <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
       </div>
+      <div class="ksave">
       <div class="inp-grid">
         <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
         <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
@@ -602,16 +647,17 @@ body.locked{overflow:hidden}
       <button class="btn-add"
         ontouchstart="this.classList.add('btn-flash')"
         ontouchend="addEntry(); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500); event.preventDefault();"
-        data-act="add-entry">+ הוסף לסדר היום</button>
+        data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
+      </div>
 
     </div>
   </div>
 
   <!-- LOG -->
-  <div class="panel" id="panel-log" style="display:none">
+  <div class="u-d-none panel" id="panel-log">
     <div class="card">
       <div class="log-hd">
-        <div class="card-ttl" style="margin:0">רשומות יומן</div>
+        <div class="u-m-0 card-ttl">רשומות יומן</div>
         <div class="log-cnt" id="logCount">0</div>
       </div>
       <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
@@ -623,36 +669,42 @@ body.locked{overflow:hidden}
   </div>
 
   <!-- SETTINGS -->
-  <div class="panel" id="panel-settings" style="display:none">
+  <div class="u-d-none panel" id="panel-settings">
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
       <button class="btn-save" data-act="save-settings">💾 שמור שינויים</button>
     </div>
     <!-- אזור מצב (סבב 17) — שני האלמנטים האחרונים במסך, בסדר הזה -->
-    <div id="sync-status-box"></div>
-    <div id="tech-info-box"></div>
   </div>
 
   <!-- ARCHIVE -->
-  <div class="panel" id="panel-archive" style="display:none">
+  <div class="u-d-none panel" id="panel-archive">
     <div class="card">
       <!-- Breadcrumb -->
-      <div id="arc-breadcrumb" style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;min-height:28px;"></div>
+      <div id="arc-breadcrumb" class="u-d-flex u-ai-c u-g-3 u-mb-5 u-fwr-wrap u-minh-28"></div>
       <!-- Level: years -->
-      <div id="arc-years" style="display:block"></div>
+      <div id="arc-years" class="u-d-block"></div>
       <!-- Level: months -->
-      <div id="arc-months" style="display:none"></div>
+      <div id="arc-months" class="u-d-none"></div>
       <!-- Level: days -->
-      <div id="arc-days" style="display:none"></div>
+      <div id="arc-days" class="u-d-none"></div>
       <!-- Level: day detail / edit -->
-      <div id="arc-detail" style="display:none"></div>
+      <div id="arc-detail" class="u-d-none"></div>
     </div>
   </div>
 
 </div>
 
 <div id="toasts"></div>
+<div id="updater">
+  <div class="in">
+    <span>🔄 גרסה חדשה זמינה</span>
+    <button data-act="sw-apply">עדכן עכשיו</button>
+    <button class="x" data-act="sw-dismiss" aria-label="סגור">✕</button>
+  </div>
+</div>
+
 
 <script>
 
@@ -688,17 +740,83 @@ var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(
 
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
-// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
+// בגיוס בהחלטת מנהל — ⚠️ ולכן היא פר-אפליקציה ואינה בבלוק החתום.
 var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_SAVED     = '✅ נשמר בהצלחה';
-// נוסח משותף לארבע האפליקציות (סבב 12 שלב 4). שמירה מקומית שטרם אושרה
-// בענן **חייבת** להיאמר אחרת משמירה שאושרה — אחרת "נשמר" נראה בדיוק אותו
-// דבר בשני המצבים, וזו ההטעיה שהסבב הזה בא למנוע.
+/* ═══ מחרוזות ההודעה המשותפות — מודול משותף (סבב 141) ════════════════════
+   ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
+   ⚠️ עד כאן הצהירה **הערה** «מילה במילה זהות», ⛔ ואיש לא מדד — ⭐ ונמדד
+   ששני שמות נשאו טקסט אחר, ⚠️ ושאחת-עשרה הודעות נכתבו כליטרל בשניים
+   ובשלושה ריפו בלי שם כלל.
+   ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
+   אותה בכל זאת: ⭐ המושג חי בארבעתן, ⛔ ורשימה שנגזרת ממי שמציג אותה
+   היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
+   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN`
+   נבדלים בגיוס בהחלטת מנהל, ⭐ והם נשארים פר-אפליקציה עם נימוקם במקומם.
+   ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
+   «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
+   נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
+   ═══════════════════════════════════════════════════════════════════════ */
+var MSG_SAVED = '✅ נשמר בהצלחה';
 var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
-var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
-// סבב 17: נוסח אחיד לארבע האפליקציות — כאן לא הייתה הודעת התאוששות כלל.
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
+var MSG_DELETE = 'מחק';
+var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
+var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
+var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
+var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
+var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
+var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
+var MSG_SERVER_ERR = 'שגיאת שרת';
+var MSG_SWITCHED_TO = 'הוחלף ל';
+var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+/* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
+/* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
+   ⛔ ההודעה היא קבוע ⛔ ואינה ליטרל באתר התצוגה — ⚠️ טקסט שנכתב במקום
+   שבו הוא נאמר נכתב שוב במסך הבא, ⭐ ושני ניסוחים לאותו מצב הם שני
+   מסלולים בעיני הקורא.
+   ⚠️ **ומה שיותר מאפליקציה אחת אומרת אינו כאן** — ⛔ הוא בבלוק החתום,
+   ⭐ ששם החתימה היא מה שמודד את זהות הנוסח. */
+var MSG_SYNCING = '🔄 מסנכרן...';
+var MSG_SYNCED = '✅ מסונכרן';
+var MSG_SYNC_FAIL_LOCAL = '⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
+var MSG_SYNC_PARTIAL = '⚠️ סנכרון חלקי — נכשל: ';
+var MSG_OFFLINE_LOCAL = '⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר';
+var MSG_DAY_ARCHIVED = '📅 יום חדש! הרשומות הועברו לארכיון אוטומטית';
+var MSG_PICK_CATEGORY = '⚠️ יש לבחור קטגוריה';
+var MSG_NEED_TASK = '⚠️ יש להזין משימה';
+var MSG_ADDED_SAVING = '✅ נוסף — שומר בענן…';
+var MSG_ROWS_DELETED = '✅ הרשומות נמחקו';
+var MSG_NO_ROWS = 'אין רשומות';
+var MSG_PDF_PREP = 'מכין PDF...';
+var MSG_POPUP_BLOCKED = '⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב';
+var MSG_PDF_OPENED = '📄 PDF נפתח!';
+var MSG_IMG_OFFLINE = '⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
+var MSG_IMG_FAIL = '⚠️ יצירת התמונה נכשלה — נסה שוב';
+var MSG_LOCAL_ONLY = '⚠️ נשמר במכשיר בלבד — הענן לא עודכן';
+var MSG_CLOUD_NO_FANOUT = '⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת';
+var MSG_SAVED_CLOUD = '✅ נשמר בענן';
+var MSG_SUBTASK_EXISTS = '⚠️ תת-המשימה כבר קיימת';
+var MSG_TASK_EXISTS = '⚠️ המשימה כבר קיימת בקטגוריה';
+var MSG_INFRA_TABLE = 'טבלת התשתית';
+var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
+var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
+var MSG_ALREADY_AT = 'כבר במוסד ';
+var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
+var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
+var MSG_IMG_PREP = 'מכין תמונה...';
+var MSG_EDIT_FORM_CLOSED = '⚠️ טופס העריכה נסגר — נסה שוב';
+var MSG_ROW_GONE = '⚠️ הרשומה לא נמצאה — לא נשמר';
+var MSG_CLEAR_ALL_TITLE = '🗑 מחיקת כל הרשומות';
+var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנוכחי?';
+/* ══ סוף הודעות פר-אפליקציה ═════════════════════════════════════════════ */
 /* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
    ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
    מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
@@ -807,9 +925,17 @@ function guardOnline() {
 // `tier2` נבנית מחדש ב-`selectYeshiva` — ראה `lsRebuildPolicy()`. עד שנבחר
 // מוסד היא ריקה, וזה נכון: אין עֵד סנכרון למוסד שלא נטען.
 var LS_CFG = {
-  app: 'yoman',
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+   *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
+   *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
+   *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
+  cachePrefix: 'yoman-avoda-',
   logKey: 'tb_ls_log',
   hzPrefix: 'tb_ls_hz_',
+  /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
+   *  המטמון שנדחה, ⛔ **ומה מפיל**: שם בלי תחילית האפליקציה —
+   *  ⭐ ה-origin משותף לארבעתן, וסימן אחד היה נדרס בכל דחייה. */
+  dismissKey: 'tb_sw_dismissed',
 
   // שלב א — ⛔ אין כאן מטמון-מהירות שאפשר לזרוק: כל מפתח tb_ הוא
   // **העותק המקומי עצמו**, ומחיקתו מרוקנת את המסך אופליין. הגדילה כאן היא
@@ -886,6 +1012,8 @@ function _tbVerify(kvKey) {
   };
 }
 
+/*  ⛔ שם המפתח הישן פר-אפליקציה — ⚠️ וההגירה שמוחקת אותו משותפת:
+ *  ⭐ הקבוע כאן הוא מה שמפריד בין הגוף הזהה לערך שנבדל. */
 /* ══════════════════════════════════════════════════════════════════════════
    עמידות אחסון מקומי — מודול משותף (סבב 11).
    ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
@@ -900,10 +1028,11 @@ var LS_SWEEP_TO    = 0.45;              // יעד הפינוי היזום
 var LS_LOG_MAX     = 12;                // אורך יומן הפינוי הנשמר
 
 // נוסח אחיד בארבע האפליקציות. סמלים: ✅ הצלחה / ⚠️ אזהרה / ❌ שגיאה, בתחילה.
-var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. פנו מקום בהגדרות ← אחסון מקומי.';
+var MSG_LS_FULL   = '❌ האחסון במכשיר מלא — לא ניתן לשמור. התחברו לרשת כדי שהנתונים יסונכרנו והמקום יתפנה.';
 var MSG_LS_BLOCK  = '❌ האחסון במכשיר חסום — לא ניתן לשמור במכשיר.';
-var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — כדאי לפנות מקום בהגדרות';
-var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — פנו מקום בהגדרות מיד';
+var MSG_LS_WARN   = '⚠️ האחסון המקומי מתמלא — התחברו לרשת, והמקום יתפנה מעצמו';
+var MSG_LS_CRIT   = '⚠️ האחסון המקומי כמעט מלא — התחברו לרשת כדי שהמקום יתפנה';
+var MSG_LS_RESTORED = '✅ האחסון התפנה — הנתונים הישנים חוזרים בסנכרון הזה';
 var MSG_LS_PRUNED = '⚠️ נתונים ישנים פונו מהמכשיר מחוסר מקום — הם שמורים בענן ויחזרו כשתהיה רשת';
 
 // כל האפליקציות שחולקות את ה-origin. הקידומת היא מה שמזהה מי תופס מה.
@@ -950,7 +1079,7 @@ function lsUsage() {
       try { v = localStorage.getItem(k) || ''; } catch (e) { }
       var b = lsEntryBytes(k, v), a = lsAppOf(k);
       out.total += b;
-      out.keys.push({ key: k, bytes: b, app: a.id, appName: a.name });
+      out.keys.push({ key: k, bytes: b, app: a.id });
       if (!byApp[a.id]) byApp[a.id] = { id: a.id, name: a.name, bytes: 0, count: 0 };
       byApp[a.id].bytes += b; byApp[a.id].count++;
     }
@@ -1003,18 +1132,18 @@ function lsAlert(msg) {
     el = document.createElement('div');
     el.id = 'ls-alert';
     el.setAttribute('role', 'alert');
-    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:#b3261e;' +
-      'color:#fff;direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-      'padding:12px 46px;box-shadow:0 2px 14px rgba(0,0,0,.35)';
+    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:var(--alert);' +
+      'color:var(--on-alert);direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
+      'padding:12px 46px;box-shadow:0 2px 14px var(--sh-3)';
     var sp = document.createElement('span');
     sp.id = 'ls-alert-msg';
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = '✕';
     b.setAttribute('aria-label', 'סגור');
-    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:#fff;' +
+    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:var(--on-alert);' +
       'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
-    b.addEventListener('click', function () { el.style.display = 'none'; });
+    b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
     (document.body || document.documentElement).appendChild(el);
   }
@@ -1123,6 +1252,19 @@ function lsClearHorizons() {
   ks.forEach(lsRemove);
   if (ks.length) lsLog('אופק הפינוי נוקה', ks.length + ' מפתחות', 0);
   return ks.length;
+}
+/*  ⛔ אופק הפינוי נוקה מהסנכרון — ⚠️ **מה נכנס**: ירידה מתחת לסף האזהרה,
+ *  ⛔ **ומה מפיל**: השארת האופק על כנו — ⭐ הסימן שהפינוי משאיר אומר «מכאן
+ *  ואילך יש לי, את הישן זרקתי», ⚠️ וכל עוד הוא עומד המשיכה אינה מחזירה את
+ *  הישן: ⛔ סימן שרק המשתמש יכול לנקות נשאר לנצח ביום שבו הכפתור יורד. */
+function lsHorizonRelease() {
+  try {
+    if (!lsHorizonKeys().length) return 0;
+    if (lsUsage().total >= LS_WARN_BYTES) return 0;
+    var n = lsClearHorizons();
+    if (n) { try { lsToast(MSG_LS_RESTORED, 5000, 'good'); } catch (e1) { } }
+    return n;
+  } catch (e) { return 0; }
 }
 // כתיבת מערך מכובדת-אופק. `tsOf(rec)` מחזירה חותמת זמן במילישניות.
 function lsSetArray(key, arr, tsOf) {
@@ -1438,7 +1580,6 @@ function lsBootDeferred() {
     var u = lsUsage();
     if (freed > 0) lsLog('פינוי נדחה הסתיים', lsFmtBytes(freed) + ' · נותרו ' + Math.round(u.pct * 100) + '%', freed);
     lsBootAlert(u);
-    try { lsRenderStatus(); } catch (e) { }
     return { usage: u, freed: freed };
   }
   return p.then(finish, function () { return finish(0); });
@@ -1473,104 +1614,7 @@ function lsBootAlert(u) {
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
-/* ── שורת המצב בהגדרות ─────────────────────────────────────────────────── */
-function lsStatusHTML() {
-  var u = lsUsage();
-  var pct = Math.min(100, Math.round(u.pct * 100));
-  var col = u.total >= LS_CRIT_BYTES ? '#b3261e' : (u.total >= LS_WARN_BYTES ? '#b26a00' : '#2e7d32');
-  var h = '<div class="ls-status" dir="rtl" style="font-size:13px;line-height:1.7">';
-  h += '<div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:4px">' +
-       '<span>נפח כולל בדומיין</span><span style="color:' + col + '">' + esc(lsFmtBytes(u.total)) +
-       ' / ' + esc(lsFmtBytes(u.quota)) + ' (' + pct + '%)</span></div>';
-  h += '<div style="background:rgba(128,128,128,.25);border-radius:6px;height:9px;overflow:hidden;margin-bottom:8px">' +
-       '<div style="width:' + pct + '%;height:100%;background:' + col + '"></div></div>';
-  h += '<div style="margin-bottom:8px">נשאר: <b>' + esc(lsFmtBytes(u.free)) + '</b></div>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי אפליקציה</div><table style="width:100%;border-collapse:collapse">';
-  u.apps.forEach(function (a) {
-    h += '<tr><td style="padding:2px 0">' + esc(a.name) + (a.id === LS_CFG.app ? ' <b>(זו)</b>' : '') +
-         '</td><td style="text-align:left;padding:2px 0">' + esc(lsFmtBytes(a.bytes)) +
-         ' <span style="opacity:.6">· ' + a.count + ' מפתחות</span></td></tr>';
-  });
-  if (!u.apps.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  h += '<div style="font-weight:800;margin:10px 0 4px">פילוח לפי מפתח (12 הגדולים)</div><table style="width:100%;border-collapse:collapse">';
-  u.keys.slice(0, 12).forEach(function (k) {
-    h += '<tr><td style="padding:2px 0;word-break:break-all">' + esc(k.key) +
-         '<span style="opacity:.6"> · ' + esc(k.appName) + '</span></td>' +
-         '<td style="text-align:left;padding:2px 0;white-space:nowrap">' + esc(lsFmtBytes(k.bytes)) + '</td></tr>';
-  });
-  if (!u.keys.length) h += '<tr><td>—</td><td></td></tr>';
-  h += '</table>';
-
-  var hz = lsHorizonKeys();
-  if (hz.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(178,106,0,.12);color:#b26a00">' +
-         '⚠️ פונו רשומות ישנות מ-' + hz.length + ' מפתחות מחוסר מקום. הן שמורות בענן ויחזרו לתצוגה כשיש רשת.</div>';
-  }
-
-  var vs = lsVerifySpecs();
-  if (vs.length) {
-    h += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(21,101,192,.12);color:#1565c0">' +
-         '☁️ במכשיר הזה אין עדות דחיפה מקומית עבור: ' +
-         esc(vs.map(function (s) { return s.label || s.key; }).join(', ')) +
-         '. פינוי שלהם נעשה רק אחרי אימות ישיר מול הענן — רשומה שאינה שם לא נמחקת.</div>';
-  }
-
-  var log = lsLogRead();
-  h += '<div style="font-weight:800;margin:10px 0 4px">יומן פינוי</div>';
-  if (!log.length) h += '<div style="opacity:.6">— טרם בוצע פינוי —</div>';
-  else {
-    h += '<div style="font-size:12px;opacity:.85">';
-    for (var i = log.length - 1; i >= 0; i--) {
-      var d = new Date(log[i].t);
-      h += '<div>' + esc(d.toLocaleDateString('he-IL')) + ' ' + esc(d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })) +
-           ' — ' + esc(log[i].a) + (log[i].d ? ' · ' + esc(log[i].d) : '') +
-           (log[i].b ? ' · ' + esc(lsFmtBytes(log[i].b)) : '') + '</div>';
-    }
-    h += '</div>';
-  }
-
-  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' +
-       '<button type="button" data-act="ls-sweep-now">🧹 פנה מקום עכשיו</button>' +
-       '<button type="button" data-act="ls-refresh-status">↻ רענן</button>';
-  if (hz.length) h += '<button type="button" data-act="ls-restore-all">☁️ טען הכל מחדש מהענן</button>';
-  h += '</div></div>';
-  return h;
-}
-function lsRenderStatus() {
-  var el = document.getElementById('ls-status-box');
-  if (el) el.innerHTML = lsStatusHTML();
-}
-function lsRefreshStatus() { lsRenderStatus(); }
-// מחזירה Promise — הפינוי הידני עובר גם במסלול הסינכרוני וגם באימות מול
-// הענן, ולכן ההודעה למשתמש מחכה לשניהם.
-function lsSweepNow() {
-  var freed = lsSweepGuarded('פינוי ידני מההגדרות', 0);
-  lsRenderStatus();
-  var p = lsHasVerifiers() ? lsSweepVerified('פינוי ידני מההגדרות — אימות מול הענן', 0) : Promise.resolve(0);
-  function finish(extra) {
-    freed += Number(extra) || 0;
-    lsRenderStatus();
-    /*  ⛔ שתי הודעות ולא אחת — ⚠️ הסיווג נגזר מהמסלול: ⭐ פינוי שהצליח
-     *  הוא הודעה נייטרלית, ⛔ ו«אין מה לפנות» היא אזהרה. */
-    try {
-      if (freed > 0) lsToast('✅ פונו ' + lsFmtBytes(freed), 4000);
-      else lsToast('⚠️ אין מה לפנות — אין נתונים מסונכרנים וישנים דיים', 4000, 'bad');
-    } catch (e) { }
-    return freed;
-  }
-  return p.then(finish, function () { return finish(0); });
-}
-function lsRestoreAll() {
-  lsClearHorizons();
-  lsRenderStatus();
-  try { lsToast('✅ האופק נוקה — הנתונים הישנים יחזרו בסנכרון הבא', 4000); } catch (e) { }
-}
-window.lsSweepNow = lsSweepNow;
-window.lsRefreshStatus = lsRefreshStatus;
-window.lsRestoreAll = lsRestoreAll;
+window.lsHorizonRelease = lsHorizonRelease;
 window.lsSet = lsSet;
 window.lsGet = lsGet;
 window.lsUsage = lsUsage;
@@ -1581,7 +1625,6 @@ window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 /* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
@@ -1616,7 +1659,7 @@ function staleSchemaHalt(e) {
     if (!_staleBanner()) {
       try { window.addEventListener('load', _staleBanner); } catch (x) {}
     }
-    try { toast(MSG_STALE_CODE, 6000); } catch (x) {}
+    try { toast(MSG_STALE_CODE, 6000, 'bad'); } catch (x) {}
   }
   return true;
 }
@@ -1656,107 +1699,192 @@ function sbWatch(c) {
   return c;
 }
 /* ═══════════════ סוף מודול האזנת הסכימה ════════════════════════════════ */
-
-/* ═══ מידע טכני — מודול משותף (סבב 91) ════════════════════════════════════
-   המודול המשותף של סבב 14 לא נגוע: הרכיב הזה רק עוטף את lsStatusHTML
-   בשורה מקופלת אחת בתחתית ההגדרות, סגורה כברירת מחדל. כפתורי הפינוי
-   הידני אינם מוצגים (מוסתרים ב-CSS — .tech-info .ls-status button);
-   המנגנון האוטומטי (lsBoot/lsSweep) הוא הדרך היחידה לפינוי.
-   חריג יחיד ומכוון: מעל LS_CRIT_BYTES מוצגת שורת מצב עדינה גם מחוץ
-   לרכיב — רשת הביטחון היחידה שמוצגת ביוזמת המערכת.
-
-   ⚠️ סבב 17: מצב הפתיחה נשמר ב-`_techInfoOpen` (זיכרון בלבד) ולא רק
-   ב-DOM. בגיוס מסך ההגדרות נבנה מחדש בכל `render()`, ולכן העוגן חוזר
-   ריק, ה-`details` הקודם כבר לא קיים — והרכיב היה נסגר בכל שמירה ובכל
-   ציור מושהה של ⏳. המצב חי בזיכרון בלבד בכוונה: זו העדפת תצוגה של
-   הרגע, לא נתון שראוי לצרוך ממנו מכסת אחסון. */
-var _techInfoOpen = false;
-function techInfoHTML() {
-  var crit = '';
-  try {
-    var u = lsUsage();
-    if (u.total >= LS_CRIT_BYTES) {
-      crit = '<div class="ls-crit-line">⚠️ האחסון המקומי כמעט מלא (' + esc(lsFmtBytes(u.total)) +
-             ' מתוך ' + esc(lsFmtBytes(u.quota)) + ') — פרטים ב"מידע טכני"</div>';
-    }
-  } catch (e) { }
-  return crit +
-    '<details class="tech-info" ontoggle="window.techInfoToggle&&window.techInfoToggle(this)">' +
-    '<summary>מידע טכני &rsaquo;</summary>' +
-    '<div id="ls-status-box"></div>' +
-    '</details>';
-}
-function techInfoToggle(el) {
-  if (!el) return;
-  _techInfoOpen = !!el.open;
-  if (el.open) { try { lsRenderStatus(); } catch (e) { } }
-}
-function techInfoMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var prev = box.querySelector('details.tech-info');
-  if (prev) _techInfoOpen = !!prev.open;
-  box.innerHTML = techInfoHTML();
-  // פתיחה מחדש מפעילה `ontoggle` (גם כשהיא תכנותית), וזה מה שמרנדר את
-  // הפירוט — אין צורך לקרוא כאן ל-lsRenderStatus ואין טעם לרנדר פעמיים.
-  if (_techInfoOpen) {
-    var d = box.querySelector('details.tech-info');
-    if (d) d.open = true;
+/* ═══ כפתור עסוק והשומר שבניתוב — מודול משותף (סבב 135) ══════════════════
+   ⛔ **כפתור שמפעיל מסלול שממתין לרשת מושבת עד שהמסלול הסתיים** —
+   ⚠️ וההשבתה יושבת בנקודת הניתוב האחת ⛔ ולא באתר הקריאה: ⭐ מטפל
+   שמחזיר הבטחה מסמן «יש כאן המתנה», ⛔ ואין מה להצהיר בכל אתר בנפרד.
+   ⚠️ הנימוק המדוד: שני מימושים חיו זה לצד זה — ⭐ אחד עם תווית ואחד
+   עם ספינר, ⛔ ובשתיים לא היה אף אחד: לחיצה שנייה על «שמור» בזמן
+   שהראשונה באוויר שלחה בקשה שנייה, ⚠️ ובכתיבת משתמש היא יוצרת שורה
+   כפולה או דורסת עדכון שטרם חזר.
+   ⛔ **ומטפל סינכרוני אינו נכנס** — ⚠️ הוא נגמר לפני שהלחיצה השנייה
+   יכולה לנחות, ⭐ ואין «בזמן» שאפשר להשבית בו. */
+/*  ⛔ התווית היא פרמטר עם ברירת מחדל ⛔ ולא מחרוזת קבועה — ⚠️ יש פעולות
+ *  רשת שאינן שמירה, ⭐ ו«שומר…» עליהן מתאר למשתמש פעולה שאינה מתרחשת. */
+function busy(btn, on, label) {
+  if (!btn) return;
+  if (on) {
+    if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
+    btn.disabled = true; btn.style.opacity = 'var(--op-4)'; btn.style.cursor = 'wait';
+    btn.innerHTML = label || '⏳ שומר…';
+  } else {
+    btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
+    if (btn._busyTxt !== undefined) { btn.innerHTML = btn._busyTxt; btn._busyTxt = undefined; }
   }
 }
-window.techInfoToggle = techInfoToggle;
-window.techInfoMount = techInfoMount;
-/* ═══════════════ סוף מודול מידע טכני ═══════════════════════════════════ */
-/* ── SYNC_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
-var SYNC_CFG = {
-  lastSync: function () { return _tbLastSyncAt || 0; },
-  sync: function () { return syncFromCloud(); }
-};
-/* ═══ אזור מצב — בלוק "☁️ סנכרון" — מודול משותף (סבב 17) ══════════════════
-   ⛔ שינוי כאן (סבב 65) — ארבע האפליקציות **וארבעת עותקי השער**, באותו
-      סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
-   `SYNC_CFG` — הדבר היחיד שנבדל בין האפליקציות — יושב מעל הבלוק. */
-function syncFmtTime(t) {
-  try { return new Date(t).toLocaleString('he-IL'); } catch (e) { return String(t); }
+/*  ⛔ הדגל נדרש גם לאלמנט שאינו כפתור — ⚠️ `disabled` אינו קיים על `div`
+ *  או על שורת טבלה, ⭐ ולחיצה שנייה עליהם הייתה נכנסת. */
+function actRun(el, fn) {
+  if (el._actBusy) return;
+  var out;
+  try { out = fn(el); }
+  catch (e) { console.error('[act] ' + el.getAttribute('data-act'), e); return; }
+  if (!out || typeof out.then !== 'function') return;
+  el._actBusy = true;
+  var isBtn = el.tagName === 'BUTTON';
+  if (isBtn) busy(el, true, '⏳ שומר…');
+  out.then(function () { }, function (e) {
+    console.error('[act] ' + el.getAttribute('data-act'), e);
+  }).then(function () {
+    el._actBusy = false;
+    if (isBtn) busy(el, false);
+  });
 }
-var _syncNowBusy = false;
-function syncLineHTML() {
-  var t = 0;
-  try { t = SYNC_CFG.lastSync() || 0; } catch (e) { t = 0; }
-  return '<div class="sync-line">' +
-    '<div>מצב חיבור: <b>' + (navigator.onLine ? 'מחובר' : 'מנותק') + '</b></div>' +
-    '<div>סנכרון אחרון: <b>' + (t ? esc(syncFmtTime(t)) : '— טרם הסתנכרן —') + '</b></div>' +
-    '<div class="sync-act"><button type="button"' + (_syncNowBusy ? ' disabled' : '') +
-    ' data-act="sync-now-status">' +
-    (_syncNowBusy ? 'מסנכרן…' : '🔄 סנכרן עכשיו') + '</button></div>' +
-    '</div>';
+window.busy = busy;
+window.actRun = actRun;
+/* ═══════════════ סוף מודול כפתור עסוק ═══════════════════════════════════ */
+/* ═══ צינור השמירה — מודול משותף (סבב 136) ═══════════════════════════════
+   ⛔ **כל שמירה מטופס עוברת בצינור אחד** — ⚠️ `runSave` מריצה, ו-`afterSave`
+      סוגרת מודאל · מרעננת · מודיעה · ומתזמנת דחיפה: ⭐ ארבעה שלבים בסדר
+      קבוע, ⛔ ולא ארבעה סדרים בכל אתר.
+   ⚠️ הנימוק המדוד: אותו רצף חי ב-11 אתרי שמירה בשלוש האפליקציות, ⛔ וכל
+      אחד השמיט ממנו שלב אחר — ⭐ אחד לא סגר מודאל, אחד לא הבחין בין מקוון
+      לאופליין, ⚠️ ואחד השאיר את ההודעה על «נשמר» גם כשלא הייתה רשת.
+   ⛔ **ו-`runSave` מחזירה את ההבטחה** — ⚠️ בלעדיה השומר שבניתוב אינו מנטרל
+      דבר: ⭐ מטפל סינכרוני נגמר לפני שהלחיצה השנייה נוחתת.
+   ⛔ **ו-`undefined` מהמטפל הוא «הוולידציה עצרה»** — ⚠️ המודאל נשאר פתוח
+      והמשתמש מתקן את מה שחסר, ⭐ וכל ערך אחר הוא הצלחה.
+   ⛔ **ו-`saveRefresh` פר-אפליקציה** — ⚠️ מה שנטען לזיכרון ומה שמצויר נבדל
+      בין הארבע, ⭐ והסדר שסביבו אינו.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב. */
+function errToast(e) {
+  console.error('[save]', e);
+  toast((e && (e.message || e.error_description)) || 'שגיאה בשמירה', null, 'bad');
 }
-function syncStatusHTML() { return pendStatusHTML() + syncLineHTML(); }
-function syncStatusMount() {
-  var box = document.getElementById('sync-status-box');
-  if (!box) return;
-  box.innerHTML = '<div class="sync-box"><div class="sync-box-ttl">☁️ סנכרון</div>' +
-                  syncStatusHTML() + '</div>';
+function afterSave(msg) {
+  closeModal();
+  saveRefresh();
+  /*  ⛔ בלי רשת ההודעה אומרת «במכשיר» — ⚠️ «נשמר» סתם נקרא «נשמר בענן»,
+   *  ⭐ וזו בדיוק ההטעיה שכתיבה מקומית-תחילה יוצרת. */
+  if (msg) toast(navigator.onLine ? msg : MSG_SAVED_LOCAL, null, 'good');
+  schedulePush();
+  return Promise.resolve();
 }
-function syncNowFromStatus() {
-  if (_syncNowBusy) return;
-  _syncNowBusy = true;
-  syncStatusMount();
-  var p = null;
-  try { p = SYNC_CFG.sync(); } catch (e) { p = null; }
-  Promise.resolve(p)['catch'](function () { })
-    .then(function () { _syncNowBusy = false; syncStatusMount(); });
+function runSave(fn, msg) {
+  return Promise.resolve()
+    .then(fn)
+    .then(function (r) {
+      if (r === undefined) return;
+      /*  ⛔ מחרוזת מהמטפל היא ההודעה — ⚠️ יש שמירות שההודעה בהן נגזרת מהנתון
+       *  שנשמר, ⭐ והיא ידועה רק בתוך המטפל: ⛔ וההצהרה בניתוב נשארת
+       *  ברירת המחדל. */
+      return afterSave(typeof r === 'string' ? r : msg);
+    })
+    .catch(function (e) { errToast(e); });
 }
-// נקודת החיווט היחידה של אזור המצב. כל מסך הגדרות קורא לה, והיא מרכיבה
-// את שני האלמנטים בסדר המחייב. בדיקת האחידות דורשת שתהיה לה קריאה חיה.
-function statusAreaMount() {
-  syncStatusMount();
-  techInfoMount();
+window.errToast = errToast;
+window.afterSave = afterSave;
+window.runSave = runSave;
+/* ═══════════════ סוף צינור השמירה ═══════════════════════════════════════ */
+
+/* ═══ הרשמת service worker — מודול משותף (סבב 128) ══════════════════════
+   ⛔ מנגנון זיהוי אחד — `reg.update()`: ⚠️ ואין מנגנון שני לאותה שאלה.
+   ⛔ ההשתלטות הראשונה אינה עדכון — ⚠️ בביקור ראשון אין מבקר, ⭐ ו-`claim()`
+      של העובד הראשון יורה `controllerchange` על דף שכבר מריץ את החדש.
+   ⛔ ודף שאיש לא נגע בו נטען מחדש מיד — ⚠️ ואחרי מגע מוצג הבאנר, ⭐ שרענון
+      באמצע עבודה מאבד את מה שהוקלד.
+   ⛔ ו-`updateViaCache: 'none'` — ⚠️ ברירת המחדל מתירה לדפדפן לענות מתוך
+      מטמון ה-HTTP, ⛔ כלומר להשוות את `sw.js` מול עותק ישן של עצמו.
+   ⛔ והכפתורים במפת הפעולות — ⚠️ המיכל `#updater` יושב במקור, ⭐ ואין כאן
+      מאזין ישיר שאיש אינו רואה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+/*  ⛔ תקרת ההמתנה להשתלטות — ⚠️ **מה נכנס**: המתנה אחת אחרי
+ *  `SKIP_WAITING`, ⛔ **ומה מפיל**: ערך קצר, שיורה לפני ההשתלטות
+ *  ויהפוך לרענון שני. */
+var SW_APPLY_MS = 10000;
+var _swReg = null, _swAccepted = false, _swReloaded = false, _swWait = 0;
+function swBanner() { return document.getElementById('updater'); }
+/*  ⛔ מזהה הגרסה נקרא משם המטמון החי — ⚠️ ואין לו ליטרל שני בדף: ⭐ הוא
+ *  מסונן בתחילית האפליקציה, ⛔ ובזמן התקנה יש שני שמות — הישן והחדש:
+ *  ⚠️ ולכן הסימן נושא את שניהם, ⭐ והוא משתנה בדיוק כשגרסה נוספת או יורדת. */
+function swVer() {
+  if (typeof caches === 'undefined') return Promise.resolve('');
+  return caches.keys().then(function (ks) {
+    return ks.filter(function (n) { return n.indexOf(LS_CFG.cachePrefix) === 0; }).sort().join('|');
+  }).catch(function () { return ''; });
 }
-window.syncStatusMount = syncStatusMount;
-window.syncNowFromStatus = syncNowFromStatus;
-window.statusAreaMount = statusAreaMount;
-/* ═══ סוף בלוק "☁️ סנכרון" ═══════════════════════════════════════════════ */
+function swBannerHide() { var el = swBanner(); if (el) el.classList.remove('show'); }
+/*  ⛔ סימן הדחייה מתמיד ונושא את הגרסה שנדחתה — ⚠️ סימן בזיכרון מתאפס
+ *  בטעינה, ⭐ והבאנר חוזר בלי שדבר השתנה: ⛔ ועובד ממתין ששרד היה מציג
+ *  אותו בכל טעינה, בלי דרך לצאת. */
+function swShowUpdate() {
+  var el = swBanner();
+  if (!el) { console.error('[sw] אין מיכל לבאנר העדכון — #updater'); return; }
+  swVer().then(function (v) {
+    if (v && v === lsGet(LS_CFG.dismissKey, '')) return;
+    el.classList.add('show');
+  });
+}
+window.showAppUpdateBanner = swShowUpdate;
+function swHideUpdate() {
+  swBannerHide();
+  swVer().then(function (v) { if (v) lsSet(LS_CFG.dismissKey, v); });
+}
+/*  ⛔ הרענון אינו כאן — ⚠️ הוא ב-`controllerchange` בלבד: ⭐ טיימר שמרענן
+ *  בעצמו יורה לפני שהעובד החדש השתלט, ⛔ ואז `reg.waiting` שורד, הבאנר
+ *  חוזר, והלחיצה הבאה חוזרת עליו. */
+function swApply(btn) {
+  _swAccepted = true;
+  busy(btn, true, 'מעדכן…');
+  if (!(_swReg && _swReg.waiting)) { swApplyFail(btn); return; }
+  _swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
+  _swWait = setTimeout(function () { swApplyFail(btn); }, SW_APPLY_MS);
+}
+/*  ⛔ עובד ממתין ששרד את הלחיצה הוא כשל ⛔ ולא מצב — ⚠️ הבאנר יורד
+ *  והכשל נאמר, ⭐ ולא נשאר על המסך ומזמין לחיצה נוספת. */
+function swApplyFail(btn) {
+  _swWait = 0;
+  if (_swReloaded) return;
+  busy(btn, false);
+  swBannerHide();
+  toast('⚠️ העדכון לא הושלם — נסה שוב', 6000, 'bad');
+}
+function swRegister() {
+  if (!('serviceWorker' in navigator)) return;
+  /*  ⛔ המשתמש נגע בדף — ⚠️ **מה נכנס**: המגע הראשון בלבד, ⭐ **ומה הוא
+   *  מפיל**: את הרענון האוטומטי שבהשתלטות. */
+  var touched = false;
+  ['pointerdown', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { touched = true; }, { once: true, capture: true });
+  });
+  var hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (_swWait) { clearTimeout(_swWait); _swWait = 0; }
+    if (_swReloaded || !hadController) return;
+    if (!_swAccepted && touched) { swShowUpdate(); return; }
+    _swReloaded = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
+    console.log('[sw] registered:', reg.scope);
+    _swReg = reg;
+    if (reg.waiting && navigator.serviceWorker.controller) swShowUpdate();
+    reg.addEventListener('updatefound', function () {
+      var nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', function () {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) swShowUpdate();
+      });
+    });
+    function checkForUpdate() { try { reg.update().catch(function () {}); } catch (e) {} }
+    checkForUpdate();
+    setInterval(checkForUpdate, 30 * 60 * 1000);
+  }).catch(function (err) { console.warn('[sw] registration failed:', err); });
+}
+window.addEventListener('load', swRegister);
+/* ═══════════════ סוף מודול הרשמת service worker ═════════════════════════ */
+
 
 /* ── BK_CFG — הדבר היחיד שנבדל בין האפליקציות ───────────────────────────── */
 /* ⚠️ כאן הכל **פר-מוסד**, ובשלוש שכבות שאין לערבב (סבב 30): הטבלה בענן היא
@@ -1770,7 +1898,6 @@ window.statusAreaMount = statusAreaMount;
 var BK_CFG = {
   client: function () { return getSB(); },
   flagKey: function () { return 'tb_last_backup' + LS; },
-  atKey: function () { return 'tb_last_backup_at' + LS; },
   logQueueKey: function () { return 'tb_log_queue' + LS; },
   prefix: function () { return (YESHIVA || 'unknown') + '_'; },
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
@@ -1799,7 +1926,6 @@ var BK_CFG = {
 var BK_TABLE = 'kv_backup';       // יומן הגיבויים — הכתיבה היא insert בלבד
 var BK_LOG_TABLE = 'sync_log';    // יומן הפעולות — insert בלבד
 var BK_LOG_MAX = 50;              // תקרת התור המקומי של היומן
-var BK_STALE_DAYS = 3;            // מעל זה — שורת התרעה ב«מידע טכני»
 var BK_RETENTION_DAYS = 30;       // עותק יומי נשמר 30 יום; ישן מזה נגרע
 var _bkRunning = false;           // נעילת ריצה (החליפה את הכתיבה-מראש)
 
@@ -2052,7 +2178,6 @@ async function bkMaybeDaily() {
     if (wrote) { try { await _bkRetention(c, dailyKeys); } catch (e2) { } }
     if (ok) {
       lsSet(flag, today);
-      lsSet(_bkVal(BK_CFG.atKey), String(Date.now()));
       logAction('backup', null, wrote, { date: today, scope: pre || null, wrote: wrote, unchanged: same });
     } else {
       /* ⛔ בלי כתיבת הדגל הגלובלי — ההזדמנות הבאה באותו יום תנסה שוב
@@ -2085,44 +2210,6 @@ async function _bkRetention(c, keys) {
   return n;
 }
 
-/* ── תצוגה: «גובה לאחרונה» בתוך «מידע טכני» ───────────────────────────── */
-// ⛔ הרכיב נתלה **אחרי** הבלוק הקפוא ואינו עורך אותו (סבב 30) — «מידע
-//    טכני» חתום ב-`check-status-area.mjs`, ועריכתו הייתה מחייבת שינוי
-//    בארבעת הריפו ובחתימות עבור שורת תצוגה אחת.
-function bkLastAt() {
-  var v = parseInt(lsGet(_bkCfg('atKey', ''), '0'), 10);
-  return isFinite(v) ? v : 0;
-}
-// ⚠️ מחזירה את מספר הימים רק כשהוא חצה את הסף, ו-0 אחרת — כדי שאתר
-//    הקריאה יהיה `if (bkStale())` ולא השוואה שמשוכפלת בכל מקום.
-//    מכשיר שטרם גיבה בכלל מחזיר 0: «— טרם גובה —» כבר אומר את זה, והתרעה
-//    בנוסף לו הייתה רעש בעלייה הראשונה.
-function bkStale() {
-  var t = bkLastAt();
-  if (!t) return 0;
-  var d = Math.floor((Date.now() - t) / 86400000);
-  return (d >= BK_STALE_DAYS) ? d : 0;
-}
-function bkStatusHTML() {
-  var t = bkLastAt(), st = bkStale();
-  return '<div class="sync-line bk-line"><div>גובה לאחרונה: <b>' +
-    (t ? esc(syncFmtTime(t)) : '— טרם גובה —') + '</b></div>' +
-    (st ? '<div class="bkStale">⚠️ הגיבוי לא רץ ' + st + ' ימים</div>' : '') +
-    '</div>';
-}
-function bkStatusMount() {
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
-  if (!d) return;
-  var prev = d.querySelector('.bk-line');
-  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
-  var wrap = document.createElement('div');
-  wrap.innerHTML = bkStatusHTML();
-  var node = wrap.firstChild;
-  if (node) d.appendChild(node);
-}
-window.bkStatusMount = bkStatusMount;
 
 /* ── נקודת ההפעלה היחידה ─────────────────────────────────────────────── */
 // ⛔ זו הקריאה היחידה שקוד האפליקציה עושה למודול (סבב 30, השלמה) — היא
@@ -2335,18 +2422,18 @@ function pendEnsureStyle() {
   var s = document.createElement('style');
   s.id = 'pend-style';
   s.textContent =
-    '.pend-tag{display:inline-block;background:#fde68a;color:#78350f;border:1px solid #f59e0b;' +
-    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:1.6;' +
+    '.pend-tag{display:inline-block;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);' +
+    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:var(--lh-4);' +
     'white-space:nowrap;vertical-align:middle;margin:0 4px}' +
-    '.pend-tag.late{background:#fecaca;color:#7f1d1d;border-color:#dc2626}' +
+    '.pend-tag.late{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}' +
     '#pend-bar{position:fixed;z-index:2147482000;left:0;right:0;bottom:0;padding:8px 12px;' +
-    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:#3d2c00;background:#ffd88a;' +
-    'box-shadow:0 -2px 10px rgba(0,0,0,.18)}' +
-    '#pend-bar.late{background:#ffb4ab;color:#5c1a12}' +
+    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:var(--warn);background:var(--warn-soft);' +
+    'box-shadow:0 -2px 10px var(--sh-1)}' +
+    '#pend-bar.late{background:var(--bad-soft);color:var(--bad)}' +
     '#pend-alert{position:fixed;z-index:2147483000;left:0;right:0;top:0;padding:10px 14px;' +
-    'direction:rtl;font:700 13px/1.6 inherit;color:#fff;background:#b91c1c;' +
-    'box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;justify-content:center}' +
-    '#pend-alert button{background:rgba(255,255,255,.25);color:#fff;border:1px solid #fff;' +
+    'direction:rtl;font:700 13px/1.6 inherit;color:var(--on-alert);background:var(--alert);' +
+    'box-shadow:0 2px 10px var(--sh-2);display:flex;gap:10px;align-items:center;justify-content:center}' +
+    '#pend-alert button{background:var(--fill-dark);color:var(--on-dark);border:1px solid var(--on-dark);' +
     'border-radius:6px;padding:2px 10px;font:inherit;cursor:pointer}';
   (document.head || document.documentElement).appendChild(s);
 }
@@ -2413,31 +2500,13 @@ function pendRenderAlert() {
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.textContent = 'הבנתי';
-  btn.onclick = function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); };
+  btn.dataset.act = 'pend-alert-ok';
   el.appendChild(span);
   el.appendChild(btn);
   document.body.appendChild(el);
 }
 
 // פאנל להגדרות — מה בדיוק ממתין, ומאיזה גיל.
-function pendStatusHTML() {
-  var m = pendAll(), keys = Object.keys(m);
-  keys.sort(function (a, b) { return m[a] - m[b]; });
-  var h = '<div style="font-size:13px;line-height:1.8">';
-  h += '<div>מצב רשת: <b>' + (navigator.onLine ? 'מקוון' : 'לא מקוון') + '</b></div>';
-  h += '<div>פעולות ממתינות לסנכרון: <b>' + keys.length + '</b></div>';
-  if (!keys.length) { h += '<div style="color:#16a34a">✅ הכול מסונכרן</div></div>'; return h; }
-  h += '<div style="margin-top:6px;max-height:220px;overflow:auto">';
-  keys.slice(0, 60).forEach(function (k) {
-    var age = Date.now() - m[k], late = age > PEND_LATE_MS;
-    h += '<div style="display:flex;gap:8px;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.08);padding:3px 0">' +
-         '<span>' + esc(k) + '</span><span style="' + (late ? 'color:#b91c1c;font-weight:700' : 'opacity:.7') + '">' +
-         esc(pendFmtAge(age)) + '</span></div>';
-  });
-  if (keys.length > 60) h += '<div style="opacity:.7">…ועוד ' + (keys.length - 60) + '</div>';
-  h += '</div></div>';
-  return h;
-}
 
 // רענון תקופתי — הגיל מוצג בתגיות ובמונה, וסף ה-24 שעות חייב להיחצות
 // גם כשהמשתמש לא נגע בכלום.
@@ -2518,9 +2587,18 @@ function cssQ(v) {
   return String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '');
 }
 var DOM_ACTIONS = {
+  'sw-apply':            function (el) { swApply(el); },
+  'sw-dismiss':          function () { swHideUpdate(); },
+  'pick-cat':            function (el) { pickCat(el.dataset.letter); },
+  'pick-task':           function (el) { pickTask(el.dataset.task, el); },
+  'pick-sub':            function (el) { pickSub(el.dataset.sub, el); },
+  /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
+   *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'pend-alert-ok':       function () { _pendAlertDismissed = Date.now(); pendRenderAlert(); },
   'entry-edit':     function (el) { editEntry(el.getAttribute('data-id')); },
   'entry-del':      function (el) { delEntry(el.getAttribute('data-id')); },
-  'entry-save':     function (el) { saveEntry(el.getAttribute('data-id')); },
+  'entry-save':     function (el) { return runSave(function () { return saveEntry(el.getAttribute('data-id')); }, MSG_SAVED); },
   'arc-pdf':        function (el) { exportArchivePDF(el.getAttribute('data-id')); },
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
@@ -2581,7 +2659,7 @@ var DOM_ACTIONS = {
                       setTimeout(function () { el.classList.remove('btn-flash'); }, 500);
                     },
   'clear-all':      function () { clearAll(); },
-  'save-settings':  function () { saveSettings(); },
+  'save-settings':  function () { return runSave(saveSettings, MSG_SAVED); },
   'share-report':   function () { shareReport(); },
   'arc-go-years':   function () { arcGoYears(); },
   'arc-toggle-edit': function () { arcToggleEdit(); },
@@ -2593,22 +2671,28 @@ var DOM_ACTIONS = {
   'modal-close':    function () { closeModal(); },
   'ask-no':         function () { closeAsk(false); },
   'ask-yes':        function () { closeAsk(true); },
-  'ls-sweep-now':      function () { lsSweepNow(); },
-  'ls-refresh-status': function () { lsRefreshStatus(); },
-  'ls-restore-all':    function () { lsRestoreAll(); },
-  'sync-now-status':   function () { syncNowFromStatus(); },
-  'hw-restore':        function (el) { hwRestoreClick(el); },
 };
 /*  ⛔ מאזין אחד ב-`document` ולא מאזין לכל אלמנט (סבב 67) — המסכים כאן
  *  נבנים מחדש בכל רינדור, ומאזין פר-אלמנט היה צריך חיווט מחדש בכל פעם;
  *  ⚠️ בדיוק שם נולד «הכפתור שהפסיק לעבוד אחרי רענון». */
+/*  ⛔ מאזין הקליק האחד של האפליקציה — ⚠️ סגירת הרקע קודמת לניתוב:
+ *  ⭐ לחיצה על הרקע אינה נושאת `data-act`, ⛔ ושני מאזינים לאותו אירוע
+ *  הם שני מקומות שבהם לחיצה נתפסת. */
 document.addEventListener('click', function (ev) {
+  if (modalBackdrop(ev)) return;
   var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
   if (!el) return;
   var fn = DOM_ACTIONS[el.getAttribute('data-act')];
   if (!fn) return;
   ev.preventDefault();
-  fn(el);
+  actRun(el, fn);
+});
+/*  ⛔ מאזין המקלדת האחד של האפליקציה — ⚠️ הוא קורא לשני המסלולים
+ *  המשותפים בסדר מוצהר: ⭐ שמירה בשדה עריכה קודמת לסגירת המודאל,
+ *  ⛔ שאחרת `Escape` בשדה שבתוך מודאל היה סוגר אותו במקום לבטל את השדה. */
+document.addEventListener('keydown', function (e) {
+  if (ksKey(e)) return;
+  modalEsc(e);
 });
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
@@ -2708,7 +2792,7 @@ var PL_CFG = {
     return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "tb_last_changed").maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(r.data.value) : null };
+        return { ok: true, ts: r.data ? plNum(kvParse("tb_last_changed", r.data.value).value) : null };
       }, function () { return { ok: false, ts: null }; });
   },
 };
@@ -2770,6 +2854,9 @@ function plTouch(ts) {
 
 function _plFull() {
   var done = function (v) { _plBusy = false; return v; };
+  /*  ⛔ שחרור האופק **לפני** המשיכה ⛔ ולא אחריה — ⚠️ הניקוי הוא שמתיר
+   *  לכתיבה שבסופה להחזיר את הישן, ⭐ וניקוי שאחריה ממתין למשיכה הבאה. */
+  try { lsHorizonRelease(); } catch (e0) { }
   try {
     return Promise.resolve(PL_CFG.pull()).then(
       function () { _plFullAt = Date.now(); return done(true); },
@@ -2989,7 +3076,6 @@ var HW_CFG = {
       סבב: אחרת החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה.
    ══════════════════════════════════════════════════════════════════════ */
 var HW_BOOT_DEFER_MS = 3000;      // כמו הפינוי הנדחה של סבב 14 — רשת אחרי עלייה
-var HW_RESTORE_ARM_MS = 8000;     // חלון האישור הדו-שלבי של כפתור השחזור
 var _hwCloudSeen = {};            // ראיה עננית בזיכרון בלבד: מפתח → {מזהה → חותמת}
 var _hwSweepBusy = false;
 var _hwSwept = 0;                 // כמה רשומות פונו בעלייה הזו — לתיעוד בלבד
@@ -3126,47 +3212,6 @@ async function hwPastLoad(key, filter) {
   return { ok: true, rows: out };
 }
 
-/* ── כפתור השחזור — נגישות ל-`lsRestoreAll` ────────────────────────────── */
-// ⛔ הרכיב נתלה אחרי הבלוק הקפוא ואינו עורך אותו (סבב 35) — אותה טכניקה
-//    של `bkStatusMount`: «מידע טכני» חתום ב-`check-status-area.mjs`,
-//    והכפתור מצטרף אליו מבחוץ.
-var _hwRestoreArmed = 0;
-function hwRestoreHTML() {
-  return '<div class="sync-line hw-restore-line"><button type="button" ' +
-    'data-act="hw-restore">' +
-    '☁️ שחזר הכול מהענן</button></div>';
-}
-function hwRestoreMount() {
-  try {
-    if (!(typeof HW_CFG !== 'undefined' && HW_CFG &&
-          typeof HW_CFG.admin === 'function' && HW_CFG.admin())) return;
-  } catch (e) { return; }
-  var box = document.getElementById('tech-info-box');
-  if (!box) return;
-  var d = box.querySelector('details.tech-info');
-  if (!d) return;
-  var prev = d.querySelector('.hw-restore-line');
-  if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
-  var wrap = document.createElement('div');
-  wrap.innerHTML = hwRestoreHTML();
-  var node = wrap.firstChild;
-  if (node) d.appendChild(node);
-}
-// אישור דו-שלבי: הלחיצה הראשונה חומשת לחלון קצר, השנייה מבצעת.
-function hwRestoreClick(btn) {
-  var now = Date.now();
-  if (!_hwRestoreArmed || (now - _hwRestoreArmed) > HW_RESTORE_ARM_MS) {
-    _hwRestoreArmed = now;
-    if (btn) btn.textContent = '⚠️ בטוח? לחיצה נוספת משחזרת הכול';
-    return;
-  }
-  _hwRestoreArmed = 0;
-  try { lsRestoreAll(); } catch (e) { }
-  if (btn) btn.textContent = '☁️ שחזר הכול מהענן';
-}
-window.hwRestoreClick = hwRestoreClick;
-window.hwRestoreMount = hwRestoreMount;
-
 /* ── נקודת ההפעלה ──────────────────────────────────────────────────────── */
 // ⛔ נקודת ההפעלה היחידה היא `hwBoot()` מפונקציית העלייה (סבב 35, כלל
 //    ברזל 12) — הפינוי מושהה מפני שהוא דורש רשת, בדיוק כמו הפינוי הנדחה
@@ -3227,7 +3272,7 @@ async function sbSet(key, value) {
     if (ctxStale(_ep)) return { ok: false, error: "ההקשר התחלף", ctxStale: true };
     if (res.error) {
       console.error('[sync] sbSet error', key, res.error.message, res.error);
-      return { ok: false, error: res.error.message || "שגיאת שרת" };
+      return { ok: false, error: res.error.message || MSG_SERVER_ERR };
     }
     console.log('[sync] sbSet ok', key);
     return { ok: true, error: null };
@@ -3247,9 +3292,11 @@ async function sbGetResult(key) {
     if (res.error) {
       var missing = res.error.code === "PGRST116";
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
-      return { ok: missing, data: null, error: missing ? null : (res.error.message || "שגיאת שרת") };
+      return { ok: missing, data: null, error: missing ? null : (res.error.message || MSG_SERVER_ERR) };
     }
-    return { ok: true, data: res.data ? JSON.parse(res.data.value) : null, error: null };
+    if (!res.data) return { ok: true, data: null, error: null };
+    var pr = kvParse(key, res.data.value);
+    return { ok: pr.ok, data: pr.value, bad: pr.bad, error: pr.bad ? KV_BAD : null };
   } catch(e) {
     console.error("sbGet exception [" + key + "]:", e);
     return { ok: false, data: null, error: (e && e.message) || String(e) };
@@ -3681,24 +3728,15 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMeta) {
       (`tb_entries`+LS / `tb_archive`+LS) ואת אותם שני מערכים, ולכן מודול
       האחסון הקפוא, מודול ה-⏳ ומדיניות הפינוי אינם מושפעים כלל.
 
-   ⛔ `TB_ARC_UNIFIED = false` הוא נתיב החזרה (סבב 32) — הקריאה והכתיבה
-      חוזרות ל-`tb_archive`, שממשיכה להתעדכן כל עוד `TB_ARC_LEGACY_WRITE`
-      דולק. זו הסיבה שהכתיבה הכפולה קיימת, וזה מה שהופך את החזרה להחלפת דגל
-      במקום שחזור נתונים — בדיוק כמו הכתיבה הכפולה ל-`kv` בסבב 30.
-   ⛔ אין למחוק את `tb_archive` בסבב 32 — הטריגר הוא שבועיים של
-      עבודה תקינה על הטבלה המאוחדת, וגם אז מפסיקים קודם את הכתיבה הכפולה
-      ורק בסבב שאחריו מוחקים. ר' `migrations/005`.
+   ⛔ אין להחזיר כתיבה כפולה ל-`tb_archive` — הטבלה נגרעה מהמסד, ⚠️ וכתיבה
+      אליה נכשלת בכל קריאה: ⭐ `tb_archive` הוא **מפתח localStorage** בלבד,
+      ⛔ ואינו שם של טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
 var TB_ROWS = true;
 var TB_ARC_UNIFIED = true;
-/* ⭐ סבב 35 — הטבלאות הן המאסטר, והכתיבה הכפולה כובתה: `TB_ARC_LEGACY_WRITE`
-   (הטבלה הישנה `tb_archive`) ו-`TB_KV_LEGACY_WRITE` (מפתחות ה-`kv`
-   `tb_entries`/`tb_archive`) כבויים. השקילות אומתה ב-17.8 (720/171, אפס
-   אי-התאמות). ⛔ המחיקה עצמה ב-30.8, פעולת מנהל — לא כאן (סבב 35) — חלון
-   שבועיים בין כיבוי למחיקה הוא מה שמאפשר לגלות טעות בזמן.
-   ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta` אינם חלק מהכיבוי —
-   ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
-var TB_ARC_LEGACY_WRITE = false;
+/* ⭐ הטבלאות הן המאסטר, והכתיבה הכפולה ל-`kv` כבויה
+   (`TB_KV_LEGACY_WRITE`) — ⚠️ `tb_cats`/`tb_subs`/`tb_subs_meta` אינם חלק
+   מהכיבוי: ⛔ ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
 var TB_KV_LEGACY_WRITE = false;
 var TB_ROW_TABLES = { tb_entries: 'tb_entries', tb_archive: 'tb_archive' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
@@ -3716,8 +3754,8 @@ function tbRecKey(kvKey, rec) {
 }
 function tbPendPrefix(kvKey) { return (kvKey === 'tb_archive') ? PK_ARC : PK_ENTRY; }
 // `tbl` אופציונלי — הטבלה שאליה השורה נועדה. ⛔ `archived` נכתב רק כשהיעד
-// הוא `tb_entries` (סבב 32) — ל-`tb_archive` אין את העמודה, ושדה עודף
-// ב-`upsert` מפיל את הכתיבה כולה ומחזיר `ok:false`.
+// הוא `tb_entries` — ⚠️ שדה שאינו עמודה ב-`upsert` מפיל את הכתיבה כולה
+// ומחזיר `ok:false`.
 function tbRowOf(kvKey, rec, tbl) {
   var k = tbRecKey(kvKey, rec);
   if (k == null) return null;
@@ -3730,9 +3768,9 @@ function tbRowOf(kvKey, rec, tbl) {
     deleted: !!(rec && rec.deleted),
     data: rec
   };
-  // ⚠️ `gdate` נשמר גם בטבלה המאוחדת (סבב 32) — הוא היה עמודה של
-  //    `tb_archive`, והשמטתו הייתה הופכת את ההעברה לחלקית ואת נתיב החזרה
-  //    למשוחזר-מהנתונים במקום למועתק. הוא נשאר `null` לרשומות יומן.
+  // ⚠️ `gdate` נשמר לסנאפשוט — ⛔ הוא עמודת הסינון של הארכיון בענן,
+  //    והשמטתו הייתה מחייבת לשחזר אותו מהנתונים בכל משיכה. הוא נשאר
+  //    `null` לרשומות יומן.
   if (kvKey === 'tb_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
   if (target === 'tb_entries') row.archived = tbArchivedFlag(kvKey);
   return row;
@@ -3856,21 +3894,6 @@ async function tbSendRows(kvKey, rows, ep) {
   if (!sb) throw new Error('failed to reach cloud');
   var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
   if (!res || res.error) return res || { error: { message: 'upsert failed' } };
-  // ⚠️ כתיבה כפולה לטבלה הישנה — נתיב החזרה בלבד (סבב 32). היא **אינה**
-  //    קובעת את ההצלחה: אילו הייתה, טבלה ישנה שכבר נמחקה הייתה מפילה את
-  //    עֵד הפינוי ואת אישור ה-⏳ על כתיבה שהצליחה במלואה. הראיה שנדרשת
-  //    לשניהם היא הטבלה המאוחדת ובלוק ה-`kv`, ושתיהן נבדקות במקומן.
-  if (TB_ARC_UNIFIED && TB_ARC_LEGACY_WRITE && kvKey === 'tb_archive') {
-    var legacy = rows.map(function (r) {
-      var c = {};
-      Object.keys(r).forEach(function (k) { if (k !== 'archived') c[k] = r[k]; });
-      return c;
-    });
-    /*  ⛔ כשל הכתיבה הכפולה נרשם ואינו נבלע (סבב 79) — ⚠️ המסלול הזה הוא
-     *  נתיב-חזרה שכבוי ברוב הזמן, ⭐ וכשל שקט בו נראה בדיוק כמו הצלחה. */
-    try { await withTimeout(sb.from('tb_archive').upsert(legacy, { onConflict: 'client_id' })); }
-    catch (e2) { _bkWriteFail('tbLegacyArchiveWrite', e2); }
-  }
   /*  ⛔ נכשל-סגור בהחלפת הקשר — ⚠️ השורות הגיעו לטבלה הנכונה ⭐ והסימון
    *  שלהן אינו פר-מוסד, ⛔ אבל מפת החותמות המרוחקות כן: ⚠️ מילויה כאן
    *  היה משווה את המוסד החדש מול חותמות של הקודם. */
@@ -3927,12 +3950,25 @@ function delSubKey(sk, ts) {
   SUBS_META[k] = metaDel(ts);
   delete SUBS[k];
 }
-/*  ⛔ עידן ה-`SUBS` — ⚠️ מספר בענן שמכריז «העותק המקומי מזוהם»: ⭐ מכשיר
- *  שראה עידן ישן **זורק** את המפה המקומית ומושך מלא, ⛔ בלי מיזוג — ⚠️ פעם
+/*  ⛔ חותמת ניקוי של ערך מפתח-ערך — ⚠️ חותמת בענן שמכריזה «העותק המקומי
+ *  מזוהם»: ⭐ מכשיר שראה חותמת ישנה **זורק** את העותק המקומי ומושך מלא,
+ *  ⛔ בלי מיזוג — ⚠️ פעם
  *  אחת, ⭐ ואז חוזר למיזוג הרגיל: ⛔ בלעדיו ניקוי בענן נדרס תוך שניות בידי
- *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי. */
-var SUBS_EPOCH_KEY = 'tb_subs_epoch';
-var _subsEpochSeen = 0;
+ *  המכשיר שמחזיק את הזיהום. ⛔ **והוא נקבע בענן ביד** — ⚠️ אחרי הניקוי.
+ *  ⛔ **ולכל ערך שהמכשיר ממזג יש סימן כזה** — ⚠️ תיקון בקוד אינו מנקה
+ *  מכשיר שכבר מזוהם, ⭐ והסימן הוא הכלי היחיד שמגיע אליו מהענן: ⛔ ולכן
+ *  שני המפתחות יושבים כאן ⛔ ולא כל אחד ליד הקוד שלו.
+ *  ⛔ **והסימן הוא חותמת ISO ולא מונה** — ⚠️ מספר סידורי אינו אומר מה
+ *  נוקה ומתי, ⭐ ומי שפותח את המסד רואה «2» ואינו יודע דבר: ⛔ וחותמת
+ *  מתעדת את עצמה. ⚠️ **והשוואת מחרוזות ISO היא השוואה כרונולוגית**,
+ *  ⭐ ואין צורך בהמרה.
+ *  ⚠️ **ו-`tb_subs_meta` חולק את חותמת ה-`tb_subs`** — ⭐ שניהם נזרקים
+ *  באותו ענף, ⛔ ושתי חותמות לענף אחד היו מתירות למפה ולחותמות שלה
+ *  להיזרק בנפרד: ⚠️ מפה בלי החותמות שלה חוזרת במיזוג הראשון. */
+var CATS_RESET_KEY = 'tb_cats_reset';
+var _catsResetSeen = '';
+var SUBS_RESET_KEY = 'tb_subs_reset';
+var _subsResetSeen = '';
 function saveSubs() {
   lsSet("tb_subs"+LS, JSON.stringify(SUBS));
   lsSet("tb_subs_meta"+LS, JSON.stringify(SUBS_META));
@@ -4018,9 +4054,8 @@ function saveArchive() {
   lsSetArray("tb_archive"+LS, hwDiskFilter('tb_archive'+LS, ARCHIVE), _tbRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
-    // ⭐ מסבב 32 הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר
-    //    הארכוב הוא **דגל על השורה** ולא העברה בין טבלאות. שכבת הדחיפה
-    //    כותבת בנוסף ל-`tb_archive` הישנה כל עוד נתיב החזרה פתוח.
+    // ⭐ הדחיפה הזו הולכת ל-`tb_entries` עם `archived=true`, כלומר הארכוב
+    //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('tb_archive', ARCHIVE);
     if (ctxStale(_ep)) return;
     var _r = TB_KV_LEGACY_WRITE ? await sbSet("tb_archive", ARCHIVE) : null;
@@ -4218,7 +4253,7 @@ function tbSyncLog(action, key, recordCount, details) {
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
-  toast("🔄 מסנכרן...", 3000);
+  toast(MSG_SYNCING, 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
   /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
@@ -4226,6 +4261,8 @@ async function syncFromCloud() {
   var _ep = ctxEpoch();
   async function pull(key, label) {
     var r = await sbGetResult(key);
+    /*  ⛔ ערך פגום כבר דיווח על עצמו בשמו — ⚠️ והוספתו כאן הייתה טוסט
+     *  שני לאותו אירוע. */
     if (!r.ok) failed.push(label);
     return r.data;
   }
@@ -4236,34 +4273,50 @@ async function syncFromCloud() {
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
     var cloudCats = await pull('tb_cats', 'קטגוריות');
+    var cloudCatsReset = String(await pull(CATS_RESET_KEY, 'חותמת ניקוי קטגוריות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
-    if (cloudCats && cloudCats.length) {
-      CATS = mergeCats(CATS, cloudCats);
-      lsSet('tb_cats'+LS, JSON.stringify(CATS));
-      sbSet('tb_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
+    if (cloudCats) {
+      /*  ⛔ החותמת קודמת למיזוג — ⚠️ מכשיר שראה חותמת ישנה זורק את
+       *  הרשימה המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה
+       *  מחזירה לענן בדיוק את מה שזה עתה נוקה בו.
+       *  ⛔ **והיא נבדקת לפני האורך** — ⚠️ כאן, ובניגוד ל-`SUBS`, המיזוג
+       *  מותנה ברשימה לא-ריקה: ⭐ רשימה שרוקנה בענן בכוונה מגיעה ריקה,
+       *  ⛔ ותנאי אורך שקודם לחותמת היה מדלג עליה — ⚠️ והמכשיר המזוהם
+       *  היה דוחף את שלו חזרה בסבב הבא. */
+      if (cloudCatsReset > _catsResetSeen) {
+        CATS = Array.isArray(cloudCats) ? cloudCats : [];
+        _catsResetSeen = cloudCatsReset;
+        lsSet(CATS_RESET_KEY+LS, JSON.stringify(cloudCatsReset));
+        lsSet('tb_cats'+LS, JSON.stringify(CATS));
+        console.log('[sync] ניקוי קטגוריות ' + cloudCatsReset + ' — העותק המקומי נזרק ונמשך מלא');
+      } else if (cloudCats.length) {
+        CATS = mergeCats(CATS, cloudCats);
+        lsSet('tb_cats'+LS, JSON.stringify(CATS));
+        sbSet('tb_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('tb_cats'); });
+      }
     }
 
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
     var cloudSubs = await pull('tb_subs', 'תתי-משימות');
     var cloudSubsMeta = await pull('tb_subs_meta', 'חותמות תתי-משימות');
-    var cloudSubsEpoch = Number(await pull(SUBS_EPOCH_KEY, 'עידן תתי-משימות')) || 0;
+    var cloudSubsReset = String(await pull(SUBS_RESET_KEY, 'חותמת ניקוי תתי-משימות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (cloudSubs) {
-      /*  ⛔ העידן קודם למיזוג — ⚠️ מכשיר שראה עידן ישן זורק את המפה
+      /*  ⛔ החותמת קודמת למיזוג — ⚠️ מכשיר שראה חותמת ישנה זורק את המפה
        *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
        *  בדיוק את מה שזה עתה נוקה בו. */
-      if (cloudSubsEpoch > _subsEpochSeen) {
+      if (cloudSubsReset > _subsResetSeen) {
         SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
         SUBS_META = (cloudSubsMeta && typeof cloudSubsMeta === 'object') ? cloudSubsMeta : {};
-        _subsEpochSeen = cloudSubsEpoch;
-        lsSet(SUBS_EPOCH_KEY+LS, JSON.stringify(cloudSubsEpoch));
+        _subsResetSeen = cloudSubsReset;
+        lsSet(SUBS_RESET_KEY+LS, JSON.stringify(cloudSubsReset));
         lsSet('tb_subs'+LS, JSON.stringify(SUBS));
         lsSet('tb_subs_meta'+LS, JSON.stringify(SUBS_META));
-        console.log('[sync] עידן תתי-משימות ' + cloudSubsEpoch + ' — העותק המקומי נזרק ונמשך מלא');
+        console.log('[sync] ניקוי תתי-משימות ' + cloudSubsReset + ' — העותק המקומי נזרק ונמשך מלא');
       } else {
         var ms = mergeSubs(SUBS, SUBS_META, cloudSubs, cloudSubsMeta);
         SUBS = ms.subs; SUBS_META = ms.meta;
@@ -4345,16 +4398,16 @@ async function syncFromCloud() {
     renderSettings();
     if (failed.length === 0 && !_tbPullLogged) { _tbPullLogged = true; tbSyncLog('pull', null, null); }
     if (failed.length === 0) {
-      toast("✅ מסונכרן");
+      toast(MSG_SYNCED);
     } else if (failed.length >= 5) {
-      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר");
+      toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
     } else {
-      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "));
+      toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'bad');
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
     _tbNetWarned = true;
-    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר");
+    toast(MSG_OFFLINE_LOCAL, null, 'bad');
   }
 }
 // ═══════════════════════════════════════
@@ -4603,58 +4656,36 @@ function hebrewDate(jsDate) {
 }
 // ═══ סוף אזור התאריך העברי ═══════════════════════════════════════════════
 
-const CAT_COLORS = {
-  "א":{bg:"#E8622A",fg:"white"}, // אדום-כתום
-  "ב":{bg:"#E8A020",fg:"white"}, // כתום-זהב
-  "ג":{bg:"#4BAD5B",fg:"white"}, // ירוק
-  "ד":{bg:"#2A9E8E",fg:"white"}, // טורקיז
-  "ה":{bg:"#3A7EC6",fg:"white"}, // כחול
-  "ו":{bg:"#6A4FC6",fg:"white"}, // סגול
-  "ז":{bg:"#C64F9E",fg:"white"}, // ורוד-סגול
-  "ח":{bg:"#7A7A7A",fg:"white"}, // אפור
-};
+/*  ⛔ הפלטה יושבת ב-CSS ⛔ ואינה חוזרת כאן — ⚠️ שתי רשימות לאותם שמונה
+ *  גוונים הן שני מקורות אמת, ⭐ ומי ששינה גוון באחת השאיר את השנייה
+ *  מתארת את מה שהיה: ⛔ כאן נשארות האותיות בסדרן, ⚠️ והמחלקה שנגזרת ממנה
+ *  היא מה שמציב את `--cat`. */
+const CAT_LETTERS = 'אבגדהוזח';
+function catCls(letter) {
+  var i = CAT_LETTERS.indexOf(letter);
+  return 'u-cat-' + (i < 0 ? 0 : i + 1);
+}
 
-/*  ⛔ ברירת מחדל להתקנה טרייה ⛔ ואינה מקור נתונים (סבב 89) — ⚠️ ההבחנה
- *  נמדדה מול הזרע המוטבע שהוסר: ⭐ הזרע **מוזג** לתוך מה שכבר יש בכל
- *  טעינה ובכל מיזוג ⛔ והחזיר רשומות שנמחקו, ⚠️ ואלה מחליפות מפתח
- *  **שאינו קיים** על הדיסק ⛔ ואינן נוגעות במה שכן קיים.
- *  ⛔ **והמחיקה חייבת tombstone** — ⚠️ קטגוריה שתוסר בלי סימון מחיקה
- *  תחזור במכשיר שנטען מאפס: ⭐ «היעדר אינו מחיקה» הוא מנוע המיזוג,
- *  ⛔ ומול ברירת מחדל הוא עובד לשני הכיוונים. */
-const DEFAULT_CATS = [
-  {letter:"א", name:"גיוס כספים", tasks:["הוראות קבע","פרנס היום","רישום לתומכי תמימים","סעודת עניים","הקדשת ריהוט","תרומות חד פעמיות","מגביות","משרד הרווחה","משרד החינוך","משרד הדתות","בניית מסמכים","מערכות"]},
-  {letter:"ב", name:"גשמי", tasks:["אסיפת תקציב","אסיפות","עמותה","בניית מסמכים","תזרים תקציבי","מערכות","נהלים","מכתבים"]},
-  {letter:"ג", name:"יחסי ציבור", tasks:["מכתבים","אסיפות","נהלים","מערכות","אירועים","כתבות","ניוז וואטסאפ","ניוזלטר"]},
-  {letter:"ד", name:"רוחני", tasks:["סטטוס","אסיפת הנהלה","אסיפת השגחה","בניית מסמכים","מערכות","סדר יום","מכתבים","תכנון שנתי","גיליונות חודשיים","תכנון חודשי","קשר צוותי ישיבות"]},
-  {letter:"ה", name:"משרד ומזכירות", tasks:["שכר לימוד","גיליונות ציונים","הנהלת חשבונות","קליטת רישום","בניית מסמכים","הנפקות גירסא","מערכות תקשוב ודיגיטל","מערכות","נהלים","הודעות להורים","עריכות והדפסות","ניהול ספרים","זימון לאסיפות","פניות אנשי צוות","פניות הורים","פניות בוגרים","פניות תלמידים","תיוק וארכוב","הזנת נתונים","קליטת אנשי קשר"]},
-  {letter:"ו", name:"חינוך", tasks:["רכש","שיחות תלמידים","שיחות הורים"]},
-  {letter:"ח", name:"עסק מזכירות", tasks:["כללי","חבד אל נידו"]},
-];
-
-const DEFAULT_SUBS = {
-  "הוראות קבע":["הנפקה ועריכת תזכורות"],
-  "פרנס היום":["שליחת הצעות","הנפקה ועריכת תזכורות"],
-  "רישום לתומכי תמימים":["דיווח נוכחות חודשית","שליחת הצעות"],
-  "מגביות":["פורים","חנוכה","שנה טובה","מחצית השקל"],
-  "הנהלת חשבונות":["אישור תלושים","תיעוד הוצאת משכורות","הגשת דוח שכר","תיעוד תנועות","סליקת תלושים","טיפול בסליקות כספים"],
-  "שכר לימוד":["תביעות שכל","בקשות הנחה","הנפקת גיליונות ציונים"],
-  "בניית מסמכים":["לוח הזמנים","מסמך מצבת תלמידים","חוזה גיוס כספים","עריכה ופרוטוקול"],
-  "מערכות":["חידוש שעון נוכחות","קליטת אנשי צוות","קליטת אברכים","הגשת אישורי בטיחות"],
-  "מערכות תקשוב ודיגיטל":["קורס הקלדות","מחקר יכולת תרגום","עבודת מיחשוב","גישה למייל","תקשורת להורים"],
-  "עריכות והדפסות":["מודעות","הדפסות","לוח הזמנים"],
-  "פניות אנשי צוות":["מסמכי ישיבה","הצהרת בריאות","הדפסות"],
-  "פניות הורים":["אישור לימודים"],
-  "קליטת אנשי קשר":["גורמי מקצוע","הורי תלמידים","אנשי צוות","תורמים"],
-  "ניהול ספרים":["הנפקת קבלות"],
-  "תיוק וארכוב":["גיליון שמירת הסדרים"],
-  "הזנת נתונים":["מעקב נוכחות","לוח פרטי התלמידים"],
-  "ניוזלטר":["הרחבת הרשימות"],
-};
-
-// נטען פר-מוסד ע"י loadLocalData() אחרי בחירת המוסד — מתחיל בברירות המחדל
-let CATS = JSON.parse(JSON.stringify(DEFAULT_CATS));
-let SUBS = JSON.parse(JSON.stringify(DEFAULT_SUBS));
+/*  ⛔ אין ערך קבוע שנכנס למיזוג עם הענן — ⚠️ **הנימוק המדוד**: שבע
+ *  קטגוריות ו-17 מפתחות תת-משימה של ראשון לציון היו מוזרקים בכל טעינה,
+ *  ⛔ והמיזוג החזיר אותם לענן: ⭐ רמת אביב קיבלה את הקטגוריות של ראשון,
+ *  ⛔ וניקוי נתוני האתר במכשיר לא עזר — 69 · 26 חזרו ל-94 · 90 תוך דקות.
+ *  ⛔ **ומצב ריק מוצג כריק** — ⚠️ הודעה אחת ⛔ ולא ערך מומצא. */
+let CATS = [];
+let SUBS = {};
 let ENTRIES = [];
+
+/*  ⛔ **נקודת הגזירה האחת של שם הקטגוריה** — ⚠️ הרשומה נושאת את האות
+ *  בלבד, ⭐ והשם נקרא מ-`CATS` הנוכחי בכל תצוגה: ⛔ שם ששמור ברשומה
+ *  מתיישן בשקט — ⚠️ קטגוריה ששמה שונה משאירה את הישן לנצח, ⭐ ורשומה
+ *  שנוצרה במוסד אחד נשאה את שמו גם אחרי מעבר למוסד השני.
+ *  ⛔ **ונפילה-חזרה לשם השמור כשהאות אינה בטבלה הנוכחית** — ⚠️ בארכיון
+ *  יושבות רשומות תחת אות שנמחקה, ⭐ ובלעדיה שם היסטורי היה יורד לאות
+ *  עירומה. */
+function catNameOf(e) {
+  var c = CATS.find(function (x) { return x.letter === e.cat; });
+  return c ? c.name : (e.catName || e.cat);
+}
 
 let selCat = null;
 let selTask = null;
@@ -4686,9 +4717,23 @@ function showTab(name, el) {
   document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
   document.getElementById("panel-"+name).style.display="block";
   el.classList.add("active");
+  renderTab(name);
+}
+/*  ⛔ ניתוב הציור בנקודה אחת — ⚠️ מעבר לשונית ורענון שאחרי שמירה מציירים
+ *  את אותו מסך, ⭐ ושני מרשמים לאותו ציור נבדלים ביום שבו נוספת לשונית. */
+function renderTab(name) {
   if (name === "log") renderLog();
   if (name === "settings") renderSettings();
   if (name === "archive") renderArchive();
+}
+/*  ⛔ נקודת הרענון של הצינור — ⚠️ **מה נכנס**: ציור הלשונית הפתוחה,
+ *  ⛔ **ומה מפיל**: מעבר לשונית — ⭐ רענון אינו ניווט, ⚠️ ושמירה שמנווטת
+ *  מוציאה את המשתמש מהמקום שבו הוא עומד. */
+function saveRefresh() {
+  var on = document.querySelector(".tab-btn.active");
+  var p = document.querySelector('.panel[style*="block"]');
+  if (p && p.id) renderTab(String(p.id).replace(/^panel-/, ""));
+  else if (on) renderTab("log");
 }
 
 // תאריך
@@ -4732,7 +4777,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
-    toast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
+    toast(MSG_DAY_ARCHIVED);
   }
   lsSet("tb_last_day"+LS, today);
 }
@@ -4813,21 +4858,32 @@ function onGregDateChange() {
 function buildCatGrid() {
   var g = document.getElementById("catGrid");
   g.innerHTML = "";
-  liveOnly(CATS).forEach(function(cat) {
-    var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
+  var live = liveOnly(CATS);
+  /*  ⛔ מצב ריק מוצג כריק — ⚠️ מוסד שאין לו קטגוריות בענן אינו מקבל ערך
+   *  מומצא: ⭐ הודעה אחת, ⛔ ולא רשימה שתמוזג חזרה לענן. */
+  if (!live.length) {
+    g.innerHTML = '<span class="hint">⚠️ אין עדיין קטגוריות — הוסף את הראשונה</span>';
+    return;
+  }
+  live.forEach(function(cat) {
     var btn = document.createElement("button");
-    btn.className = "cat-btn";
-    btn.style.borderColor = c.bg;
-    btn.style.backgroundColor = (selCat && selCat.letter === cat.letter) ? c.bg : "";
-    btn.style.color = (selCat && selCat.letter === cat.letter) ? c.fg : c.bg;
-    btn.innerHTML = "<span style=\"font-size:13px;font-weight:700\">" + esc(cat.name) + "</span>";
-    btn.onclick = function() { pickCat(cat); };
+    btn.className = "cat-btn " + catCls(cat.letter) +
+      ((selCat && selCat.letter === cat.letter) ? " sel" : "");
+    btn.innerHTML = "<span class=\"u-fs-2 u-fw-700\">" + esc(cat.name) + "</span>";
+    btn.dataset.act = 'pick-cat';
+    btn.dataset.letter = cat.letter;
     g.appendChild(btn);
   });
 }
 
-function pickCat(cat) {
-  selCat = cat; selTask = null; selSub = null;
+/*  ⛔ הקטגוריה נמצאת לפי האות שב-DOM — ⚠️ המזהה חי באלמנט והמטפל קורא
+ *  אותו משם, ⭐ ולא בסגור שנתפר לכפתור: ⛔ סגור פר-כפתור הוא מאזין ישיר
+ *  לכל דבר, ⚠️ והוא בדיוק מה שהמפה קיימת כדי למנוע. */
+function pickCat(letter) {
+  var hit = null;
+  CATS.forEach(function (c) { if (c && String(c.letter) === String(letter)) hit = c; });
+  if (!hit) { console.error('[cat] אין קטגוריה לאות: ' + letter); return; }
+  selCat = hit; selTask = null; selSub = null;
   buildCatGrid(); buildTaskBtns(); buildSubBtns();
 }
 
@@ -4839,19 +4895,17 @@ function buildTaskBtns() {
     var b = document.createElement("button");
     b.className = "qbtn" + (selTask === t ? " active" : "");
     b.textContent = t;
-    b.onclick = function() { pickTask(t); };
+    b.dataset.act = 'pick-task';
+    b.dataset.task = t;
     el.appendChild(b);
   });
 }
 
-function pickTask(t) {
+/*  ⛔ הכפתור מגיע כארגומנט ⛔ ולא מ-`event.currentTarget` — ⚠️ בהאצלה
+ *  ה-`currentTarget` הוא `document`, ⭐ וההבזק היה נצבע על כל הדף. */
+function pickTask(t, btn) {
   selTask = t; selSub = null;
-  // אפקט הבזק למובייל: הדגשה קצרה ואז שחרור
-  if (event && event.currentTarget) {
-    var btn = event.currentTarget;
-    btn.classList.add("tapped");
-    setTimeout(function(){ btn.classList.remove("tapped"); }, 600);
-  }
+  tapFlash(btn);
   document.getElementById("taskInput").value = t;
   buildTaskBtns(); buildSubBtns();
 }
@@ -4869,20 +4923,24 @@ function buildSubBtns() {
     var b = document.createElement("button");
     b.className = "qbtn" + (selSub === s ? " active" : "");
     b.textContent = s;
-    b.onclick = function() { pickSub(s); };
+    b.dataset.act = 'pick-sub';
+    b.dataset.sub = s;
     el.appendChild(b);
   });
 }
 
-function pickSub(s) {
+function pickSub(s, btn) {
   selSub = s;
-  if (event && event.currentTarget) {
-    var btn = event.currentTarget;
-    btn.classList.add("tapped");
-    setTimeout(function(){ btn.classList.remove("tapped"); }, 600);
-  }
+  tapFlash(btn);
   document.getElementById("subInput").value = s;
   buildSubBtns();
+}
+
+// אפקט הבזק למובייל: הדגשה קצרה ואז שחרור
+function tapFlash(btn) {
+  if (!btn) return;
+  btn.classList.add("tapped");
+  setTimeout(function(){ btn.classList.remove("tapped"); }, 600);
 }
 
 
@@ -4950,8 +5008,8 @@ function addEntry() {
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
   var hdate = document.getElementById("hebDateInput").value.trim();
-  if (!selCat) { toast("⚠️ יש לבחור קטגוריה"); return; }
-  if (!task)   { toast("⚠️ יש להזין משימה"); return; }
+  if (!selCat) { toast(MSG_PICK_CATEGORY, null, 'bad'); return; }
+  if (!task)   { toast(MSG_NEED_TASK, null, 'bad'); return; }
   var now = new Date();
   var entry = {
     // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורת מזהי הרשומות במטריצה).
@@ -4962,7 +5020,7 @@ function addEntry() {
     //    אינו ניתן להשוואה מספרית. ר' `entryOrderTs`.
     createdAt: now.getTime(),
     day: selDay, hdate: hdate, gdate: document.getElementById("gregDateInput").value.trim(),
-    cat: selCat.letter, catName: selCat.name,
+    cat: selCat.letter,
     task: task, sub: sub, notes: notes, count: count,
     updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
     // השעה הוסרה
@@ -4975,7 +5033,7 @@ function addEntry() {
   clearForm();
   // השמירה המקומית הושלמה בנקודה זו; דחיפת הענן עוד לא התחילה —
   // schedulePush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
-  toast("✅ נוסף — שומר בענן…");
+  toast(MSG_ADDED_SAVING);
   schedulePush();
 }
 
@@ -5002,16 +5060,15 @@ function renderLog() {
   }
   filtered = tbSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
-    var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
     var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
-    return '<div class="entry-row" style="border-right:4px solid ' + c.bg + '">'
-      + '<div class="entry-badge" style="background:' + c.bg + '"></div>'
+    return '<div class="entry-row u-bdr-cat ' + catCls(e.cat) + '">'
+      + '<div class="entry-badge u-bg-cat"></div>'
       + '<div class="entry-body">'
-      + '<div class="e-main">' + esc(e.catName) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
+      + '<div class="e-main">' + esc(catNameOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;">✏️</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2">✏️</button>'
       + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
       + '</div>';
   }).join("");
@@ -5031,7 +5088,8 @@ function delEntry(id) {
 }
 
 function clearAll() {
-  showConfirm("🗑 מחיקת כל הרשומות", "האם למחוק את כל רשומות היום הנוכחי?", function() {
+  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE).then(function (yes) {
+    if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();
     var sample = ENTRIES.find(function(e){ return e.gdate === curKey; });
@@ -5039,7 +5097,7 @@ function clearAll() {
     saveEntries(); renderLog();
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
-    toast("✅ הרשומות נמחקו");
+    toast(MSG_ROWS_DELETED);
     schedulePush();
   });
 }
@@ -5141,7 +5199,7 @@ function toast(msg, dur, kind) {
   el.textContent = msg;
   box.appendChild(el);
   setTimeout(function () {
-    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    el.style.transition = 'opacity var(--dur-4)'; el.style.opacity = '0';
     setTimeout(function () { el.remove(); }, 260);
   }, dur || TOAST_DEFAULT_MS);
 }
@@ -5149,6 +5207,22 @@ function toast(msg, dur, kind) {
    כשל כתיבה, ⭐ והקורא חייב זמן לקרוא אותה. */
 var LS_TOAST_MS = 5000;
 function lsToast(msg, dur, kind) { try { toast(msg, dur || LS_TOAST_MS, kind); } catch (e) {} }
+/*  ⛔ סגירת המודאל היא שני מסלולים שנקראים מהמאזין האחד — ⚠️ לחיצה על
+ *  הרקע ו-`Escape`: ⭐ המנגנון זהה בארבעתן, ⛔ ומאזין נפרד לכל אחד היה
+ *  מפזר את הסגירה על פני שלושה מקומות. */
+function modalBackdrop(e) {
+  if (!e.target) return false;
+  if (e.target.id === 'modal') { closeModal(); return true; }
+  if (e.target.id === 'ask') { closeAsk(false); return true; }
+  return false;
+}
+function modalEsc(e) {
+  if (e.key !== 'Escape') return false;
+  var a = document.getElementById('ask'), m = document.getElementById('modal');
+  if (a && a.classList.contains('open')) { closeAsk(false); return true; }
+  if (m && m.classList.contains('open')) { closeModal(); return true; }
+  return false;
+}
 /* ═══════════════ סוף מודול שכבת המודאל ═════════════════════════════════ */
 /* ═══ קריאת ערך מספרי — מודול משותף (סבב 104) ═════════════════════════════
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: אחרת
@@ -5200,24 +5274,66 @@ function uniqHas(list, val, keyFn) {
   return list.some(function (v) { return uniqKeyOf(v, keyFn) === k; });
 }
 /* ═══════════════ סוף מודול כיווץ רשימת ערכים ═══════════════════════════ */
+/* ═══ Enter שומר בשדה עריכה — מודול משותף (סבב 125) ═════════════════════
+   ⛔ שדה שנשמר בכפתור נשמר גם ב-`Enter` — ⚠️ **וההיקף הוא הטופס** (`.ksave`)
+      ⛔ ולא השדה: ⭐ שדה שנוסף לטופס קיים מקבל את המקש בלי שאיש ייגע בו,
+      ⚠️ ומטפל פר-שדה נשכח בשדה הבא שנוסף.
+   ⛔ והכפתור מסומן — ⚠️ `data-ksave` לשמירה ו-`data-kesc` לביטול: ⭐ בטופס
+      יושב יותר מכפתור אחד, ⛔ ובחירה לפי סדר הייתה מפעילה את הראשון.
+   ⛔ והניתוב הוא **מפת הפעולות** — ⚠️ הכפתור נמצא בתוך ההיקף והפעולה שלו
+      מופעלת: ⭐ מסלול שמירה שני מתיישן ברגע שהראשון משתנה.
+   ⛔ ו-`textarea` אינו נכנס — ⚠️ `Enter` בו הוא שורה חדשה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+function ksFire(scope, attr) {
+  var b = scope.querySelector('[' + attr + ']');
+  if (!b || b.disabled) return false;
+  var act = b.getAttribute('data-act');
+  var fn = DOM_ACTIONS[act];
+  if (!fn) { console.error('[ks] כפתור ' + attr + ' בלי פעולה במפה: ' + act); return false; }
+  fn(b);
+  return true;
+}
+/*  ⛔ המודול אינו רושם מאזין משלו — ⚠️ הוא נקרא מהמאזין האחד שבאפליקציה:
+ *  ⭐ שני מאזינים לאותו אירוע הם שני מקומות שבהם מקש נתפס, ⛔ וסדר
+ *  ההרצה ביניהם אינו מוצהר. */
+function ksKey(e) {
+  if (e.key !== 'Enter' && e.key !== 'Escape') return false;
+  var t = e.target;
+  if (!t || t.tagName !== 'INPUT' || !t.closest) return false;
+  var scope = t.closest('.ksave');
+  if (!scope) return false;
+  if (!ksFire(scope, e.key === 'Enter' ? 'data-ksave' : 'data-kesc')) return false;
+  e.preventDefault();
+  return true;
+}
+/* ═══════════════ סוף מודול Enter שומר בשדה עריכה ════════════════════════ */
+
+/* ═══ ערך מפתח-ערך — מודול משותף (סבב 126) ══════════════════════════════
+   ⛔ «אין ערך» ו«ערך פגום» אינן אותה תשובה — ⚠️ שתיהן חזרו «נכשל», ⭐ והמשתמש
+      חיפש רשת שלא נפלה.
+   ⛔ ולכן `null` הוא ערך שאינו קיים ⛔ ואינו כשל, ⚠️ וערך שאינו JSON הוא כשל
+      שנוקב בשם המפתח.
+   ⛔ והנוסח אחד בארבעתן — ⚠️ הודעה שנבדלת בין האפליקציות היא ארבעה חיפושים
+      לאותה תקלה.
+   ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב: ⚠️ אחרת
+      החתימה נשברת בריפו אחד, והשער מאשר את הסטייה בשלושה. */
+var KV_BAD = 'ערך פגום בענן';
+function kvParse(key, raw) {
+  if (raw === null || raw === undefined || raw === '') return { ok: true, value: null, bad: false };
+  try { return { ok: true, value: JSON.parse(raw), bad: false }; }
+  catch (e) {
+    /*  ⛔ ההודעה יוצאת מכאן ⛔ ולא מאתר הקריאה — ⚠️ כשל שאינו אומר מה קרה
+     *  שקול לכשל שקט, ⭐ ונקודת יציאה אחת היא מה שמשאיר את הנוסח אחד. */
+    console.error('[sync] ' + KV_BAD + ' [' + key + ']:', e);
+    toast('⚠️ ' + kvBadLabel(key), null, 'bad');
+    return { ok: false, value: null, bad: true };
+  }
+}
+function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
+/* ═══════════════ סוף מודול ערך מפתח-ערך ═════════════════════════════════ */
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
-document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  var a = document.getElementById('ask'), m = document.getElementById('modal');
-  if (a && a.classList.contains('open')) closeAsk(false);
-  else if (m && m.classList.contains('open')) closeModal();
-});
-document.addEventListener('click', function (e) {
-  if (e.target && e.target.id === 'modal') closeModal();
-  if (e.target && e.target.id === 'ask') closeAsk(false);
-});
-
-/*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
- *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
-function showConfirm(title, msg, onOk) {
-  ask(title, msg, 'מחק').then(function (yes) { if (yes) onOk(); });
-}
 
 // שם המוסד הפעיל — מקור אמת יחיד לכל הפלטים (PDF / דוח תמונה / סיגנל).
 // קודם היה מקודד קשיח "ראשון לציון", כך שרמת אביב הוציאה דוחות בשם
@@ -5242,14 +5358,14 @@ function instName() {
  *  שתי הזדמנויות שאחד מהם ייסחף. */
 function exportPDF() {
   var live = liveOnly(ENTRIES);
-  if (!live.length) { toast("אין רשומות"); return; }
+  if (!live.length) { toast(MSG_NO_ROWS); return; }
   /*  ⛔ הכותרת נגזרת **לפני** הרינדור הא-סינכרוני — ⚠️ מסלול הארכיון מחליף
    *  את `ENTRIES` ואת שדה התאריך ומשחזר אותם מיד אחרי הקריאה, ⭐ והרינדור
    *  מסתיים אחרי השחזור: ⛔ קריאה מאוחרת הייתה מקבלת את תאריך היום. */
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var fileTitle = "יומן עבודה " + today + " " + todayGreg;
-  toast("מכין PDF...");
+  toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
       div.style.left = '-9999px';
@@ -5265,18 +5381,18 @@ function _printCanvas(canvas, title) {
   // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נפלה בשקט
   // ("w is null") והמשתמש לא ידע למה לא קרה כלום.
   if (!w || !w.document) {
-    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב");
+    toast(MSG_POPUP_BLOCKED, null, 'bad');
     return;
   }
   w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
     + '<title>' + esc(title) + '</title><style>@page{size:A4 portrait;margin:10mm}'
-    + 'html,body{margin:0;padding:0;background:var(--bgcard)}img{width:100%;height:auto;display:block}'
+    + 'html,body{margin:0;padding:0;background:var(--card)}img{width:100%;height:auto;display:block}'
     + '</style></head><body><img alt="' + esc(title) + '" src="' + canvas.toDataURL('image/png') + '">'
     + '<' + 'script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>'
     + '</body></html>');
   w.document.close();
   setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
-  toast("📄 PDF נפתח!");
+  toast(MSG_PDF_OPENED);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -5291,9 +5407,9 @@ function _reportError(div, e){
   console.error('[report] rendering failed:', e);
   toast(
     (typeof html2canvas === 'undefined')
-      ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
-      : "⚠️ יצירת התמונה נכשלה — נסה שוב"
-  );
+      ? MSG_IMG_OFFLINE
+      : MSG_IMG_FAIL
+  , null, 'bad');
 }
 // מחזירה תמיד promise, ⛔ ולעולם אינה זורקת סינכרונית (נרשם בסבב 67) —
 // זריקה סינכרונית כאן הייתה משאירה את פאנל הדוח על המסך עד רענון.
@@ -5313,10 +5429,23 @@ function _renderReport(div){
 /*  ⛔ `entries` אופציונלי ⛔ ואינו נקודת הפעלה שנייה — ⚠️ המשמיט מקבל את
  *  רשומות היום, ⭐ והייצוא מוסר את רשומות הארכיון: ⛔ סינון קשיח ליום
  *  הנוכחי היה מוציא דוח ריק לכל יום שאינו היום. */
+/*  ⛔ צבעי הדוח ליטרלים בכוונה ⛔ ואינם אסימוני ערכה (סבב 137) — ⚠️ הדיב
+ *  הזה נצרב לתמונה ונשלח החוצה, ⭐ והתמונה חייבת להיראות אותו דבר לכל
+ *  מי שמקבל אותה: ⛔ אסימון שמתחלף עם מצב כהה היה שולח שני דוחות שונים
+ *  לאותו יום, ⚠️ לפי הערכה של מי שלחץ. */
+/*  ⛔ הדוח נצרב לתמונה ⛔ ולכן צבעיו ליטרלים — ⚠️ אסימון ערכה היה משנה
+ *  את התמונה לפי המצב של מי שלחץ, ⭐ ושני מקבלים היו רואים שני דוחות.
+ *  ⛔ **וכל ליטרל כאן הוא ערכו הבהיר של אסימון**, ⚠️ ומוצלב מולו בשער:
+ *  `#1A2540` ⟵ `--text` · `#4A5A7A` ⟵ `--text2` · `#8A9ABB` ⟵ `--text3` ·
+ *  `#D0DAF0` ⟵ `--border` · `#E4EBF5` ⟵ `--card-2` · `#F0F4FA` ⟵ `--bg` ·
+ *  `#FFFFFF` ⟵ `--card`. ⭐ **וששת התווים מלאים** ⛔ ואינם קיצור בן שלושה:
+ *  ⚠️ ההצלבה משווה טקסט, ⛔ ו-`#fff` אינו `#FFFFFF`.
+ *  ⚠️ **ובמצב כהה הדוח יוצא בהיר אף הוא** — ⭐ זו התמונה שנשלחת, ⛔ והיא
+ *  אינה נגזרת מהמצב של מי שצילם אותה. */
 function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
-  div.style.cssText='position:fixed;top:0;left:0;background:#fff;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
+  div.style.cssText='position:fixed;top:0;left:0;background:#FFFFFF;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
@@ -5327,36 +5456,35 @@ function _buildReportDiv(cb, entries){
   var src = Array.isArray(entries) ? entries
           : liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
   var sortedPDF = tbSortEntries(src);
-  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:e.catName||e.cat,list:[]};byCAT[e.cat].list.push(e);});
+  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catNameOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
   var globalTaskIdx = 0;
   catLetters.forEach(function(letter){
     var data=byCAT[letter];
-    var c=(typeof CAT_COLORS!=='undefined'&&CAT_COLORS[letter])||{bg:'#555',fg:'white'};
     var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
     var cri=0;
     tgs.forEach(function(tg,ti){
-      var bg=(globalTaskIdx%2===0)?'#fff':'#f0f0f0'; globalTaskIdx++;
+      var bg=(globalTaskIdx%2===0)?'#FFFFFF':'#F0F4FA'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" style="background:'+c.bg+';color:'+c.fg+';font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #ddd;padding:8px;min-width:65px">'+data.name+'</td>';
-        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #ddd;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #ddd;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat" style="color:#FFFFFF;font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #D0DAF0;padding:8px;min-width:65px">'+data.name+'</td>';
+        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #D0DAF0;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
         rows+='</tr>';cri++;
       });
     });
   });
   var li=logoUrl?'<img src="'+logoUrl+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
-  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2B5E;padding-bottom:12px;margin-bottom:14px;">'+li
-    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#999;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
-    +'<div style="font-size:26px;font-weight:900;color:#1A2B5E;">יומן עבודה</div>'
-    +'<div style="font-size:11px;color:#555;">'+instTitle+'</div></div>'
-    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2B5E;">'+dayLabel+'</div>'
-    +'<div style="font-size:11px;color:#444;">'+today+'</div><div style="font-size:10px;color:#888;">'+todayGreg+'</div></div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2B5E;color:white;">'
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2540;padding-bottom:12px;margin-bottom:14px;">'+li
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#8A9ABB;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
+    +'<div style="font-size:26px;font-weight:900;color:#1A2540;">יומן עבודה</div>'
+    +'<div style="font-size:11px;color:#4A5A7A;">'+instTitle+'</div></div>'
+    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2540;">'+dayLabel+'</div>'
+    +'<div style="font-size:11px;color:#1A2540;">'+today+'</div><div style="font-size:10px;color:#8A9ABB;">'+todayGreg+'</div></div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2540;color:#FFFFFF;">'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">קטגוריה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">משימה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
@@ -5365,7 +5493,7 @@ function _buildReportDiv(cb, entries){
     +'</tr></thead><tbody>'+rows+'</tbody></table>';
     // סה״כ = בדיוק השורות שבטבלה (רשומות היום הנבחר). קודם נספרו כל ENTRIES,
     // כך שהדוח שנשלח להנהלה הציג סיכום שלא תאם את השורות שבו.
-    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#999;border-top:1px solid #eee;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
+    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#8A9ABB;border-top:1px solid #E4EBF5;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
   div.style.left='0';cb(div);
 }
 
@@ -5405,7 +5533,7 @@ async function tbSyncPushNow() {
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום tb_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
-      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן");
+      toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
@@ -5416,9 +5544,9 @@ async function tbSyncPushNow() {
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
     if (ctxStale(_ep)) return;
-    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת"); return; }
+    if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
-    toast("✅ נשמר בענן");
+    toast(MSG_SAVED_CLOUD);
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -5601,7 +5729,7 @@ function addSub(ci, ti) {
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
    *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
-  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000); return; }
+  if (uniqHas(SUBS[sk], val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5676,14 +5804,10 @@ function editTaskInline(ci, ti) {
    בעתיד — שער סיסמה כאן היה **שכבה שלמה יש מאין**, לא יישור לאחיות.
    ═════════════════════════════════════════════════════════════════════ */
 function renderSettings() {
-  statusAreaMount();
-  bkStatusMount();
-  hwRestoreMount();
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   CATS.forEach(function(cat, ci) {
     if (!isLive(cat)) return;   // ci חייב להישאר האינדקס הגולמי — עליו בנויים מפתחות SUBS
-    var c = CAT_COLORS[cat.letter] || {bg:"#888",fg:"white"};
     var div = document.createElement("div");
     div.className = "set-card";
     div.draggable = true;
@@ -5709,9 +5833,9 @@ function renderSettings() {
       renderSettings();
       buildCatGrid();
     });
-    var hdr = '<div class="set-hdr">'
+    var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
       + '<span class="drag-handle">⠿</span>'
-      + '<div class="set-badge" style="background:' + c.bg + '"></div>'
+      + '<div class="set-badge u-bg-cat"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
@@ -5719,7 +5843,7 @@ function renderSettings() {
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
           var subsSection = '';
           if(subs.length > 0) {
-            subsSection = '<div class="set-lbl" style="font-size:9px;margin:4px 0 2px 0;color:var(--textlite)">תתי משימות:</div>'
+            subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-text3 set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" draggable="true" '
@@ -5728,17 +5852,17 @@ function renderSettings() {
                     + 'ondragleave="subDragLeave(event)" '
                     + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
                     + 'ondragend="subDragEnd(event)">'
-                    + '<span style="cursor:grab;color:#bbb;font-size:10px;margin-left:2px">⠿</span>'
+                    + '<span class="u-cur-grab u-c-text3 u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
           }
-          var addSubRow = '<div style="display:flex;gap:4px;margin-top:4px">'
-            + '<input aria-label="תת-משימה חדשה" class="set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." style="font-size:11px" />'
-            + '<button class="btn-mini" data-act="cat-sub-add" data-ci="'+ci+'" data-ti="'+ti+'" style="font-size:10px;padding:4px 8px;white-space:nowrap">+ הוסף</button>'
+          var addSubRow = '<div class="u-d-flex u-g-2 u-mt-2 ksave">'
+            + '<input aria-label="תת-משימה חדשה" class="u-fs-1 set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
+            + '<button class="u-fs-1 u-p-2-4 u-ws-nw btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
             + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
@@ -5749,16 +5873,16 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" style="background:none;border:none;cursor:pointer;font-size:11px;padding:1px 3px;color:var(--primary-ink);">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
             + addSubRow
             + '</div>';
         }).join('')
-      + '<div class="set-add-row" style="margin-top:8px">'
+      + '<div class="u-mt-4 set-add-row ksave">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
-      + '<button class="btn-mini" data-act="cat-task-add" data-ci="' + ci + '">+ הוסף</button>'
+      + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHtml;
     ed.appendChild(div);
@@ -5786,7 +5910,7 @@ function addTask(ci) {
    *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
    *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
    *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
-  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000); return; }
+  if (uniqHas(CATS[ci].tasks, val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
@@ -5815,7 +5939,7 @@ function saveSettings() {
     }
   });
   saveCats(); saveSubs(); buildCatGrid();
-  toast(MSG_SAVED);
+  return true;
 }
 
 // TOAST — חתימה משותפת לשלושת הפרויקטים (סבב 8): toast(msg, dur).
@@ -6075,7 +6199,7 @@ function renderArcYears() {
     return a > b ? 1 : -1;
   });
 
-  var html = '<div style="font-size:11px;color:var(--textmid);margin-bottom:8px">בחר שנה:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר שנה:</div><div class="arc-grid">';
   yearList.forEach(function(y) {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
@@ -6113,7 +6237,7 @@ function renderArcMonths(year) {
     return ia - ib;
   });
 
-  var html = '<div style="font-size:11px;color:var(--textmid);margin-bottom:8px">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
   monthList.forEach(function(m) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
@@ -6141,11 +6265,11 @@ function renderArcDays(year, month) {
   var nowKey = getTodayKey();
 
   if (!days.length) {
-    el.innerHTML = '<div style="color:#bbb;font-size:12px;padding:8px">אין רשומות לחודש זה</div>';
+    el.innerHTML = '<div class="u-c-text3 u-fs-2 u-p-4">אין רשומות לחודש זה</div>';
     return;
   }
 
-  var html = '<div style="font-size:11px;color:var(--textmid);margin-bottom:8px">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
   days.forEach(function(d) {
     // Show day-of-month only (first token of hdate = גמטריה)
     var parts = (d.hdate||"").split(" ");
@@ -6155,7 +6279,7 @@ function renderArcDays(year, month) {
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
           + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
-          + dayNum + '<br><small style="font-size:9px;font-weight:400;opacity:0.8">' + (d.entries.length) + ' רש׳</small></button>';
+          + dayNum + '<br><small class="u-fs-1 u-fw-400 u-op-8">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -6185,47 +6309,46 @@ function renderArcDetail() {
   var sortedE = tbSortEntries(d.entries);
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-    '<div style="flex:1">'+
-      '<div style="font-family:\'Frank Ruhl Libre\',serif;font-size:15px;font-weight:900;color:var(--primary-ink)">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
-      '<div style="font-size:11px;color:var(--textmid)">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
+    '<div class="u-d-flex u-ai-c u-g-4 u-mb-5">'+
+    '<div class="u-fx-1">'+
+      '<div class="u-ff-frank u-fs-4 u-fw-900 u-c-primary-ink">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div class="u-fs-1 u-c-text2">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
-    '<button class="btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit" style="font-size:11px;padding:5px 10px">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'" style="font-size:11px;padding:5px 10px;background:#2A5A2A;color:#9AE89A">📄 PDF</button>' : '')+
+    '<button class="u-fs-1 u-p-3-5 btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
+    (d.snapId ? '<button class="u-fs-1 u-p-3-5 u-bg-ok-soft u-c-ok btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
-    html += '<div style="color:#bbb;font-size:12px;text-align:center;padding:12px">אין רשומות</div>';
+    html += '<div class="u-c-text3 u-fs-2 u-ta-c u-p-5">אין רשומות</div>';
   } else {
     sortedE.forEach(function(e, ei) {
-      var c = CAT_COLORS[e.cat] || {bg:"#888",fg:"white"};
-      html += '<div class="arc-entry-row">'+
-        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" style="background:none;border:none;cursor:pointer;font-size:13px;padding:2px 3px;" title="ערוך">✏️</button>' +
+      html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
+        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
-        '<div style="width:12px;height:12px;border-radius:3px;background:'+c.bg+';flex-shrink:0"></div>'+
-        '<span style="color:var(--textmid);font-size:11px">'+esc(e.catName)+'</span>'+
-        '<span style="color:#bbb">←</span>'+
-        '<span style="font-weight:700;color:var(--text)">'+esc(e.task)+'</span>'+
-        (e.sub ? '<span style="color:#bbb">→</span><span style="color:#888">'+esc(e.sub)+'</span>' : '')+
-        (e.notes ? '<span style="color:#aaa;font-size:10px;flex:1;text-align:left"> · '+esc(e.notes)+'</span>' : '<span style="flex:1"></span>')+
-        (e.count ? '<span style="color:var(--accent);font-size:10px;font-weight:700">×'+esc(e.count)+'</span>' : '')+
+        '<div class="u-w-12 u-h-12 u-r-1 u-bg-cat u-fsh-0"></div>'+
+        '<span class="u-c-text2 u-fs-1">'+esc(catNameOf(e))+'</span>'+
+        '<span class="u-c-text3">←</span>'+
+        '<span class="u-fw-700 u-c-text">'+esc(e.task)+'</span>'+
+        (e.sub ? '<span class="u-c-text3">→</span><span class="u-c-text3">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span class="u-c-text3 u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
+        (e.count ? '<span class="u-c-primary-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
   }
 
   // מצב עריכה: הוספת רשומה
   if (arcEditMode) {
-    html += '<div style="border-top:2px dashed var(--accent);margin-top:10px;padding-top:10px">'+
-      '<div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:6px">+ הוסף רשומה</div>'+
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
-      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+    html += '<div class="u-bt-2-dashed-accent u-mt-5 u-pt-5">'+
+      '<div class="u-fs-1 u-fw-700 u-c-primary-ink u-mb-3">+ הוסף רשומה</div>'+
+      '<div class="u-d-flex u-g-3 u-fwr-wrap u-ai-c ksave">'+
+      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
-      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px">'+
+      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
-      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." style="border-radius:7px;border:1.5px solid var(--border);padding:5px 8px;font-family:Heebo;font-size:12px;width:100px" />'+
-      '<button class="btn-mini" data-act="arc-add-entry" style="white-space:nowrap">+ הוסף</button>'+
+      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2 u-w-100" />'+
+      '<button class="u-ws-nw btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
       '</div></div>';
   }
 
@@ -6273,8 +6396,7 @@ function arcAddEntry(gdateKey) {
   var notesSel = document.getElementById("arc-add-notes");
   if (!catSel || !taskSel) return;
   var letter = catSel.value;
-  var cat = CATS.find(function(c){ return c.letter === letter; });
-  if (!cat) return;
+  if (!CATS.some(function(c){ return c.letter === letter; })) return;
   // ⭐ סבב 38 — אותו דפוס בדיוק כמו ב-`addEntry`: מזהה מהמודול המשותף,
   //    וחותמת יצירה נפרדת לסדר.
   var _now = Date.now();
@@ -6282,7 +6404,7 @@ function arcAddEntry(gdateKey) {
     id: newClientId(),
     createdAt: _now,
     day: d.day, hdate: d.hdate, gdate: d.gdate,
-    cat: letter, catName: cat.name,
+    cat: letter,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
     updatedAt: _now
   };
@@ -6539,7 +6661,7 @@ function _infHtml(d) {
    *  מה שייבדק, ⭐ ותאריך ריק הוא הצהרה שהסריקה טרם נעשתה: ⛔ ריכוז תאים
    *  שאינם ✅ כבר יושב בפרק א, ⚠️ ופרק שני לאותו נתון הוא מקור אמת שני. */
   h += '<div class="inf-card"><h4>הסריקה — ארבעת המימדים</h4>' +
-       '<div class="inf-wrap"><table class="inf-tbl" style="min-width:520px">' +
+       '<div class="inf-wrap"><table class="u-minw-520 inf-tbl">' +
        '<colgroup><col class="c-t"><col class="c-s"></colgroup>' +
        '<thead><tr><th>מימד</th><th>מה נבדק</th></tr></thead><tbody>';
   YS_INF_DIMS.forEach(function (x) {
@@ -6558,7 +6680,7 @@ window._infOpen = false;
  *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
 async function ysInfraOpen() {
   window._infOpen = false;
-  openModal('טבלת התשתית',
+  openModal(MSG_INFRA_TABLE,
     '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
@@ -6603,7 +6725,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      toast("⚠️ לא הצליח לטעון סנכרון", 2000);
+      toast(MSG_SYNC_LOAD_FAIL, 2000, 'bad');
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -6622,23 +6744,24 @@ function lsRead(key, fallback, kind) {
   if (raw == null || raw === "") return fallback;
   var val;
   try { val = JSON.parse(raw); } catch(e) {
-    console.warn('[load] ערך פגום ב-' + key + ' — נטען ברירת מחדל', e);
+    console.warn('[load] ערך פגום ב-' + key + ' — חוזרים לערך הנפילה-חזרה שנמסר', e);
     return fallback;
   }
   var ok = (kind === 'array') ? Array.isArray(val)
          : (kind === 'object') ? (val && typeof val === 'object' && !Array.isArray(val))
          : (val != null);
-  if (!ok) { console.warn('[load] סוג לא צפוי ב-' + key + ' — נטען ברירת מחדל'); return fallback; }
+  if (!ok) { console.warn('[load] סוג לא צפוי ב-' + key + ' — חוזרים לערך הנפילה-חזרה שנמסר'); return fallback; }
   return val;
 }
 function loadLocalData() {
   try {
-    CATS = lsRead("tb_cats"+LS, null, 'array') || JSON.parse(JSON.stringify(DEFAULT_CATS));
-    SUBS = lsRead("tb_subs"+LS, null, 'object') || JSON.parse(JSON.stringify(DEFAULT_SUBS));
+    CATS = lsRead("tb_cats"+LS, null, 'array') || [];
+    SUBS = lsRead("tb_subs"+LS, null, 'object') || {};
     // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
     // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
     SUBS_META = lsRead("tb_subs_meta"+LS, null, 'object') || {};
-    _subsEpochSeen = Number(lsRead(SUBS_EPOCH_KEY+LS, 0)) || 0;
+    _catsResetSeen = String(lsRead(CATS_RESET_KEY+LS, '') || '');
+    _subsResetSeen = String(lsRead(SUBS_RESET_KEY+LS, '') || '');
     ENTRIES = lsRead("tb_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
@@ -6660,11 +6783,12 @@ function loadLocalData() {
     ARCHIVE = arr ? arr.filter(function(s){ return s && typeof s === 'object'; }) : [];
   } catch(e) {
     // גם כישלון בלתי צפוי לא ימנע מהאפליקציה לעלות
-    console.error('[load] טעינת נתונים מקומיים נכשלה — עולים עם ברירות מחדל', e);
-    if (!Array.isArray(CATS) || !CATS.length) CATS = JSON.parse(JSON.stringify(DEFAULT_CATS));
-    if (!SUBS || typeof SUBS !== 'object') SUBS = JSON.parse(JSON.stringify(DEFAULT_SUBS));
+    console.error('[load] טעינת נתונים מקומיים נכשלה — עולים ריקים ומחכים לענן', e);
+    if (!Array.isArray(CATS)) CATS = [];
+    if (!SUBS || typeof SUBS !== 'object') SUBS = {};
     if (!SUBS_META || typeof SUBS_META !== 'object') SUBS_META = {};
-    if (!isFinite(_subsEpochSeen)) _subsEpochSeen = 0;
+    if (typeof _catsResetSeen !== 'string') _catsResetSeen = '';
+    if (typeof _subsResetSeen !== 'string') _subsResetSeen = '';
     if (!Array.isArray(ENTRIES)) ENTRIES = [];
     if (!Array.isArray(ARCHIVE)) ARCHIVE = [];
   }
@@ -6703,7 +6827,7 @@ function loadLocalData() {
    מוסדות** — בדיוק מה שסיומת ה-`LS` באה למנוע.
 
    **הפינוי אינו בלתי נראה:** כל הגירה, וכל **דילוג** על הגירה, נרשמים ביומן
-   הפינוי (`LS_CFG.logKey`) ומוצגים בהגדרות ← מידע טכני ›.
+   הפינוי (`LS_CFG.logKey`) ובקונסולה תחת התג `[ls]`.
    ══════════════════════════════════════════════════════════════════════════ */
 var TB_LEGACY_SPECS = [
   { legacy: 'tb_entries', suffix: '_rishon', label: 'רשומות היומן',
@@ -6827,7 +6951,8 @@ function ysResetTenantState() {
   CATS = [];
   SUBS = {};
   SUBS_META = {};
-  _subsEpochSeen = 0;
+  _catsResetSeen = '';
+  _subsResetSeen = '';
   arcSelYear = null;
   arcSelMonth = null;
   arcSelDayKey = null;
@@ -6835,16 +6960,16 @@ function ysResetTenantState() {
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
 function ysPickYeshiva() {
-  var body = '<div style="display:flex;flex-direction:column;gap:10px">';
+  var body = '<div class="u-d-flex u-fd-col u-g-5">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
-    body += '<button class="btn-sm" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '"' +
-            ' style="background:var(--primary-fill);color:#fff;padding:14px;font-size:16px;font-weight:800' +
-            (cur ? ';opacity:.55' : '') + '">' + esc(YESHIVOT[i].name) +
+    body += '<button class="btn-sm u-bg-primary-fill u-c-on-primary u-p-6 u-fs-4 u-fw-800' +
+            (cur ? ' u-op-55' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
+            esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
   body += '</div>';
-  openModal('החלפת ישיבה', body, '');
+  openModal(MSG_SWITCH_YESHIVA, body, '');
 }
 
 /*  ⛔ המעבר מאפס את המצב **לפני** הטעינה מחדש (סבב 81) — ⚠️ סדר הפוך
@@ -6856,13 +6981,13 @@ function ysPickYeshiva() {
 function ysConfirmSwitch(y) {
   if (!ysNameOf(y)) return;
   closeModal();
-  if (idEq(y, YESHIVA)) { toast('כבר במוסד ' + ysNameOf(y)); return; }
+  if (idEq(y, YESHIVA)) { toast(MSG_ALREADY_AT + ysNameOf(y)); return; }
   selectYeshiva(y);
   /*  ⛔ הארכיון חוזר לשורש דרך נקודת הניווט היחידה — ⚠️ שנת הקידוח
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
-  toast('הוחלף ל' + ysNameOf(y));
+  toast(MSG_SWITCHED_TO + ysNameOf(y));
 }
 
 /*  ⛔ `again` מסמן מעבר בין מוסדות ⛔ ולא עלייה (סבב 81) — ⚠️ כל
@@ -6906,7 +7031,7 @@ function selectYeshiva(y) {
   //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
-    '<button class="btn-sm" style="background:#3A76F0;color:white" ' +
+    '<button class="u-bg-primary-fill u-c-on-primary btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון (סבב 11): המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק
@@ -6946,7 +7071,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[startApp] נכשל', e);
-    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן");
+    toast(MSG_BOOT_FAIL, null, 'bad');
   }
 }
 
@@ -6958,8 +7083,8 @@ function selectYeshiva(y) {
 function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){ toast("אין רשומות לשיתוף להיום"); return; }
-  toast("מכין תמונה...");
+  if(!todayEntries.length){ toast(MSG_NOTHING_TO_SHARE); return; }
+  toast(MSG_IMG_PREP);
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
@@ -6995,14 +7120,15 @@ function editEntry(id) {
   var container = row.closest('.entry-row');
   if(!container) return;
   var div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px;background:#fffbe6;border-radius:6px;';
   div.innerHTML =
-    '<input aria-label="משימה" id="ei_task" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" style="width:60px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;">' +
-    '<button data-act="entry-save" data-id="' + esc(id) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">ביטול</button>';
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
+    '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">ביטול</button>' +
+    '</div>';
   container.innerHTML = '';
   container.appendChild(div);
   // קובע את הערכים ישירות ב-JS — מונע לחלוטין בעיות בריחת HTML
@@ -7023,9 +7149,7 @@ function saveEntry(id) {
   pendMark(PK_ENTRY + e.id);
   saveEntries();
   autoArchiveDay(e.day, e.hdate, e.gdate);   // שהעריכה תגיע גם לסנאפשוט של אותו יום
-  renderLog();
-  schedulePush();
-  toast(MSG_SAVED);
+  return true;
 }
 
 function arcEditEntry(gdateKey, entryId) {
@@ -7047,13 +7171,13 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px;background:#fffbe6;border-radius:6px;width:100%;">' +
-    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" style="flex:2;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" style="width:55px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" style="flex:3;padding:4px 8px;border:1px solid #ccc;border-radius:4px;min-width:80px;font-family:Heebo,sans-serif;font-size:12px;">' +
-    '<button data-act="arc-entry-save" data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" style="padding:4px 10px;background:#1A2B5E;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" style="padding:4px 10px;background:#aaa;color:white;border:none;border-radius:4px;cursor:pointer;font-family:Heebo,sans-serif;">בטל</button>' +
+    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
+    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
+    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">בטל</button>' +
     '</div>';
 }
 
@@ -7063,7 +7187,7 @@ function arcSaveEntry(gdateKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב'); return; }
+  if (vals.task === null) { toast(MSG_EDIT_FORM_CLOSED, null, 'bad'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -7083,7 +7207,7 @@ function arcSaveEntry(gdateKey, entryId) {
     // אין מה לשמור — לא לשקר למשתמש
     console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
-    toast('⚠️ הרשומה לא נמצאה — לא נשמר');
+    toast(MSG_ROW_GONE, null, 'bad');
     return;
   }
   pendMark(PK_ENTRY + entryId);
@@ -7103,43 +7227,12 @@ function arcSaveEntry(gdateKey, entryId) {
   toast(MSG_SAVED);
 }
 
-// תמיכה במקש Enter בלשוניות ההזנה והעריכה
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
-  var id = e.target.id || '';
-  // שדות לשונית ההזנה: taskInput, subInput, countInput, notesInput
-  if (id === 'taskInput' || id === 'subInput' || id === 'countInput' || id === 'notesInput') {
-    e.preventDefault();
-    if (typeof addEntry === 'function') addEntry();
-    return;
-  }
-  // שדות המשימה החדשה בלשונית העריכה: snewtask-ci
-  if (id.startsWith('snewtask-')) {
-    e.preventDefault();
-    // ⛔ `ci` הוא **אינדקס במערך** שנחלץ ממזהה DOM — ⚠️ ולא מזהה רשומה:
-    //    ⭐ ולכן הוא נבדק כספרות לפני ההמרה, ⛔ ו-`NaN` אינו מגיע ל-`CATS[ci]`.
-    var ciRaw = id.replace('snewtask-', '');
-    if (!/^[0-9]+$/.test(ciRaw)) return;
-    var ci = Number(ciRaw);
-    if (typeof addTask === 'function') addTask(ci);
-    return;
-  }
-  // שדות תת-המשימה החדשה בלשונית העריכה: snewsub-ci-ti
-  if (id.startsWith('snewsub-')) {
-    e.preventDefault();
-    var parts = id.replace('snewsub-', '').split('-');
-    if (!/^[0-9]+$/.test(parts[0]) || !/^[0-9]+$/.test(parts[1])) return;
-    var ci = Number(parts[0]), ti = Number(parts[1]);
-    if (typeof addSub === 'function') addSub(ci, ti);
-    return;
-  }
-});
 </script>
 <!-- ⛔ מיכל מודאל אחד ב-DOM (סבב 68) — ⚠️ פתיחה, סגירה,
      מיקוד, Escape ונעילת הגלילה חיים במקום אחד; ⛔ בדפוס הדינמי כל דיאלוג
      מממש אותם מחדש, ודיאלוג שמפספס אחד מהם נראה תקין עד שלוחצים Escape. -->
 <div class="veil" id="modal">
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="sheet ksave" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="sheet-hd">
       <h3 id="modal-title"></h3>
       <button class="x" data-act="modal-close" aria-label="סגירה">✕</button>
