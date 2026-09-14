@@ -43,6 +43,11 @@
   --warn:#B45309; --warn-soft:#FFFBE6;
   --bad:#B91C1C; --bad-soft:#FFE8E8;
   --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
+  --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+  --on-deep:#F7F4EB; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
+  --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+  --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
+  --shadow-accent:rgba(240,165,0,0.40); --ok-2:#2ABB6A;
 }
 /*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
  *  ⭐ והגוון בלבד נבדל בין האפליקציות: ⛔ מסך שאינו קריא מתוקן בגוון
@@ -62,6 +67,11 @@
     --primaryl:#5AA6EE; --primaryd:#9EC8F2;
     --accent:#FFB930; --accentl:#FFC957;
     --shadow:rgba(0,0,0,0.45);
+    --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+    --on-deep:#F7F4EB; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
+    --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+    --shadow-brand:rgba(0,0,0,0.45); --shadow-brand-soft:rgba(0,0,0,0.25);
+    --shadow-accent:rgba(0,0,0,0.45); --ok-2:#84DBA6;
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -72,8 +82,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
-.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  border:none;box-shadow:0 6px 28px rgba(21,88,160,0.35);display:flex;flex-direction:column;height:180px;overflow:hidden;}
+.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
+  border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
@@ -93,51 +103,51 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    `mark.shapes` אות באות. ⛔ מי שמשנה ערך כאן בלי לשנות שם מייצר מקור
    שני לאותו צבע, והשער משווה את חמשת הערכים. ⚠️ ואין כאן `--primary`
    ו-`--bg` של פנים האפליקציה: ⛔ הם הכחול הבהיר, ⭐ והם אינם גוון האייקון. */
-#yeshivaSelect{position:fixed;inset:0;z-index:10000;
-  background:linear-gradient(141deg,#2A4E8C 0%,#0E2145 100%);
-  color:#F7F4EB;display:flex;align-items:center;justify-content:center;
+#yeshivaSelect{position:fixed;inset:0;z-index:var(--z-7);
+  background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
+  color:var(--on-deep);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
-.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:#F7F4EB;}
+.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
 /* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
    11+6 מעל ו-10+15.4 מתחת; ⭐ ולכן הכותרת נשארת באותה נקודה בדיוק, ⛔ ואין
    להחליפו ב-`margin` — הוא היה נבלע במרווח של «בחר ישיבה» שמתחתיו */
 .ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;
-  letter-spacing:1px;line-height:1;margin:0;padding:var(--sp-6) 0 var(--sp-7);}
-.ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:0.7;margin:var(--sp-7) 0 var(--sp-5);}
+  letter-spacing:var(--ls-2);line-height:var(--lh-1);margin:0;padding:var(--sp-6) 0 var(--sp-7);}
+.ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:var(--op-5);margin:var(--sp-7) 0 var(--sp-5);}
 .ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
 /* ⚠️ הכפתור שקוף על הגרדיאנט ⛔ ואינו לבן מלא — ⭐ מסגרת בדיו היא אותו
    מוטיב של הפסים, ⛔ ומשטח לבן היה מכניס גוון שלישי למסך. */
 .ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
-  color:#F7F4EB;background:rgba(247,244,235,0.08);border:2px solid rgba(247,244,235,0.45);
-  border-radius:var(--r-5);cursor:pointer;transition:background 0.18s,border-color 0.18s;}
-.ys-pick-btn:hover{background:rgba(247,244,235,0.18);border-color:#F7F4EB;}
+  color:var(--on-deep);background:var(--fill-deep);border:2px solid var(--edge-deep);
+  border-radius:var(--r-5);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
+.ys-pick-btn:hover{background:var(--fill-deep-2);border-color:var(--on-deep);}
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* ⛔ המרווח הוא מה שמפריד בין בחירה לקריאה — ⚠️ כפתור שלישי צמוד נקרא
    כישיבה שלישית, ⭐ והקו מעליו הוא הגבול. */
-.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid rgba(247,244,235,0.18);}
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);}
 /* ⚠️ מובחן משני הכפתורים שמעליו בגודל ובעובי המסגרת ⛔ ולא בצבע — ⭐ גוון
    שלישי על הגרדיאנט היה שובר את המוטיב. */
 .ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
-  color:#F7F4EB;background:transparent;border:1px dashed rgba(247,244,235,0.4);
-  border-radius:var(--r-4);cursor:pointer;transition:background 0.18s,border-color 0.18s;}
-.ys-pick-alt:hover{background:rgba(247,244,235,0.10);border-color:rgba(247,244,235,0.75);}
+  color:var(--on-deep);background:transparent;border:1px dashed var(--edge-deep);
+  border-radius:var(--r-4);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
+.ys-pick-alt:hover{background:var(--fill-deep);border-color:var(--edge-deep-2);}
 .ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 .hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:var(--fs-1);color:rgba(255,255,255,0.6);letter-spacing:4px;margin-bottom:var(--sp-2);}
+.hdr-bh{font-size:var(--fs-1);color:var(--on-dark-3);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
-.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:#FFFFFF;letter-spacing:1px;line-height:1;}
+.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--on-primary);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 
 .hdr-title-wrap::after{content:none;}
 /* ⛔ הכתובית בשורה אחת ⛔ ואינה נשברת — ⚠️ שם המוסד שנשבר לשתיים מזיז
    את גוש הטקסט שהלוגו ממורכז אליו, ⭐ ומקצר את הכרטיס במסך צר בלבד. */
-.hdr-sub{font-size:var(--fs-1);color:rgba(255,255,255,0.6);margin-top:var(--sp-4);letter-spacing:0.3px;
+.hdr-sub{font-size:var(--fs-1);color:var(--on-dark-3);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ הרכיב שישב כאן
    הוסר והשאיר חלל שנראה כטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
-.hdr-div{height:1px;background:rgba(255,255,255,0.22);margin:0 var(--sp-7);}
-.hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:rgba(255,255,255,0.9);
-  letter-spacing:0.3px;line-height:1.4;text-align:center;}
+.hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--sp-7);}
+.hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
+  letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
 /* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
    נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
    בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
@@ -145,7 +155,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
 .hdr-logo-wrap{padding:0 var(--sp-5);}
 @media (min-width:360px){
-  .hdr-sub{font-size:var(--fs-1);letter-spacing:0.3px;}
+  .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
   .hdr-logo-wrap{padding:0 var(--sp-6);}
 }
 /* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
@@ -164,27 +174,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ניווט לעומק בארכיון */
 .arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);
   font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;color:var(--text);cursor:pointer;
-  transition:all 0.18s;box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
+  transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
 .arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--card-2);}
-.arc-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.arc-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
 .arc-grid{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:var(--sp-4);}
 .arc-crumb{font-size:var(--fs-2);color:var(--text2);cursor:pointer;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-2);
-  background:var(--card-2);border:1px solid var(--border);transition:all 0.15s;}
-.arc-crumb:hover{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);}
-.arc-crumb-sep{color:#bbb;font-size:var(--fs-2);}
+  background:var(--card-2);border:1px solid var(--border);transition:all var(--dur-2);}
+.arc-crumb:hover{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);}
+.arc-crumb-sep{color:var(--text3);font-size:var(--fs-2);}
 .arc-day-card{background:var(--card-2);border-radius:var(--radius);padding:var(--sp-6);margin-bottom:var(--sp-5);border:1.5px solid var(--border);}
-.arc-day-card.editing{border-color:var(--accent);background:#fffdf5;}
+.arc-day-card.editing{border-color:var(--accent);background:var(--warn-soft);}
 .arc-entry-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) 0;border-top:1px solid var(--border);font-size:var(--fs-2);}
-.arc-entry-del{background:none;border:none;color:#ddd;cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:1;flex-shrink:0;}
+.arc-entry-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:var(--lh-1);flex-shrink:0;}
 .arc-entry-del:hover{color:var(--bad);}
 
 /* לשוניות */
 .tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .tab-btn{flex:1;background:var(--card);color:var(--text2);border:2px solid var(--border);
-  border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all 0.2s;box-shadow:0 2px 6px var(--shadow);}
+  border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);}
 .tab-btn:hover{background:var(--card-2);color:var(--primary-ink);border-color:var(--primary-ink);}
-.tab-btn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 4px 12px rgba(30,111,191,0.3);}
+.tab-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
 /* כרטיס */
 .card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
@@ -197,9 +207,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .date-lbl{font-size:var(--fs-1);font-weight:700;color:var(--text2);white-space:nowrap;}
 .day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
 .day-chip{background:var(--card-2);color:var(--text2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);
-  font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all var(--dur-3);white-space:nowrap;}
 .day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.day-chip.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);box-shadow:0 2px 8px rgba(30,111,191,0.3);}
+.day-chip.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 2px 8px var(--shadow-brand);}
 .heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
   font-weight:700;background:var(--card);direction:rtl;min-width:155px;flex:1;color:var(--text);}
 .heb-inp:focus{outline:none;border-color:var(--primary-ink);}
@@ -209,18 +219,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
 @media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
 .cat-btn{border:2px solid;border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
-  cursor:pointer;transition:all 0.2s;text-align:center;line-height:1.4;background:var(--card);box-shadow:0 1px 4px var(--shadow);}
+  cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
 
 /* כפתורים מהירים */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
-.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text3);margin-bottom:var(--sp-2);letter-spacing:1px;text-transform:uppercase;}
+.qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text3);margin-bottom:var(--sp-2);letter-spacing:var(--ls-2);text-transform:uppercase;}
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
-  font-family:'Heebo',sans-serif;cursor:pointer;transition:all 0.15s;color:var(--text2);white-space:nowrap;}
+  font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text2);white-space:nowrap;}
 .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-.qbtn.active{background:var(--primary-fill);color:#fff;border-color:var(--primary-fill);font-weight:700;}
+.qbtn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);font-weight:700;}
 .qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
 .hint{color:var(--text3);font-size:var(--fs-1);}
 
@@ -232,21 +242,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .fld{display:flex;flex-direction:column;gap:var(--sp-2);}
 .fld label{font-size:var(--fs-1);font-weight:700;color:var(--text2);}
 .fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
-  color:var(--text);background:var(--card);direction:rtl;transition:border-color 0.2s;}
-.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px rgba(30,111,191,0.12);}
+  color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
+.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
 
 /* כפתור ההוספה הגדול */
-.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
+.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:var(--on-primary);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
-  cursor:pointer;transition:all 0.2s;letter-spacing:1px;box-shadow:0 4px 14px rgba(30,111,191,0.35);}
-.btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px rgba(240,165,0,0.4);}
-.btn-add.btn-flash{background:linear-gradient(135deg,var(--ok),#2ABB6A) !important;color:white !important;transform:scale(0.97);}
+  cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
+.btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-accent);}
+.btn-add.btn-flash{background:linear-gradient(135deg,var(--ok),var(--ok-2)) !important;color:var(--on-primary) !important;transform:scale(0.97);}
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
-.log-cnt{background:var(--primary-fill);color:#fff;border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
+.log-cnt{background:var(--primary-fill);color:var(--on-primary);border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
 .entry-row{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-5);display:grid;grid-template-columns:auto 1fr auto;
-  gap:var(--sp-4);align-items:start;margin-bottom:var(--sp-3);box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein 0.3s;}
+  gap:var(--sp-4);align-items:start;margin-bottom:var(--sp-3);box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein var(--dur-4);}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .entry-badge{width:28px;height:28px;border-radius:var(--r-2);display:flex;align-items:center;justify-content:center;
   font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);font-weight:900;flex-shrink:0;}
@@ -254,20 +264,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .e-main{font-size:var(--fs-3);font-weight:700;color:var(--text);}
 .e-sub{font-size:var(--fs-1);color:var(--text2);}
 .e-meta{font-size:var(--fs-1);color:var(--text3);}
-.del-btn{background:none;border:none;color:#CCC;font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all 0.15s;flex-shrink:0;}
+.del-btn{background:none;border:none;color:var(--text3);font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all var(--dur-2);flex-shrink:0;}
 .del-btn:hover{background:var(--bad-soft);color:var(--bad);}
-.empty{text-align:center;padding:var(--sp-7);color:var(--text3);font-size:var(--fs-3);line-height:2;}
+.empty{text-align:center;padding:var(--sp-7);color:var(--text3);font-size:var(--fs-3);line-height:var(--lh-6);}
 .exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
-.btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all 0.2s;}
+.btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all var(--dur-3);}
 
-.btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:#fff;}
+.btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);} .btn-blue:hover{background:var(--primary-fill);color:var(--on-primary);}
 .btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);} .btn-red:hover{background:var(--bad);color:var(--bad-soft);}
 
 /* הגדרות */
-.set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow 0.2s;}
-.set-card.dragging{opacity:0.5;box-shadow:0 8px 24px var(--shadow);}
+.set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow var(--dur-3);}
+.set-card.dragging{opacity:var(--op-3);box-shadow:0 8px 24px var(--shadow);}
 .set-card:active{cursor:grabbing;}
-.drag-handle{font-size:var(--fs-5);color:#CCC;cursor:grab;margin-left:var(--sp-4);flex-shrink:0;}
+.drag-handle{font-size:var(--fs-5);color:var(--text3);cursor:grab;margin-left:var(--sp-4);flex-shrink:0;}
 .drag-handle:active{cursor:grabbing;}
 .set-hdr{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
 .set-badge{width:30px;height:30px;border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;
@@ -278,28 +288,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 .chip{display:flex;align-items:center;gap:var(--sp-2);background:var(--card-2);border:1px solid var(--border);
   border-radius:var(--r-5);padding:var(--sp-2) var(--sp-4) var(--sp-2) var(--sp-3);font-size:var(--fs-1);cursor:grab;}
-.chip.chip-sub{background:var(--card);font-size:var(--fs-1);border-color:#D8E4F0;}
+.chip.chip-sub{background:var(--card);font-size:var(--fs-1);border-color:var(--border);}
 
 .drag-over{outline:2px dashed var(--primary-ink);border-radius:var(--r-3);}
-.chip button{background:none;border:none;color:#AAA;cursor:pointer;font-size:var(--fs-2);padding:0;line-height:1;}
+.chip button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-2);padding:0;line-height:var(--lh-1);}
 .chip button:hover{color:var(--bad);}
 .sub-chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);padding-right:var(--sp-4);min-height:10px;}
 
-.task-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);cursor:grab;transition:box-shadow 0.15s;}
+.task-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);margin-bottom:var(--sp-4);cursor:grab;transition:box-shadow var(--dur-2);}
 .task-block:hover{box-shadow:0 2px 10px var(--shadow);}
-.task-block.dragging{opacity:0.4;}
+.task-block.dragging{opacity:var(--op-2);}
 .task-block-hdr{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-2);}
-.task-drag-icon{color:#ccc;font-size:var(--fs-3);cursor:grab;flex-shrink:0;}
+.task-drag-icon{color:var(--text3);font-size:var(--fs-3);cursor:grab;flex-shrink:0;}
 .task-name{flex:1;font-size:var(--fs-2);font-weight:700;color:var(--text);}
-.task-del-btn{background:none;border:none;color:#ccc;cursor:pointer;font-size:var(--fs-3);padding:0;line-height:1;flex-shrink:0;}
+.task-del-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:var(--fs-3);padding:0;line-height:var(--lh-1);flex-shrink:0;}
 .task-del-btn:hover{color:var(--bad);}
 .set-add-row{display:flex;gap:var(--sp-3);}
 .set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);direction:rtl;color:var(--text);}
 .set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
-.btn-mini{background:var(--primary-fill);color:#fff;border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
+.btn-mini{background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
 .btn-mini:hover{background:var(--primaryl);}
-.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:white;border:none;
-  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-5);transition:all 0.2s;}
+.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primaryl));color:var(--on-primary);border:none;
+  border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-5);transition:all var(--dur-3);}
 .btn-save:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);}
 
 /* טוסט */
@@ -313,10 +323,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
-.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,#1558a0 100%);color:#fff;
+.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);color:var(--on-primary);
   border-radius:var(--r-5);padding:var(--sp-6) var(--sp-6);margin-bottom:var(--sp-6)}
 .inf-hd b{font-size:var(--fs-4);font-weight:800;display:block}
-.inf-hd span{font-size:var(--fs-2);opacity:.85}
+.inf-hd span{font-size:var(--fs-2);opacity:var(--op-7)}
 .inf-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-5);
   box-shadow:0 2px 10px var(--shadow);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
 .inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--primaryd)}
@@ -332,20 +342,20 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-wrap{overflow-x:auto}
 .inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:var(--fs-2)}
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
-  vertical-align:top;text-align:right;line-height:1.6;overflow-wrap:anywhere}
+  vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
 .inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text2)}
 .inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
 .inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
 .inf-dot.ok{background:var(--ok)}.inf-dot.gap{background:var(--warn)}.inf-dot.bad{background:var(--bad)}
 .inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
-.inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:1.7}
+.inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:var(--lh-5)}
 .inf-li:first-child{border-top:0}
 .inf-li b{color:var(--primaryd)}
 .inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
   font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}
 .inf-err{background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r-5);padding:var(--sp-6);
-  font-size:var(--fs-3);color:var(--bad);line-height:1.8}
+  font-size:var(--fs-3);color:var(--bad);line-height:var(--lh-5)}
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
    זהה בית-לבית בארבע האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
@@ -355,15 +365,15 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
-#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:999;display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
-.toast{background:#1a1a1a;color:#fff;border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:1.45;box-shadow:0 6px 20px rgba(0,0,0,.22);max-width:92vw;text-align:center;animation:toastUp .2s ease-out}
+#toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
+.toast{background:var(--chip);color:var(--on-chip);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
 .toast.good{background:var(--ok);color:var(--ok-soft)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
 /* ================================================================= מעדכן */
 #updater{
-  position:fixed;inset-inline:0;z-index:10001;
+  position:fixed;inset-inline:0;z-index:var(--z-6);
   bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom) + 46px);
   display:none;justify-content:center;padding:var(--sp-5) var(--sp-6)}
 #updater.show{display:flex}
@@ -377,31 +387,31 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   padding:var(--sp-4) var(--sp-6);font-family:inherit;font-weight:700;cursor:pointer;font-size:var(--fs-3);flex:none
 }
 #updater button.x{
-  margin-inline-start:0;background:none;color:var(--on-brand);opacity:.7;padding:0 var(--sp-2);font-size:var(--fs-4)}
+  margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
 /* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
 body.locked{overflow:hidden}
-.veil{position:fixed;inset:0;z-index:10050;background:rgba(10,20,30,.5);
+.veil{position:fixed;inset:0;z-index:var(--z-4);background:var(--veil);
   display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .veil.open{display:flex}
 @media (min-width:640px){.veil{align-items:center}}
 .sheet{width:100%;max-width:560px;max-height:92dvh;overflow:auto;background:var(--card);
-  color:var(--text);border-radius:var(--r-6) var(--r-6) 0 0;box-shadow:0 12px 40px rgba(0,0,0,.3);
+  color:var(--text);border-radius:var(--r-6) var(--r-6) 0 0;box-shadow:0 12px 40px var(--sh-3);
   font-family:'Heebo',sans-serif;direction:rtl}
 @media (min-width:640px){.sheet{border-radius:var(--r-6)}}
 .sheet-hd{display:flex;align-items:center;gap:var(--sp-5);padding:var(--sp-6) var(--sp-6);
-  border-bottom:1px solid rgba(0,0,0,.1);position:sticky;top:0;background:var(--card);z-index:2}
+  border-bottom:1px solid var(--sh-1);position:sticky;top:0;background:var(--card);z-index:var(--z-1)}
 .sheet-hd h3{font-size:var(--fs-4);flex:1;margin:0;font-weight:800}
-.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:1;color:#777;
+.sheet-hd .x{background:none;border:0;font-size:var(--fs-5);line-height:var(--lh-1);color:var(--text2);
   cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-3)}
-.sheet-bd{padding:var(--sp-6) var(--sp-6);font-size:var(--fs-3);line-height:1.6;color:#555}
+.sheet-bd{padding:var(--sp-6) var(--sp-6);font-size:var(--fs-3);line-height:var(--lh-4);color:var(--text2)}
 .sheet-ft{padding:var(--sp-5) var(--sp-6) var(--sp-6);display:flex;gap:var(--sp-4)}
 .sheet-ft:empty{display:none}
-.sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid #ccc;
-  background:#f5f5f5;color:#333;font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
+.sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid var(--text3);
+  background:var(--card-2);color:var(--text);font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
 .sheet-ft button.danger{border:none;background:var(--bad);color:var(--bad-soft)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
-/* ═══ סולמות הגודל, הריווח והרדיוס — מודול משותף (סבב 138) ═══════════════
-   ⛔ שלושה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך מספרי חזותי
+/* ═══ סולמות הערך החזותי — מודול משותף (סבב 141) ═════════════════════════
+   ⛔ שמונה סולמות, ⛔ ואותן דרגות בארבע האפליקציות — ⚠️ כל ערך חזותי
       נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
       הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
       ביניהם.
@@ -415,12 +425,27 @@ body.locked{overflow:hidden}
    ⛔ **ואין כאן `!important`** — ⚠️ `display` ו-`color` נכתבים מ-JS בזמן
       ריצה, ⭐ וסגנון מוטבע שנכתב אחר כך חייב לגבור עליהן: ⛔ הקדימות באה
       מהמיקום — ⚠️ הבלוק יושב בסוף הגיליון, אחרי כל כלל אחר.
+   ⛔ **ו-`--z-*` הוא סדר ולא גודל** — ⚠️ הדרגה נבחרת לפי **תפקיד**
+      השכבה — תוכן · סרגל · תפריט · מודאל · טוסט · באנר · נעילה — ⭐ ולא
+      לפי המספר שהיה שם: ⛔ מספר שנבחר לכל אתר הוא מרוץ שאיש אינו מכריע בו.
+   ⛔ **והמשך נמדד בשניות ולא באלפיות** — ⚠️ והכתיב אחיד, בלי
+      אפס מוביל: ⭐ `.15s` ו-`0.15s` הם אותו ערך בשני כתיבים, ⛔ ושני כתיבים
+      הם שני חיפושים.
    ⛔ שינוי כאן — ארבע האפליקציות **וארבעת עותקי השער**, באותו סבב.
    ═══════════════════════════════════════════════════════════════════════ */
 :root{
 --fs-1:.65rem;--fs-2:.75rem;--fs-3:.85rem;--fs-4:.95rem;--fs-5:1.2rem;--fs-6:1.7rem;--fs-7:2.8rem;
 --sp-1:2px;--sp-2:4px;--sp-3:6px;--sp-4:8px;--sp-5:12px;--sp-6:16px;--sp-7:24px;
---r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px
+--r-1:4px;--r-2:6px;--r-3:8px;--r-4:10px;--r-5:14px;--r-6:20px;--r-7:999px;
+--z-1:1;--z-2:10;--z-3:20;--z-4:30;--z-5:40;--z-6:50;--z-7:60;
+--dur-1:.12s;--dur-2:.15s;--dur-3:.2s;--dur-4:.3s;--dur-5:.6s;--dur-6:.7s;--ease:cubic-bezier(.2,.8,.3,1);
+--op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
+--lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
+--ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
+--chip:#1A1A1A;--on-chip:#FFFFFF;--veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
+--alert:#B3261E;--on-alert:#FFFFFF;
+--sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
+--on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
 }
 .u-ai-c{align-items:center}
 .u-d-flex{display:flex}
@@ -493,8 +518,8 @@ body.locked{overflow:hidden}
 .u-minw-80{min-width:80px}
 .u-ml-1{margin-left:var(--sp-1)}
 .u-mt-4{margin-top:var(--sp-4)}
-.u-op-55{opacity:.55}
-.u-op-8{opacity:.8}
+.u-op-55{opacity:var(--op-4)}
+.u-op-8{opacity:var(--op-6)}
 .u-p-1-2{padding:var(--sp-1) var(--sp-2)}
 .u-p-2{padding:var(--sp-2)}
 .u-p-2-4{padding:var(--sp-2) var(--sp-4)}
@@ -715,17 +740,83 @@ var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(
 
 // ===== ניסוח הודעות אחיד לשלושת הפרויקטים (סבב 8) =====
 // **סמל אחד לכל מצב:** ✅ הצלחה, ⚠️ אזהרה, ❌ שגיאה. אין להשתמש ב-✓/✔, ואין
-// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. שלוש ההודעות שלמטה חייבות להיות
-// **מילה במילה זהות** בשלושת הפרויקטים; אין לנסח וריאציה מקומית.
+// להצמיד סמל בסוף המשפט — הוא תמיד בתחילתו. ⛔ וההודעה שלמטה נבדלת
+// בגיוס בהחלטת מנהל — ⚠️ ולכן היא פר-אפליקציה ואינה בבלוק החתום.
 var MSG_OFFLINE   = 'אין חיבור לאינטרנט — הפעולה לא בוצעה';
-var MSG_SAVED     = '✅ נשמר בהצלחה';
-// נוסח משותף לארבע האפליקציות (סבב 12 שלב 4). שמירה מקומית שטרם אושרה
-// בענן **חייבת** להיאמר אחרת משמירה שאושרה — אחרת "נשמר" נראה בדיוק אותו
-// דבר בשני המצבים, וזו ההטעיה שהסבב הזה בא למנוע.
+/* ═══ מחרוזות ההודעה המשותפות — מודול משותף (סבב 141) ════════════════════
+   ⭐ הודעה שיותר מאפליקציה אחת אומרת יושבת כאן פעם אחת, ⛔ וגופה נחתם:
+   ⚠️ עד כאן הצהירה **הערה** «מילה במילה זהות», ⛔ ואיש לא מדד — ⭐ ונמדד
+   ששני שמות נשאו טקסט אחר, ⚠️ ושאחת-עשרה הודעות נכתבו כליטרל בשניים
+   ובשלושה ריפו בלי שם כלל.
+   ⛔ **והמשפחה תשתית ולא מפקד** — ⚠️ אפליקציה שאינה אומרת הודעה נושאת
+   אותה בכל זאת: ⭐ המושג חי בארבעתן, ⛔ ורשימה שנגזרת ממי שמציג אותה
+   היום משתנה עם המוצר ⛔ ואיש אינו מיישר אותה בחזרה.
+   ⚠️ **ומה שנבדל בהחלטה אינו כאן** — ⛔ `MSG_OFFLINE` ו-`MSG_BAD_LOGIN`
+   נבדלים בגיוס בהחלטת מנהל, ⭐ והם נשארים פר-אפליקציה עם נימוקם במקומם.
+   ⛔ **וכל הודעת חסימה מתארת מצב אחר** — ⚠️ אין לאחד אותן זו עם זו ולא עם
+   «סיסמה שגויה»: ⭐ הודעה מאוחדת שולחת את המשתמש להקליד שוב ושוב סיסמה
+   נכונה, ⛔ במקום לומר לו את הדבר היחיד שיפתור — חיבור אחד.
+   ═══════════════════════════════════════════════════════════════════════ */
+var MSG_SAVED = '✅ נשמר בהצלחה';
 var MSG_SAVED_LOCAL = '✅ נשמר במכשיר — יסונכרן כשתחזור הרשת';
-var MSG_BAD_LOGIN = 'שם משתמש או סיסמה שגויים';
-// סבב 17: נוסח אחיד לארבע האפליקציות — כאן לא הייתה הודעת התאוששות כלל.
 var MSG_SYNC_BACK = '☁️ הסנכרון חזר לפעול';
+var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
+var MSG_DELETE = 'מחק';
+var MSG_FILL_ALL = '⚠️ נא למלא את כל השדות';
+var MSG_LOAD_FAIL_PRE = '⚠️ טעינת הנתונים נכשלה (';
+var MSG_MY_PASS_TITLE = '🔑 שינוי הסיסמה שלי';
+var MSG_OFFLINE_LOGIN = '📴 כניסה במצב אופליין — הנתונים יסונכרנו כשהרשת תחזור';
+var MSG_PASS_CUR_BAD = '❌ הסיסמה הנוכחית שגויה';
+var MSG_PASS_MISMATCH = '⚠️ הסיסמאות החדשות אינן זהות';
+var MSG_PASS_UPDATE_FAIL = '❌ עדכון הסיסמה נכשל: ';
+var MSG_PASS_VERIFY_FAIL = '❌ לא ניתן לאמת את הסיסמה הנוכחית: ';
+var MSG_SERVER_ERR = 'שגיאת שרת';
+var MSG_SWITCHED_TO = 'הוחלף ל';
+var MSG_OFF_UNKNOWN = '📴 אין חיבור — המשתמש הזה אינו בעותק המקומי שבמכשיר. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_FP = '📴 אין חיבור — המשתמש הזה טרם הוכן לכניסה ללא רשת. נדרש חיבור לאינטרנט פעם אחת';
+var MSG_OFF_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לכניסה ללא רשת';
+var MSG_NO_CRYPTO = '❌ הדפדפן אינו תומך בהצפנה הנדרשת לאימות הסיסמה';
+var MSG_OFF_USER_WRITE = '📴 אין חיבור — ניהול משתמשים דורש חיבור לאינטרנט';
+/* ═══════════════ סוף מודול מחרוזות ההודעה ══════════════════════════════ */
+/* ══ הודעות פר-אפליקציה — מה שרק כאן נאמר ═══════════════════════════════
+   ⛔ ההודעה היא קבוע ⛔ ואינה ליטרל באתר התצוגה — ⚠️ טקסט שנכתב במקום
+   שבו הוא נאמר נכתב שוב במסך הבא, ⭐ ושני ניסוחים לאותו מצב הם שני
+   מסלולים בעיני הקורא.
+   ⚠️ **ומה שיותר מאפליקציה אחת אומרת אינו כאן** — ⛔ הוא בבלוק החתום,
+   ⭐ ששם החתימה היא מה שמודד את זהות הנוסח. */
+var MSG_SYNCING = '🔄 מסנכרן...';
+var MSG_SYNCED = '✅ מסונכרן';
+var MSG_SYNC_FAIL_LOCAL = '⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
+var MSG_SYNC_PARTIAL = '⚠️ סנכרון חלקי — נכשל: ';
+var MSG_OFFLINE_LOCAL = '⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר';
+var MSG_DAY_ARCHIVED = '📅 יום חדש! הרשומות הועברו לארכיון אוטומטית';
+var MSG_PICK_CATEGORY = '⚠️ יש לבחור קטגוריה';
+var MSG_NEED_TASK = '⚠️ יש להזין משימה';
+var MSG_ADDED_SAVING = '✅ נוסף — שומר בענן…';
+var MSG_ROWS_DELETED = '✅ הרשומות נמחקו';
+var MSG_NO_ROWS = 'אין רשומות';
+var MSG_PDF_PREP = 'מכין PDF...';
+var MSG_POPUP_BLOCKED = '⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב';
+var MSG_PDF_OPENED = '📄 PDF נפתח!';
+var MSG_IMG_OFFLINE = '⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
+var MSG_IMG_FAIL = '⚠️ יצירת התמונה נכשלה — נסה שוב';
+var MSG_LOCAL_ONLY = '⚠️ נשמר במכשיר בלבד — הענן לא עודכן';
+var MSG_CLOUD_NO_FANOUT = '⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת';
+var MSG_SAVED_CLOUD = '✅ נשמר בענן';
+var MSG_SUBTASK_EXISTS = '⚠️ תת-המשימה כבר קיימת';
+var MSG_TASK_EXISTS = '⚠️ המשימה כבר קיימת בקטגוריה';
+var MSG_INFRA_TABLE = 'טבלת התשתית';
+var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
+var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
+var MSG_ALREADY_AT = 'כבר במוסד ';
+var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
+var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
+var MSG_IMG_PREP = 'מכין תמונה...';
+var MSG_EDIT_FORM_CLOSED = '⚠️ טופס העריכה נסגר — נסה שוב';
+var MSG_ROW_GONE = '⚠️ הרשומה לא נמצאה — לא נשמר';
+var MSG_CLEAR_ALL_TITLE = '🗑 מחיקת כל הרשומות';
+var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנוכחי?';
+/* ══ סוף הודעות פר-אפליקציה ═════════════════════════════════════════════ */
 /* ═══ סולם נקודות השבירה — מודול משותף (סבב 97) ═══════════════════════════
    ⭐ הסולם הוא מקור האמת היחיד לנקודות השבירה בארבע האפליקציות, ⛔ והוא
    מוצהר כאן פעם אחת: ⚠️ שאילתה שערכה אינו ברשימה מפילה בשער.
@@ -1041,16 +1132,16 @@ function lsAlert(msg) {
     el = document.createElement('div');
     el.id = 'ls-alert';
     el.setAttribute('role', 'alert');
-    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:#b3261e;' +
-      'color:#fff;direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
-      'padding:12px 46px;box-shadow:0 2px 14px rgba(0,0,0,.35)';
+    el.style.cssText = 'position:fixed;z-index:2147483000;left:0;right:0;top:0;background:var(--alert);' +
+      'color:var(--on-alert);direction:rtl;text-align:center;font:700 14px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;' +
+      'padding:12px 46px;box-shadow:0 2px 14px var(--sh-3)';
     var sp = document.createElement('span');
     sp.id = 'ls-alert-msg';
     var b = document.createElement('button');
     b.type = 'button';
     b.textContent = '✕';
     b.setAttribute('aria-label', 'סגור');
-    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:#fff;' +
+    b.style.cssText = 'position:absolute;right:10px;top:9px;background:transparent;border:0;color:var(--on-alert);' +
       'font:700 17px/1 sans-serif;cursor:pointer;padding:4px 8px';
     b.dataset.act = 'ls-alert-close';
     el.appendChild(sp); el.appendChild(b);
@@ -1534,7 +1625,6 @@ window.lsBootDeferred = lsBootDeferred;
 window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
-var MSG_STALE_CODE = '⚠️ הגרסה הזו מיושנת — יש לעדכן';
 /* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
 /*  ⛔ **שלוש תשובות מסד מעידות שהקוד ישן מהסכימה** — טבלה שאינה קיימת
  *  (`42P01`) · עמודה שאינה קיימת (`42703`) · ו-404 על טבלה: ⚠️ שלושתן
@@ -1625,7 +1715,7 @@ function busy(btn, on, label) {
   if (!btn) return;
   if (on) {
     if (btn._busyTxt === undefined) btn._busyTxt = btn.innerHTML;
-    btn.disabled = true; btn.style.opacity = '.6'; btn.style.cursor = 'wait';
+    btn.disabled = true; btn.style.opacity = 'var(--op-4)'; btn.style.cursor = 'wait';
     btn.innerHTML = label || '⏳ שומר…';
   } else {
     btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = '';
@@ -2332,18 +2422,18 @@ function pendEnsureStyle() {
   var s = document.createElement('style');
   s.id = 'pend-style';
   s.textContent =
-    '.pend-tag{display:inline-block;background:#fde68a;color:#78350f;border:1px solid #f59e0b;' +
-    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:1.6;' +
+    '.pend-tag{display:inline-block;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);' +
+    'border-radius:999px;padding:0 7px;font-size:.68rem;font-weight:700;line-height:var(--lh-4);' +
     'white-space:nowrap;vertical-align:middle;margin:0 4px}' +
-    '.pend-tag.late{background:#fecaca;color:#7f1d1d;border-color:#dc2626}' +
+    '.pend-tag.late{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}' +
     '#pend-bar{position:fixed;z-index:2147482000;left:0;right:0;bottom:0;padding:8px 12px;' +
-    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:#3d2c00;background:#ffd88a;' +
-    'box-shadow:0 -2px 10px rgba(0,0,0,.18)}' +
-    '#pend-bar.late{background:#ffb4ab;color:#5c1a12}' +
+    'text-align:center;direction:rtl;font:600 13px/1.5 inherit;color:var(--warn);background:var(--warn-soft);' +
+    'box-shadow:0 -2px 10px var(--sh-1)}' +
+    '#pend-bar.late{background:var(--bad-soft);color:var(--bad)}' +
     '#pend-alert{position:fixed;z-index:2147483000;left:0;right:0;top:0;padding:10px 14px;' +
-    'direction:rtl;font:700 13px/1.6 inherit;color:#fff;background:#b91c1c;' +
-    'box-shadow:0 2px 10px rgba(0,0,0,.25);display:flex;gap:10px;align-items:center;justify-content:center}' +
-    '#pend-alert button{background:rgba(255,255,255,.25);color:#fff;border:1px solid #fff;' +
+    'direction:rtl;font:700 13px/1.6 inherit;color:var(--on-alert);background:var(--alert);' +
+    'box-shadow:0 2px 10px var(--sh-2);display:flex;gap:10px;align-items:center;justify-content:center}' +
+    '#pend-alert button{background:var(--fill-dark);color:var(--on-dark);border:1px solid var(--on-dark);' +
     'border-radius:6px;padding:2px 10px;font:inherit;cursor:pointer}';
   (document.head || document.documentElement).appendChild(s);
 }
@@ -3182,7 +3272,7 @@ async function sbSet(key, value) {
     if (ctxStale(_ep)) return { ok: false, error: "ההקשר התחלף", ctxStale: true };
     if (res.error) {
       console.error('[sync] sbSet error', key, res.error.message, res.error);
-      return { ok: false, error: res.error.message || "שגיאת שרת" };
+      return { ok: false, error: res.error.message || MSG_SERVER_ERR };
     }
     console.log('[sync] sbSet ok', key);
     return { ok: true, error: null };
@@ -3202,7 +3292,7 @@ async function sbGetResult(key) {
     if (res.error) {
       var missing = res.error.code === "PGRST116";
       if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
-      return { ok: missing, data: null, error: missing ? null : (res.error.message || "שגיאת שרת") };
+      return { ok: missing, data: null, error: missing ? null : (res.error.message || MSG_SERVER_ERR) };
     }
     if (!res.data) return { ok: true, data: null, error: null };
     var pr = kvParse(key, res.data.value);
@@ -4188,7 +4278,7 @@ function tbSyncLog(action, key, recordCount, details) {
 var _tbPullLogged = false;
 
 async function syncFromCloud() {
-  toast("🔄 מסנכרן...", 3000);
+  toast(MSG_SYNCING, 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
   /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
@@ -4333,16 +4423,16 @@ async function syncFromCloud() {
     renderSettings();
     if (failed.length === 0 && !_tbPullLogged) { _tbPullLogged = true; tbSyncLog('pull', null, null); }
     if (failed.length === 0) {
-      toast("✅ מסונכרן");
+      toast(MSG_SYNCED);
     } else if (failed.length >= 5) {
-      toast("⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר", null, 'bad');
+      toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
     } else {
-      toast("⚠️ סנכרון חלקי — נכשל: " + failed.join(", "), null, 'bad');
+      toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'bad');
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
     _tbNetWarned = true;
-    toast("⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר", null, 'bad');
+    toast(MSG_OFFLINE_LOCAL, null, 'bad');
   }
 }
 // ═══════════════════════════════════════
@@ -4712,7 +4802,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("tb_entries"+LS, ENTRIES, _tbRecTs);
-    toast("📅 יום חדש! הרשומות הועברו לארכיון אוטומטית");
+    toast(MSG_DAY_ARCHIVED);
   }
   lsSet("tb_last_day"+LS, today);
 }
@@ -4943,8 +5033,8 @@ function addEntry() {
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
   var hdate = document.getElementById("hebDateInput").value.trim();
-  if (!selCat) { toast("⚠️ יש לבחור קטגוריה", null, 'bad'); return; }
-  if (!task)   { toast("⚠️ יש להזין משימה", null, 'bad'); return; }
+  if (!selCat) { toast(MSG_PICK_CATEGORY, null, 'bad'); return; }
+  if (!task)   { toast(MSG_NEED_TASK, null, 'bad'); return; }
   var now = new Date();
   var entry = {
     // ⭐ סבב 38 — מזהה שנוצר במכשיר דרך המודול המשותף (שורת מזהי הרשומות במטריצה).
@@ -4968,7 +5058,7 @@ function addEntry() {
   clearForm();
   // השמירה המקומית הושלמה בנקודה זו; דחיפת הענן עוד לא התחילה —
   // schedulePush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
-  toast("✅ נוסף — שומר בענן…");
+  toast(MSG_ADDED_SAVING);
   schedulePush();
 }
 
@@ -5023,7 +5113,8 @@ function delEntry(id) {
 }
 
 function clearAll() {
-  showConfirm("🗑 מחיקת כל הרשומות", "האם למחוק את כל רשומות היום הנוכחי?", function() {
+  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE).then(function (yes) {
+    if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();
     var sample = ENTRIES.find(function(e){ return e.gdate === curKey; });
@@ -5031,7 +5122,7 @@ function clearAll() {
     saveEntries(); renderLog();
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
-    toast("✅ הרשומות נמחקו");
+    toast(MSG_ROWS_DELETED);
     schedulePush();
   });
 }
@@ -5133,7 +5224,7 @@ function toast(msg, dur, kind) {
   el.textContent = msg;
   box.appendChild(el);
   setTimeout(function () {
-    el.style.transition = 'opacity .25s'; el.style.opacity = '0';
+    el.style.transition = 'opacity var(--dur-4)'; el.style.opacity = '0';
     setTimeout(function () { el.remove(); }, 260);
   }, dur || TOAST_DEFAULT_MS);
 }
@@ -5269,12 +5360,6 @@ function kvBadLabel(name) { return name + ' (' + KV_BAD + ')'; }
 /*  ⛔ מסלול סגירה אחד לשלושת הדרכים (סבב 68) — כפתור, לחיצה על הרקע
  *  ו-`Escape`; ⚠️ מסלול נפרד לכל אחת הוא בדיוק מה שנשבר בשקט. */
 
-/*  ⚠️ `showConfirm` נשארת כשם הקורא ⛔ ואינה מסלול שני (סבב 68) — היא
- *  מעטפת דקה מעל `ask`, שהיא המימוש היחיד. */
-function showConfirm(title, msg, onOk) {
-  ask(title, msg, 'מחק').then(function (yes) { if (yes) onOk(); });
-}
-
 // שם המוסד הפעיל — מקור אמת יחיד לכל הפלטים (PDF / דוח תמונה / סיגנל).
 // קודם היה מקודד קשיח "ראשון לציון", כך שרמת אביב הוציאה דוחות בשם
 // הישיבה השנייה.
@@ -5298,14 +5383,14 @@ function instName() {
  *  שתי הזדמנויות שאחד מהם ייסחף. */
 function exportPDF() {
   var live = liveOnly(ENTRIES);
-  if (!live.length) { toast("אין רשומות"); return; }
+  if (!live.length) { toast(MSG_NO_ROWS); return; }
   /*  ⛔ הכותרת נגזרת **לפני** הרינדור הא-סינכרוני — ⚠️ מסלול הארכיון מחליף
    *  את `ENTRIES` ואת שדה התאריך ומשחזר אותם מיד אחרי הקריאה, ⭐ והרינדור
    *  מסתיים אחרי השחזור: ⛔ קריאה מאוחרת הייתה מקבלת את תאריך היום. */
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
   var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
   var fileTitle = "יומן עבודה " + today + " " + todayGreg;
-  toast("מכין PDF...");
+  toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
       div.style.left = '-9999px';
@@ -5321,7 +5406,7 @@ function _printCanvas(canvas, title) {
   // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נפלה בשקט
   // ("w is null") והמשתמש לא ידע למה לא קרה כלום.
   if (!w || !w.document) {
-    toast("⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב", null, 'bad');
+    toast(MSG_POPUP_BLOCKED, null, 'bad');
     return;
   }
   w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
@@ -5332,7 +5417,7 @@ function _printCanvas(canvas, title) {
     + '</body></html>');
   w.document.close();
   setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
-  toast("📄 PDF נפתח!");
+  toast(MSG_PDF_OPENED);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -5347,8 +5432,8 @@ function _reportError(div, e){
   console.error('[report] rendering failed:', e);
   toast(
     (typeof html2canvas === 'undefined')
-      ? "⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת"
-      : "⚠️ יצירת התמונה נכשלה — נסה שוב"
+      ? MSG_IMG_OFFLINE
+      : MSG_IMG_FAIL
   , null, 'bad');
 }
 // מחזירה תמיד promise, ⛔ ולעולם אינה זורקת סינכרונית (נרשם בסבב 67) —
@@ -5473,7 +5558,7 @@ async function tbSyncPushNow() {
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום tb_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
-      toast("⚠️ נשמר במכשיר בלבד — הענן לא עודכן", null, 'bad');
+      toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
@@ -5484,9 +5569,9 @@ async function tbSyncPushNow() {
     var stampTs = Date.now();
     var rTs = await PL_CFG.stamp(stampTs);
     if (ctxStale(_ep)) return;
-    if (!rTs.ok) { toast("⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת", null, 'bad'); return; }
+    if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
-    toast("✅ נשמר בענן");
+    toast(MSG_SAVED_CLOUD);
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -5669,7 +5754,7 @@ function addSub(ci, ti) {
   if (!SUBS[sk]) SUBS[sk] = SUBS[taskName] ? [...SUBS[taskName]] : [];
   /*  ⛔ ואותו דבר בתת-המשימה — ⚠️ הרשימה היא רשימת ערכים,
    *  ⭐ והערך הוא הזהות: ⛔ פריט שנכתב פעמיים נמחק פעם אחת. */
-  if (uniqHas(SUBS[sk], val)) { toast("⚠️ תת-המשימה כבר קיימת", 4000, 'bad'); return; }
+  if (uniqHas(SUBS[sk], val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
   SUBS[sk].push(val);
   touchSubKey(sk);
   inp.value = "";
@@ -5850,7 +5935,7 @@ function addTask(ci) {
    *  על מזהה: ⭐ שתי משימות באותו שם הן משימה אחת, ⛔ והשם הוא מפתח
    *  החותמה ומפתח תתי-המשימות — ⚠️ ושתי שורות באותו שם חולקות אותם:
    *  ⛔ המחיקה מסירה אחת מהן והשנייה נשארת עם סימון מחיקה. */
-  if (uniqHas(CATS[ci].tasks, val)) { toast("⚠️ המשימה כבר קיימת בקטגוריה", 4000, 'bad'); return; }
+  if (uniqHas(CATS[ci].tasks, val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
   CATS[ci].tasks.push(val);
   touchTask(CATS[ci], val);
   recTouch(CATS[ci]);
@@ -6620,7 +6705,7 @@ window._infOpen = false;
  *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
 async function ysInfraOpen() {
   window._infOpen = false;
-  openModal('טבלת התשתית',
+  openModal(MSG_INFRA_TABLE,
     '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
@@ -6665,7 +6750,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      toast("⚠️ לא הצליח לטעון סנכרון", 2000, 'bad');
+      toast(MSG_SYNC_LOAD_FAIL, 2000, 'bad');
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -6909,7 +6994,7 @@ function ysPickYeshiva() {
             (cur ? ' ✓' : '') + '</button>';
   }
   body += '</div>';
-  openModal('החלפת ישיבה', body, '');
+  openModal(MSG_SWITCH_YESHIVA, body, '');
 }
 
 /*  ⛔ המעבר מאפס את המצב **לפני** הטעינה מחדש (סבב 81) — ⚠️ סדר הפוך
@@ -6921,13 +7006,13 @@ function ysPickYeshiva() {
 function ysConfirmSwitch(y) {
   if (!ysNameOf(y)) return;
   closeModal();
-  if (idEq(y, YESHIVA)) { toast('כבר במוסד ' + ysNameOf(y)); return; }
+  if (idEq(y, YESHIVA)) { toast(MSG_ALREADY_AT + ysNameOf(y)); return; }
   selectYeshiva(y);
   /*  ⛔ הארכיון חוזר לשורש דרך נקודת הניווט היחידה — ⚠️ שנת הקידוח
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
-  toast('הוחלף ל' + ysNameOf(y));
+  toast(MSG_SWITCHED_TO + ysNameOf(y));
 }
 
 /*  ⛔ `again` מסמן מעבר בין מוסדות ⛔ ולא עלייה (סבב 81) — ⚠️ כל
@@ -7011,7 +7096,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[startApp] נכשל', e);
-    toast("⚠️ שגיאה בעליית האפליקציה — נסה לרענן", null, 'bad');
+    toast(MSG_BOOT_FAIL, null, 'bad');
   }
 }
 
@@ -7023,8 +7108,8 @@ function selectYeshiva(y) {
 function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  if(!todayEntries.length){ toast("אין רשומות לשיתוף להיום"); return; }
-  toast("מכין תמונה...");
+  if(!todayEntries.length){ toast(MSG_NOTHING_TO_SHARE); return; }
+  toast(MSG_IMG_PREP);
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       div.style.left='-9999px';
@@ -7127,7 +7212,7 @@ function arcSaveEntry(gdateKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { toast('⚠️ טופס העריכה נסגר — נסה שוב', null, 'bad'); return; }
+  if (vals.task === null) { toast(MSG_EDIT_FORM_CLOSED, null, 'bad'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -7147,7 +7232,7 @@ function arcSaveEntry(gdateKey, entryId) {
     // אין מה לשמור — לא לשקר למשתמש
     console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
-    toast('⚠️ הרשומה לא נמצאה — לא נשמר', null, 'bad');
+    toast(MSG_ROW_GONE, null, 'bad');
     return;
   }
   pendMark(PK_ENTRY + entryId);

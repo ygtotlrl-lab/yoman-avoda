@@ -34,6 +34,14 @@ const APP = {
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
     [/hwNoteCloud\('tb_archive'\+LS, _rowsA\.data\)/, 'הראיה העננית ניזונה ממשיכת tb_archive'],
   ],
+  /*  ⛔ בדיקות על קובץ שאינו `index.html` — ⚠️ **מה נכנס**: `[קובץ, תבנית,
+   *  הודעה]`; ⛔ **ומה מפיל**: תבנית שאינה נמצאת בקובץ. ⭐ **ולמה המבנה
+   *  קיים**: החלון החם נשען על מטמון ה-CDN שב-`sw.js`, ⛔ והוא אינו נראה
+   *  מ-`index.html` — ⚠️ ובלי המפתח הזה אין דרך למדוד אותו. */
+  fileChecks: [
+    ['sw.js', /var CDN_ASSETS = \[/, 'רשימת ה-CDN נושאת את השם המשותף CDN_ASSETS'],
+    ['sw.js', /ensureCdnCached/, 'ריפוי עצמי של ה-CDN קיים (ensureCdnCached)'],
+  ],
   mutations: [
     ["{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',",
      "{ kind: 'kv', table: KV_TABLE, name: 'tb_entries', key: 'tb_entries_rows',",

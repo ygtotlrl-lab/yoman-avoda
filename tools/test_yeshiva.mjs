@@ -196,13 +196,16 @@ function audit(root) {
     v.push({ kind: 'palette', msg: 'לא נחלצו ערכי `APP` מ-`gen-icons`' });
   } else {
     const ang = Math.round(180 - Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180 / Math.PI);
-    const want = `linear-gradient(${ang}deg,${hex(start)} 0%,${hex(end)} 100%)`;
+    const want = `linear-gradient(${ang}deg,var(--deep-1) 0%,var(--deep-2) 100%)`;
     if (page.indexOf(want) < 0)
       v.push({ kind: 'palette', msg: `מדרג מסך הבחירה — הצפוי «${want}»` });
-    if (page.indexOf('color:' + hex(ink) + ';') < 0)
-      v.push({ kind: 'palette', msg: `צבע הדיו — הצפוי «color:${hex(ink)};»` });
-    if (page.indexOf('fill:' + hex(ink) + ';') < 0)
-      v.push({ kind: 'palette', msg: `מילוי הסמל — הצפוי «fill:${hex(ink)};»` });
+    for (const [tok, val] of [['--deep-1', hex(start)], ['--deep-2', hex(end)], ['--on-deep', hex(ink)]])
+      if (page.indexOf(tok + ':' + val + ';') < 0)
+        v.push({ kind: 'palette', msg: `ערך האסימון ${tok} — הצפוי «${tok}:${val};»` });
+    if (page.indexOf('color:var(--on-deep);') < 0)
+      v.push({ kind: 'palette', msg: 'צבע הדיו — הצפוי «color:var(--on-deep);»' });
+    if (page.indexOf('fill:var(--on-deep);') < 0)
+      v.push({ kind: 'palette', msg: 'מילוי הסמל — הצפוי «fill:var(--on-deep);»' });
   }
 
   /* ו. מוטיב הפסים — ארבעת המלבנים כפי שהם ב-`APP.mark.shapes` */
@@ -295,11 +298,11 @@ mutate('נ2ב · ⭐ מוטציית-נגד: שורה שנוספה בלי איש�
                    "  console.log('switch');\n  selectYeshiva(y);\n"), ['__none__']);
 
 mutate('מ3 · מוטציה: הבורר עוקף את openModal — טענה ב נופלת',
-  (s) => s.replace("  openModal('החלפת ישיבה', body, '');",
+  (s) => s.replace("  openModal(MSG_SWITCH_YESHIVA, body, '');",
                    "  document.getElementById('modal-body').innerHTML = body;"), ['modal']);
 
 mutate('מ4 · מוטציה: צבע המדרג זז בגוון אחד — טענה ה נופלת',
-  (s) => s.replace('linear-gradient(141deg,#2A4E8C 0%', 'linear-gradient(141deg,#2A4E8D 0%'),
+  (s) => s.split('--deep-1:#2A4E8C;').join('--deep-1:#2A4E8D;'),
   ['palette']);
 
 mutate('מ5 · מוטציה: רוחב פס אחד בסמל משתנה — טענה ו נופלת',
@@ -319,8 +322,8 @@ mutate('נ1 · ⭐ מוטציית-נגד: שורת איפוס **נוספת** ⛔
 /*  ⭐ מוטציית-נגד חיה: ניסוח ההודעה שאחרי ההחלפה — ⛔ מחרוזת שקיימת בקובץ,
  *  ⚠️ ולא כזו שנעלמה ממנו: ⛔ מוטציה שהחלפתה אינה מחליפה דבר אינה רצה. */
 mutate('נ2 · ⭐ מוטציית-נגד: ניסוח ההודעה שאחרי ההחלפה ⛔ אינו מפיל את טענה ג',
-  (s) => s.replace("toast('הוחלף ל' + ysNameOf(y));",
-                   "toast('המוסד הוחלף ל' + ysNameOf(y));"), ['__none__']);
+  (s) => s.replace("var MSG_SWITCHED_TO = 'הוחלף ל';",
+                   "var MSG_SWITCHED_TO = 'המוסד הוחלף ל';"), ['__none__']);
 
 rmSync(tmp, { recursive: true, force: true });
 }
