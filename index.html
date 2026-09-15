@@ -250,7 +250,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
 .btn-add:hover{background:linear-gradient(135deg,var(--accent),var(--accentl));color:var(--text);transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-accent);}
-.btn-add.btn-flash{background:linear-gradient(135deg,var(--ok),var(--ok-2)) !important;color:var(--on-primary) !important;transform:scale(0.97);}
+.btn-add:active{background:linear-gradient(135deg,var(--ok),var(--ok-2)) !important;color:var(--on-primary) !important;transform:scale(0.97);}
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
@@ -620,7 +620,7 @@ body.locked{overflow:hidden}
              yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
              ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
              שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-        <input aria-label="תאריך לועזי" class="u-minw-130 heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." oninput="onGregDateChange()" />
+        <input aria-label="תאריך לועזי" class="u-minw-130 heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
       </div>
     </div>
 
@@ -644,10 +644,7 @@ body.locked{overflow:hidden}
         <div class="fld"><label for="notesInput">הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
         <div class="fld"><label for="countInput">כמות</label><input id="countInput" type="text" inputmode="numeric" autocomplete="off" placeholder="1" /></div>
       </div>
-      <button class="btn-add"
-        ontouchstart="this.classList.add('btn-flash')"
-        ontouchend="addEntry(); var s=this; setTimeout(function(){s.classList.remove('btn-flash');},500); event.preventDefault();"
-        data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
+      <button class="btn-add" data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
       </div>
 
     </div>
@@ -836,7 +833,6 @@ var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנ
    ⭐ והשער הוא מה שמשווה ביניהם לרשימה שכאן: ⛔ הקבוע הוא ההצהרה,
    ⚠️ והשאילתה היא המימוש. */
 var BP_SCALE = [360, 480, 640, 900, 1200];
-window.BP_SCALE = BP_SCALE;
 /* ═══════════════ סוף מודול סולם נקודות השבירה ═════════════════════════ */
 /* ═══ עוזרי הרשת — מודול משותף (סבב 84) ═══════════════════════════════════
    ⛔ שלוש הפונקציות ישבו **בין** בלוקים חתומים, ⚠️ ולכן אף `sha256` לא מדד
@@ -1153,14 +1149,6 @@ function lsAlert(msg) {
    מחזירה true/false — ומסלול קריטי שמתעלם מהערך המוחזר הוא באג. */
 var _lsSweeping = false;
 var _lsToastAt = 0;
-/* "אף כישלון שקט" — מונה כישלונות גלובלי.
-   מסלול קריטי (רישום נוכחות, שמירת תשלום, הוספת רשומה, רישום תנועה) עוטף את
-   הפעולה כך:  `var t = lsFails(); ...await save()...; if (!lsOkSince(t)) return;`
-   ורק אז מציג "נשמר". כך גם כתיבה שנכשלה עמוק בתוך שרשרת async מונעת את טוסט
-   ההצלחה, בלי להשחיל ערך מוחזר דרך עשר פונקציות. */
-var _lsFailCount = 0;
-function lsFails() { return _lsFailCount; }
-function lsOkSince(n) { return _lsFailCount === n; }
 
 /* ── שער "אין טוסט הצלחה אחרי כישלון שמירה" ─────────────────────────────
    נקודת אכיפה **אחת** במקום עשרות בדיקות פזורות שאפשר לשכוח באחת: `toast()`
@@ -1180,16 +1168,15 @@ function lsSet(key, value) {
   try { localStorage.setItem(key, v); return true; } catch (e) {
     // בתוך פינוי — כישלון הוא תוצאה, לא טריגר לפינוי נוסף (רקורסיה).
     if (_lsSweeping) return false;
-    _lsFailCount++;
     _lsLastFailAt = Date.now();
     if (lsIsQuotaErr(e)) {
       // מנגנון חירום: פינוי נוסף לפי **אותו סדר** בדיוק, וניסיון אחד נוסף.
       var need = lsEntryBytes(key, v) + 64 * 1024;
       var freed = lsSweepGuarded('חירום — כתיבה נכשלה במכסה: ' + key, need);
       if (freed > 0) {
-        // הצליח בניסיון השני — לא כישלון. המונה מוחזר כדי שהמסלול הקריטי
-        // יציג "נשמר", שהרי הנתון באמת נשמר.
-        try { localStorage.setItem(key, v); _lsFailCount--; _lsLastFailAt = 0; lsLog('כתיבה חוזרת הצליחה', key, 0); return true; }
+        // הצליח בניסיון השני — לא כישלון. חלון ההשתקה נסגר כדי שטוסט
+        // ההצלחה יעבור, שהרי הנתון באמת נשמר.
+        try { localStorage.setItem(key, v); _lsLastFailAt = 0; lsLog('כתיבה חוזרת הצליחה', key, 0); return true; }
         catch (e2) { e = e2; }
       }
       lsLog('❌ כתיבה נכשלה (מכסה)', key, lsEntryBytes(key, v));
@@ -1609,15 +1596,6 @@ function lsBootAlert(u) {
   if (lsHorizonKeys().length) { try { lsToast(MSG_LS_PRUNED, 6000, 'bad'); } catch (e1) { } }
 }
 
-window.lsHorizonRelease = lsHorizonRelease;
-window.lsSet = lsSet;
-window.lsGet = lsGet;
-window.lsUsage = lsUsage;
-window.lsFails = lsFails;
-window.lsOkSince = lsOkSince;
-window.lsGuardToast = lsGuardToast;
-window.lsBootDeferred = lsBootDeferred;
-window.lsSweepVerified = lsSweepVerified;
 /* ═══════════════ סוף המודול המשותף ═══════════════════════════════════ */
 
 /* ═══ האזנת הסכימה — מודול משותף (סבב 91) ═════════════════════════════════
@@ -1735,7 +1713,8 @@ function actRun(el, fn) {
     if (isBtn) busy(el, false);
   });
 }
-window.busy = busy;
+/*  ⛔ הגשר היחיד שנשאר כאן — ⚠️ צרכנו הוא שער ההתנהגות, ⭐ שמודד את
+ *  נקודת הניתוב בדפדפן אמיתי: ⛔ שם שחי במודול אינו נראה משם. */
 window.actRun = actRun;
 /* ═══════════════ סוף מודול כפתור עסוק ═══════════════════════════════════ */
 /* ═══ צינור השמירה — מודול משותף (סבב 136) ═══════════════════════════════
@@ -1777,9 +1756,6 @@ function runSave(fn, msg) {
     })
     .catch(function (e) { errToast(e); });
 }
-window.errToast = errToast;
-window.afterSave = afterSave;
-window.runSave = runSave;
 /* ═══════════════ סוף צינור השמירה ═══════════════════════════════════════ */
 
 /* ═══ הרשמת service worker — מודול משותף (סבב 128) ══════════════════════
@@ -2216,7 +2192,6 @@ function bkBoot() {
   try { bkMaybeDaily(); } catch (e) { }
   try { logFlush(); } catch (e) { }
 }
-window.bkBoot = bkBoot;
 /* ═══════════════ סוף מודול הגיבוי היומי ═══════════════════════════════ */
 
 /* ── PEND_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
@@ -2596,14 +2571,7 @@ var DOM_ACTIONS = {
   'inf-open':       function () { ysInfraOpen(); },
   'inf-all':        function (el) { ysInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { ysConfirmSwitch(el.getAttribute('data-yeshiva')); },
-  /*  ⚠️ הבזק הכפתור רץ רק כשאין מסך מגע — ⛔ במכשיר מגע הוא נשאר דלוק
-   *  אחרי הלחיצה, מפני שאין `mouseleave` שמסיר אותו. */
-  'add-entry':      function (el) {
-                      addEntry();
-                      if ('ontouchstart' in window) return;
-                      el.classList.add('btn-flash');
-                      setTimeout(function () { el.classList.remove('btn-flash'); }, 500);
-                    },
+  'add-entry':      function () { addEntry(); },
   'clear-all':      function () { clearAll(); },
   'save-settings':  function () { return runSave(saveSettings, MSG_SAVED); },
   'share-report':   function () { shareReport(); },
@@ -2640,6 +2608,45 @@ document.addEventListener('keydown', function (e) {
   if (ksKey(e)) return;
   modalEsc(e);
 });
+
+/*  ⛔ מאזין ההקלדה האחד — ⚠️ שדה התאריך הלועזי הוא האתר היחיד. */
+document.addEventListener('input', function (e) {
+  var el = e.target;
+  if (el && el.dataset && el.dataset.inp === 'greg-date') onGregDateChange();
+});
+/*  ⛔ `blur` אינו מתפשט — ⚠️ ולכן `focusout`, ⭐ שהוא אותו אירוע שכן
+ *  עולה בעץ: ⛔ מטפל בתגית אינו רואה שם שחי במודול, ⚠️ והוא מכריח
+ *  גשר על `window`. */
+document.addEventListener('focusout', function (e) {
+  var el = e.target;
+  if (el && el.dataset && el.dataset.blr === 'cat-name') saveCatName(+el.dataset.ci);
+});
+
+/*  ⛔ חמשת אירועי הגרירה בהאצלה — ⚠️ **מה נכנס**: `data-drag` ⟵ הרכיב
+ *  הנגרר (`cat` · `task` · `sub`) והמדדים שלו; ⛔ **ומה מפיל**: רכיב
+ *  נגרר בלי המאפיין — ⭐ הוא פשוט אינו נגרר. ⚠️ **ולמה המבנה קיים**:
+ *  האלמנטים נבנים מחדש בכל ציור של ההגדרות, ⭐ ומאזין שנקשר אליהם מת
+ *  איתם: ⛔ ו-`closest` בוחר את הפנימי, ⚠️ ולכן משימה שבתוך קטגוריה
+ *  מכריעה לפני הקטגוריה — ⭐ בדיוק מה ש-`stopPropagation` עשה קודם. */
+var DRAG_START = { cat: catDragStart, task: taskDragStart, sub: subDragStart };
+var DRAG_OVER  = { cat: catDragOver,  task: taskDragOver,  sub: subDragOver  };
+/*  ⛔ לקטגוריה אין יציאה — ⚠️ היא אינה מסמנת «מעליי», ⭐ ואין מה לנקות. */
+var DRAG_LEAVE = { task: taskDragLeave, sub: subDragLeave };
+var DRAG_DROP  = { cat: catDrop,      task: taskDrop,      sub: subDrop      };
+var DRAG_END   = { cat: catDragEnd,   task: taskDragEnd,   sub: subDragEnd   };
+function dragRoute(map) {
+  return function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('[data-drag]') : null;
+    if (!el) return;
+    var fn = map[el.dataset.drag];
+    if (fn) fn(e, el);
+  };
+}
+document.addEventListener('dragstart', dragRoute(DRAG_START));
+document.addEventListener('dragover',  dragRoute(DRAG_OVER));
+document.addEventListener('dragleave', dragRoute(DRAG_LEAVE));
+document.addEventListener('drop',      dragRoute(DRAG_DROP));
+document.addEventListener('dragend',   dragRoute(DRAG_END));
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ ביומן אין תור אופליין: «ממתין» הוא סימון ⏳, והריקון הוא דחיפת-מצב
@@ -3142,7 +3149,6 @@ function hwBoot() {
   if (!hwEnabled()) return;
   try { setTimeout(function () { hwSweep(); }, HW_BOOT_DEFER_MS); } catch (e) { }
 }
-window.hwBoot = hwBoot;
 /* ═══════════════ סוף מודול החלון החם ══════════════════════════════════ */
 
 /* ── ERA_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
@@ -5446,37 +5452,57 @@ var _dragData = {};
 /* ══════════════════════════════════════════════════════════════════════════
    מסך ההגדרות — קטגוריות, משימות ותתי-משימות (כולל גרירה)
    ══════════════════════════════════════════════════════════════════════════ */
-// ── גרירת קטגוריה (מטופלת על set-card) ──
-// (מחווטת ב-renderSettings דרך addEventListener)
+// ── גרירת קטגוריה ──
+/*  ⛔ המדדים נקראים מה-DOM ⛔ ואינם ארגומנטים — ⚠️ הניתוב אחד לשלושת
+ *  הרכיבים, ⭐ והאלמנט שנתפס הוא מה שנמסר: ⛔ חתימה שנבדלת בין הרכיבים
+ *  הייתה שלוש מפות ניתוב. */
+function catDragStart(e, el) {
+  _dragKind = "cat";
+  e.dataTransfer.setData("text/plain", el.dataset.idx);
+  setTimeout(function(){ el.classList.add("dragging"); }, 0);
+}
+function catDragEnd(e, el) { _dragKind = null; el.classList.remove("dragging"); }
+function catDragOver(e) { e.preventDefault(); }
+function catDrop(e, el) {
+  e.preventDefault();
+  // מטפל רק בגרירת קטגוריה לקטגוריה; גרירת משימה או תת-משימה אינה אמורה להגיע לכאן
+  if (_dragKind !== "cat") { _dragKind = null; return; }
+  var fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
+  var toIdx = parseInt(el.dataset.idx);
+  if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+  var moved = CATS.splice(fromIdx, 1)[0];
+  CATS.splice(toIdx, 0, moved);
+  _dragKind = null;
+  saveCats();
+  renderSettings();
+  buildCatGrid();
+}
 
 // ── גרירת משימה ──
-function taskDragStart(e, ci, ti) {
+function taskDragStart(e, el) {
   _dragKind = "task";
-  _dragData = {ci:ci, ti:ti};
+  _dragData = {ci:+el.dataset.ci, ti:+el.dataset.ti};
   e.dataTransfer.setData("text/plain", "task");
   e.dataTransfer.effectAllowed = "move";
-  e.stopPropagation();
-  var el = e.currentTarget;
   requestAnimationFrame(function(){ el.classList.add("dragging"); });
 }
-function taskDragEnd(e) {
+function taskDragEnd(e, el) {
   _dragKind = null;
-  e.currentTarget.classList.remove("dragging");
-  document.querySelectorAll(".drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
+  el.classList.remove("dragging");
+  document.querySelectorAll(".drag-over").forEach(function(x){ x.classList.remove("drag-over"); });
 }
-function taskDragOver(e) {
+function taskDragOver(e, el) {
   if (_dragKind !== "task") return;
   e.preventDefault();
-  e.stopPropagation();
-  e.currentTarget.classList.add("drag-over");
+  el.classList.add("drag-over");
 }
-function taskDragLeave(e) {
-  e.currentTarget.classList.remove("drag-over");
+function taskDragLeave(e, el) {
+  el.classList.remove("drag-over");
 }
-function taskDrop(e, ci, ti) {
+function taskDrop(e, el) {
+  var ci = +el.dataset.ci, ti = +el.dataset.ti;
   e.preventDefault();
-  e.stopPropagation();
-  e.currentTarget.classList.remove("drag-over");
+  el.classList.remove("drag-over");
   if (_dragKind !== "task" || _dragData.ci !== ci || _dragData.ti === ti) return;
   var moved = CATS[ci].tasks.splice(_dragData.ti, 1)[0];
   CATS[ci].tasks.splice(ti, 0, moved);
@@ -5487,33 +5513,30 @@ function taskDrop(e, ci, ti) {
 }
 
 // ── גרירת תת-משימה ──
-function subDragStart(e, ci, ti, si) {
+function subDragStart(e, el) {
   _dragKind = "sub";
-  _dragData = {ci:ci, ti:ti, si:si};
+  _dragData = {ci:+el.dataset.ci, ti:+el.dataset.ti, si:+el.dataset.si};
   e.dataTransfer.setData("text/plain", "sub");
   e.dataTransfer.effectAllowed = "move";
-  e.stopPropagation();
-  var el = e.currentTarget;
   requestAnimationFrame(function(){ el.classList.add("dragging"); });
 }
-function subDragEnd(e) {
+function subDragEnd(e, el) {
   _dragKind = null;
-  e.currentTarget.classList.remove("dragging");
-  document.querySelectorAll(".drag-over").forEach(function(el){ el.classList.remove("drag-over"); });
+  el.classList.remove("dragging");
+  document.querySelectorAll(".drag-over").forEach(function(x){ x.classList.remove("drag-over"); });
 }
-function subDragOver(e) {
+function subDragOver(e, el) {
   if (_dragKind !== "sub") return;
   e.preventDefault();
-  e.stopPropagation();
-  e.currentTarget.classList.add("drag-over");
+  el.classList.add("drag-over");
 }
-function subDragLeave(e) {
-  e.currentTarget.classList.remove("drag-over");
+function subDragLeave(e, el) {
+  el.classList.remove("drag-over");
 }
-function subDrop(e, ci, ti, si) {
+function subDrop(e, el) {
+  var ci = +el.dataset.ci, ti = +el.dataset.ti, si = +el.dataset.si;
   e.preventDefault();
-  e.stopPropagation();
-  e.currentTarget.classList.remove("drag-over");
+  el.classList.remove("drag-over");
   if (_dragKind !== "sub" || _dragData.ci !== ci || _dragData.ti !== ti || _dragData.si === si) return;
   var taskName = CATS[ci].tasks[ti];
   var sk = subKey(ci, taskName);
@@ -5651,31 +5674,11 @@ function renderSettings() {
     div.className = "set-card";
     div.draggable = true;
     div.dataset.idx = ci;
-    div.addEventListener("dragstart", function(e) {
-      _dragKind = "cat";
-      e.dataTransfer.setData("text/plain", ci);
-      setTimeout(function(){ div.classList.add("dragging"); }, 0);
-    });
-    div.addEventListener("dragend", function() { _dragKind = null; div.classList.remove("dragging"); });
-    div.addEventListener("dragover", function(e) { e.preventDefault(); });
-    div.addEventListener("drop", function(e) {
-      e.preventDefault();
-      // מטפל רק בגרירת קטגוריה לקטגוריה; גרירת משימה או תת-משימה אינה אמורה להגיע לכאן
-      if (_dragKind !== "cat") { _dragKind = null; return; }
-      var fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
-      var toIdx = parseInt(div.dataset.idx);
-      if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
-      var moved = CATS.splice(fromIdx, 1)[0];
-      CATS.splice(toIdx, 0, moved);
-      _dragKind = null;
-      saveCats();
-      renderSettings();
-      buildCatGrid();
-    });
+    div.dataset.drag = "cat";
     var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
       + '<span class="drag-handle">⠿</span>'
       + '<div class="set-badge u-bg-cat"></div>'
-      + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" onblur="saveCatName('+ ci +')" />'
+      + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
@@ -5686,11 +5689,7 @@ function renderSettings() {
               + '<div class="sub-chips">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" draggable="true" '
-                    + 'ondragstart="subDragStart(event,'+ci+','+ti+','+si+')" '
-                    + 'ondragover="subDragOver(event)" '
-                    + 'ondragleave="subDragLeave(event)" '
-                    + 'ondrop="subDrop(event,'+ci+','+ti+','+si+')" '
-                    + 'ondragend="subDragEnd(event)">'
+                    + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
                     + '<span class="u-cur-grab u-c-text3 u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
@@ -5704,11 +5703,7 @@ function renderSettings() {
             + '<button class="u-fs-1 u-p-2-4 u-ws-nw btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" draggable="true" '
-            + 'ondragstart="taskDragStart(event,'+ci+','+ti+')" '
-            + 'ondragover="taskDragOver(event)" '
-            + 'ondragleave="taskDragLeave(event)" '
-            + 'ondrop="taskDrop(event,'+ci+','+ti+')" '
-            + 'ondragend="taskDragEnd(event)">'
+            + 'data-drag="task" data-ci="'+ci+'" data-ti="'+ti+'">'
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
