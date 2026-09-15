@@ -131,9 +131,9 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 
 | | |
 |---|---|
-| **קובץ** | `signing/yoman.keystore` (PKCS12, RSA 2048, תקף עד 2053) |
-| **alias** | `yoman` |
-| **storepass / keypass** | `yoman123` (זהה לשניהם) |
+| **קובץ** | ⛔ אינו בריפו — GitHub Secret `KEYSTORE_B64`, מפוענח לקובץ זמני בזמן בנייה ונמחק אחריה (PKCS12, RSA 2048) |
+| **alias** | ⛔ אינו מוקלד — `sign-apk.sh` גוזר אותו מהמפתח עצמו |
+| **storepass / keypass** | ⛔ אינה בריפו — GitHub Secret `KEYSTORE_PASS` |
 | **SHA256** | `29:F5:0B:29:60:79:0B:77:28:25:7C:88:79:12:31:28:7A:B8:F1:D9:3E:90:B6:3B:50:F4:1E:41:B9:FA:F8:B5` |
 
 אחרי חתימה מאמתים שה-SHA256 תואם לטבלה. ⚠️ המפתח הקודם (`/tmp/yoman.keystore`)
@@ -164,8 +164,8 @@ apktool d <app>.apk -o /tmp/yw_work -f
 rm -rf /tmp/yw_work/build          # חובה לפני בנייה חוזרת
 apktool b /tmp/yw_work -o built.apk
 zipalign -f 4 built.apk aligned.apk
-apksigner sign --ks signing/yoman.keystore --ks-key-alias yoman \
-  --ks-pass pass:yoman123 --key-pass pass:yoman123 --out output.apk aligned.apk
+SIGN_KEYSTORE=<עותק מקומי של המפתח> SIGN_PASS=<הערך שב-KEYSTORE_PASS> \
+  signing/sign-apk.sh aligned.apk output.apk
 ```
 
 ⚠️ **המפתח הישן שישב ב-`/tmp/yoman.keystore` אבד**; המפתח הקבוע הוא
