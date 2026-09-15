@@ -251,7 +251,7 @@ export function slotWiring(src) {
 /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
 mutStage();
 if (!RUN_MUT) {
-  console.log('\n⏭ test_share: המוטציות רצות ברמה המלאה (--full)');
+  console.log('\n⏭ test_share: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
   process.exit(failures === 0 ? 0 : 1);
 }
 const MUTATIONS = [

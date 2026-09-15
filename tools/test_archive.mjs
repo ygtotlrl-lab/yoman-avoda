@@ -561,7 +561,7 @@ if (!process.env.RD67_MUT) {
   /*  ⛔ מכאן ולמטה מוטציות (סבב 92) — ⚠️ הן רצות ברמה המלאה בלבד. */
   mutStage();
   if (!RUN_MUT) {
-    console.log('\n⏭ test_archive: המוטציות רצות ברמה המלאה (--full)');
+    console.log('\n⏭ test_archive: המוטציות רצות ברמה המלאה (--full) — ⛔ ואינן נמדדות כאן');
     process.exit(failN === 0 ? 0 : 1);
   }
   console.log('\n— מוטציות (סבב 67) —');
