@@ -133,12 +133,18 @@ function bodyOf(page, name) {
 function audit(root) {
   const v = [];
   const page = readFileSync(join(root, 'index.html'), 'utf8');
-  const gen  = readFileSync(join(root, 'tools', 'gen-icons.mjs'), 'utf8');
-  const appBlk = (/\/\* ── APP[\s\S]*?\/\* ── סוף APP/.exec(gen) || [''])[0];
-  const nums = (name) => {
-    const m = new RegExp(name + ':\\s*\\[([^\\]]*)\\]').exec(appBlk);
-    return m ? m[1].split(',').map((x) => Number(x.trim())) : null;
-  };
+  /*  ⛔ מקור הצבעים והפסים הוא **מאסטר האייקון** (סבב 148) — ⚠️ המחולל
+      קורא אותו וגוזר ממנו את 16 הנכסים, ⭐ ומסך הבחירה מצייר את אותו סמל
+      ב-DOM: ⛔ גזירה מקובץ אחר הייתה מקור אמת שני, ⚠️ והמסך היה נבדל
+      מהאייקון בלי ששער אחד נופל. */
+  const svg = readFileSync(join(root, 'design', 'icon-master.svg'), 'utf8');
+  const stops = [...svg.matchAll(/<stop[^>]*stop-color="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]);
+  const grad = /<linearGradient[^>]*x1="([\d.]+)"[^>]*y1="([\d.]+)"[^>]*x2="([\d.]+)"[^>]*y2="([\d.]+)"/
+    .exec(svg);
+  /*  ⛔ פס הסמל הוא מלבן שנושא `x` — ⚠️ מלבן הרקע נושא רוחב וגובה בלבד,
+      ⭐ והוא הצורה היחידה שאינה חלק מהסמל. */
+  const marks = [...svg.matchAll(
+    /<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" rx="(\d+)" fill="(#[0-9A-Fa-f]{6})"(?: opacity="([\d.]+)")?\s*\/>/g)];
 
   /* א. הלוגו הוא כפתור אמיתי, ושתי הפעולות מנותבות בדלגציה */
   const trigger = /<button class="hdr-logo-btn" data-act="open-yeshiva-picker"/.test(page);
@@ -189,17 +195,16 @@ function audit(root) {
   if (missVar.length)
     v.push({ kind: 'reset', msg: `מוצהרים כאן ואינם משתנים בקובץ: ${missVar.join(' · ')}` });
 
-  /* ה. חמשת ערכי האייקון — נגזרים מ-`gen-icons` ומושווים למסך הבחירה */
-  const start = nums('start'), end = nums('end'), ink = nums('ink');
-  const p1 = nums('p1'), p2 = nums('p2');
-  if (!start || !end || !ink || !p1 || !p2) {
-    v.push({ kind: 'palette', msg: 'לא נחלצו ערכי `APP` מ-`gen-icons`' });
+  /* ה. חמשת ערכי האייקון — נגזרים מהמאסטר ומושווים למסך הבחירה */
+  if (stops.length !== 2 || !grad || !marks.length) {
+    v.push({ kind: 'palette', msg: 'לא נחלצו שני עצרי המדרג וכיוונו ממאסטר האייקון' });
   } else {
+    const p1 = [Number(grad[1]), Number(grad[2])], p2 = [Number(grad[3]), Number(grad[4])];
     const ang = Math.round(180 - Math.atan2(p2[0] - p1[0], p2[1] - p1[1]) * 180 / Math.PI);
     const want = `linear-gradient(${ang}deg,var(--deep-1) 0%,var(--deep-2) 100%)`;
     if (page.indexOf(want) < 0)
       v.push({ kind: 'palette', msg: `מדרג מסך הבחירה — הצפוי «${want}»` });
-    for (const [tok, val] of [['--deep-1', hex(start)], ['--deep-2', hex(end)], ['--on-deep', hex(ink)]])
+    for (const [tok, val] of [['--deep-1', stops[0]], ['--deep-2', stops[1]], ['--on-deep', marks[0][6]]])
       if (page.indexOf(tok + ':' + val + ';') < 0)
         v.push({ kind: 'palette', msg: `ערך האסימון ${tok} — הצפוי «${tok}:${val};»` });
     if (page.indexOf('color:var(--on-deep);') < 0)
@@ -208,15 +213,18 @@ function audit(root) {
       v.push({ kind: 'palette', msg: 'מילוי הסמל — הצפוי «fill:var(--on-deep);»' });
   }
 
-  /* ו. מוטיב הפסים — ארבעת המלבנים כפי שהם ב-`APP.mark.shapes` */
-  const shapes = [...appBlk.matchAll(
-    /\{ kind: 'rect', x: (-?\d+),\s*y: (-?\d+),\s*w: (\d+), h: (\d+), r: (\d+), alpha: ([\d.]+) \}/g)]
-    .map((m) => m.slice(1).map(Number));
+  /*  ו. מוטיב הפסים — ⛔ המלבנים כפי שהם במאסטר, ⚠️ מוזזים לפינת תיבת
+      הסמל: ⭐ המאסטר נושא אותם בקואורדינטות הקנבס, ⛔ והמסך מצייר את
+      הסמל לבדו — ⚠️ והשוואה בלי ההזזה הייתה מודדת את מיקום הקנבס. */
+  const mx = Math.min(...marks.map((m) => Number(m[1])));
+  const my = Math.min(...marks.map((m) => Number(m[2])));
+  const shapes = marks.map((m) => [Number(m[1]) - mx, Number(m[2]) - my,
+    Number(m[3]), Number(m[4]), Number(m[5]), m[7] === undefined ? 1 : Number(m[7])]);
   const rects = [...page.matchAll(
     /<rect x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)" rx="(\d+)" opacity="([\d.]+)"><\/rect>/g)]
     .map((m) => m.slice(1).map(Number));
   if (!shapes.length)
-    v.push({ kind: 'mark', msg: 'לא נחלצו צורות מ-`APP.mark.shapes`' });
+    v.push({ kind: 'mark', msg: 'לא נחלצו פסים ממאסטר האייקון' });
   else if (rects.length !== shapes.length)
     v.push({ kind: 'mark', msg: `נמדדו ${rects.length} מלבנים במסך והצפוי ${shapes.length}` });
   else
@@ -245,9 +253,9 @@ t(n++, !base.some((x) => x.kind === 'order'),
 t(n++, !base.some((x) => x.kind === 'reset'),
   `ד. ${TENANT_STATE.length} שמות המצב הפר-מוסדי מאופסים ומוצהרים בקובץ ${of('reset')}`);
 t(n++, !base.some((x) => x.kind === 'palette'),
-  `ה. שלושת צבעי מסך הבחירה נגזרים מ-gen-icons ${of('palette')}`);
+  `ה. שלושת צבעי מסך הבחירה נגזרים ממאסטר האייקון ${of('palette')}`);
 t(n++, !base.some((x) => x.kind === 'mark'),
-  `ו. ארבעת פסי הסמל זהים ל-APP.mark.shapes ${of('mark')}`);
+  `ו. ארבעת פסי הסמל זהים למאסטר האייקון ${of('mark')}`);
 
 if (RUN_MUT) {
   mutStage();
