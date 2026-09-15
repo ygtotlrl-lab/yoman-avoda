@@ -131,8 +131,8 @@ function cutVar(decl) {
 
 const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords',
   'entryKey', 'archiveKey', 'parseGregLike', 'gregKeyFromParts', 'hasHebMonth',
-  'normHDate', 'normHMonth', 'extractYM', 'hebFromText', 'snapHDate',
-  'getAllArchiveDays', 'getYearsWithData', 'getMonthsWithData', 'getDaysInMonth',
+  'normHDate', 'monthKeyOf', 'extractYM', 'hebFromText', 'snapHDate',
+  'getAllArchiveDays', 'getYearsWithData', 'monthsWithData', 'getDaysInMonth',
   'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
   'checkDayChange', 'gregDateStr', 'getTodayKey'];
 /*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
@@ -239,7 +239,7 @@ function reachable(c) {
   const seen = new Set();
   const years = c.getYearsWithData();
   for (const y of Object.keys(years)) {
-    for (const m of Object.keys(c.getMonthsWithData(y))) {
+    for (const m of Object.keys(c.monthsWithData(y))) {
       for (const d of c.getDaysInMonth(y, m)) seen.add(d.key);
     }
   }

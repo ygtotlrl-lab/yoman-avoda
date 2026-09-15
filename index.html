@@ -4666,7 +4666,7 @@ function normHDate(h) {
 /*  ⛔ שם החודש נכתב בצורה אחת — ⚠️ גרש עברי `׳`, ⛔ ולא אפוסטרוף ולא
  *  מרכאה: ⭐ שתי צורות הן שני דליים בארכיון, ⛔ ומיפוי ביניהן הוא מקור
  *  אמת שני שמתיישן — ⚠️ ואין להחזיר טבלת מיפוי «למקרה ש». */
-function normHMonth(m) {
+function monthKeyOf(m) {
   return normHDate(m).trim().replace(/\s+/g, " ");
 }
 
@@ -5995,7 +5995,7 @@ var arcSelMonth = null;
 var arcSelDayKey = null;  // מחרוזת gdate
 var arcEditMode = false;
 
-// סדר החודשים לניווט בארכיון. "מרחשון" הוסר — normHMonth ממפה אותו ל"חשון",
+// סדר החודשים לניווט בארכיון. "מרחשון" הוסר — monthKeyOf ממפה אותו ל"חשון",
 // אחרת אותה שנה מקבלת שני כפתורי חשוון. "אדר" (שנה פשוטה) ו"אדר א׳"/"אדר ב׳"
 // (שנה מעוברת) חיים זה לצד זה: בכל שנה נתונה מופיע רק אחד מהמצבים.
 var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א׳","אדר ב׳","ניסן","אייר","סיון","תמוז","מנחם אב","אלול"];
@@ -6017,7 +6017,7 @@ function extractYM(hdate) {
   }
   // שומר רק חלקים שהם מילים עבריות (בלי ספרות ובלי לטינית)
   var hebrewParts = parts.filter(function(p) { return p && !/[0-9a-zA-Z]/.test(p); });
-  month = normHMonth(hebrewParts.slice(1).join(" "));
+  month = monthKeyOf(hebrewParts.slice(1).join(" "));
   // מאמת שהחודש נמצא ברשימה המוכרת
   if (!year || HMO.indexOf(month) < 0) return unknown();
   return {year: year, month: month, order: HMO.indexOf(month)};
@@ -6135,7 +6135,7 @@ function getYearsWithData() {
   return years;
 }
 
-function getMonthsWithData(year) {
+function monthsWithData(year) {
   var days = getAllArchiveDays();
   var months = {};
   Object.values(days).forEach(function(d) {
@@ -6253,7 +6253,7 @@ function renderArcMonths(year) {
 
   // החודשים נגזרים רק מרשומות אמיתיות של השנה הזו (מונע-נתונים, פר-מוסד)
   var monthSet = {};
-  var withData = getMonthsWithData(year);
+  var withData = monthsWithData(year);
   Object.keys(withData).forEach(function(m){ monthSet[m] = true; });
 
   // Sort by HMO order; חודש לא מזוהה (indexOf === -1) בסוף ולא בהתחלה
