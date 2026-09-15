@@ -5,12 +5,15 @@
  *  ⚠️ מסבב 42ג כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'yoman-avoda-v149';
+var CACHE_NAME = 'yoman-avoda-v150';
 
 // קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
   './',
   './index.html',
+  './core/util.js',
+  './core/sync.js',
+  './core/hebrew.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

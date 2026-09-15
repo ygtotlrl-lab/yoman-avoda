@@ -29,6 +29,7 @@ import { readFileSync, writeFileSync, mkdtempSync, cpSync, rmSync } from 'node:f
 import { join, dirname, resolve, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -132,7 +133,10 @@ function bodyOf(page, name) {
 /* ── הביקורת — רצה על שורש כלשהו ───────────────────────────────────────── */
 function audit(root) {
   const v = [];
-  const page = readFileSync(join(root, 'index.html'), 'utf8');
+  /*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ שומר ה-tombstones
+      יצא למודול, ⭐ ושער שקורא את הקובץ בלבד מדווח «אינו מוצהר» על
+      משתנה שקיים. */
+  const page = appSrc(root);
   /*  ⛔ מקור הצבעים והפסים הוא **מאסטר האייקון** (סבב 148) — ⚠️ המחולל
       קורא אותו וגוזר ממנו את 16 הנכסים, ⭐ ומסך הבחירה מצייר את אותו סמל
       ב-DOM: ⛔ גזירה מקובץ אחר הייתה מקור אמת שני, ⚠️ והמסך היה נבדל

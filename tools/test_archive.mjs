@@ -23,6 +23,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { appSrc } from './appsrc.mjs';
 
 
 /*  ⛔ הקובץ הזה אינו אוכף שורה בטבלת התשתית (סבב 72) — ⚠️ הצהרה ריקה
@@ -34,7 +35,9 @@ export const ROWS = [];
  *  (`--full`), בסוף הסבב ולפני מיזוג, ⚠️ ולא בכל הרצה בזמן העבודה. */
 const RUN_MUT = process.env.GATE_MUT === '1';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+/*  ⛔ המקור הוא `index.html` **ומודולי הליבה** — ⚠️ הליבה המשותפת יצאה
+ *  למודול, ⭐ ושער שקורא את הקובץ בלבד אינו מוצא את מה שרץ. */
+const SRC = appSrc(ROOT);
 const FIX = fs.readFileSync(path.join(ROOT, 'tools/fixtures/round31_archive.txt'), 'utf8');
 
 let passN = 0, failN = 0;
@@ -184,6 +187,10 @@ function makeCtx(opts) {
     if (a < 0 || b <= a) throw new Error('אזור התאריך העברי לא אותר');
     sandbox.window = sandbox;
     vm.runInContext(L.slice(a, b + 1).join('\n'), sandbox);
+    /*  ⛔ המנוע עצמו חי במודול הליבה ⛔ ואינו באזור שבקובץ — ⚠️ הוא יצא
+     *  ל-`core/hebrew.js`, ⭐ והאזור שבקובץ נושא את מה שמסביבו: ⛔ בלי
+     *  הרצתו כאן `ysHebDate` אינה קיימת, ⚠️ והנפילה-חזרה אינה נמדדת. */
+    vm.runInContext(fs.readFileSync(path.join(ROOT, 'core', 'hebrew.js'), 'utf8'), sandbox);
   }
   return sandbox;
 }
