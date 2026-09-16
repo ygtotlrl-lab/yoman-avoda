@@ -152,7 +152,7 @@ const APP = {
   offlineLoginFn: null,
   /*  ⛔ חתימת ה-keystore — ⚠️ היא מה שהופך «מפתח קבוע» למדיד:
    *  ⭐ keystore חדש הוא גם קובץ קיים, ⛔ וחתימה שונה מפילה. */
-  keystoreSha: 'b0d107e8e7da35fb',
+  keystoreSha: '80262ee0bec2f029',
   schemaFile: 'migrations/000_initial_schema.sql',
   // ⚠️ «לא רלוונטי» — אין כאן טבלת משתמשים כלל, ולכן אין מה לממש.
   /*  ⭐ שם משפך ה-`kv` (סבב 56) — `null` כשאין כאן `kv` כלל. */

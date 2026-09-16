@@ -17,7 +17,7 @@ set -euo pipefail
 # מפתח שאיש לא התכוון אליו, והכשל היה מתגלה רק אצל משתמש מותקן.
 KS="${SIGN_KEYSTORE:?SIGN_KEYSTORE is unset — the keystore lives in GitHub Secrets, not in the repo}"
 PASS="${SIGN_PASS:?SIGN_PASS is unset — the store password lives in GitHub Secrets, not in the repo}"
-EXPECTED_SHA256='29:F5:0B:29:60:79:0B:77:28:25:7C:88:79:12:31:28:7A:B8:F1:D9:3E:90:B6:3B:50:F4:1E:41:B9:FA:F8:B5'
+EXPECTED_SHA256='C1:03:A4:39:26:F0:9B:8F:6D:4E:DB:1A:68:2F:13:37:5A:AC:E2:08:50:72:A6:E1:CE:1D:C8:70:0D:5B:6A:58'
 
 IN="${1:?usage: sign-apk.sh <unsigned.apk> [output.apk]}"
 OUT="${2:-yoman-avoda.apk}"
