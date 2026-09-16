@@ -42,7 +42,7 @@ import { appSrc } from './appsrc.mjs';
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 93) — ⚠️ הבודק גוזר את
  *  המיפוי מכאן, ⛔ ואינו מחזיק רשימה משלו. */
-export const ROWS = [162, 155, 156, 157, 177, 207, 208, 209, 210, 169, 160, 147, 158];
+export const ROWS = [163, 156, 157, 158, 178, 208, 210, 211, 212, 170, 161, 148, 159];
 
 /*  ⛔ המרשם שהסורק מכריז — ⚠️ **מה נכנס**: שם הדפוס שהשער אוכף;
  *  ⛔ **ומה מפיל**: דפוס שאין לו מוטציה, ומוטציה שנוקבת בדפוס שאינו כאן.
@@ -66,7 +66,7 @@ const APP = {
   /*  ⛔ הטבלאות שנושאות `updated_at` — ⚠️ **וכולן `bigint`**: ⭐ חותמת
    *  שהמכשיר מייצר, ⛔ ובה אפס הוא **הישן ביותר** ולא «לא ידוע».
    *  ⛔ אין כאן טיפוס שני — ⚠️ שני טיפוסים לאותו מושג הם שני מנועי הכרעה. */
-  stamped: ['tb_entries', 'tb_kv_rishon', 'tb_kv_ramataviv'],
+  stamped: ['ya_entries', 'ya_settings_rishon', 'ya_settings_ramataviv'],
   /*  ⛔ טבלה מוצהרת שאינה במסד בכוונה — ⚠️ **מה נכנס**: שם טבלה ⟵ נימוק.
    *  ⛔ **ומה מפיל**: שם שאין לו הצהרה ב-`migrations/`. ⭐ **ולמה היא
    *  קיימת**: טבלה שמוצהרת ואינה קיימת היא סחיפה — ⛔ **וכאן כל טבלה
@@ -86,16 +86,16 @@ const APP = {
    *  ⭐ **ולמה הם נשארים**: הכתיבה הכפולה כבויה, ⚠️ והשורות שנשארו הן
    *  הבית הישן של הנתון: ⛔ מחיקתן מהמסד היא הכרעת מנהל. */
   cfgOrphans: {
-    tb_entries: 'הבית הישן של היומן החי — הכתיבה הכפולה כבויה, והנתון חי ב-`tb_entries`',
-    tb_archive: 'הבית הישן של הארכיון — הכתיבה הכפולה כבויה, והנתון חי ב-`tb_entries` עם דגל',
+    ya_entries: 'הבית הישן של היומן החי — הכתיבה הכפולה כבויה, והנתון חי ב-`ya_entries`',
+    ya_archive: 'הבית הישן של הארכיון — הכתיבה הכפולה כבויה, והנתון חי ב-`ya_entries` עם דגל',
   },
-  cfgTable: 'tb_kv_rishon',
+  cfgTable: 'ya_settings_rishon',
   /*  ⛔ טבלאות המפתח-ערך שבבעלות הריפו — ⚠️ **מה נכנס**: שם טבלה שעמודת
    *  `value` שלה נושאת JSON; ⛔ **ומה מפיל**: ערך שאינו מתפרש, ⭐ ורשימה
    *  ריקה. ⚠️ **ולמה היא קיימת**: הבעלות היא של ריפו אחד, ⛔ והמדידה
    *  רצה שם ⛔ ולא בשלושה. */
   kvReadFn: 'sbGetResult',
-  kvTables: ['tb_kv_rishon', 'tb_kv_ramataviv'],
+  kvTables: ['ya_settings_rishon', 'ya_settings_ramataviv'],
   backupTable: 'sh_backup',
   allowlistFn: '',
   /*  ⛔ משפחות הטבלאות המקבילות — ⚠️ **הרשימה הקנונית זהה בית-לבית
@@ -110,7 +110,7 @@ const APP = {
    *  מפיל**: שם שאין לו אף טבלה בסכימה. ⭐ **ולמה הוא כאן**: שני פרויקטים
    *  חיים בקובץ אחד, ⛔ וריפו שמודד את שניהם מדווח פער על טבלה שאינה שלו. */
   project: 'shared',
-  ownTables: ['tb_entries', 'tb_kv_rishon', 'tb_kv_ramataviv'],
+  ownTables: ['ya_entries', 'ya_settings_rishon', 'ya_settings_ramataviv'],
   /*  ⛔ שמות עמודה שאין להם קורא **בכוונה** (סבב 104) — ⚠️ וכל אחד נושא
    *  את נימוקו: ⭐ שלישיית המחיקה הרכה ומשפחת הטבלאות המקבילות מחייבות
    *  את העמודה בסכימה, ⛔ גם באפליקציה שאינה כותבת אותה.
@@ -124,10 +124,10 @@ const APP = {
    *  ⛔ **והרשימה אינה נשמטת** — ⚠️ שדה חסר נקרא «לא נשאל», ⭐ וריק
    *  נקרא «נמדד ואין». */
   derivedFields: [{
-    entries: 'tb_entries', json: 'data', field: 'catName', key: 'cat',
+    entries: 'ya_entries', json: 'data', field: 'catName', key: 'cat',
     by: 'letter', as: 'name', order: 'client_id',
-    sources: [{ table: 'tb_kv_rishon',    row: 'tb_cats', where: 'yeshiva=eq.rishon' },
-              { table: 'tb_kv_ramataviv', row: 'tb_cats', where: 'yeshiva=eq.ramataviv' }],
+    sources: [{ table: 'ya_settings_rishon',    row: 'ya_cats', where: 'yeshiva=eq.rishon' },
+              { table: 'ya_settings_ramataviv', row: 'ya_cats', where: 'yeshiva=eq.ramataviv' }],
   }],
   colNoReader: {
     deleted_at: 'שלישיית המחיקה הרכה — התקן מחייב אותה בכל טבלה שנושאת מחיקה',
@@ -142,7 +142,7 @@ const APP = {
   appendOnly: ['sh_backup', 'sh_sync_log'],
   twinTables: {
     users:    null,
-    settings: { table: 'tb_kv_rishon',
+    settings: { table: 'ya_settings_rishon',
                 cols: ['key', 'value', 'updated_at', 'client_id',
                     'deleted', 'deleted_at', 'deleted_by'] },
   },
@@ -967,7 +967,7 @@ if (RUN_MUT && !SELFTEST) {
       return [200, JSON.stringify([allowFirst])];
     if (APP.backupTable && url.includes('/' + APP.backupTable + '?'))
       return [200, JSON.stringify(
-        (scen === 'orphan' ? [{ key: 'ys_orphan_key_that_is_not_listed' }] : [])
+        (scen === 'orphan' ? [{ key: 'hr_orphan_key_that_is_not_listed' }] : [])
           .concat([{ key: allowFirst }]))];
     const keys = (scen === 'cfg' ? cfgWant.slice(1) : cfgWant).concat(cfgOrph);
     return [200, JSON.stringify(keys.map((k) => ({ key: k, deleted: false })))];

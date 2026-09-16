@@ -43,6 +43,13 @@ const SRC = appSrc(ROOT);
 const M4 = fs.readFileSync(path.join(ROOT, 'migrations/004_entries_archived_flag.sql'), 'utf8');
 const M5 = fs.readFileSync(path.join(ROOT, 'migrations/005_merge_archive_into_entries.sql'), 'utf8');
 
+/*  ⛔ השם שבתוך המיגרציות ⛔ ואינו השם החי — ⚠️ מיגרציה שכבר רצה אינה
+ *  נערכת ואינה נמחקת, ⭐ והיא מתארת את המסד כפי שהיה בשעה שהיא רצה:
+ *  ⛔ **ושער שקורא אותה נוקב בשם שכתוב בה** — ⚠️ השם החי הוא `ya_`,
+ *  ⭐ וההכרזה כאן היא מה שמונע «יישור» בתום לב שיפיל את שלוש הטענות. */
+const MIG_ENTRIES = 'tb_entries';
+const MIG_ARCHIVE = 'tb_archive';
+
 let passN = 0, failN = 0;
 /*  ⛔ שער מריץ את כל טענותיו — ⚠️ תהליך שנסגר באמצע מדפיס «עבר» על טענות
  *  שלא רצו: ⭐ `EXPECTED` הוא רצפה שנמדדה ברמה שבה השער רץ, ⛔ ופחות ממנה
@@ -162,7 +169,7 @@ function makeEnv(opts = {}) {
   const env = {
     rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [],
     // ברירת מחדל: המיגרציה רצה. `noArchivedCol` מדמה את המצב שלפניה.
-    cols: { tb_entries: opts.noArchivedCol ? COLS_LEGACY : COLS_UNIFIED, tb_archive: COLS_LEGACY },
+    cols: { ya_entries: opts.noArchivedCol ? COLS_LEGACY : COLS_UNIFIED, ya_archive: COLS_LEGACY },
   };
   const client = {
     from(t) {
@@ -187,7 +194,7 @@ function makeEnv(opts = {}) {
         upsert(rows, o) {
           env.upserts.push({ table: q.t, rows, opts: o });
           if (!env.net) return Promise.resolve({ data: null, error: { message: 'net' } });
-          if (env.legacyFails && q.t === 'tb_archive') {
+          if (env.legacyFails && q.t === 'ya_archive') {
             return Promise.resolve({ data: null, error: { message: 'legacy gone' } });
           }
           const allowed = env.cols[q.t];
@@ -207,7 +214,7 @@ function makeEnv(opts = {}) {
   const sandbox = {
     console, JSON, Date, Math, String, Number, Array, Object, Boolean, isFinite, parseInt, Promise, RegExp, Error,
     YESHIVA: opts.yeshiva || 'rishon',
-    KV_TABLE: 'tb_kv_rishon',
+    KV_TABLE: 'ya_settings_rishon',
     LS: '_rishon',
     PK_ENTRY: 'entry:', PK_ARC: 'arc:',
     getSB: () => client,
@@ -261,15 +268,15 @@ const row = (t, y, rec_key, ts, data, archived) => ({ _t: t, yeshiva: y, rec_key
    ══════════════════════════════════════════════════════════════════════════ */
 function t1() {
   const sb = makeEnv().sb;
-  eq(sb.tbTableOf('tb_entries'), 'tb_entries', '1א · רשומות היומן — tb_entries');
-  eq(sb.tbTableOf('tb_archive'), 'tb_entries', '1ב · ⭐ והארכיון — לאותה טבלה');
-  eq(sb.tbArchivedFlag('tb_entries'), false, '1ג · הדגל של רשומת יומן — false');
-  eq(sb.tbArchivedFlag('tb_archive'), true, '1ד · והדגל של סנאפשוט — true');
+  eq(sb.tbTableOf('ya_entries'), 'ya_entries', '1א · רשומות היומן — ya_entries');
+  eq(sb.tbTableOf('ya_archive'), 'ya_entries', '1ב · ⭐ והארכיון — לאותה טבלה');
+  eq(sb.tbArchivedFlag('ya_entries'), false, '1ג · הדגל של רשומת יומן — false');
+  eq(sb.tbArchivedFlag('ya_archive'), true, '1ד · והדגל של סנאפשוט — true');
 
   // ⭐ נתיב החזרה
   const back = makeEnv({ unified: false }).sb;
-  eq(back.tbTableOf('tb_archive'), 'tb_archive', '1ה · ⭐ TB_ARC_UNIFIED=false ⇒ חזרה לטבלה הישנה');
-  eq(back.tbTableOf('tb_entries'), 'tb_entries', '1ו · ורשומות היומן לא מושפעות מהחזרה');
+  eq(back.tbTableOf('ya_archive'), 'ya_archive', '1ה · ⭐ TB_ARC_UNIFIED=false ⇒ חזרה לטבלה הישנה');
+  eq(back.tbTableOf('ya_entries'), 'ya_entries', '1ו · ורשומות היומן לא מושפעות מהחזרה');
   const uFlags = [...SRC.matchAll(/var TB_ARC_UNIFIED = (\w+);/g)].map((m) => m[1]);
   ok(uFlags.length === 1 && uFlags[0] === 'true',
      `1ז · והדגל קיים בקוד כדגל יחיד — נמדדו ${uFlags.length} הצהרות ` +
@@ -281,24 +288,24 @@ function t1() {
    ══════════════════════════════════════════════════════════════════════════ */
 function t2() {
   const sb = makeEnv().sb;
-  const e = sb.tbRowOf('tb_entries', E(7, 100));
+  const e = sb.tbRowOf('ya_entries', E(7, 100));
   eq(e.archived, false, '2א · רשומת יומן — archived=false');
   eq(e.rec_key, '7', '2ב · והמפתח לא השתנה');
 
-  const a = sb.tbRowOf('tb_archive', S('3/09/2025', 200));
+  const a = sb.tbRowOf('ya_archive', S('3/09/2025', 200));
   eq(a.archived, true, '2ג · ⭐ סנאפשוט — archived=true');
   eq(a.rec_key, 'g:3/09/2025', '2ד · והמפתח נשאר `g:<gdate>`');
   eq(a.gdate, '3/09/2025', '2ה · ⚠️ ו-gdate נשמר גם בטבלה המאוחדת — העברה מלאה');
   eq(a.client_id, 'rishon:g:3/09/2025', '2ו · client_id לא השתנה — נתיב החזרה סימטרי');
 
   // ⛔ יעד ישן — בלי `archived`
-  const legacy = sb.tbRowOf('tb_archive', S('3/09/2025', 200), 'tb_archive');
+  const legacy = sb.tbRowOf('ya_archive', S('3/09/2025', 200), 'ya_archive');
   eq('archived' in legacy, false, '2ז · ⛔ שורה לטבלה הישנה אינה נושאת archived');
   eq(legacy.gdate, '3/09/2025', '2ח · אבל כן את gdate');
 
   // ובנתיב החזרה, `tbRowOf` בלי ארגומנט שלישי כבר מכוונת לישנה
   const backSb = makeEnv({ unified: false }).sb;
-  eq('archived' in backSb.tbRowOf('tb_archive', S('1/01/2026', 5)), false,
+  eq('archived' in backSb.tbRowOf('ya_archive', S('1/01/2026', 5)), false,
     '2ט · ⭐ ובחזרה — גם בלי ארגומנט מפורש');
 }
 
@@ -316,7 +323,7 @@ function t3() {
   eq(ek.filter((k) => ak.includes(k)).length, 0, '3א · ⛔ אפס חפיפה בין שני מרחבי המפתחות');
   ok(ak.length > 0 && ak.every((k) => /^[gi]:/.test(k)), '3ב · מפתחות הארכיון תמיד בקידומת g:/i:');
   ok(ek.length > 0 && ek.every((k) => !/^[gi]:/.test(k)), '3ג · ומפתחות היומן לעולם לא');
-  ok(/join public\.tb_entries e/.test(M5) && /raise exception/.test(M5),
+  ok(new RegExp('join public\\.' + MIG_ENTRIES + ' e').test(M5) && /raise exception/.test(M5),
     '3ד · ⛔ ו-005 בודק את זה במסד ולא מניח — שער התנגשות שזורק');
 }
 
@@ -326,29 +333,29 @@ function t3() {
 async function t4() {
   const env = makeEnv({
     rows: [
-      row('tb_entries', 'rishon', '1', 100, E(1, 100), false),
-      row('tb_entries', 'rishon', '2', 200, E(2, 200), false),
-      row('tb_entries', 'rishon', 'g:3/09/2025', 300, S('3/09/2025', 300), true),
-      row('tb_entries', 'rishon', 'g:4/09/2025', 400, S('4/09/2025', 400), true),
-      row('tb_entries', 'ramataviv', '9', 1, E(9, 1), false),
+      row('ya_entries', 'rishon', '1', 100, E(1, 100), false),
+      row('ya_entries', 'rishon', '2', 200, E(2, 200), false),
+      row('ya_entries', 'rishon', 'g:3/09/2025', 300, S('3/09/2025', 300), true),
+      row('ya_entries', 'rishon', 'g:4/09/2025', 400, S('4/09/2025', 400), true),
+      row('ya_entries', 'ramataviv', '9', 1, E(9, 1), false),
     ],
   });
-  const g = await env.sb.tbRowsGet('tb_entries');
+  const g = await env.sb.tbRowsGet('ya_entries');
   eq(g.ok, true, '4א · משיכת רשומות היומן הצליחה');
   eq(g.data.length, 2, '4ב · ⭐ והחזירה **רק** את הלא-מאורכבות של המוסד');
   eq(env.selects[0].archived, false, '4ג · ⭐ הסינון נעשה בשאילתה עצמה — לא בקוד');
   eq(env.selects[0].yeshiva, 'rishon', '4ד · ⛔ ולצדו סינון המוסד — אין דליפה');
 
-  const a = await env.sb.tbRowsGet('tb_archive');
+  const a = await env.sb.tbRowsGet('ya_archive');
   eq(a.ok, true, '4ה · ומשיכת הארכיון מאותה טבלה הצליחה');
   eq(a.data.length, 2, '4ו · ⭐ והחזירה רק את המאורכבות');
-  eq(env.selects[1].table, 'tb_entries', '4ז · ⭐ מאותה טבלה בדיוק');
+  eq(env.selects[1].table, 'ya_entries', '4ז · ⭐ מאותה טבלה בדיוק');
   eq(env.selects[1].archived, true, '4ח · עם הדגל ההפוך');
   eq(env.selects[1].order && env.selects[1].order.col, 'rec_key',
     '4ט · ⛔ והסדר עדיין נדרש מהמסד (סבב 31) — לא נשמט באיחוד');
   eq(a.data[0].gdate, '4/09/2025', '4י · ⛔ והמיון הסמנטי נשמר — היום החדש קודם');
-  eq(env.sb._tbRemote.tb_archive['g:3/09/2025'], 300, '4יא · מפת החותמות נבנתה בנפרד לכל סוג');
-  eq(env.sb._tbRemote.tb_entries['1'], 100, '4יב · ואינה מעורבבת עם זו של היומן');
+  eq(env.sb._tbRemote.ya_archive['g:3/09/2025'], 300, '4יא · מפת החותמות נבנתה בנפרד לכל סוג');
+  eq(env.sb._tbRemote.ya_entries['1'], 100, '4יב · ואינה מעורבבת עם זו של היומן');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -356,19 +363,19 @@ async function t4() {
    ══════════════════════════════════════════════════════════════════════════ */
 async function t5() {
   const env = makeEnv();
-  const r = await env.sb.pushTable('tb_archive', [S('3/09/2025', 100)]);
+  const r = await env.sb.pushTable('ya_archive', [S('3/09/2025', 100)]);
   eq(r.ok, true, '5א · הדחיפה הצליחה');
   /*  ⛔ כתיבה אחת ⛔ ולא שתיים — ⚠️ הכתיבה הכפולה לטבלה הישנה ירדה עם
    *  הטבלה עצמה: ⭐ ומה שמפריד בין החי לארכיון הוא הדגל. */
   eq(env.upserts.length, 1, '5ב · ⛔ כתיבה אחת בלבד — אין טבלה שנייה');
-  eq(env.upserts[0].table, 'tb_entries', '5ג · והיא לטבלה המאוחדת');
+  eq(env.upserts[0].table, 'ya_entries', '5ג · והיא לטבלה המאוחדת');
   eq(env.upserts[0].rows[0].archived, true, '5ד · עם הדגל');
   eq(env.upserts[0].opts.onConflict, 'client_id', '5ה · ⚠️ upsert על client_id — אידמפוטנטי');
-  eq(env.sb._tbRemote.tb_archive['g:3/09/2025'], 100, '5ו · ומפת החותמות התעדכנה');
+  eq(env.sb._tbRemote.ya_archive['g:3/09/2025'], 100, '5ו · ומפת החותמות התעדכנה');
 
   // רשומת יומן — אותה טבלה, בלי הדגל
   const env2 = makeEnv();
-  await env2.sb.pushTable('tb_entries', [E(1, 100)]);
+  await env2.sb.pushTable('ya_entries', [E(1, 100)]);
   eq(env2.upserts.length, 1, '5ז · ⛔ רשומת יומן אינה נכתבת פעמיים');
   eq(env2.upserts[0].rows[0].archived, false, '5ח · ובלי הדגל');
 }
@@ -379,16 +386,16 @@ async function t5() {
 async function t6() {
   const env = makeEnv({
     noArchivedCol: true,
-    rows: [row('tb_entries', 'rishon', '1', 100, E(1, 100), false)],
+    rows: [row('ya_entries', 'rishon', '1', 100, E(1, 100), false)],
   });
-  const g = await env.sb.tbRowsGet('tb_entries');
+  const g = await env.sb.tbRowsGet('ya_entries');
   eq(g.ok, false, '6א · ⭐ בלי העמודה — המשיכה מחזירה ok:false, ואתר הקריאה נופל-חזרה ל-kv');
   eq(g.data, null, '6ב · ובלי נתונים');
-  eq(env.sb._tbRemote.tb_entries, null, '6ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
+  eq(env.sb._tbRemote.ya_entries, null, '6ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
 
-  const p = await env.sb.pushTable('tb_entries', [E(1, 100)]);
+  const p = await env.sb.pushTable('ya_entries', [E(1, 100)]);
   eq(p.ok, false, '6ד · והדחיפה נכשלת — עֵד הפינוי ואישור ה-⏳ לא יינתנו');
-  eq(env.sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1,
+  eq(env.sb.tbDirtyRows('ya_entries', [E(1, 100)]).length, 1,
     '6ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב אחרי המיגרציה');
 }
 
@@ -398,20 +405,20 @@ async function t6() {
 async function t7() {
   // ⚠️ רשומה מסומנת ⏳ מנצחת בבחירת מה לדחוף
   const env = makeEnv({ pending: { 'arc:g:3/09/2025': 1 } });
-  env.sb._tbRemote.tb_archive = { 'g:3/09/2025': 999 };
-  eq(env.sb.tbDirtyRows('tb_archive', [S('3/09/2025', 100)]).length, 1,
+  env.sb._tbRemote.ya_archive = { 'g:3/09/2025': 999 };
+  eq(env.sb.tbDirtyRows('ya_archive', [S('3/09/2025', 100)]).length, 1,
     '7א · ⛔ סנאפשוט מסומן ⏳ נדחף גם כשחותמת הענן חדשה יותר');
-  eq(env.sb.tbPendPrefix('tb_archive'), 'arc:', '7ב · והקידומת לא השתנתה באיחוד');
+  eq(env.sb.tbPendPrefix('ya_archive'), 'arc:', '7ב · והקידומת לא השתנתה באיחוד');
 
   // אופליין — נכשל סגור
   const off = makeEnv({ net: false });
-  eq((await off.sb.tbRowsGet('tb_archive')).ok, false, '7ג · ⛔ אופליין — אין ראיה');
-  eq((await off.sb.pushTable('tb_archive', [S('1/01/2026', 1)])).ok, false, '7ד · ואין דחיפה');
+  eq((await off.sb.tbRowsGet('ya_archive')).ok, false, '7ג · ⛔ אופליין — אין ראיה');
+  eq((await off.sb.pushTable('ya_archive', [S('1/01/2026', 1)])).ok, false, '7ד · ואין דחיפה');
 
   // TB_ROWS=false — נתיב החזרה הרחב של סבב 30 לא נשבר
   const envOff = makeEnv();
   envOff.sb.TB_ROWS = false;
-  eq((await envOff.sb.tbRowsGet('tb_archive')).ok, false, '7ה · ⛔ TB_ROWS=false עדיין מנתק הכל');
+  eq((await envOff.sb.tbRowsGet('ya_archive')).ok, false, '7ה · ⛔ TB_ROWS=false עדיין מנתק הכל');
   eq(envOff.selects.length + envOff.upserts.length, 0, '7ו · ואפס נגיעה ברשת');
 }
 
@@ -423,7 +430,7 @@ function t8() {
   ok(/add column if not exists archived boolean not null default false/.test(M4),
     '8א · ⭐ 004 מוסיף `archived` — not null עם ברירת מחדל false');
   ok(/add column if not exists gdate text/.test(M4), '8ב · ו-gdate, כדי שההעברה תהיה מלאה');
-  ok(/create index if not exists tb_entries_yeshiva_archived/.test(M4),
+  ok(new RegExp('create index if not exists ' + MIG_ENTRIES + '_yeshiva_archived').test(M4),
     '8ג · ואינדקס שתומך בשליפה המסוננת');
   ok(!/create\s+index[^;]*\bwhere\b/i.test(M4.replace(/^\s*--.*$/gm, '')),
     '8ד · ⛔ ואין בו אינדקס חלקי — הלקח מ-007 של schar');
@@ -432,8 +439,9 @@ function t8() {
 
   // 005 — אדיטיביות ואידמפוטנטיות
   const body5 = M5.replace(/^\s*--.*$/gm, '');
-  ok(/insert into public\.tb_entries/.test(body5) && /from public\.tb_archive/.test(body5),
-    '8ו · 005 מעביר מ-tb_archive ל-tb_entries');
+  ok(new RegExp('insert into public\\.' + MIG_ENTRIES).test(body5)
+     && new RegExp('from public\\.' + MIG_ARCHIVE).test(body5),
+    '8ו · 005 מעביר מ-' + MIG_ARCHIVE + ' ל-' + MIG_ENTRIES);
   ok(/on conflict \(client_id\) do nothing/.test(body5),
     '8ז · ⛔ `do nothing` ולא `do update` — הרצה חוזרת אינה דורסת שורה חדשה');
   ok(/,\s*true\b/.test(body5), '8ח · והדגל נכתב true');

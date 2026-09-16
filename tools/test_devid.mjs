@@ -27,7 +27,7 @@ import { fileURLToPath } from 'node:url';
 const APP = {
   app: 'yoman-avoda',
   /* ⛔ המפתח ההיסטורי — אינו משתנה לעולם (סבב 40). */
-  deviceKey: 'tb_device_id',
+  deviceKey: 'ya_device_id',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 

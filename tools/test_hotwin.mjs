@@ -28,11 +28,11 @@ import { appSrc } from './appsrc.mjs';
 const APP = {
   checks: [
     [/var TB_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (TB_KV_LEGACY_WRITE=false)'],
-    [/kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את tb_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
+    [/kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את ya_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
     [/function tbSyncLog\(/, 'עוטף sh_sync_log קיים (tbSyncLog)'],
     [/var p = parseGregLike\(g\);/, '_tbGdateTs מפענחת דרך parseGregLike (סגירת פער סבב 31)'],
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
-    [/hwNoteCloud\('tb_archive'\+LS, _rowsA\.data\)/, 'הראיה העננית ניזונה ממשיכת tb_archive'],
+    [/hwNoteCloud\('ya_archive'\+LS, _rowsA\.data\)/, 'הראיה העננית ניזונה ממשיכת ya_archive'],
   ],
   /*  ⛔ בדיקות על קובץ שאינו `index.html` — ⚠️ **מה נכנס**: `[קובץ, תבנית,
    *  הודעה]`; ⛔ **ומה מפיל**: תבנית שאינה נמצאת בקובץ. ⭐ **ולמה המבנה
@@ -43,9 +43,9 @@ const APP = {
     ['sw.js', /ensureCdnCached/, 'ריפוי עצמי של ה-CDN קיים (ensureCdnCached)'],
   ],
   mutations: [
-    ["{ kind: 'table', name: 'tb_entries', key: 'tb_entries_rows',",
-     "{ kind: 'kv', table: KV_TABLE, name: 'tb_entries', key: 'tb_entries_rows',",
-     /kind: 'table', name: 'tb_entries'/,
+    ["{ kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',",
+     "{ kind: 'kv', table: KV_TABLE, name: 'ya_entries', key: 'ya_entries_rows',",
+     /kind: 'table', name: 'ya_entries'/,
      'מוטציה שמכבה את גיבוי-הטבלאות נתפסת'],
   ],
 };

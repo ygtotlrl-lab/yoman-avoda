@@ -193,7 +193,7 @@ function makeEnv(opts = {}) {
   const sandbox = {
     console, JSON, Date, Math, String, Number, Array, Object, Boolean, isFinite, parseInt, Promise, RegExp, Error,
     YESHIVA: opts.yeshiva || 'rishon',
-    KV_TABLE: 'tb_kv_rishon',
+    KV_TABLE: 'ya_settings_rishon',
     LS: '_rishon',
     PK_ENTRY: 'entry:', PK_ARC: 'arc:',
     getSB: () => (opts.noClient ? null : client),
@@ -258,7 +258,7 @@ function t1() {
   const env = makeEnv();
   const sb = env.sb;
   const OLD = [E(1, 100), E(2, 200), E(3, 0, { deleted: true }), E(4, 300, { notes: 'x' })];
-  const rows = OLD.map((r) => sb.tbRowOf('tb_entries', r));
+  const rows = OLD.map((r) => sb.tbRowOf('ya_entries', r));
   eq(rows.filter(Boolean).length, OLD.length, '1א · כל רשומה הפכה לשורה');
 
   // כיוון א — כל רשומה בערך הישן נמצאת בשורות
@@ -295,17 +295,17 @@ function t2() {
   const sb = makeEnv().sb;
   const cases = [E(1, 10), E('12345', 10), E(1785324660377, 10)];
   cases.forEach((r, i) => {
-    const row = sb.tbRowOf('tb_entries', r);
+    const row = sb.tbRowOf('ya_entries', r);
     eq(row.rec_key, sqlEntryKey(r), `2א.${i} · rec_key של רשומה זהה לנוסחת ה-SQL`);
     eq(row.client_id, 'rishon:' + sqlEntryKey(r), `2ב.${i} · client_id = '<yeshiva>:<rec_key>'`);
   });
   const snaps = [S('3/09/2025', 10), { id: 7, updatedAt: 5 }, { gdate: '', id: 9 }];
   snaps.forEach((r, i) => {
-    const row = sb.tbRowOf('tb_archive', r);
+    const row = sb.tbRowOf('ya_archive', r);
     eq(row.rec_key, sqlArchiveKey(r), `2ג.${i} · rec_key של סנאפשוט זהה לנוסחת ה-SQL`);
   });
-  eq(sb.tbRowOf('tb_archive', {}), null, '2ד · סנאפשוט בלי gdate ובלי id — אין לו שורה');
-  eq(sb.tbRowOf('tb_entries', {}), null, '2ה · ורשומה בלי id — גם כן');
+  eq(sb.tbRowOf('ya_archive', {}), null, '2ד · סנאפשוט בלי gdate ובלי id — אין לו שורה');
+  eq(sb.tbRowOf('ya_entries', {}), null, '2ה · ורשומה בלי id — גם כן');
   ok(/'g:' \|\| \(s->>'gdate'\)/.test(MIG), '2ו · ⛔ הנוסחה `g:`+gdate כתובה גם ב-migrations/003');
   ok(/'i:' \|\| \(s->>'id'\)/.test(MIG), '2ז · ⛔ וכך גם הנפילה-חזרה ל-`i:`+id');
   ok(/on conflict \(client_id\) do nothing/.test(MIG), '2ח · ⛔ והמיגרציה היא do nothing ולא do update');
@@ -346,33 +346,33 @@ async function t4() {
   const arr = [E(1, 100), E(2, 200), E(3, 300)];
 
   // ⛔ מפה null (טרם נמשך) ⇒ הכל דחוף — דילוג היה משאיר רשומה בלי עותק בענן
-  eq(sb.tbDirtyRows('tb_entries', arr).length, 3, '4א · ⛔ לפני משיכה — הכל נחשב לדחיפה');
+  eq(sb.tbDirtyRows('ya_entries', arr).length, 3, '4א · ⛔ לפני משיכה — הכל נחשב לדחיפה');
 
-  sb._tbRemote.tb_entries = { '1': 100, '2': 200, '3': 300 };
-  eq(sb.tbDirtyRows('tb_entries', arr).length, 0, '4ב · הכל מסונכרן ⇒ אין מה לדחוף');
+  sb._tbRemote.ya_entries = { '1': 100, '2': 200, '3': 300 };
+  eq(sb.tbDirtyRows('ya_entries', arr).length, 0, '4ב · הכל מסונכרן ⇒ אין מה לדחוף');
 
   arr[1] = E(2, 250);
-  const d = sb.tbDirtyRows('tb_entries', arr);
+  const d = sb.tbDirtyRows('ya_entries', arr);
   eq(d.length, 1, '4ג · רק מה שהשתנה');
   eq(d[0].rec_key, '2', '4ד · והוא הנכון');
 
   // רשומה חדשה לגמרי
   arr.push(E(9, 50));
-  eq(sb.tbDirtyRows('tb_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
+  eq(sb.tbDirtyRows('ya_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
 
   // ⚠️ רשומה מסומנת ⏳ מנצחת במיזוג
   const env2 = makeEnv({ pending: { 'entry:1': 1 } });
-  env2.sb._tbRemote.tb_entries = { '1': 999 };
-  eq(env2.sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1,
+  env2.sb._tbRemote.ya_entries = { '1': 999 };
+  eq(env2.sb.tbDirtyRows('ya_entries', [E(1, 100)]).length, 1,
     '4ו · ⛔ רשומה מסומנת ⏳ נדחפת גם כשחותמת הענן חדשה יותר');
 
   // הדחיפה עצמה
-  const r = await sb.pushTable('tb_entries', arr);
+  const r = await sb.pushTable('ya_entries', arr);
   eq(r.ok, true, '4ז · הדחיפה הצליחה');
   eq(env.upserts.length, 1, '4ח · קריאת upsert אחת');
   eq(env.upserts[0].opts.onConflict, 'client_id', '4ט · ⚠️ upsert על client_id — אידמפוטנטי');
-  eq(env.upserts[0].table, 'tb_entries', '4י · לטבלה הנכונה');
-  eq(sb.tbDirtyRows('tb_entries', arr).length, 0, '4יא · ואחריה אין מה לדחוף');
+  eq(env.upserts[0].table, 'ya_entries', '4י · לטבלה הנכונה');
+  eq(sb.tbDirtyRows('ya_entries', arr).length, 0, '4יא · ואחריה אין מה לדחוף');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -381,30 +381,30 @@ async function t4() {
 async function t5() {
   const env = makeEnv({ net: false });
   const sb = env.sb;
-  const g = await sb.tbRowsGet('tb_entries');
+  const g = await sb.tbRowsGet('ya_entries');
   eq(g.ok, false, '5א · ⛔ משיכה שנכשלה מחזירה ok:false — «אין ראיה»');
   // ⛔ תשובה עם `error` **וגם** מערך תקין — הצורה שמפילה בדיקה רופפת
-  const envE = makeEnv({ net: false, rows: [{ _t: 'tb_entries', yeshiva: 'rishon', rec_key: '1', updated_at: 5, data: E(1, 5) }] });
+  const envE = makeEnv({ net: false, rows: [{ _t: 'ya_entries', yeshiva: 'rishon', rec_key: '1', updated_at: 5, data: E(1, 5) }] });
   envE.errWithData = true;
-  eq((await envE.sb.tbRowsGet('tb_entries')).ok, false,
+  eq((await envE.sb.tbRowsGet('ya_entries')).ok, false,
     '5א2 · ⛔ `error` שמלווה במערך תקין עדיין נכשל סגור');
   eq(g.data, null, '5ב · ובלי נתונים, כדי שאתר הקריאה ייפול-חזרה לבלוק');
-  eq(sb._tbRemote.tb_entries, null, '5ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
+  eq(sb._tbRemote.ya_entries, null, '5ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
 
-  const p = await sb.pushTable('tb_entries', [E(1, 100)]);
+  const p = await sb.pushTable('ya_entries', [E(1, 100)]);
   eq(p.ok, false, '5ד · דחיפה שנכשלה מחזירה ok:false');
-  eq(sb.tbDirtyRows('tb_entries', [E(1, 100)]).length, 1, '5ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב');
+  eq(sb.tbDirtyRows('ya_entries', [E(1, 100)]).length, 1, '5ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב');
 
   // הרשת חוזרת
   env.net = true;
-  eq((await sb.pushTable('tb_entries', [E(1, 100)])).ok, true, '5ו · וכשהרשת חוזרת — נדחפת');
+  eq((await sb.pushTable('ya_entries', [E(1, 100)])).ok, true, '5ו · וכשהרשת חוזרת — נדחפת');
 
   // בלי לקוח / בלי מוסד
   const env2 = makeEnv({ noClient: true });
-  eq((await env2.sb.tbRowsGet('tb_entries')).ok, false, '5ז · בלי לקוח — ok:false');
+  eq((await env2.sb.tbRowsGet('ya_entries')).ok, false, '5ז · בלי לקוח — ok:false');
   const env3 = makeEnv();
   env3.sb.YESHIVA = null;
-  eq((await env3.sb.tbRowsGet('tb_entries')).ok, false, '5ח · ⛔ ולפני בחירת מוסד — לא נוגעים ברשת');
+  eq((await env3.sb.tbRowsGet('ya_entries')).ok, false, '5ח · ⛔ ולפני בחירת מוסד — לא נוגעים ברשת');
   eq(env3.selects.length, 0, '5ט · ואפס שאילתות');
 }
 
@@ -414,8 +414,8 @@ async function t5() {
 async function t6() {
   const env = makeEnv({ tbRows: false });
   const sb = env.sb;
-  eq((await sb.tbRowsGet('tb_entries')).ok, false, '6א · ⭐ בכיבוי — אין קריאה מהשורות');
-  eq((await sb.pushTable('tb_entries', [E(1, 1)])).ok, false, '6ב · ואין דחיפה');
+  eq((await sb.tbRowsGet('ya_entries')).ok, false, '6א · ⭐ בכיבוי — אין קריאה מהשורות');
+  eq((await sb.pushTable('ya_entries', [E(1, 1)])).ok, false, '6ב · ואין דחיפה');
   eq(env.selects.length + env.upserts.length, 0, '6ג · ⛔ ואפס נגיעה ברשת');
   const flags = [...SRC.matchAll(/var TB_ROWS = (\w+);/g)].map((m) => m[1]);
   ok(flags.length === 1 && flags[0] === 'true',
@@ -429,16 +429,16 @@ async function t6() {
 async function t7() {
   const env = makeEnv({
     rows: [
-      { _t: 'tb_entries', yeshiva: 'rishon', rec_key: '1', updated_at: 100, data: E(1, 100) },
-      { _t: 'tb_entries', yeshiva: 'rishon', rec_key: '2', updated_at: 200, data: E(2, 200) },
-      { _t: 'tb_entries', yeshiva: 'ramataviv', rec_key: '9', updated_at: 1, data: E(9, 1) },
+      { _t: 'ya_entries', yeshiva: 'rishon', rec_key: '1', updated_at: 100, data: E(1, 100) },
+      { _t: 'ya_entries', yeshiva: 'rishon', rec_key: '2', updated_at: 200, data: E(2, 200) },
+      { _t: 'ya_entries', yeshiva: 'ramataviv', rec_key: '9', updated_at: 1, data: E(9, 1) },
     ],
   });
-  const g = await env.sb.tbRowsGet('tb_entries');
+  const g = await env.sb.tbRowsGet('ya_entries');
   eq(g.ok, true, '7א · משיכה מוצלחת');
   eq(g.data.length, 2, '7ב · ⛔ רק שורות המוסד הפעיל — אין דליפה בין מוסדות');
   eq(env.selects[0].yeshiva, 'rishon', '7ג · והסינון נעשה בשאילתה עצמה');
-  eq(env.sb._tbRemote.tb_entries['2'], 200, '7ד · מפת החותמות נבנתה מהמשיכה');
+  eq(env.sb._tbRemote.ya_entries['2'], 200, '7ד · מפת החותמות נבנתה מהמשיכה');
   // ⚠️ מסבב 31 המשיכה מחזירה **ממוין** — רשומות לפי id יורד — ולכן הראשון
   //    הוא 2 ולא 1. הטענה בודקת שהנתונים הם גוף הרשומה, ועכשיו גם את הסדר.
   eq(g.data[0].id, 2, '7ה · והנתונים הם גוף הרשומה, בסדר יורד לפי id');

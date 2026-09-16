@@ -157,11 +157,11 @@ assert(c.entryOrderTs(null) === 0 && c.entryOrderTs({}) === 0,
     '6 · ⛔ סדר רשומות העבר זהה בדיוק לזה שהיה');
 }
 {
-  const rows = c.tbSortRows('tb_entries', [oldRec, newRec]);
+  const rows = c.tbSortRows('ya_entries', [oldRec, newRec]);
   assert(rows[0].task === 'חדשה' && rows[1].task === 'ישנה',
     '7 · `tbSortRows` ממיינת נכון גם כשהמזהים מעורבים');
-  const a = c.tbSortRows('tb_entries', [oldRec, newRec]).map((r) => String(r.id));
-  const b = c.tbSortRows('tb_entries', [newRec, oldRec]).map((r) => String(r.id));
+  const a = c.tbSortRows('ya_entries', [oldRec, newRec]).map((r) => String(r.id));
+  const b = c.tbSortRows('ya_entries', [newRec, oldRec]).map((r) => String(r.id));
   assert(JSON.stringify(a) === JSON.stringify(b), '8 · ⭐ והיא דטרמיניסטית');
 }
 

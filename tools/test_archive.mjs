@@ -338,14 +338,14 @@ function reachable(c) {
     const j = s % (i + 1);
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const a = c.tbSortRows('tb_archive', kvOrder).map((s) => c.archiveKey(s));
-  const b = c.tbSortRows('tb_archive', shuffled).map((s) => c.archiveKey(s));
+  const a = c.tbSortRows('ya_archive', kvOrder).map((s) => c.archiveKey(s));
+  const b = c.tbSortRows('ya_archive', shuffled).map((s) => c.archiveKey(s));
   eq(JSON.stringify(a), JSON.stringify(b), '⭐ tbSortRows דטרמיניסטית — סדר קלט שונה, פלט זהה');
   ok(a.length === 155 && new Set(a).size === 155, 'המיון אינו מאבד ואינו משכפל סנאפשוט');
   // הסדר הסמנטי: יום חדש קודם.
-  const ts = c.tbSortRows('tb_archive', shuffled).map((s) => c.gdateOrderTs(s.gdate));
+  const ts = c.tbSortRows('ya_archive', shuffled).map((s) => c.gdateOrderTs(s.gdate));
   ok(ts.length > 0 && ts.every((v, i) => i === 0 || ts[i - 1] >= v), 'הארכיון ממוין מהיום החדש לישן');
-  ok(!c.tbSortRows('tb_archive', kvOrder).some((s, i) => s === kvOrder[i] && false),
+  ok(!c.tbSortRows('ya_archive', kvOrder).some((s, i) => s === kvOrder[i] && false),
     'tbSortRows אינה משנה את מערך הקלט');
   eq(JSON.stringify(kvOrder.map((s) => c.archiveKey(s))),
      JSON.stringify(FX.rishon.map((r) => c.archiveKey(r.snap))),
@@ -358,7 +358,7 @@ function reachable(c) {
     const d = cc.getAllArchiveDays();
     return JSON.stringify(Object.keys(d).sort().map((k) => [k, d[k].hdate, d[k].entries.length]));
   };
-  eq(view(c.tbSortRows('tb_archive', shuffled)), view(kvOrder),
+  eq(view(c.tbSortRows('ya_archive', shuffled)), view(kvOrder),
     '⭐ התצוגה אחרי המיון זהה לתצוגה מסדר ה-kv המקורי');
 }
 {
@@ -373,15 +373,15 @@ function reachable(c) {
   const fwd = hOf(pair), rev = hOf(pair.slice().reverse());
   ok(fwd !== rev, '⭐ בלי סדר קבוע — אותו יום מקבל תאריך עברי אחר לפי סדר הקלט');
   const c = makeCtx();
-  const s1 = c.tbSortRows('tb_archive', pair.map((r) => r.snap));
-  const s2 = c.tbSortRows('tb_archive', pair.slice().reverse().map((r) => r.snap));
+  const s1 = c.tbSortRows('ya_archive', pair.map((r) => r.snap));
+  const s2 = c.tbSortRows('ya_archive', pair.slice().reverse().map((r) => r.snap));
   eq(JSON.stringify(s1.map((s) => s.id)), JSON.stringify(s2.map((s) => s.id)),
     '⭐ ואחרי המיון — אותו סדר משני כיווני הקלט');
 }
 {
   const c = makeCtx();
   const rows = [{ id: 5 }, { id: 99 }, { id: 7 }];
-  eq(JSON.stringify(c.tbSortRows('tb_entries', rows).map((r) => r.id)), JSON.stringify([99, 7, 5]),
+  eq(JSON.stringify(c.tbSortRows('ya_entries', rows).map((r) => r.id)), JSON.stringify([99, 7, 5]),
     'רשומות ממוינות לפי id יורד — כמו המיון שרץ אחרי המיזוג');
 }
 
@@ -449,7 +449,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   // המסלול האוטומטי — `checkDayChange` על הקוד האמיתי.
   const a = makeCtx();
   a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
-  a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
+  a._store['ya_last_day_test'] = 'Tue Aug 11 2026';
   a.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];
   a.checkDayChange();
   eq(a.ARCHIVE.length, 1, 'מעבר יום יצר סנאפשוט אחד');
@@ -475,7 +475,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
 {
   // ⛔ בלי hebcal ובלי hdate ברשומות — נפילה-חזרה מפורשת, ו-name עדיין מציל.
   const a = makeCtx();
-  a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
+  a._store['ya_last_day_test'] = 'Tue Aug 11 2026';
   a.ENTRIES = [{ id: 1, gdate: '11 אוגוסט 2026', day: 'יום שלישי', updatedAt: 10 }];
   a.checkDayChange();
   const s = a.ARCHIVE[0];
@@ -487,7 +487,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   // ⛔ בלי רשומה שנושאת תאריך — השעון הוא הנפילה-חזרה, לא שדה ריק.
   const a = makeCtx();
   a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
-  a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
+  a._store['ya_last_day_test'] = 'Tue Aug 11 2026';
   a.ENTRIES = [{ id: 1, updatedAt: 10 }];
   a.checkDayChange();
   const s = a.ARCHIVE[0];
@@ -500,7 +500,7 @@ const FIELDS = ['id', 'name', 'hdate', 'gdate', 'day', 'date', 'entries', 'count
   // ⭐ מעבר יום על יום שכבר יש לו סנאפשוט — מיזוג, לא כפילות.
   const a = makeCtx();
   a.hebrewDate = () => 'כ״ח מנחם אב ה׳תשפ״ו';
-  a._store['tb_last_day_test'] = 'Tue Aug 11 2026';
+  a._store['ya_last_day_test'] = 'Tue Aug 11 2026';
   a.ARCHIVE = [{ id: 900, name: 'כ״ח מנחם אב ה׳תשפ״ו', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', gdate: '11 אוגוסט 2026',
     day: 'יום שלישי', date: '11 אוגוסט 2026', entries: [{ id: 7, updatedAt: 5 }], count: 1, updatedAt: 5 }];
   a.ENTRIES = [{ id: 8, gdate: '11 אוגוסט 2026', hdate: 'כ״ח מנחם אב ה׳תשפ״ו', day: 'יום שלישי', updatedAt: 10 }];

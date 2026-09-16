@@ -38,7 +38,8 @@ const APP = {
    *  הפרש בלי נימוק, ⛔ ונימוק בלי הפרש. ⭐ **ולמה המבנה קיים**:
    *  קידום עידן מוחק עותק מקומי במכשירים חיים, ⛔ והוא נעשה רק כשצורת
    *  השורה השתנתה. */
-  dataEra: { base: 1, era: 1, why: '' },
+  dataEra: { base: 1, era: 2,
+    why: 'שם הטבלה ומפתח האחסון הוסבו לתחילית שנגזרת משם הריפו — ⚠️ והמראה ממופתחת בשם: ⭐ ההגירה המקומית מכסה מכשיר שעלה, ⛔ והעידן מכסה מכשיר שההגירה נפלה בו באמצע (סבב 148)' },
   names: ['recTs', 'isLive', 'liveOnly', 'tombStamp', 'prunePastTombstones', 'tombPruneMerged', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey', 'pendEntry', 'pendArc', 'mergeEntries'],
   vars: ['var TOMBSTONE_TTL_MS = ', 'var _tombPrunePending = '],
   globals: { PK_ENTRY: 'entry:', PK_ARC: 'arc:' },

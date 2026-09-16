@@ -29,7 +29,7 @@ import { appSrc } from './appsrc.mjs';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   rowsGet: 'tbRowsGet',
-  keys: ['tb_entries', 'tb_archive'],
+  keys: ['ya_entries', 'ya_archive'],
   // ⛔ שני מפתחות × שלושה מסלולים (syncFromCloud · tbPullFromCloud ·
   //    _tbVerify) ועוד ספק החלון החם — ר' הטענה 1א.
   minRowsGet: 5,
@@ -38,7 +38,7 @@ const APP = {
   rowsVars: ['_rowsE', '_rowsA'],
   legacyOff: /var TB_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
-  kvOnly: ['tb_cats', 'tb_subs', 'tb_subs_meta'],
+  kvOnly: ['ya_cats', 'ya_subs', 'ya_subs_meta'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -127,7 +127,7 @@ assert(calls >= APP.minRowsGet,
 /* ⛔ אין קריאת ערך-שלם למפתח שעבר לטבלה — ⚠️ לא כמסלול ראשי ולא כנפילה-חזרה:
    ⭐ הבלוק חדל להיות רשת ביטחון והפך למקור אמת שני. */
 const kvReads = [];
-const reKv = /(await pull\('(tb_entries|tb_archive)'|select\("value"\)\.eq\("key","(tb_entries|tb_archive)"\))/g;
+const reKv = /(await pull\('(ya_entries|ya_archive)'|select\("value"\)\.eq\("key","(ya_entries|ya_archive)"\))/g;
 let m;
 while ((m = reKv.exec(SRC))) {
   const line = SRC.slice(SRC.lastIndexOf('\n', m.index) + 1, SRC.indexOf('\n', m.index));
@@ -202,7 +202,7 @@ function env(total, mode, mutSrc) {
   };
   const sb = {
     console, JSON, Date, Math, String, Number, Array, Object, Boolean, isFinite, parseInt, Promise, RegExp, Error,
-    YESHIVA: 'rishon', KV_TABLE: 'tb_kv_rishon',
+    YESHIVA: 'rishon', KV_TABLE: 'ya_settings_rishon',
     getSB: () => client, withTimeout: (p) => p,
     /*  ⛔ המוסד שהסביבה מחזירה בכל עמוד נרשם (סבב 89) — ⚠️ הסגור נקרא
      *  פעם אחת לכל עמוד, ⭐ וזה מה שמאפשר למדוד עם מי הוא בא במגע. */
@@ -232,26 +232,26 @@ const PAGE = Number((cutVar('var YS_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
 assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(PAGE + 250);
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   assert(r.ok && r.data.length === PAGE + 250,
     '2ב · ⛔ יותר מעמוד אחד — כל השורות חוזרות (' + (r.ok ? r.data.length : 'ok=false') + ')');
   assert(e.st.pages.length === 2, '2ג · ונמשכו בדיוק שני עמודים');
 }
 {
   const e = env(50);
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   assert(r.ok && r.data.length === 50 && e.st.pages.length === 1,
     '2ד · עמוד חלקי עוצר מיד — בלי בקשה מיותרת');
 }
 {
   const e = env(PAGE + 250, 'error');
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   assert(r.ok === false && r.data === null,
     '2ה · ⛔ עמוד שנכשל מחזיר «אין ראיה» ולא תמונה חלקית');
 }
 {
   const e = env(10, 'errorFirst');
-  const r = await e.sb.tbRowsGet('tb_archive');
+  const r = await e.sb.tbRowsGet('ya_archive');
   assert(r.ok === false, '2ו · כשל בעמוד הראשון ⇒ «אין ראיה», ⛔ ולא מערך ריק');
 }
 /*  ⛔⛔ דליפת העימוד (סבב 89) — ⚠️ הנימוק המדוד: הסגור שמועבר לשכבת
@@ -260,7 +260,7 @@ assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
  *  **שני** המוסדות. */
 {
   const e = env(PAGE + 250, 'switch');
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   const uniq = [...new Set(e.st.asked)];
   assert(uniq.length === 1 && uniq[0] === 'rishon',
     '2ז · ⛔ כל העמודים נמשכו עבור המוסד שנלכד בכניסה — נמדד ' + uniq.join(',') +
@@ -289,7 +289,7 @@ console.log('— מוטציות —');
   const bad = SRC.replace(".eq('yeshiva', yesh)", ".eq('yeshiva', YESHIVA)");
   assert(bad !== SRC, 'מוטציה: הסגור אותר והוחזר לקריאת הגלובלי');
   const e = env(PAGE + 250, 'switch', bad);
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   const uniq = [...new Set(e.st.asked)];
   assert(uniq.length > 1,
     'מוטציה: קריאת הגלובלי בסגור משרשרת שני מוסדות (' + uniq.join(',') + ') — טענה 2ז הייתה נכשלת');
@@ -302,7 +302,7 @@ console.log('— מוטציות —');
   const bad = SRC.replace(".eq('yeshiva', yesh)", ".eq('yeshiva', YESHIVA)")
                  .replace('    if (ctxStale(_ep)) return { ok: false, data: null };\n', '');
   const e = env(PAGE + 250, 'switch', bad);
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   assert(r.ok === true,
     'מוטציה: ⛔ בלי השער התוצאה המעורבת חוזרת כ-ok:true — טענה 2ח הייתה נכשלת');
 }
@@ -311,15 +311,15 @@ console.log('— מוטציות —');
   /* ⛔ החזרת הנפילה-חזרה — ⚠️ בדיוק השינוי ש«ליתר ביטחון» היה מכניס. */
   const bad1 = SRC.replace('      var cloudEntries = _rowsE.data;',
     '      var cloudEntries = _rowsE.data || JSON.parse((await sb.from(KV_TABLE)' +
-    '.select("value").eq("key","tb_entries").single()).data.value);');
-  const re2 = /(await pull\('(tb_entries|tb_archive)'|select\("value"\)\.eq\("key","(tb_entries|tb_archive)"\))/g;
+    '.select("value").eq("key","ya_entries").single()).data.value);');
+  const re2 = /(await pull\('(ya_entries|ya_archive)'|select\("value"\)\.eq\("key","(ya_entries|ya_archive)"\))/g;
   assert((bad1.match(re2) || []).length > 0,
     'מוטציה: ⛔ החזרת הנפילה-חזרה ל-kv נתפסת ע"י טענה 1ב');
 }
 {
   /* ⛔ הוצאת המיזוג מחוץ לשער ה-`ok` — ⚠️ «הענן ריק» במקום «אין ראיה». */
-  const bad1b = SRC.replace(`    var _rowsA = await tbRowsGet('tb_archive');
-    if (_rowsA.ok) {`, `    var _rowsA = await tbRowsGet('tb_archive');
+  const bad1b = SRC.replace(`    var _rowsA = await tbRowsGet('ya_archive');
+    if (_rowsA.ok) {`, `    var _rowsA = await tbRowsGet('ya_archive');
     {`);
   const still = new RegExp("var _rowsA = await tbRowsGet\\('\\w+'\\);\\s*\\n\\s*if \\(_rowsA\\.ok\\) \\{").test(bad1b);
   assert(!still, 'מוטציה: ⛔ מיזוג מחוץ לשער ה-`ok` נתפס ע"י טענה 1ג');
@@ -331,15 +331,15 @@ console.log('— מוטציות —');
 {
   const e = env(PAGE + 250);
   vm.runInContext('YS_ROWS_PAGE = 1e9;', e.sb);
-  const r = await e.sb.tbRowsGet('tb_entries');
+  const r = await e.sb.tbRowsGet('ya_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');
 }
 {
   /* ⛔ מוטציית-נגד לטענה 1ב — ⚠️ אתר קריאה **נוסף** מהטבלה הוא שינוי חי,
      ⭐ ואסור לו להפיל: הטענה אוסרת את הערך השלם ⛔ ולא את שכבת השורות. */
-  const good = SRC.replace("    var _rowsA = await tbRowsGet('tb_archive');",
-    "    await tbRowsGet('tb_entries');\n    var _rowsA = await tbRowsGet('tb_archive');");
+  const good = SRC.replace("    var _rowsA = await tbRowsGet('ya_archive');",
+    "    await tbRowsGet('ya_entries');\n    var _rowsA = await tbRowsGet('ya_archive');");
   assert((good.match(reKv) || []).length === 0 &&
          (good.match(new RegExp('(?<![\\w$.])' + APP.rowsGet + "\\('", 'g')) || []).length === calls + 1,
     'מוטציית-נגד: אתר קריאה נוסף מהטבלה — אינו מפיל את 1ב');

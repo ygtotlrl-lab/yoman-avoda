@@ -40,7 +40,7 @@ const APP = {
   /* ⚠️ אתרי הקריאה של מסלול הייצוא, וההחלפה שמנטרלת כל אחד — ריק כשאין ייצוא */
   exportCalls: [['html2canvas(', 'html2canvasZ('], ['navigator.share(', 'navigator.shareZ(']],
   /* ⚠️ חותמת זריקה לערך מפתח-ערך — ריקה כשאין כאן ערך שלם שממוזג */
-  kvResetKey: 'tb_cats_reset',
+  kvResetKey: 'ya_cats_reset',
   /* ⚠️ מפתח מראת המשתמשים — ריק כשאין כאן כניסה */
   mirrorKey: '',
   /* ⚠️ מקור המשתמש המחובר — ריק כשאין כאן כניסה */

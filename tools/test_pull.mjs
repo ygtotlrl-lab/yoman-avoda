@@ -40,7 +40,7 @@ const APP = {
    *  ⚠️ מפני שהוא זקוק לתוצאה כדי להזהיר את המשתמש. */
   touchFns: ['tbSyncPushNow'],
   every: 3000,
-  stampKey: 'tb_last_changed',
+  stampKey: 'ya_last_changed',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
