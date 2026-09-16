@@ -349,9 +349,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
 .inf-dot.ok{background:var(--ok)}.inf-dot.gap{background:var(--warn)}.inf-dot.bad{background:var(--bad)}
 .inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
-.inf-li{border-top:1px solid var(--border);padding:var(--sp-4) var(--sp-1);font-size:var(--fs-2);line-height:var(--lh-5)}
-.inf-li:first-child{border-top:0}
-.inf-li b{color:var(--primaryd)}
 .inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
   font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}
 .inf-err{background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r-5);padding:var(--sp-6);
@@ -514,7 +511,6 @@ body.locked{overflow:hidden}
 .u-mb-5{margin-bottom:var(--sp-5)}
 .u-minh-28{min-height:28px}
 .u-minw-130{min-width:130px}
-.u-minw-520{min-width:520px}
 .u-minw-80{min-width:80px}
 .u-ml-1{margin-left:var(--sp-1)}
 .u-mt-4{margin-top:var(--sp-4)}
@@ -6436,16 +6432,6 @@ function _infParse(md) {
   return { cats: cats, rows: rows };
 }
 var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
-/*  ⛔ ארבעת מימדי הסריקה — ⚠️ שלושתם הראשונים אינם נראים מהריפו כלל,
- *  ⭐ והרביעי הוא מה שסוגר את הלולאה: ⛔ סימון בטבלה הוא הצהרה, ⚠️ והמימד
- *  הזה שואל אם היא נכונה **בפועל**. ⭐ והם מוצהרים כאן ⛔ ולא בטקסט
- *  המסך — ⚠️ לשורה שבטבלה יש כאן מקור אחד, ⛔ ולא שניים. */
-var YS_INF_DIMS = [
-  ['**א · מסד**', 'סכימה · הרשאות · טריגרים · `cron` — ⭐ **מה קיים בפועל**'],
-  ['**ב · בדיקה חיה**', '**הרצה מול המסד החי**, ⛔ ולא מול קבצים'],
-  ['**ג · עקבות**', 'מתי רצו הגיבוי · הסנכרון · הפינויים האחרונים'],
-  ['**ד · אימות הטבלה**', '**כל סימון בטבלה — נכון בפועל?**'],
-];
 /*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
  *  ⭐ והמשיכה נשמרת בזיכרון. */
 function _infHtml(d) {
@@ -6477,21 +6463,6 @@ function _infHtml(d) {
     h += '</tbody></table></div></details>';
   });
   h += '</div>';
-
-  /*  ⛔ הפרק הזה הוא **מסגרת שממתינה** ⛔ ואינו דוח — ⚠️ ארבעת המימדים הם
-   *  מה שייבדק, ⭐ ותאריך ריק הוא הצהרה שהסריקה טרם נעשתה: ⛔ ריכוז תאים
-   *  שאינם ✅ כבר יושב בפרק א, ⚠️ ופרק שני לאותו נתון הוא מקור אמת שני. */
-  h += '<div class="inf-card"><h4>הסריקה — ארבעת המימדים</h4>' +
-       '<div class="inf-wrap"><table class="u-minw-520 inf-tbl">' +
-       '<colgroup><col class="c-t"><col class="c-s"></colgroup>' +
-       '<thead><tr><th>מימד</th><th>מה נבדק</th></tr></thead><tbody>';
-  YS_INF_DIMS.forEach(function (x) {
-    h += '<tr><td>' + _infMd(x[0]) + '</td><td>' + _infMd(x[1]) + '</td></tr>';
-  });
-  h += '</tbody></table></div>' +
-       '<div class="inf-li"><b>תאריך הסריקה האחרונה:</b> <span class="inf-tag">______</span></div>' +
-       '<div class="inf-li"><b>מתי תיעשה:</b> כשכל שורות הטבלה יהיו ירוקות או מנומקות</div>' +
-       '</div>';
   h += '</div>';
   return h;
 }
