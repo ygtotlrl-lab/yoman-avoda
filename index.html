@@ -4436,8 +4436,6 @@ window.ysGematria=function(n,sep){
   return s.slice(0,-1)+sep+s.slice(-1);
 };
 window.ysHebDayLabel=function(day){var T=window.DAYS_HEB;return (T&&T[day])||window.ysGematria(day)||String(day);};
-// תווית שנה קצרה — תשפ"ו (גרשיים ישרים, כפי שהוצג עד היום בלוח)
-window.ysHebYearLabel=function(hy){return window.ysGematria((+hy)%1000,'"');};
 // תווית שנה מלאה — ה׳תשפ״ו
 window.ysHebYearLabelFull=function(hy){
   var ONES=['','א','ב','ג','ד','ה','ו','ז','ח','ט'],th=Math.floor((+hy)/1000);
@@ -4519,8 +4517,8 @@ window._ysBadDate=function(where,d){
   try{ console.warn('ysHebDate: קלט שאינו תאריך תקף ב-'+where+' — '+got); }catch(e){}
 };
 window._ysHebNone=function(src){
-  return {year:0,monthIndex:0,monthName:'',day:0,dayLabel:'',yearLabel:'',
-          yearLabelFull:'',leap:false,ok:false,src:src};
+  return {year:0,monthIndex:0,monthName:'',day:0,dayLabel:'',
+          yearLabelFull:'',ok:false,src:src};
 };
 
 // ── נרמול שמות חודשים עבריים ──
@@ -4538,18 +4536,6 @@ function monthKeyOf(m) {
   return normHDate(m).trim().replace(/\s+/g, " ");
 }
 
-// ---- צרכן התצוגה — יושב על ysHebDate ----
-/*  ⛔ קלט פגום אינו הופך ל«היום» (סבב 80) — ⚠️ `jsDate || new Date()` הסתיר
- *  ארגומנט שגוי והציג את תאריך היום כאילו הוא התאריך שנתבקש; ⭐ מחרוזת
- *  ריקה היא מה שכל הצרכנים כאן כבר יודעים לטפל בו.
- *  ⚠️ קריאה **בלי ארגומנט** היא חוזה קיים ומשמעה «היום» — היא נשארת. */
-function hebrewDate(jsDate) {
-  if (jsDate === undefined || jsDate === null) jsDate = new Date();
-  if (!window._ysIsDate(jsDate)) { window._ysBadDate('hebrewDate', jsDate); return ""; }
-  var h = window.ysHebDate(jsDate);
-  if (!h.ok) return "";
-  return h.dayLabel + " " + h.monthName + " " + h.yearLabelFull;
-}
 // ═══ סוף אזור התאריך העברי ═══════════════════════════════════════════════
 
 /*  ⛔ הפלטה יושבת ב-CSS ⛔ ואינה חוזרת כאן — ⚠️ שתי רשימות לאותם שמונה
