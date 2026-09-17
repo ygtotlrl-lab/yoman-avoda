@@ -115,7 +115,7 @@ function cut(name, src) {
 }
 
 const NAMES = ['idEq', 'legacyIdStamp', 'entryOrderTs', 'idArg', 'entryKey', 'gdateOrderTs',
-               'parseGregLike', 'tbSortRows', 'archiveKey'];
+               'parseGregLike', 'yaSortRows', 'archiveKey'];
 function build(src) {
   const ctx = { console, Number, String, Array, Object, isFinite, Date, JSON, Math };
   vm.createContext(ctx);
@@ -157,11 +157,11 @@ assert(c.entryOrderTs(null) === 0 && c.entryOrderTs({}) === 0,
     '6 · ⛔ סדר רשומות העבר זהה בדיוק לזה שהיה');
 }
 {
-  const rows = c.tbSortRows('ya_entries', [oldRec, newRec]);
+  const rows = c.yaSortRows('ya_entries', [oldRec, newRec]);
   assert(rows[0].task === 'חדשה' && rows[1].task === 'ישנה',
-    '7 · `tbSortRows` ממיינת נכון גם כשהמזהים מעורבים');
-  const a = c.tbSortRows('ya_entries', [oldRec, newRec]).map((r) => String(r.id));
-  const b = c.tbSortRows('ya_entries', [newRec, oldRec]).map((r) => String(r.id));
+    '7 · `yaSortRows` ממיינת נכון גם כשהמזהים מעורבים');
+  const a = c.yaSortRows('ya_entries', [oldRec, newRec]).map((r) => String(r.id));
+  const b = c.yaSortRows('ya_entries', [newRec, oldRec]).map((r) => String(r.id));
   assert(JSON.stringify(a) === JSON.stringify(b), '8 · ⭐ והיא דטרמיניסטית');
 }
 

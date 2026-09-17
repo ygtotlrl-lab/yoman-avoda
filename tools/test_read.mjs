@@ -28,15 +28,15 @@ import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  rowsGet: 'tbRowsGet',
+  rowsGet: 'yaRowsGet',
   keys: ['ya_entries', 'ya_archive'],
-  // ⛔ שני מפתחות × שלושה מסלולים (syncFromCloud · tbPullFromCloud ·
-  //    _tbVerify) ועוד ספק החלון החם — ר' הטענה 1א.
+  // ⛔ שני מפתחות × שלושה מסלולים (syncFromCloud · yaPullFromCloud ·
+  //    _yaVerify) ועוד ספק החלון החם — ר' הטענה 1א.
   minRowsGet: 5,
   // ⛔ שני המסלולים שנמדדים בטענה 1ג — ⚠️ שמם הוא מה שקושר את המשיכה לשער
   //    ה-`ok` שלה, ⛔ ובלעדיו הטענה מודדת דפוס ולא אתר.
   rowsVars: ['_rowsE', '_rowsA'],
-  legacyOff: /var TB_KV_LEGACY_WRITE = false;/,
+  legacyOff: /var YA_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
   kvOnly: ['ya_cats', 'ya_subs', 'ya_subs_meta'],
 };
@@ -156,7 +156,7 @@ for (const k of APP.kvOnly) {
     '1ו · ' + k + ' נקרא מ-kv — ⚠️ זה ביתו היחיד בענן, ולא סטייה');
 }
 
-/* ── 2. הרצת tbRowsGet האמיתית — עמודים ונכשל-סגור ─────────────────────── */
+/* ── 2. הרצת yaRowsGet האמיתית — עמודים ונכשל-סגור ─────────────────────── */
 function cut(name, src) {
   src = src || SRC;
   const re = new RegExp('\\n(async )?function ' + name + '\\s*\\(', 'g');
@@ -209,20 +209,20 @@ function env(total, mode, mutSrc) {
   };
   sb.globalThis = sb;
   vm.createContext(sb);
-  for (const d of ['var TB_ROWS = true;', 'var TB_ARC_UNIFIED = true;',
-                   'var TB_ROW_TABLES = ', 'var YS_ROWS_PAGE = ', 'var YS_ROWS_CAP = ',
-                   'var _tbRemote = ']) {
+  for (const d of ['var YA_ROWS = true;', 'var YA_ARC_UNIFIED = true;',
+                   'var YA_ROW_TABLES = ', 'var YS_ROWS_PAGE = ', 'var YS_ROWS_CAP = ',
+                   'var _yaRemote = ']) {
     vm.runInContext(cutVar(d), sb);
   }
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
    *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
   vm.runInContext(cutVar('var _ctxEpoch = 0;'), sb);
   for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
-                   'tbSortRows', 'tbTableOf', 'tbArchivedFlag', 'ctxEpoch', 'ctxSwitch', 'ctxStale', 'tbRowsGet']) {
+                   'yaSortRows', 'yaTableOf', 'yaArchivedFlag', 'ctxEpoch', 'ctxSwitch', 'ctxStale', 'yaRowsGet']) {
     vm.runInContext(cut(n, mutSrc), sb, { filename: n + '.js' });
   }
   /*  ⛔ ההחלפה היא קידום המונה **האמיתי** ⛔ ולא דגל של הסביבה — ⚠️ זה
-   *  בדיוק מה ש-`ysResetTenantState` עושה בהחלפת מוסד. */
+   *  בדיוק מה ש-`yaResetTenantState` עושה בהחלפת מוסד. */
   st.bump = () => { sb.YESHIVA = 'ramataviv'; vm.runInContext('ctxSwitch();', sb); };
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sb);
   return { sb, st };
@@ -232,26 +232,26 @@ const PAGE = Number((cutVar('var YS_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
 assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(PAGE + 250);
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok && r.data.length === PAGE + 250,
     '2ב · ⛔ יותר מעמוד אחד — כל השורות חוזרות (' + (r.ok ? r.data.length : 'ok=false') + ')');
   assert(e.st.pages.length === 2, '2ג · ונמשכו בדיוק שני עמודים');
 }
 {
   const e = env(50);
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok && r.data.length === 50 && e.st.pages.length === 1,
     '2ד · עמוד חלקי עוצר מיד — בלי בקשה מיותרת');
 }
 {
   const e = env(PAGE + 250, 'error');
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok === false && r.data === null,
     '2ה · ⛔ עמוד שנכשל מחזיר «אין ראיה» ולא תמונה חלקית');
 }
 {
   const e = env(10, 'errorFirst');
-  const r = await e.sb.tbRowsGet('ya_archive');
+  const r = await e.sb.yaRowsGet('ya_archive');
   assert(r.ok === false, '2ו · כשל בעמוד הראשון ⇒ «אין ראיה», ⛔ ולא מערך ריק');
 }
 /*  ⛔⛔ דליפת העימוד (סבב 89) — ⚠️ הנימוק המדוד: הסגור שמועבר לשכבת
@@ -260,14 +260,14 @@ assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
  *  **שני** המוסדות. */
 {
   const e = env(PAGE + 250, 'switch');
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   const uniq = [...new Set(e.st.asked)];
   assert(uniq.length === 1 && uniq[0] === 'rishon',
     '2ז · ⛔ כל העמודים נמשכו עבור המוסד שנלכד בכניסה — נמדד ' + uniq.join(',') +
     ' והצפוי rishon בלבד. לוכדים את המוסד בכניסה ומשתמשים בו בתוך הסגור');
   assert(r.ok === false && r.data === null,
     '2ח · ⛔ והחלפת הקשר באמצע העימוד מחזירה «אין ראיה» — נמדד ok=' + r.ok +
-    ' והצפוי false. בודקים את ההקשר לפני הרישום ל-_tbRemote');
+    ' והצפוי false. בודקים את ההקשר לפני הרישום ל-_yaRemote');
 }
 
 if (RUN_MUT) {
@@ -289,7 +289,7 @@ console.log('— מוטציות —');
   const bad = SRC.replace(".eq('yeshiva', yesh)", ".eq('yeshiva', YESHIVA)");
   assert(bad !== SRC, 'מוטציה: הסגור אותר והוחזר לקריאת הגלובלי');
   const e = env(PAGE + 250, 'switch', bad);
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   const uniq = [...new Set(e.st.asked)];
   assert(uniq.length > 1,
     'מוטציה: קריאת הגלובלי בסגור משרשרת שני מוסדות (' + uniq.join(',') + ') — טענה 2ז הייתה נכשלת');
@@ -302,7 +302,7 @@ console.log('— מוטציות —');
   const bad = SRC.replace(".eq('yeshiva', yesh)", ".eq('yeshiva', YESHIVA)")
                  .replace('    if (ctxStale(_ep)) return { ok: false, data: null };\n', '');
   const e = env(PAGE + 250, 'switch', bad);
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok === true,
     'מוטציה: ⛔ בלי השער התוצאה המעורבת חוזרת כ-ok:true — טענה 2ח הייתה נכשלת');
 }
@@ -318,28 +318,28 @@ console.log('— מוטציות —');
 }
 {
   /* ⛔ הוצאת המיזוג מחוץ לשער ה-`ok` — ⚠️ «הענן ריק» במקום «אין ראיה». */
-  const bad1b = SRC.replace(`    var _rowsA = await tbRowsGet('ya_archive');
-    if (_rowsA.ok) {`, `    var _rowsA = await tbRowsGet('ya_archive');
+  const bad1b = SRC.replace(`    var _rowsA = await yaRowsGet('ya_archive');
+    if (_rowsA.ok) {`, `    var _rowsA = await yaRowsGet('ya_archive');
     {`);
-  const still = new RegExp("var _rowsA = await tbRowsGet\\('\\w+'\\);\\s*\\n\\s*if \\(_rowsA\\.ok\\) \\{").test(bad1b);
+  const still = new RegExp("var _rowsA = await yaRowsGet\\('\\w+'\\);\\s*\\n\\s*if \\(_rowsA\\.ok\\) \\{").test(bad1b);
   assert(!still, 'מוטציה: ⛔ מיזוג מחוץ לשער ה-`ok` נתפס ע"י טענה 1ג');
 }
 {
-  const bad2 = SRC.replace('var TB_KV_LEGACY_WRITE = false;', 'var TB_KV_LEGACY_WRITE = true;');
+  const bad2 = SRC.replace('var YA_KV_LEGACY_WRITE = false;', 'var YA_KV_LEGACY_WRITE = true;');
   assert(!APP.legacyOff.test(bad2), 'מוטציה: ⛔ החזרת הכתיבה הכפולה נתפסת ע"י טענה 1ה');
 }
 {
   const e = env(PAGE + 250);
   vm.runInContext('YS_ROWS_PAGE = 1e9;', e.sb);
-  const r = await e.sb.tbRowsGet('ya_entries');
+  const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');
 }
 {
   /* ⛔ מוטציית-נגד לטענה 1ב — ⚠️ אתר קריאה **נוסף** מהטבלה הוא שינוי חי,
      ⭐ ואסור לו להפיל: הטענה אוסרת את הערך השלם ⛔ ולא את שכבת השורות. */
-  const good = SRC.replace("    var _rowsA = await tbRowsGet('ya_archive');",
-    "    await tbRowsGet('ya_entries');\n    var _rowsA = await tbRowsGet('ya_archive');");
+  const good = SRC.replace("    var _rowsA = await yaRowsGet('ya_archive');",
+    "    await yaRowsGet('ya_entries');\n    var _rowsA = await yaRowsGet('ya_archive');");
   assert((good.match(reKv) || []).length === 0 &&
          (good.match(new RegExp('(?<![\\w$.])' + APP.rowsGet + "\\('", 'g')) || []).length === calls + 1,
     'מוטציית-נגד: אתר קריאה נוסף מהטבלה — אינו מפיל את 1ב');

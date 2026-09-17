@@ -31,14 +31,14 @@ const APP = {
   file: 'index.html',
   bootFn: 'selectYeshiva',
   /*  פונקציית המשיכה — מה ש-`PL_CFG.pull` מפעיל. */
-  syncFn: 'tbPullFromCloud',
-  /*  משפכי הכתיבה לענן שחייבים לקדם את החותמת. ⚠️ `tbSyncPushNow` הוא
+  syncFn: 'yaPullFromCloud',
+  /*  משפכי הכתיבה לענן שחייבים לקדם את החותמת. ⚠️ `yaSyncPushNow` הוא
    *  מסלול השמירה הידנית, ושם הקורא זקוק לתוצאת הכתיבה עצמה. */
   /*  ⛔ משפכי הכתיבה לענן **שמחוץ לשכבת הדחיפה** — ⚠️ הדחיפה עצמה מקדמת
    *  את החותמת בתוך הבלוק החתום, ⭐ ומדידה נוספת עליה כאן הייתה טענה
    *  כפולה: ⛔ מה שנשאר הוא המסלול שקורא ל-`PL_CFG.stamp` בעצמו,
    *  ⚠️ מפני שהוא זקוק לתוצאה כדי להזהיר את המשתמש. */
-  touchFns: ['tbSyncPushNow'],
+  touchFns: ['yaSyncPushNow'],
   every: 3000,
   stampKey: 'ya_last_changed',
 };

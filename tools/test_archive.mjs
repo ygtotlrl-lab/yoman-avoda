@@ -136,7 +136,7 @@ const FN = ['recTs', 'recTouch', 'recDelete', 'isLive', 'liveOnly', '_mergePick'
   'entryKey', 'archiveKey', 'parseGregLike', 'gregKeyFromParts', 'hasHebMonth',
   'normHDate', 'monthKeyOf', 'extractYM', 'hebFromText', 'snapHDate',
   'getAllArchiveDays', 'getYearsWithData', 'monthsWithData', 'getDaysInMonth',
-  'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows', 'arcPutSnapshot', 'autoArchiveDay',
+  'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'yaSortRows', 'arcPutSnapshot', 'autoArchiveDay',
   'checkDayChange', 'gregDateStr', 'getTodayKey'];
 /*  ⛔ ההודעות הן קבועים ⛔ ואינן ליטרל באתר התצוגה — ⚠️ הרתמה טוענת את
  *  הצהרותיהן, ⭐ שאם לא כן מטפל שמציג הודעה זורק `ReferenceError`,
@@ -164,7 +164,7 @@ function makeCtx(opts) {
     toast(m) { sandbox.calls.toast.push(m); },
     localStorage: { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } },
     LS: '_test',
-    _tbRecTs: (r) => (r && Number(r.updatedAt)) || 0,
+    _yaRecTs: (r) => (r && Number(r.updatedAt)) || 0,
     // ⭐ סבב 35: שער הדיסק של החלון החם עוטף את כתיבות הארכיון — כאן הוא
     //    שקוף בכוונה, הבדיקות של החלון עצמו יושבות ב-test_hotwin.
     hwDiskFilter: (k, rows) => rows,
@@ -338,15 +338,15 @@ function reachable(c) {
     const j = s % (i + 1);
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const a = c.tbSortRows('ya_archive', kvOrder).map((s) => c.archiveKey(s));
-  const b = c.tbSortRows('ya_archive', shuffled).map((s) => c.archiveKey(s));
-  eq(JSON.stringify(a), JSON.stringify(b), '⭐ tbSortRows דטרמיניסטית — סדר קלט שונה, פלט זהה');
+  const a = c.yaSortRows('ya_archive', kvOrder).map((s) => c.archiveKey(s));
+  const b = c.yaSortRows('ya_archive', shuffled).map((s) => c.archiveKey(s));
+  eq(JSON.stringify(a), JSON.stringify(b), '⭐ yaSortRows דטרמיניסטית — סדר קלט שונה, פלט זהה');
   ok(a.length === 155 && new Set(a).size === 155, 'המיון אינו מאבד ואינו משכפל סנאפשוט');
   // הסדר הסמנטי: יום חדש קודם.
-  const ts = c.tbSortRows('ya_archive', shuffled).map((s) => c.gdateOrderTs(s.gdate));
+  const ts = c.yaSortRows('ya_archive', shuffled).map((s) => c.gdateOrderTs(s.gdate));
   ok(ts.length > 0 && ts.every((v, i) => i === 0 || ts[i - 1] >= v), 'הארכיון ממוין מהיום החדש לישן');
-  ok(!c.tbSortRows('ya_archive', kvOrder).some((s, i) => s === kvOrder[i] && false),
-    'tbSortRows אינה משנה את מערך הקלט');
+  ok(!c.yaSortRows('ya_archive', kvOrder).some((s, i) => s === kvOrder[i] && false),
+    'yaSortRows אינה משנה את מערך הקלט');
   eq(JSON.stringify(kvOrder.map((s) => c.archiveKey(s))),
      JSON.stringify(FX.rishon.map((r) => c.archiveKey(r.snap))),
      '⛔ מערך הקלט לא שונה במקום (הפונקציה טהורה)');
@@ -358,7 +358,7 @@ function reachable(c) {
     const d = cc.getAllArchiveDays();
     return JSON.stringify(Object.keys(d).sort().map((k) => [k, d[k].hdate, d[k].entries.length]));
   };
-  eq(view(c.tbSortRows('ya_archive', shuffled)), view(kvOrder),
+  eq(view(c.yaSortRows('ya_archive', shuffled)), view(kvOrder),
     '⭐ התצוגה אחרי המיון זהה לתצוגה מסדר ה-kv המקורי');
 }
 {
@@ -373,15 +373,15 @@ function reachable(c) {
   const fwd = hOf(pair), rev = hOf(pair.slice().reverse());
   ok(fwd !== rev, '⭐ בלי סדר קבוע — אותו יום מקבל תאריך עברי אחר לפי סדר הקלט');
   const c = makeCtx();
-  const s1 = c.tbSortRows('ya_archive', pair.map((r) => r.snap));
-  const s2 = c.tbSortRows('ya_archive', pair.slice().reverse().map((r) => r.snap));
+  const s1 = c.yaSortRows('ya_archive', pair.map((r) => r.snap));
+  const s2 = c.yaSortRows('ya_archive', pair.slice().reverse().map((r) => r.snap));
   eq(JSON.stringify(s1.map((s) => s.id)), JSON.stringify(s2.map((s) => s.id)),
     '⭐ ואחרי המיון — אותו סדר משני כיווני הקלט');
 }
 {
   const c = makeCtx();
   const rows = [{ id: 5 }, { id: 99 }, { id: 7 }];
-  eq(JSON.stringify(c.tbSortRows('ya_entries', rows).map((r) => r.id)), JSON.stringify([99, 7, 5]),
+  eq(JSON.stringify(c.yaSortRows('ya_entries', rows).map((r) => r.id)), JSON.stringify([99, 7, 5]),
     'רשומות ממוינות לפי id יורד — כמו המיון שרץ אחרי המיזוג');
 }
 

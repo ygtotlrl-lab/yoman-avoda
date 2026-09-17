@@ -950,7 +950,7 @@ var LS_CFG = {
   tier1: [],
   tier2: [],
 
-  // אין כאן תור אופליין; העדות לסנכרון היא `_tbPushedAt` פר-מפתח (למטה).
+  // אין כאן תור אופליין; העדות לסנכרון היא `_yaPushedAt` פר-מפתח (למטה).
   pending: function () { return false; },
   syncedThrough: function () { return 0; }
 };
@@ -959,21 +959,21 @@ var LS_CFG = {
 // `_lastKnownTimestamp` **אינו** עד סנכרון: הוא מתעדכן גם במשיכה (הוא אומר
 // "ראיתי את מצב הענן"), וגם ב-saveEntries/saveArchive בלי לבדוק את תוצאת
 // ה-sbSet. לכן פינוי שהיה נשען עליו היה יכול למחוק מהדיסק רשומה שמעולם לא
-// הגיעה לענן. `_tbPushedAt[key]` נכתב **רק** אחרי `sbSet` שהחזירה ok, ולכן
+// הגיעה לענן. `_yaPushedAt[key]` נכתב **רק** אחרי `sbSet` שהחזירה ok, ולכן
 // כל רשומה שגילה קטן ממנו הייתה בתוך המערך שנדחף בהצלחה.
-var _tbPushedAt = {};
-function _tbMarkPushed(kvKey) { _tbPushedAt[kvKey] = Date.now(); }
-function _tbPushedThrough(kvKey) { return _tbPushedAt[kvKey] || 0; }
+var _yaPushedAt = {};
+function _yaMarkPushed(kvKey) { _yaPushedAt[kvKey] = Date.now(); }
+function _yaPushedThrough(kvKey) { return _yaPushedAt[kvKey] || 0; }
 
 // חותמת רשומה/סנאפשוט לצורך פינוי.
-function _tbRecTs(r) {
+function _yaRecTs(r) {
   if (!r || typeof r !== 'object') return 0;
   if (r.updatedAt) return Number(r.updatedAt) || 0;
-  return _tbGdateTs(r.gdate);
+  return _yaGdateTs(r.gdate);
 }
 // gdate נשמר בצורה "3/09/2025" (d/mm/yyyy) — לא ISO. עוגן בצהריים מקומיים,
 // כמו כל חישוב תאריך בפרויקטים האלה.
-function _tbGdateTs(g) {
+function _yaGdateTs(g) {
   // ⭐ מסבב 35 הפענוח הוא דרך `parseGregLike` (סבב 35) — היא מכירה גם את
   //    הצורה «19 יולי 2026» שמייצרת `gregDateStr`, שקודם החזירה כאן 0
   //    ועיוותה את גיל הרשומה לצורך הפינוי (הפער שנרשם בסבב 31). העוגן
@@ -989,30 +989,30 @@ function _tbGdateTs(g) {
 // שום תוקף לגבי הנתונים של השני. המוסד השני יפונה כשייבחר.
 function lsRebuildPolicy() {
   LS_CFG.tier2 = [
-    { key: 'ya_archive' + LS, label: 'ארכיון ימים', ts: _tbRecTs,
+    { key: 'ya_archive' + LS, label: 'ארכיון ימים', ts: _yaRecTs,
       minAgeMs: 60 * 86400000,
-      syncedThrough: function () { return _tbPushedThrough('ya_archive'); },
-      idOf: archiveKey, verify: _tbVerify('ya_archive') },
-    { key: 'ya_entries' + LS, label: 'רשומות היומן', ts: _tbRecTs,
+      syncedThrough: function () { return _yaPushedThrough('ya_archive'); },
+      idOf: archiveKey, verify: _yaVerify('ya_archive') },
+    { key: 'ya_entries' + LS, label: 'רשומות היומן', ts: _yaRecTs,
       minAgeMs: 90 * 86400000,
-      syncedThrough: function () { return _tbPushedThrough('ya_entries'); },
-      idOf: entryKey, verify: _tbVerify('ya_entries') }
+      syncedThrough: function () { return _yaPushedThrough('ya_entries'); },
+      idOf: entryKey, verify: _yaVerify('ya_entries') }
   ];
 }
 /* ── עדות סנכרון חלופית (סבב 14) ────────────────────────────────────────
-   `_tbPushedAt` הוא עֵד **דחיפה**, ולכן בדפדפן שרק קורא הוא נשאר 0 לנצח
+   `_yaPushedAt` הוא עֵד **דחיפה**, ולכן בדפדפן שרק קורא הוא נשאר 0 לנצח
    ושלב ב לא מפנה דבר — האחסון מתמלא והפינוי מחזיר 0. כשאין
    עֵד מקומי, המודול פונה לכאן: משיכת שורות אותה קטגוריה מהטבלה המובנית
    (`ya_archive` / `ya_entries` — בלי סיומת המוסד, כי ההפרדה בענן היא
    בטבלת המוסד) והשוואה פר-רשומה מול המפתח והחותמת.
    **נכשל סגור:** לא די ב-`ok` — נדרש **מערך**. כשל רשת או timeout ⇒
    `ok:false` ⇒ לא מפנים דבר. */
-function _tbVerify(kvKey) {
+function _yaVerify(kvKey) {
   return function () {
     // ⭐ העדות היא **הטבלה** ולא הערך השלם: שם יושבת האמת פר-רשומה.
     //    ⛔ ואין נפילה-חזרה לערך השלם — ⚠️ עֵד שנשען עליו היה מפנה מהדיסק
     //    רשומה שהטבלה אינה מכירה, ⭐ והראיה שעליה נשען הפינוי היא הטבלה.
-    return tbRowsGet(kvKey).then(function (rr) {
+    return yaRowsGet(kvKey).then(function (rr) {
       return (rr && rr.ok && Array.isArray(rr.data)) ? { ok: true, rows: rr.data }
                                                      : { ok: false, rows: [] };
     }, function () { return { ok: false, rows: [] }; });
@@ -2591,13 +2591,13 @@ var DOM_ACTIONS = {
   /*  ⛔ הבורר והאישור עוברים באותה דלגציה (סבב 81) — ⚠️ הלוגו נשאר ב-DOM
    *  ואינו נבנה מחדש, ⛔ אבל כפתורי הבורר כן: ⭐ מאזין פר-כפתור היה צריך
    *  חיווט מחדש בכל פתיחה. */
-  'open-yeshiva-picker': function () { ysPickYeshiva(); },
+  'open-yeshiva-picker': function () { yaPickYeshiva(); },
   /*  ⛔ שלוש הפעולות של מציג טבלת התשתית עוברות בדלגציה — ⚠️ הכפתורים
    *  נבנים מחדש בכל ציור של המודאל, ⭐ ומאזין פר-כפתור היה צריך חיווט
    *  מחדש בכל פעם. */
-  'inf-open':       function () { ysInfraOpen(); },
-  'inf-all':        function (el) { ysInfraToggleAll(el.getAttribute('data-open') === '1'); },
-  'switch-yeshiva': function (el) { ysConfirmSwitch(el.getAttribute('data-yeshiva')); },
+  'inf-open':       function () { yaInfraOpen(); },
+  'inf-all':        function (el) { yaInfraToggleAll(el.getAttribute('data-open') === '1'); },
+  'switch-yeshiva': function (el) { yaConfirmSwitch(el.getAttribute('data-yeshiva')); },
   'add-entry':      function () { addEntry(); },
   'clear-all':      function () { clearAll(); },
   'save-settings':  function () { return runSave(saveSettings, MSG_SAVED); },
@@ -2677,10 +2677,10 @@ document.addEventListener('dragend',   dragRoute(DRAG_END));
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ ביומן אין תור אופליין: «ממתין» הוא סימון ⏳, והריקון הוא דחיפת-מצב
-   של שתי שכבות השורות. `tbSyncPushNow` היא גוף `schedulePush` בלי
+   של שתי שכבות השורות. `yaSyncPushNow` היא גוף `schedulePush` בלי
    ההשהיה — אותה דחיפה בדיוק, ⛔ ולא מסלול שני (סבב 44). */
 var RTY_CFG = {
-  flush:   function () { return tbSyncPushNow(); },
+  flush:   function () { return yaSyncPushNow(); },
   pending: function () { try { return pendCount() > 0; } catch (e) { return false; } },
 };
 /* ═══ ניסיון חוזר בסנכרון — מודול משותף (סבב 44) ══════════════════════════
@@ -2760,16 +2760,16 @@ function rtyBoot() {
    היה נוגע בנתונים של דייר שאיש לא בחר.
    ⛔ **וזה ההבדל היחיד ב-`active()` ביניהן** — ⚠️ בשלוש האחרות הוא
    `sessActive()`, ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
-   ⚠️ `ok()` הוא `_tbMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
-   ממנה את עֵד הפינוי (סבב 51) — הוא `_tbPushedAt` פר-מפתח. */
+   ⚠️ `ok()` הוא `_yaMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
+   ממנה את עֵד הפינוי (סבב 51) — הוא `_yaPushedAt` פר-מפתח. */
 var PL_CFG = {
   every:  3000,
   active: function () { return !!YESHIVA; },
   seen:   function () { return _lastKnownTimestamp; },
   note:   function (ts) { _lastKnownTimestamp = ts; },
-  ok:     function () { _tbMarkSynced(); },
+  ok:     function () { _yaMarkSynced(); },
   stamp:  function (ts) { return sbSet("ya_last_changed", ts); },
-  pull:   function () { return tbPullFromCloud(); },
+  pull:   function () { return yaPullFromCloud(); },
   remote: function () {
     return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "ya_last_changed").maybeSingle())
       .then(function (r) {
@@ -2867,20 +2867,20 @@ var PUSH_TABLES = ['ya_entries', 'ya_archive'];
 /*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `send` ו-`mark` רצים אחרי
  *  `await`, ⭐ וקריאת הגלובלי בהם הייתה זוקפת את הצלחת הדחיפה של מוסד
  *  אחד לחשבון השני. */
-var _tbPushEp = 0;
+var _yaPushEp = 0;
 var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
   delay:  400,
   dirty:  function (t, ctx) {
-    if (!TB_ROWS || !tbTableOf(t) || !KV_TABLE || !YESHIVA) return null;
-    _tbPushEp = ctxEpoch();
-    return tbDirtyRows(t, ctx || (t === 'ya_archive' ? ARCHIVE : ENTRIES));
+    if (!YA_ROWS || !yaTableOf(t) || !KV_TABLE || !YESHIVA) return null;
+    _yaPushEp = ctxEpoch();
+    return yaDirtyRows(t, ctx || (t === 'ya_archive' ? ARCHIVE : ENTRIES));
   },
-  key:    function (t, row) { return tbPendPrefix(t) + row.rec_key; },
-  send:   function (t, rows) { return tbSendRows(t, rows, _tbPushEp); },
-  mark:   function (t) { if (!ctxStale(_tbPushEp)) _tbMarkPushed(t); },
-  run:    function () { tbSyncPushNow(); },
+  key:    function (t, row) { return yaPendPrefix(t) + row.rec_key; },
+  send:   function (t, rows) { return yaSendRows(t, rows, _yaPushEp); },
+  mark:   function (t) { if (!ctxStale(_yaPushEp)) _yaMarkPushed(t); },
+  run:    function () { yaSyncPushNow(); },
 };
 /* ═══ שכבת הדחיפה — מודול משותף (סבב 102) ═════════════════════════════════
    ⛔ שלוש שכבות נפרדות — **מנה · טבלה · טבלאות** — ⚠️ וכל אחת פונקציה
@@ -3015,15 +3015,15 @@ var HW_CFG = {
     label: 'ארכיון ימים',
     inWindow: function () { return false; },
     idOf: function (r) { return archiveKey(r); },
-    ts: function (r) { return _tbRecTs(r); },
+    ts: function (r) { return _yaRecTs(r); },
     isPending: function (r) { return pendHas(PK_ARC + archiveKey(r)); },
     fetch: async function () {
-      var r = await tbRowsGet('ya_archive');
+      var r = await yaRowsGet('ya_archive');
       return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data }
                                                   : { ok: false, rows: [] };
     },
     rows: function () { return ARCHIVE; },
-    apply: function (kept) { return lsSetArray('ya_archive' + LS, kept, _tbRecTs); }
+    apply: function (kept) { return lsSetArray('ya_archive' + LS, kept, _yaRecTs); }
   }]
 };
 /* ═══ חלון חם ושחזור מקומי — מודול משותף (סבב 35) ════════════════════════
@@ -3210,7 +3210,7 @@ var ERA_CFG = {
   /*  ⛔ הדחיפה היא ראיה טרייה ⛔ ואינה זיכרון — ⚠️ שכבת הדחיפה מחזירה
    *  `{ok, still}` לכל הטבלאות, ⭐ ומכשיר נקי מקבל `ok` עם `still` ריק. */
   push:   function () { return pushDirty(null); },
-  refresh: function () { return tbPullFromCloud(); }
+  refresh: function () { return yaPullFromCloud(); }
 };
 
 /* ═══ עידן הנתונים — מודול משותף (סבב 148) ═════════════════════════════════
@@ -3341,7 +3341,7 @@ function eraKick() {
 /* ── חיבור yoman-avoda למודול ─────────────────────────────────────────────
    דחיפת-מצב מלא: `saveEntries`/`saveArchive` שולחות את **כל** המערך בכל
    שמירה, ולכן `sbSet` שהחזירה `ok` היא אישור לכל רשומה שסומנה לפני שהצילום
-   נלקח. זו אותה עדות שכבר מזינה את `_tbPushedAt` — ולא `_lastKnownTimestamp`,
+   נלקח. זו אותה עדות שכבר מזינה את `_yaPushedAt` — ולא `_lastKnownTimestamp`,
    שמתעדכן גם במשיכה ולכן אינו ראיה לדחיפה (ר' הערת סבב 11).
    ───────────────────────────────────────────────────────────────────────── */
 var PK_ENTRY = 'entry:', PK_ARC = 'arc:';
@@ -3464,7 +3464,7 @@ function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); 
 //    שמכשיר א' דוחף, השורה בענן נושאת חותמת **מאוחרת יותר** מעריכה חדשה
 //    יותר שיושבת אצל מכשיר ב' וטרם עלתה — ומכשיר ב' היה מאמץ את גרסת א',
 //    כלומר מוחק את העריכה שלו **בשקט**. הצד השני של אותו כלל — «רשומה
-//    מסומנת נחשבת תמיד לדחיפה» — יושב ב-`tbDirtyRows`.
+//    מסומנת נחשבת תמיד לדחיפה» — יושב ב-`yaDirtyRows`.
 //    המחיר המודע: מכשיר שהיה מנותק זמן רב ידרוס בעלייתו עריכה מרוחקת חדשה
 //    יותר. זו העדפה מכוונת — הרשומה מסומנת ⏳ כל אותו זמן ומתריעה אחרי
 //    24 שעות, בעוד שעריכה שנמחקת בשקט אינה משאירה עקבות.
@@ -3525,7 +3525,7 @@ function entryOrderTs(e) {
   return (isFinite(u) && u > 0) ? u : 0;
 }
 function entryKey(e) { return (e && e.id != null) ? e.id : null; }
-// ⚠️ שני הפרדיקטים האלה הם **אותם מפתחות בדיוק** שבהם משתמשים `tbDirtyRows`
+// ⚠️ שני הפרדיקטים האלה הם **אותם מפתחות בדיוק** שבהם משתמשים `yaDirtyRows`
 //    (בחירת מה לדחוף) ו-`HW_CFG.specs[].isPending` (שער הפינוי) — קידומת
 //    הסימון + מפתח מנוע המיזוג. שלוש הנקודות חייבות לקרוא את אותו מפתח.
 function pendEntry(k) { return pendHas(PK_ENTRY + k); }
@@ -3620,7 +3620,7 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
   var Ls = (localSubs && typeof localSubs === 'object') ? localSubs : {};
   var Rs = (remoteSubs && typeof remoteSubs === 'object') ? remoteSubs : {};
   var Lm = (localMeta && typeof localMeta === 'object') ? localMeta : {};
-  var Rm = tbMetaMap(remoteMetaRes) || {};
+  var Rm = yaMetaMap(remoteMetaRes) || {};
   var subs = {}, meta = {}, keys = {};
   [Ls, Rs, Lm, Rm].forEach(function(m){
     Object.keys(m).forEach(function(k){ keys[k] = 1; });
@@ -3630,7 +3630,7 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
     var rKnows = (k in Rs) || (k in Rm);
     // ⛔ צד שאינו מכיר את המפתח אינו מכריע עליו — «אין לי» אינו «נמחק»;
     // ⚠️ ובשוויון חותמות מנצח הענן, שההכרעה דטרמיניסטית
-    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[k]) > tbMetaTs(remoteMetaRes, k);
+    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[k]) > yaMetaTs(remoteMetaRes, k);
     var mv = useLocal ? Lm[k] : Rm[k];
     // ⛔ הסימון נשאר במפת החותמות ⛔ והמפתח יורד — כך המחיקה מתפשטת הלאה
     if (metaDeleted(mv)) { meta[k] = mv; return; }
@@ -3661,12 +3661,12 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
       שיפסיק את הכתיבה הכפולה, וזה הטריגר שרשום ב-`migrations/003`.
       מה שכן הושג כבר עכשיו: המשיכה והמיזוג בענן הם פר-רשומה.
 
-   ⭐ **בטוח לפרוס לפני שהמיגרציה רצה.** `tbRowsGet` מחזירה `ok:false`
+   ⭐ **בטוח לפרוס לפני שהמיגרציה רצה.** `yaRowsGet` מחזירה `ok:false`
       כשהטבלה חסרה או שהמשיכה נכשלה, וכל אתר קריאה נופל-חזרה לבלוק ה-kv —
       כלומר בדיוק ההתנהגות שלפני הסבב. זה מה שמאפשר את הסדר שהסבב מחייב:
       קוד קודם, מיגרציה אחרי שהגיבוי אומת.
 
-   ⛔ `TB_ROWS = false` הוא נתיב החזרה המלא (סבב 30) — הקריאה חוזרת ל-kv,
+   ⛔ `YA_ROWS = false` הוא נתיב החזרה המלא (סבב 30) — הקריאה חוזרת ל-kv,
       הכתיבה ממשיכה לשם ממילא, ואין מה לשחזר במסד. ר' `migrations/003`.
    ⛔ `client_id` נגזר ממפתח המיזוג ואינו uuid חדש (סבב 30) — לרשומה כאן
       כבר יש זהות שנוצרה במכשיר (`id`/`gdate`), ומזהה שני ועצמאי היה מאפשר
@@ -3703,34 +3703,34 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
       אליה נכשלת בכל קריאה: ⭐ `ya_archive` הוא **מפתח localStorage** בלבד,
       ⛔ ואינו שם של טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
-var TB_ROWS = true;
-var TB_ARC_UNIFIED = true;
+var YA_ROWS = true;
+var YA_ARC_UNIFIED = true;
 /* ⭐ הטבלאות הן המאסטר, והכתיבה הכפולה ל-`kv` כבויה
-   (`TB_KV_LEGACY_WRITE`) — ⚠️ `ya_cats`/`ya_subs`/`ya_subs_meta` אינם חלק
+   (`YA_KV_LEGACY_WRITE`) — ⚠️ `ya_cats`/`ya_subs`/`ya_subs_meta` אינם חלק
    מהכיבוי: ⛔ ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
-var TB_KV_LEGACY_WRITE = false;
-var TB_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_archive' };
+var YA_KV_LEGACY_WRITE = false;
+var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_archive' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
-function tbTableOf(kvKey) {
-  return (TB_ARC_UNIFIED && kvKey === 'ya_archive') ? 'ya_entries' : TB_ROW_TABLES[kvKey];
+function yaTableOf(kvKey) {
+  return (YA_ARC_UNIFIED && kvKey === 'ya_archive') ? 'ya_entries' : YA_ROW_TABLES[kvKey];
 }
-function tbArchivedFlag(kvKey) { return kvKey === 'ya_archive'; }
+function yaArchivedFlag(kvKey) { return kvKey === 'ya_archive'; }
 // מפת חותמות הענן פר-מפתח, בזיכרון בלבד. ⛔ `null` פירושו «טרם נמשך», והוא
 // גורם לדחיפה של הכל (סבב 30) — בספק דוחפים, כי רשומה שלא נדחפה נעלמת
 // מהענן בשקט בעוד שדחיפה מיותרת רק עולה בתעבורה.
-var _tbRemote = { ya_entries: null, ya_archive: null };
+var _yaRemote = { ya_entries: null, ya_archive: null };
 
-function tbRecKey(kvKey, rec) {
+function yaRecKey(kvKey, rec) {
   return (kvKey === 'ya_archive') ? archiveKey(rec) : entryKey(rec);
 }
-function tbPendPrefix(kvKey) { return (kvKey === 'ya_archive') ? PK_ARC : PK_ENTRY; }
+function yaPendPrefix(kvKey) { return (kvKey === 'ya_archive') ? PK_ARC : PK_ENTRY; }
 // `tbl` אופציונלי — הטבלה שאליה השורה נועדה. ⛔ `archived` נכתב רק כשהיעד
 // הוא `ya_entries` — ⚠️ שדה שאינו עמודה ב-`upsert` מפיל את הכתיבה כולה
 // ומחזיר `ok:false`.
-function tbRowOf(kvKey, rec, tbl) {
-  var k = tbRecKey(kvKey, rec);
+function yaRowOf(kvKey, rec, tbl) {
+  var k = yaRecKey(kvKey, rec);
   if (k == null) return null;
-  var target = tbl || tbTableOf(kvKey);
+  var target = tbl || yaTableOf(kvKey);
   var row = {
     client_id: YESHIVA + ':' + k,
     yeshiva: YESHIVA,
@@ -3743,7 +3743,7 @@ function tbRowOf(kvKey, rec, tbl) {
   //    והשמטתו הייתה מחייבת לשחזר אותו מהנתונים בכל משיכה. הוא נשאר
   //    `null` לרשומות יומן.
   if (kvKey === 'ya_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
-  if (target === 'ya_entries') row.archived = tbArchivedFlag(kvKey);
+  if (target === 'ya_entries') row.archived = yaArchivedFlag(kvKey);
   return row;
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3760,7 +3760,7 @@ function tbRowOf(kvKey, rec, tbl) {
       ופעם כ«כ״ט אב», משני סנאפשוטים מתחרים.
 
    ⛔ אין להסיר את הסדר משני המקומות (סבב 31) — `order()` בשאילתה נותן דטרמיניזם
-      ברמת המסד, ו-`tbSortRows` נותן את הסדר ה**סמנטי** שהיה לפני המעבר: ארכיון
+      ברמת המסד, ו-`yaSortRows` נותן את הסדר ה**סמנטי** שהיה לפני המעבר: ארכיון
       מהיום החדש לישן (כמו `ARCHIVE.unshift`), רשומות לפי `id` יורד (כמו המיון
       שרץ בסוף המיזוג). שאילתה לבדה אינה מספיקה — `rec_key` הוא מחרוזת,
       ומיון לקסיקוגרפי שלה אינו סדר תאריכים.
@@ -3774,7 +3774,7 @@ function gdateOrderTs(g) {
   if (!p) return -1;
   return Date.UTC(p.y, p.m - 1, p.d);
 }
-function tbSortRows(kvKey, arr) {
+function yaSortRows(kvKey, arr) {
   var a = (Array.isArray(arr) ? arr : []).slice();
   if (kvKey === 'ya_archive') {
     a.sort(function (x, y) {
@@ -3799,9 +3799,9 @@ function tbSortRows(kvKey, arr) {
 // משיכה. מחזירה `{ok, data}` — `ok:false` פירושו «אין ראיה», וכל אתר קריאה
 // נופל-חזרה לבלוק ה-kv. ⛔ אין להחזיר `ok:true` על תשובה שאינה מערך (סבב 30):
 // טבלה חסרה מחזירה שגיאה, ו-`ok` על מערך ריק היה נקרא כ«הענן ריק» ומוחק.
-async function tbRowsGet(kvKey) {
-  var t = tbTableOf(kvKey);
-  if (!TB_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
+async function yaRowsGet(kvKey) {
+  var t = yaTableOf(kvKey);
+  if (!YA_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
    *  המדוד: `_ysRowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
@@ -3819,7 +3819,7 @@ async function tbRowsGet(kvKey) {
        שנראית שלמה. ⚠️ החלון כאן הוא **הדגל**, והוא מפריד 2,108 מ-375. */
     var rows = await _ysRowsPaged(function () {
       var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', yesh);
-      if (t === 'ya_entries') q = q.eq('archived', tbArchivedFlag(kvKey));
+      if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
       return q;
     }, 'rec_key', null);
     if (!rows) return { ok: false, data: null };
@@ -3829,26 +3829,26 @@ async function tbRowsGet(kvKey) {
       map[String(r.rec_key)] = Number(r.updated_at) || 0;
       out.push(r.data);
     });
-    /*  ⛔ מפת החותמות המרוחקות היא מצב פר-מוסד — ⚠️ `ysResetTenantState` מאפסת
+    /*  ⛔ מפת החותמות המרוחקות היא מצב פר-מוסד — ⚠️ `yaResetTenantState` מאפסת
      *  אותה, ⭐ וכתיבה שאחרי ההמתנה הייתה ממלאת אותה בחותמות המוסד הקודם:
-     *  ⛔ ואז `tbDirtyRows` משווה מול טבלה אחרת ומחליט מה לדחוף לפיה. */
+     *  ⛔ ואז `yaDirtyRows` משווה מול טבלה אחרת ומחליט מה לדחוף לפיה. */
     if (ctxStale(_ep)) return { ok: false, data: null };
-    _tbRemote[kvKey] = map;
-    return { ok: true, data: tbSortRows(kvKey, out) };
+    _yaRemote[kvKey] = map;
+    return { ok: true, data: yaSortRows(kvKey, out) };
   } catch (e) { return { ok: false, data: null }; }
 }
 // בחירת מה לדחוף. רשומה מסומנת ⏳ נחשבת תמיד «לדחיפה».
 // ⛔ אין להסיר את בדיקת ה-⏳ מכאן (סבב 12 שלב 4) — בלעדיה
 //    רשומה מסומנת נשארת מסומנת לנצח ולעולם אינה נדחפת.
-function tbDirtyRows(kvKey, arr) {
-  var map = _tbRemote[kvKey], pre = tbPendPrefix(kvKey), out = [];
+function yaDirtyRows(kvKey, arr) {
+  var map = _yaRemote[kvKey], pre = yaPendPrefix(kvKey), out = [];
   (Array.isArray(arr) ? arr : []).forEach(function (rec) {
-    var k = tbRecKey(kvKey, rec);
+    var k = yaRecKey(kvKey, rec);
     if (k == null) return;
     var ts = Math.round(Number(recTs(rec)) || 0);
     var known = map ? map[String(k)] : undefined;
     if (map === null || known === undefined || ts > known || pendHas(pre + k)) {
-      var row = tbRowOf(kvKey, rec);
+      var row = yaRowOf(kvKey, rec);
       if (row) out.push(row);
     }
   });
@@ -3857,8 +3857,8 @@ function tbDirtyRows(kvKey, arr) {
 // הכתיבה עצמה, למנה שהשכבה המשותפת מסרה.
 // ⚠️ `onConflict: 'client_id'` ולא `insert` — ניסיון חוזר אחרי תשובה
 // שאבדה ברשת חייב להיות אידמפוטנטי.
-async function tbSendRows(kvKey, rows, ep) {
-  var t = tbTableOf(kvKey);
+async function yaSendRows(kvKey, rows, ep) {
+  var t = yaTableOf(kvKey);
   var sb = getSB();
   /*  ⛔ היעדר לקוח נרשם כשגיאת רשת ⛔ ולא כשגיאה סמכותית — ⚠️ הסימון
    *  חייב להישאר: ⭐ השורה לא נדחתה, ⛔ היא כלל לא נשלחה. */
@@ -3869,7 +3869,7 @@ async function tbSendRows(kvKey, rows, ep) {
    *  שלהן אינו פר-מוסד, ⛔ אבל מפת החותמות המרוחקות כן: ⚠️ מילויה כאן
    *  היה משווה את המוסד החדש מול חותמות של הקודם. */
   if (ctxStale(ep)) return {};
-  var map = _tbRemote[kvKey] || (_tbRemote[kvKey] = {});
+  var map = _yaRemote[kvKey] || (_yaRemote[kvKey] = {});
   rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
   return {};
 }
@@ -3881,7 +3881,7 @@ function saveCats() {
   sbSet("ya_cats", CATS).then(function(r){
     if (ctxStale(_ep)) return;
     if (!(r && r.ok)) return;
-    _tbMarkPushed('ya_cats');
+    _yaMarkPushed('ya_cats');
     /*  ⛔ כתיבה שהצליחה מקדמת את אות הפולינג — ⚠️ בלעדיה השינוי
      *  נשאר בלתי-נראה לכל מכשיר אחר לנצח: ⭐ הם מושכים רק כשהיא מתקדמת. */
     plTouch();
@@ -3907,7 +3907,7 @@ function metaDeleted(v) { return !!(v && typeof v === 'object' && v.deleted); }
  *  אחד** — ⚠️ נמדד שמשיכה שנכשלה הגיעה למיזוג כמפה ריקה: ⭐ עריכה
  *  מקומית שחותמתה 0 נדרסה בעותק ענני ישן, ⛔ ומפתח שנמחק בענן חזר
  *  ונדחף אליו. */
-function tbMetaMap(res) {
+function yaMetaMap(res) {
   if (!res || res.ok !== true) return null;
   var m = res.data;
   if (m === null || m === undefined) return {};
@@ -3917,9 +3917,9 @@ function tbMetaMap(res) {
  *  חדש יותר», ⛔ ולא «הענן חדש» ⛔ ולא «הענן ריק»: ⭐ אפס מפסיד לכל
  *  עריכה מתוארכת ⛔ ואינו מנצח דבר, ⚠️ וזריקה נבלעת כאן ⛔ ואינה עוצרת
  *  את המיזוג כולו. */
-function tbMetaTs(res, key) {
+function yaMetaTs(res, key) {
   try {
-    var m = tbMetaMap(res);
+    var m = yaMetaMap(res);
     return m ? metaTs(m[key]) : 0;
   } catch (e) { return 0; }
 }
@@ -3982,7 +3982,7 @@ function saveSubs() {
 function subKey(ci, taskName) { return ci + "::" + taskName; }
 
 /* ══ המיון היחיד לרשומות היומן ════════════════════════════════════════ */
-/*  ⛔ **`tbSortEntries` היא נקודת המיון היחידה** — ⚠️ המסך, הארכיון, גשר
+/*  ⛔ **`yaSortEntries` היא נקודת המיון היחידה** — ⚠️ המסך, הארכיון, גשר
     השיתוף וה-PDF קוראים לה כולם, ⛔ ואין מיון מקומי בשום מסך: ⭐ כל
     העותקים של אותו משווה נתנו סדר שנבדל בין המסך לייצוא, ⛔ והמשתמש ראה
     דף שאינו מה שהוא ייצא.
@@ -3990,7 +3990,7 @@ function subKey(ci, taskName) { return ci + "::" + taskName; }
     ששלוש רמותיהן זהות נשארו בסדר ההכנסה: ⛔ סדר שנראה אקראי במסך.
     ⛔ **והמזהה הוא הרמה האחרונה** — ⚠️ בלעדיו שתי רשומות זהות לגמרי
     מתחלפות ביניהן בין רינדור לרינדור, ⭐ והמיון אינו יציב. */
-function tbSortEntries(list) {
+function yaSortEntries(list) {
   var arr = Array.isArray(list) ? list.slice() : [];
   var catOrder = {};
   CATS.forEach(function (cat, ci) { catOrder[cat.letter] = ci; });
@@ -4030,20 +4030,20 @@ function saveEntries() {
   /*  ⛔ ההקשר נלכד לפני ההמתנה (סבב 88) — ⚠️ הרישום שאחריה זוקף את
    *  הצלחת הדחיפה לעֵד הפינוי ולסימון ה-⏳, ⭐ ושניהם פר-מוסד. */
   var _ep = ctxEpoch();
-  lsSetArray("ya_entries"+LS, ENTRIES, _tbRecTs);
+  lsSetArray("ya_entries"+LS, ENTRIES, _yaRecTs);
   (async function(){
     // ⭐ הטבלאות הן המאסטר (סבב 35) — הכתיבה הכפולה לבלוק ה-kv כובתה,
     //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
-    //    `TB_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
+    //    `YA_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
     var _rows = await pushTable('ya_entries', ENTRIES);
     if (ctxStale(_ep)) return;
-    var _r = TB_KV_LEGACY_WRITE ? await sbSet("ya_entries", ENTRIES) : null;
+    var _r = YA_KV_LEGACY_WRITE ? await sbSet("ya_entries", ENTRIES) : null;
     if (ctxStale(_ep)) return;
     /*  ⛔ עֵד הפינוי מסומן בשכבה המשותפת ⛔ ואינו נכתב כאן שוב —
      *  ⚠️ שני אתרי סימון לאותו עֵד הם שתי הכרעות על אותה ראיה. */
-    var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
+    var _ok = _rows.ok && (!YA_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
-    if (_ok && _rows.n) tbSyncLog('push', 'ya_entries', _rows.n);
+    if (_ok && _rows.n) yaSyncLog('push', 'ya_entries', _rows.n);
     /*  ⛔ החותמת מקודמת בשכבת הדחיפה ⛔ ואינה נכתבת כאן שוב — ⚠️ שכבת
      *  הדחיפה מקדמת אותה **רק כשבאמת נכתב משהו**, ⭐ וקידום שני היה חותם
      *  גם על דחיפה שלא העלתה דבר. */
@@ -4052,18 +4052,18 @@ function saveEntries() {
 function saveArchive() {
   var _t0 = Date.now();
   var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — אותו שער בדיוק
-  lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _tbRecTs);
+  lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
   (async function(){
     // ר' ההסבר ב-saveEntries — אותו כלל בדיוק (סבב 30).
     // ⭐ הדחיפה הזו הולכת ל-`ya_entries` עם `archived=true`, כלומר הארכוב
     //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('ya_archive', ARCHIVE);
     if (ctxStale(_ep)) return;
-    var _r = TB_KV_LEGACY_WRITE ? await sbSet("ya_archive", ARCHIVE) : null;
+    var _r = YA_KV_LEGACY_WRITE ? await sbSet("ya_archive", ARCHIVE) : null;
     if (ctxStale(_ep)) return;
-    var _ok = _rows.ok && (!TB_KV_LEGACY_WRITE || !!(_r && _r.ok));
+    var _ok = _rows.ok && (!YA_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ARC, _t0);
-    if (_ok && _rows.n) tbSyncLog('push', 'ya_archive', _rows.n);
+    if (_ok && _rows.n) yaSyncLog('push', 'ya_archive', _rows.n);
     // ר' ההערה ב-saveEntries — החותמת מקודמת בשכבת הדחיפה
   })();
 }
@@ -4238,7 +4238,7 @@ function arcCleanupCorrupted() {
    דרך `logAction` שבמודול הגיבוי — fire-and-forget, לעולם אינו חוסם.
    ⛔ אין לרשום את תקתוק המשיכה (סבב 35) — הוא רץ כל 3 שניות,
    ו-`sh_sync_log` היא יומן ראיות ב-insert בלבד שאי-אפשר לדלל. */
-function tbSyncLog(action, key, recordCount, details) {
+function yaSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
 }
 /*  ⛔⛔ מזהה ההקשר הפעיל (סבב 87ג) — ⚠️ הנימוק המדוד: `syncFromCloud` היא
@@ -4251,7 +4251,7 @@ function tbSyncLog(action, key, recordCount, details) {
  *  ⭐ המונה מקודם בכל החלפה, ⛔ וכל מחזור שקורא מהזיכרון לוכד אותו בכניסה
  *  ⛔ ובודק אותו לפני כל כתיבה: ⚠️ השוואת `YESHIVA` לבדה אינה מספיקה —
  *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
-var _tbPullLogged = false;
+var _yaPullLogged = false;
 
 async function syncFromCloud() {
   toast(MSG_SYNCING, 3000);
@@ -4299,7 +4299,7 @@ async function syncFromCloud() {
       } else if (cloudCats.length) {
         CATS = mergeCats(CATS, cloudCats);
         lsSet('ya_cats'+LS, JSON.stringify(CATS));
-        sbSet('ya_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _tbMarkPushed('ya_cats'); });
+        sbSet('ya_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _yaMarkPushed('ya_cats'); });
       }
     }
 
@@ -4313,13 +4313,13 @@ async function syncFromCloud() {
     /*  ⛔⛔ המיזוג רץ רק מול ראיה שמפת החותמות הגיעה — ⚠️ מפה
      *  שמשיכתה נכשלה אינה «הענן אינו מכיר»: ⭐ וכל הכרעה מול היעדר
      *  שלא נמדד היא הסקה ולא ראיה, ⛔ והדחיפה שאחריה מקבעת אותה בענן. */
-    if (cloudSubs && tbMetaMap(cloudSubsMetaR)) {
+    if (cloudSubs && yaMetaMap(cloudSubsMetaR)) {
       /*  ⛔ החותמת קודמת למיזוג — ⚠️ מכשיר שראה חותמת ישנה זורק את המפה
        *  המקומית ומושך מלא: ⭐ ואינו דוחף, ⛔ שהדחיפה הייתה מחזירה לענן
        *  בדיוק את מה שזה עתה נוקה בו. */
       if (cloudSubsReset > _subsResetSeen) {
         SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
-        SUBS_META = tbMetaMap(cloudSubsMetaR) || {};
+        SUBS_META = yaMetaMap(cloudSubsMetaR) || {};
         _subsResetSeen = cloudSubsReset;
         lsSet(SUBS_RESET_KEY+LS, JSON.stringify(cloudSubsReset));
         lsSet('ya_subs'+LS, JSON.stringify(SUBS));
@@ -4344,7 +4344,7 @@ async function syncFromCloud() {
     /* ⛔ מהטבלה בלבד, ⛔ ובלי נפילה-חזרה לערך השלם — ⚠️ וכשל אינו נכנס
        לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
        את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
-    var _rowsE = await tbRowsGet('ya_entries');
+    var _rowsE = await yaRowsGet('ya_entries');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
@@ -4358,22 +4358,19 @@ async function syncFromCloud() {
       ENTRIES = tombPruneMerged(ENTRIES);
       // מיון לפי id בסדר יורד (החדש קודם)
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
-      lsSetArray('ya_entries'+LS, ENTRIES, _tbRecTs);
+      lsSetArray('ya_entries'+LS, ENTRIES, _yaRecTs);
       pushTable('ya_entries', ENTRIES);
-      if (TB_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES);
+      if (YA_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES);
     } else if (ENTRIES.length) {
       pushTable('ya_entries', ENTRIES);
-      if (TB_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
-      // אין מה למזג — הגריעה של הטעינה כבר שלמה, מכבים את הדגל כדי שלא
-      // יישאר תלוי ויופעל במיזוג מאוחר ולא צפוי.
-      _tombPrunePending = false;
+      if (YA_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
     }
     }
 
     // ARCHIVE: מיזוג סנאפשוטים לפי gdate + מיזוג הרשומות שבתוך כל סנאפשוט.
     // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
     // איבדו את הצד הקטן יותר.
-    var _rowsA = await tbRowsGet('ya_archive');
+    var _rowsA = await yaRowsGet('ya_archive');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
@@ -4383,14 +4380,14 @@ async function syncFromCloud() {
     var cloudArchive = _rowsA.data;
     if (cloudArchive && cloudArchive.length) {
       ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
-      lsSetArray('ya_archive'+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _tbRecTs);
+      lsSetArray('ya_archive'+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
       // דוחף את הארכיון הממוזג בחזרה לענן כדי שכל המכשירים יישארו מסונכרנים
       pushTable('ya_archive', ARCHIVE);
-      if (TB_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
+      if (YA_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
       pushTable('ya_archive', ARCHIVE);
-      if (TB_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
+      if (YA_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
     }
     }
 
@@ -4406,9 +4403,9 @@ async function syncFromCloud() {
     buildSubBtns();
     renderLog();
     // הסימון לפני הרינדור — שורת המצב שבאזור המצב נבנית בתוך renderSettings.
-    if (failed.length === 0) _tbMarkSynced();
+    if (failed.length === 0) _yaMarkSynced();
     renderSettings();
-    if (failed.length === 0 && !_tbPullLogged) { _tbPullLogged = true; tbSyncLog('pull', null, null); }
+    if (failed.length === 0 && !_yaPullLogged) { _yaPullLogged = true; yaSyncLog('pull', null, null); }
     if (failed.length === 0) {
       toast(MSG_SYNCED);
     } else if (failed.length >= 5) {
@@ -4418,7 +4415,7 @@ async function syncFromCloud() {
     }
   } catch(e) {
     console.error("[syncFromCloud] error:", e);
-    _tbNetWarned = true;
+    _yaNetWarned = true;
     toast(MSG_OFFLINE_LOCAL, null, 'bad');
   }
 }
@@ -4683,10 +4680,10 @@ function checkDayChange() {
     // ⛔ אותו בונה בדיוק כמו המסלול הידני (סבב 31) — `auto` הוא סימון מקור
     //    ותו לא, ואינו מחליף שדה. ר' הבלוק שמעל `arcPutSnapshot`.
     arcPutSnapshot(dayKey, hdate, gdate, carried, ts, { auto: true });
-    lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _tbRecTs);
+    lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
-    lsSetArray("ya_entries"+LS, ENTRIES, _tbRecTs);
+    lsSetArray("ya_entries"+LS, ENTRIES, _yaRecTs);
     toast(MSG_DAY_ARCHIVED);
   }
   lsSet("ya_last_day"+LS, today);
@@ -4968,7 +4965,7 @@ function renderLog() {
     list.innerHTML = '<div class="empty">📋<br>אין רשומות לתאריך זה</div>';
     return;
   }
-  filtered = tbSortEntries(filtered);
+  filtered = yaSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
     var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
     return '<div class="entry-row u-bdr-cat ' + catCls(e.cat) + '">'
@@ -5314,7 +5311,7 @@ function _buildReportDiv(cb, entries){
   var curKey = getCurrentDateKey();
   var src = Array.isArray(entries) ? entries
           : liveOnly(ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  var sortedPDF = tbSortEntries(src);
+  var sortedPDF = yaSortEntries(src);
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catNameOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rows='';
@@ -5364,7 +5361,7 @@ function _buildReportDiv(cb, entries){
 //    החוזר יקרא לאותה דחיפה בדיוק. ⛔ אין לשכפל את הגוף הזה
 //    למסלול שני (סבב 44) — שתי דחיפות שונות לאותם נתונים הן שתי
 //    הזדמנויות שאחת מהן תיסחף.
-async function tbSyncPushNow() {
+async function yaSyncPushNow() {
     // ⚠️ t0 לפני שהצילום נקרא — רשומה שתסומן אחרי הרגע הזה אינה במה שנדחף
     //    עכשיו, והורדת הסימון ממנה הייתה מאבדת אותה בשקט (סבב 12).
     var _t0 = Date.now();
@@ -5379,7 +5376,7 @@ async function tbSyncPushNow() {
     if (ctxStale(_ep)) return;
     var rArchive = await pushTable("ya_archive", ARCHIVE);
     if (ctxStale(_ep)) return;
-    if (TB_KV_LEGACY_WRITE) { await sbSet("ya_entries", ENTRIES); await sbSet("ya_archive", ARCHIVE); }
+    if (YA_KV_LEGACY_WRITE) { await sbSet("ya_entries", ENTRIES); await sbSet("ya_archive", ARCHIVE); }
     if (ctxStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
@@ -6153,7 +6150,7 @@ function renderArcDetail() {
   var d = days[arcSelDayKey];
   if (!d) { el.innerHTML = '<div class="empty">לא נמצא</div>'; return; }
 
-  var sortedE = tbSortEntries(d.entries);
+  var sortedE = yaSortEntries(d.entries);
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div class="u-d-flex u-ai-c u-g-4 u-mb-5">'+
@@ -6328,13 +6325,13 @@ var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB
 var _lastKnownTimestamp = 0;
 // סבב 17: מועד הסנכרון המוצלח האחרון — לשורת המצב שבאזור המצב בהגדרות.
 // נכתב על כל שיחה מוצלחת עם הענן, ולכן הוא נכון גם בדפדפן שרק קורא.
-// ⛔ אינו עֵד דחיפה ואינו משמש לפינוי — לזה יש `_tbPushedAt` פר-מפתח.
-var _tbLastSyncAt = 0, _tbNetWarned = false;
-function _tbMarkSynced() {
-  _tbLastSyncAt = Date.now();
+// ⛔ אינו עֵד דחיפה ואינו משמש לפינוי — לזה יש `_yaPushedAt` פר-מפתח.
+var _yaLastSyncAt = 0, _yaNetWarned = false;
+function _yaMarkSynced() {
+  _yaLastSyncAt = Date.now();
   // הכישלון עצמו נשאר שקט כאן (הפולינג הוא כל 3 שניות — טוסט על כל מחזור
   // היה רעש), אבל **החזרה** כן נאמרת: היא הרגע שבו מה שהמתין מתחיל לעלות.
-  if (_tbNetWarned) { _tbNetWarned = false; toast(MSG_SYNC_BACK); }
+  if (_yaNetWarned) { _yaNetWarned = false; toast(MSG_SYNC_BACK); }
   // ⛔ הגיבוי והיומן **אינם** נתלים כאן (סבב 30, השלמה) — הניסוח הראשון
   //    תלה אותם בשיחה מוצלחת עם הענן, כלומר בפעילות סנכרון. זו בדיוק
   //    הצורה שהשביתה גיבוי ל-25 יום בלי שאיש ידע: מנגנון
@@ -6345,13 +6342,13 @@ function _tbMarkSynced() {
 //    המשותף (`PL_CFG` + `plTick`), ⭐ ומה שכאן הוא **המשיכה עצמה**:
 //    ⛔ מסלול שני שמכריע מתי למשוך יוצא מסנכרון מול המודול, ⚠️ וזה
 //    בדיוק «מקור אמת שני».
-async function tbPullFromCloud() {
+async function yaPullFromCloud() {
   /*  ⛔⛔ שער ההקשר של **מסלול הפולינג** — ⚠️ הנימוק המדוד: סבב 87 סגר את
    *  `syncFromCloud` וסבב 88 את מסלול הדחיפה, ⛔ והמשיכה הזו — שרצה
    *  **כל שלוש שניות** מ-`plTick` — נשארה בלי שער: ⭐ נמדד בדפדפן
    *  שהחלפת מוסד בזמן משיכה בטיסה כתבה רשומת ראשון למפתח
    *  `ya_entries_ramataviv`, ⛔ ומילאה את מפת החותמות בחותמות ראשון
-   *  אחרי ש-`ysResetTenantState` כבר איפסה אותה.
+   *  אחרי ש-`yaResetTenantState` כבר איפסה אותה.
    *  ⚠️ וזה מה שדווח מהשטח: הקטגוריות והארכיון מתערבבים בין המוסדות. */
   var _ep = ctxEpoch(), _ls = LS;
   try {
@@ -6363,33 +6360,33 @@ async function tbPullFromCloud() {
        נמדדה מול המסד בשני המוסדות, והבלוק חדל להיות רשת ביטחון והפך
        למקור אמת שני. ⛔ וכשל מחזיר «אין ראיה» ⛔ ולא «הענן ריק» — ⚠️ מיזוג
        מול מערך ריק מוחק את מה שלא הספיק לעלות. */
-    var _rowsE = await tbRowsGet('ya_entries');
+    var _rowsE = await yaRowsGet('ya_entries');
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsE.ok) {
       var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
-        lsSetArray("ya_entries"+_ls, ENTRIES, _tbRecTs);
+        lsSetArray("ya_entries"+_ls, ENTRIES, _yaRecTs);
         renderLog();
         console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
                     " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
     }
-    var _rowsA = await tbRowsGet('ya_archive');
+    var _rowsA = await yaRowsGet('ya_archive');
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsA.ok) {
       hwNoteCloud('ya_archive'+_ls, _rowsA.data);   // ראיה עננית לשער הדיסק (סבב 35)
       var cloudArchive = _rowsA.data;
       if (Array.isArray(cloudArchive)) {
         ARCHIVE = mergeArchive(ARCHIVE, cloudArchive);
-        lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _tbRecTs);
+        lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _yaRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
         if (arcPanel && arcPanel.style.display !== "none" && arcSelDayKey) renderArcDetail();
       }
     }
-  } catch(e) { _tbNetWarned = true; console.error("[sync] error:", e); }
+  } catch(e) { _yaNetWarned = true; console.error("[sync] error:", e); }
 }
 
 // ============================================================
@@ -6402,7 +6399,7 @@ async function tbPullFromCloud() {
    ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
       הכשל השקט.
    ⚠️ ואין כאן בדיקת הרשאה — ⭐ ביומן משתמש אחד, ⛔ ואין שכבת כניסה. */
-var YS_INF_MD = RAW_BASE + 'CLAUDE.md';
+var YA_INF_MD = RAW_BASE + 'CLAUDE.md';
 
 /*  ⛔ פירוק שורת טבלה — ⚠️ הפרדה על `|` משאירה תא ריק בשני הקצוות,
  *  ⭐ ושניהם נגזרים ⛔ ואינם נחתכים בקבוע. */
@@ -6461,7 +6458,7 @@ function _infParse(md) {
   }
   return { cats: cats, rows: rows };
 }
-var YS_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
+var YA_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
 /*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
  *  ⭐ והמשיכה נשמרת בזיכרון. */
 function _infHtml(d) {
@@ -6483,7 +6480,7 @@ function _infHtml(d) {
          '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
          '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
          '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
-         YS_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
+         YA_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
          '<th>הערה</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
       h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
@@ -6500,7 +6497,7 @@ window._infData = null;
 window._infOpen = false;
 /*  ⛔ שתי המשיכות במקביל ⛔ ולא בזו אחר זו — ⚠️ אין ביניהן תלות,
  *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
-async function ysInfraOpen() {
+async function yaInfraOpen() {
   window._infOpen = false;
   openModal(MSG_INFRA_TABLE,
     '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
@@ -6509,7 +6506,7 @@ async function ysInfraOpen() {
   try {
     /*  ⛔ משיכה אחת (סבב 96) — ⚠️ המשיכה השנייה הביאה את מפת הזיווג של
      *  סעיפי הכללים, ⭐ ואין יותר כללים לזווג. */
-    var res = await withTimeout(fetch(YS_INF_MD, { cache: 'no-store' }));
+    var res = await withTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
     md = await res.text();
   } catch (e) {
@@ -6527,7 +6524,7 @@ function _infPaint() {
   var el = document.getElementById('modal-body');
   if (el && window._infData) el.innerHTML = _infHtml(window._infData);
 }
-function ysInfraToggleAll(open) {
+function yaInfraToggleAll(open) {
   window._infOpen = open;
   _infPaint();
 }
@@ -6588,8 +6585,8 @@ function loadLocalData() {
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
     // גריעת tombstones מעבר ל-`TOMBSTONE_TTL_MS` — בטעינה בלבד, פעם אחת לעלייה.
-    // הדגל נצרך במיזוג הראשון שאחרי הטעינה (ראה _tombPrunePending), כי אחרת
-    // העותק הענני היה מחזיר את כולם מיד.
+    // ⛔ והגריעה רצה שוב על **תוצאת המיזוג** — ⚠️ גריעה מקומית בלבד
+    // מוחזרת מהענן תוך שניות.
     var _beforePrune = ENTRIES.length;
     ENTRIES = prunePastTombstones(ENTRIES);
     if (ENTRIES.length !== _beforePrune) {
@@ -6651,7 +6648,7 @@ function loadLocalData() {
    **הפינוי אינו בלתי נראה:** כל הגירה, וכל **דילוג** על הגירה, נרשמים ביומן
    הפינוי (`LS_CFG.logKey`) ובקונסולה תחת התג `[ls]`.
    ══════════════════════════════════════════════════════════════════════════ */
-var TB_LEGACY_SPECS = [
+var YA_LEGACY_SPECS = [
   { legacy: 'ya_entries', suffix: '_rishon', label: 'רשומות היומן',
     keyOf: function (r) { return entryKey(r); },
     merge: function (l, r) { return mergeEntries(l, r); } },
@@ -6739,7 +6736,7 @@ function migrateLegacyLsKeys() {
   if (YESHIVA !== 'rishon') return report;   // ⛔ ראשון לציון בלבד (סבב 13) — דליפה בין מוסדות
   report.ran = true;
 
-  TB_LEGACY_SPECS.forEach(function (sp) {
+  YA_LEGACY_SPECS.forEach(function (sp) {
     var raw = null;
     try { raw = lsGet(sp.legacy); } catch (e) { raw = null; }
     if (raw == null) return;                 // אין שריד — אידמפוטנטי
@@ -6776,7 +6773,7 @@ function migrateLegacyLsKeys() {
     }
 
     // ── כותבים לפני שמוחקים, ורק כתיבה שהצליחה מתירה מחיקה ──
-    if (added && !lsSetArray(target, merged, _tbRecTs)) {
+    if (added && !lsSetArray(target, merged, _yaRecTs)) {
       lsLog('הגירת שריד נדחתה', sp.legacy + ' — הכתיבה ל-' + target + ' נכשלה', 0);
       report.skipped.push(sp.legacy); return;
     }
@@ -6805,7 +6802,7 @@ var YESHIVOT = [
 /* ══════════════════════════════════════════════════════════════════════════
    החלפת מוסד — הבורר, איפוס המצב, והעלייה מחדש
    ══════════════════════════════════════════════════════════════════════════ */
-function ysNameOf(y) {
+function yaNameOf(y) {
   for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i].name;
   return '';
 }
@@ -6827,22 +6824,21 @@ function ysNameOf(y) {
  *  בלבד, ⭐ ומערך ריק הוא «אין מה לדחוף» ⛔ ולא «נמחק הכול».
  *  ⛔ ומפת החותמות המרוחקות מתאפסת אף היא — ⚠️ היא נמדדה מול המוסד הקודם,
  *  ⭐ והשוואה מולה הייתה מכריעה מה לדחוף על סמך טבלה אחרת. */
-function ysResetTenantState() {
+function yaResetTenantState() {
   ctxSwitch();
   /*  ⛔ הדחיפה המושהית אינה מבוטלת כאן — ⚠️ שער ההקשר שבשכבת הדחיפה
    *  עוצר אותה בהתעוררות, ⭐ ושני אתרי עצירה לאותו מחזור הם שתי הכרעות
    *  על אותה ראיה. */
-  _tbPushedAt = {};
+  _yaPushedAt = {};
   _lastKnownTimestamp = 0;
   _plFullAt = 0;
   _pendMap = null;
-  _tombPrunePending = false;
-  _tbRemote = { ya_entries: null, ya_archive: null };
+  _yaRemote = { ya_entries: null, ya_archive: null };
   _pendDrawHold = {};
   _hwCloudSeen = {};
-  _tbLastSyncAt = 0;
-  _tbNetWarned = false;
-  _tbPullLogged = false;
+  _yaLastSyncAt = 0;
+  _yaNetWarned = false;
+  _yaPullLogged = false;
   ENTRIES = [];
   ARCHIVE = [];
   CATS = [];
@@ -6856,7 +6852,7 @@ function ysResetTenantState() {
 }
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
-function ysPickYeshiva() {
+function yaPickYeshiva() {
   var body = '<div class="u-d-flex u-fd-col u-g-5">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
@@ -6875,16 +6871,16 @@ function ysPickYeshiva() {
 /*  ⛔ **אין אישור שני** (סבב 82) — ⚠️ הבחירה במוסד בבורר **היא** האישור:
  *  ⭐ שני דיאלוגים לפעולה אחת מלמדים ללחוץ «כן» בלי לקרוא, ⛔ ואז גם
  *  האישור שכן חשוב נלחץ בלי לקרוא. */
-function ysConfirmSwitch(y) {
-  if (!ysNameOf(y)) return;
+function yaConfirmSwitch(y) {
+  if (!yaNameOf(y)) return;
   closeModal();
-  if (idEq(y, YESHIVA)) { toast(MSG_ALREADY_AT + ysNameOf(y)); return; }
+  if (idEq(y, YESHIVA)) { toast(MSG_ALREADY_AT + yaNameOf(y)); return; }
   selectYeshiva(y);
   /*  ⛔ הארכיון חוזר לשורש דרך נקודת הניווט היחידה — ⚠️ שנת הקידוח
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
-  toast(MSG_SWITCHED_TO + ysNameOf(y));
+  toast(MSG_SWITCHED_TO + yaNameOf(y));
 }
 
 /*  ⛔ `again` מסמן מעבר בין מוסדות ⛔ ולא עלייה (סבב 81) — ⚠️ כל
@@ -6904,7 +6900,7 @@ function selectYeshiva(y) {
    *  אחד ולא בשני, ⭐ ולכן `pendBoot` רץ פעם שנייה במסלול השני ⛔ והוסיף
    *  מאזיני רשת כפולים. */
   var reentry = !!YESHIVA;
-  if (reentry) ysResetTenantState();
+  if (reentry) yaResetTenantState();
   var again = reentry;
   YESHIVA  = y;
   KV_TABLE = (y === 'ramataviv') ? 'ya_settings_ramataviv' : 'ya_settings_rishon';
@@ -6959,7 +6955,7 @@ function selectYeshiva(y) {
   // גיבוי יומי ויומן פעולות (סבב 30) — נקודת ההפעלה היחידה של המודול.
   // ⚠️ כאן ולא מוקדם יותר, וזה פרטי ליומן: `BK_CFG.sources` נשענת על
   //    `KV_TABLE`, שהוא `null` עד שנבחר מוסד. ⛔ אין להזיז את הקריאה
-  //    למסלול סנכרון (סבב 30, השלמה) — ר' ההערה ב-`_tbMarkSynced`.
+  //    למסלול סנכרון (סבב 30, השלמה) — ר' ההערה ב-`_yaMarkSynced`.
   try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
   try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // ניסיון חוזר בסנכרון (סבב 44) — נקודת ההפעלה היחידה של המודול.
@@ -7117,7 +7113,7 @@ function arcSaveEntry(gdateKey, entryId) {
   pendMark(PK_ENTRY + entryId);
   // ⛔ מפתח הסימון של סנאפשוט הוא `archiveKey` ולא מפתח המפה של
   //    `getAllArchiveDays` (סבב 37) — המפה ממופתחת ב-gdate **גולמי**
-  //    (`"3/09/2025"`), ואילו שלוש נקודות הקריאה — `tbDirtyRows`,
+  //    (`"3/09/2025"`), ואילו שלוש נקודות הקריאה — `yaDirtyRows`,
   //    `HW_CFG.specs[].isPending` ו-`mergeArchive` — קוראות
   //    `PK_ARC + archiveKey(r)`, כלומר `arc:g:3/09/2025`. עד סבב 37 נכתב
   //    כאן `arc:3/09/2025`, ולכן **אף אחת מהשלוש לא ראתה את הסימון**:

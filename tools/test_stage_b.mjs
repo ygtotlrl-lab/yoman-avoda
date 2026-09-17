@@ -134,24 +134,24 @@ function cutObj(decl) {
 }
 
 const NAMES = [
-  /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ בלעדיו `tbRowsGet` זורקת
+  /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ בלעדיו `yaRowsGet` זורקת
    *  ונתפסת ב-catch שלה עצמה, ⭐ והבדיקה הייתה מדווחת «אין רשת». */
   '_ysRowsPaged',
   'recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
   // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
   'pendEntry', 'pendArc', 'mergeEntries',
-  'archiveKey', 'mergeArchive', 'tbRecKey', 'tbPendPrefix', 'tbRowOf',
-  // ⚠️ נוספו בסבב 31 — `tbRowsGet` ממיינת את מה שנמשך, ובלעדיהן היא זורקת
+  'archiveKey', 'mergeArchive', 'yaRecKey', 'yaPendPrefix', 'yaRowOf',
+  // ⚠️ נוספו בסבב 31 — `yaRowsGet` ממיינת את מה שנמשך, ובלעדיהן היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
-  // ⚠️ `entryOrderTs` נוספה בסבב 38 — `tbSortRows` ממיינת דרכה מאז שמזהה
-  //    הרשומה הוא uuid; בלעדיה היא זורקת ונתפסת ב-catch של `tbRowsGet`.
-  'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'tbSortRows',
-  // ⚠️ נוספו בסבב 32 — `tbRowsGet`/`tbRowsPush` פונות דרכן לטבלה המאוחדת.
-  'tbTableOf', 'tbArchivedFlag',
-  // ⚠️ ⛔ מסבב 102 הדחיפה היא הבלוק המשותף — ⭐ `tbSendRows` היא הכתיבה
+  // ⚠️ `entryOrderTs` נוספה בסבב 38 — `yaSortRows` ממיינת דרכה מאז שמזהה
+  //    הרשומה הוא uuid; בלעדיה היא זורקת ונתפסת ב-catch של `yaRowsGet`.
+  'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs', 'yaSortRows',
+  // ⚠️ נוספו בסבב 32 — `yaRowsGet`/`yaRowsPush` פונות דרכן לטבלה המאוחדת.
+  'yaTableOf', 'yaArchivedFlag',
+  // ⚠️ ⛔ מסבב 102 הדחיפה היא הבלוק המשותף — ⭐ `yaSendRows` היא הכתיבה
   //    עצמה, ⛔ והלולאה שמעליה היא `pushTable` שנטענת מהבלוק.
-  'tbRowsGet', 'tbDirtyRows', 'tbSendRows', 'pushRow', 'pushTable'];
+  'yaRowsGet', 'yaDirtyRows', 'yaSendRows', 'pushRow', 'pushTable'];
 
 function makeEnv(opts = {}) {
   const env = { rows: opts.rows || [], net: opts.net !== false, upserts: [], selects: [] };
@@ -204,26 +204,26 @@ function makeEnv(opts = {}) {
      *  מספקת אותם כדי שהשכבה תיטען לבדה: ⛔ טעינת בלוק שלם לכל עוזר הייתה
      *  מכניסה לרתמה קוד שאינו נמדד כאן. */
     _pushTimer: null,
-    _tbPushEp: 0,
+    _yaPushEp: 0,
     isNetErr: (e) => /net|fetch|timeout|failed to/i.test((e && (e.message || '')) + ''),
     pendClear: () => {},
     pendFailed: () => {},
     plTouch: () => {},
-    _tbMarkPushed: () => {},
+    _yaMarkPushed: () => {},
     _bkWriteFail: () => {},
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(cutVar('var GREG_MONTHS_HE = '), sandbox);   // דרוש ל-parseGregLike (סבב 31)
-  vm.runInContext(cutVar('var TB_ROWS = true;'), sandbox);
-  vm.runInContext(cutVar('var TB_ARC_UNIFIED = true;'), sandbox);
-    vm.runInContext(cutVar("var TB_ROW_TABLES = "), sandbox);
-  // ⚠️ נוסף בסבב 55 — `tbRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
+  vm.runInContext(cutVar('var YA_ROWS = true;'), sandbox);
+  vm.runInContext(cutVar('var YA_ARC_UNIFIED = true;'), sandbox);
+    vm.runInContext(cutVar("var YA_ROW_TABLES = "), sandbox);
+  // ⚠️ נוסף בסבב 55 — `yaRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
   vm.runInContext(cutVar("var YS_ROWS_PAGE = "), sandbox);
   vm.runInContext(cutVar("var YS_ROWS_CAP = "), sandbox);
-  vm.runInContext(cutVar("var _tbRemote = "), sandbox);
-  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `tbRowsGet` ו-`tbSendRows`
+  vm.runInContext(cutVar("var _yaRemote = "), sandbox);
+  /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `yaRowsGet` ו-`yaSendRows`
    *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`
    *  של עצמן: ⚠️ והבדיקה הייתה מדווחת «אין רשת» על קוד תקין. */
   vm.runInContext(cutVar('var _ctxEpoch = 0;'), sandbox);
@@ -233,7 +233,7 @@ function makeEnv(opts = {}) {
    *  אמת שני, ⭐ והוא היה עובר גם כשההצהרה שבקוד השתנתה. */
   vm.runInContext(cutVar('var PUSH_TABLES = '), sandbox);
   vm.runInContext(cutObj('var PUSH_CFG = {'), sandbox);
-  if (opts.tbRows === false) sandbox.TB_ROWS = false;
+  if (opts.yaRows === false) sandbox.YA_ROWS = false;
   for (const n of NAMES) vm.runInContext(cut(n), sandbox, { filename: n + '.js' });
   env.sb = sandbox;
   return env;
@@ -258,7 +258,7 @@ function t1() {
   const env = makeEnv();
   const sb = env.sb;
   const OLD = [E(1, 100), E(2, 200), E(3, 0, { deleted: true }), E(4, 300, { notes: 'x' })];
-  const rows = OLD.map((r) => sb.tbRowOf('ya_entries', r));
+  const rows = OLD.map((r) => sb.yaRowOf('ya_entries', r));
   eq(rows.filter(Boolean).length, OLD.length, '1א · כל רשומה הפכה לשורה');
 
   // כיוון א — כל רשומה בערך הישן נמצאת בשורות
@@ -295,17 +295,17 @@ function t2() {
   const sb = makeEnv().sb;
   const cases = [E(1, 10), E('12345', 10), E(1785324660377, 10)];
   cases.forEach((r, i) => {
-    const row = sb.tbRowOf('ya_entries', r);
+    const row = sb.yaRowOf('ya_entries', r);
     eq(row.rec_key, sqlEntryKey(r), `2א.${i} · rec_key של רשומה זהה לנוסחת ה-SQL`);
     eq(row.client_id, 'rishon:' + sqlEntryKey(r), `2ב.${i} · client_id = '<yeshiva>:<rec_key>'`);
   });
   const snaps = [S('3/09/2025', 10), { id: 7, updatedAt: 5 }, { gdate: '', id: 9 }];
   snaps.forEach((r, i) => {
-    const row = sb.tbRowOf('ya_archive', r);
+    const row = sb.yaRowOf('ya_archive', r);
     eq(row.rec_key, sqlArchiveKey(r), `2ג.${i} · rec_key של סנאפשוט זהה לנוסחת ה-SQL`);
   });
-  eq(sb.tbRowOf('ya_archive', {}), null, '2ד · סנאפשוט בלי gdate ובלי id — אין לו שורה');
-  eq(sb.tbRowOf('ya_entries', {}), null, '2ה · ורשומה בלי id — גם כן');
+  eq(sb.yaRowOf('ya_archive', {}), null, '2ד · סנאפשוט בלי gdate ובלי id — אין לו שורה');
+  eq(sb.yaRowOf('ya_entries', {}), null, '2ה · ורשומה בלי id — גם כן');
   ok(/'g:' \|\| \(s->>'gdate'\)/.test(MIG), '2ו · ⛔ הנוסחה `g:`+gdate כתובה גם ב-migrations/003');
   ok(/'i:' \|\| \(s->>'id'\)/.test(MIG), '2ז · ⛔ וכך גם הנפילה-חזרה ל-`i:`+id');
   ok(/on conflict \(client_id\) do nothing/.test(MIG), '2ח · ⛔ והמיגרציה היא do nothing ולא do update');
@@ -346,24 +346,24 @@ async function t4() {
   const arr = [E(1, 100), E(2, 200), E(3, 300)];
 
   // ⛔ מפה null (טרם נמשך) ⇒ הכל דחוף — דילוג היה משאיר רשומה בלי עותק בענן
-  eq(sb.tbDirtyRows('ya_entries', arr).length, 3, '4א · ⛔ לפני משיכה — הכל נחשב לדחיפה');
+  eq(sb.yaDirtyRows('ya_entries', arr).length, 3, '4א · ⛔ לפני משיכה — הכל נחשב לדחיפה');
 
-  sb._tbRemote.ya_entries = { '1': 100, '2': 200, '3': 300 };
-  eq(sb.tbDirtyRows('ya_entries', arr).length, 0, '4ב · הכל מסונכרן ⇒ אין מה לדחוף');
+  sb._yaRemote.ya_entries = { '1': 100, '2': 200, '3': 300 };
+  eq(sb.yaDirtyRows('ya_entries', arr).length, 0, '4ב · הכל מסונכרן ⇒ אין מה לדחוף');
 
   arr[1] = E(2, 250);
-  const d = sb.tbDirtyRows('ya_entries', arr);
+  const d = sb.yaDirtyRows('ya_entries', arr);
   eq(d.length, 1, '4ג · רק מה שהשתנה');
   eq(d[0].rec_key, '2', '4ד · והוא הנכון');
 
   // רשומה חדשה לגמרי
   arr.push(E(9, 50));
-  eq(sb.tbDirtyRows('ya_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
+  eq(sb.yaDirtyRows('ya_entries', arr).length, 2, '4ה · רשומה שאינה בענן נדחפת גם עם חותמת ישנה');
 
   // ⚠️ רשומה מסומנת ⏳ מנצחת במיזוג
   const env2 = makeEnv({ pending: { 'entry:1': 1 } });
-  env2.sb._tbRemote.ya_entries = { '1': 999 };
-  eq(env2.sb.tbDirtyRows('ya_entries', [E(1, 100)]).length, 1,
+  env2.sb._yaRemote.ya_entries = { '1': 999 };
+  eq(env2.sb.yaDirtyRows('ya_entries', [E(1, 100)]).length, 1,
     '4ו · ⛔ רשומה מסומנת ⏳ נדחפת גם כשחותמת הענן חדשה יותר');
 
   // הדחיפה עצמה
@@ -372,7 +372,7 @@ async function t4() {
   eq(env.upserts.length, 1, '4ח · קריאת upsert אחת');
   eq(env.upserts[0].opts.onConflict, 'client_id', '4ט · ⚠️ upsert על client_id — אידמפוטנטי');
   eq(env.upserts[0].table, 'ya_entries', '4י · לטבלה הנכונה');
-  eq(sb.tbDirtyRows('ya_entries', arr).length, 0, '4יא · ואחריה אין מה לדחוף');
+  eq(sb.yaDirtyRows('ya_entries', arr).length, 0, '4יא · ואחריה אין מה לדחוף');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -381,19 +381,19 @@ async function t4() {
 async function t5() {
   const env = makeEnv({ net: false });
   const sb = env.sb;
-  const g = await sb.tbRowsGet('ya_entries');
+  const g = await sb.yaRowsGet('ya_entries');
   eq(g.ok, false, '5א · ⛔ משיכה שנכשלה מחזירה ok:false — «אין ראיה»');
   // ⛔ תשובה עם `error` **וגם** מערך תקין — הצורה שמפילה בדיקה רופפת
   const envE = makeEnv({ net: false, rows: [{ _t: 'ya_entries', yeshiva: 'rishon', rec_key: '1', updated_at: 5, data: E(1, 5) }] });
   envE.errWithData = true;
-  eq((await envE.sb.tbRowsGet('ya_entries')).ok, false,
+  eq((await envE.sb.yaRowsGet('ya_entries')).ok, false,
     '5א2 · ⛔ `error` שמלווה במערך תקין עדיין נכשל סגור');
   eq(g.data, null, '5ב · ובלי נתונים, כדי שאתר הקריאה ייפול-חזרה לבלוק');
-  eq(sb._tbRemote.ya_entries, null, '5ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
+  eq(sb._yaRemote.ya_entries, null, '5ג · ⛔ ומפת הענן לא נדרסה במפה ריקה');
 
   const p = await sb.pushTable('ya_entries', [E(1, 100)]);
   eq(p.ok, false, '5ד · דחיפה שנכשלה מחזירה ok:false');
-  eq(sb.tbDirtyRows('ya_entries', [E(1, 100)]).length, 1, '5ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב');
+  eq(sb.yaDirtyRows('ya_entries', [E(1, 100)]).length, 1, '5ה · ⭐ והרשומה נשארת «לדחיפה» — תנוסה שוב');
 
   // הרשת חוזרת
   env.net = true;
@@ -401,23 +401,23 @@ async function t5() {
 
   // בלי לקוח / בלי מוסד
   const env2 = makeEnv({ noClient: true });
-  eq((await env2.sb.tbRowsGet('ya_entries')).ok, false, '5ז · בלי לקוח — ok:false');
+  eq((await env2.sb.yaRowsGet('ya_entries')).ok, false, '5ז · בלי לקוח — ok:false');
   const env3 = makeEnv();
   env3.sb.YESHIVA = null;
-  eq((await env3.sb.tbRowsGet('ya_entries')).ok, false, '5ח · ⛔ ולפני בחירת מוסד — לא נוגעים ברשת');
+  eq((await env3.sb.yaRowsGet('ya_entries')).ok, false, '5ח · ⛔ ולפני בחירת מוסד — לא נוגעים ברשת');
   eq(env3.selects.length, 0, '5ט · ואפס שאילתות');
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   6 · ⭐ נתיב החזרה — TB_ROWS=false מחזיר את ההתנהגות הישנה
+   6 · ⭐ נתיב החזרה — YA_ROWS=false מחזיר את ההתנהגות הישנה
    ══════════════════════════════════════════════════════════════════════════ */
 async function t6() {
-  const env = makeEnv({ tbRows: false });
+  const env = makeEnv({ yaRows: false });
   const sb = env.sb;
-  eq((await sb.tbRowsGet('ya_entries')).ok, false, '6א · ⭐ בכיבוי — אין קריאה מהשורות');
+  eq((await sb.yaRowsGet('ya_entries')).ok, false, '6א · ⭐ בכיבוי — אין קריאה מהשורות');
   eq((await sb.pushTable('ya_entries', [E(1, 1)])).ok, false, '6ב · ואין דחיפה');
   eq(env.selects.length + env.upserts.length, 0, '6ג · ⛔ ואפס נגיעה ברשת');
-  const flags = [...SRC.matchAll(/var TB_ROWS = (\w+);/g)].map((m) => m[1]);
+  const flags = [...SRC.matchAll(/var YA_ROWS = (\w+);/g)].map((m) => m[1]);
   ok(flags.length === 1 && flags[0] === 'true',
      `6ד · והדגל קיים בקוד כדגל יחיד — נמדדו ${flags.length} הצהרות ` +
      `(${flags.join(', ') || '—'}) והצפוי אחת בערך true`);
@@ -434,11 +434,11 @@ async function t7() {
       { _t: 'ya_entries', yeshiva: 'ramataviv', rec_key: '9', updated_at: 1, data: E(9, 1) },
     ],
   });
-  const g = await env.sb.tbRowsGet('ya_entries');
+  const g = await env.sb.yaRowsGet('ya_entries');
   eq(g.ok, true, '7א · משיכה מוצלחת');
   eq(g.data.length, 2, '7ב · ⛔ רק שורות המוסד הפעיל — אין דליפה בין מוסדות');
   eq(env.selects[0].yeshiva, 'rishon', '7ג · והסינון נעשה בשאילתה עצמה');
-  eq(env.sb._tbRemote.ya_entries['2'], 200, '7ד · מפת החותמות נבנתה מהמשיכה');
+  eq(env.sb._yaRemote.ya_entries['2'], 200, '7ד · מפת החותמות נבנתה מהמשיכה');
   // ⚠️ מסבב 31 המשיכה מחזירה **ממוין** — רשומות לפי id יורד — ולכן הראשון
   //    הוא 2 ולא 1. הטענה בודקת שהנתונים הם גוף הרשומה, ועכשיו גם את הסדר.
   eq(g.data[0].id, 2, '7ה · והנתונים הם גוף הרשומה, בסדר יורד לפי id');
@@ -500,7 +500,7 @@ if (!process.env.RD67_MUT) {
   }
   console.log('\n— מוטציות (סבב 67) —');
   _mut('⛔ הסרת המיון משכבת השורות מפילה את השער', 'index.html',
-       (s) => s.replace(/function tbSortRows/, 'function tbSortRowsX'), true);
+       (s) => s.replace(/function yaSortRows/, 'function yaSortRowsX'), true);
   _mut('⭐ מוטציית-נגד: פונקציה חדשה וחיה ב-index.html ⛔ אינה מפילה', 'index.html',
        (s) => s.replace('</body>', '<script>function r72Live(){ return 1; }\nvar _r72Seen = r72Live();</script>\n</body>'), false);
 }

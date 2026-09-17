@@ -51,8 +51,8 @@ const RUN_MUT = process.env.GATE_MUT === '1';
  *  מוסד ולכן נטענים מחדש, ⭐ ואלה אינם: ⛔ כל שם כאן חייב להיות משתנה
  *  ברמת הקובץ **וגם** מאופס בפונקציית האיפוס, ⚠️ ושם שאינו אחד מהם
  *  מפיל — ⭐ כך ששינוי שם אינו מדלג בשקט. */
-const TENANT_STATE = ['_tbPushedAt', '_lastKnownTimestamp', '_plFullAt',
-                      '_pendMap', '_tombPrunePending'];
+const TENANT_STATE = ['_yaPushedAt', '_lastKnownTimestamp', '_plFullAt',
+                      '_pendMap', '_yaRemote'];
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -159,20 +159,20 @@ function audit(root) {
   }
 
   /* ב. הבורר עובר ב-`openModal`, והאישור ב-`ask` */
-  const picker = bodyOf(page, 'ysPickYeshiva');
+  const picker = bodyOf(page, 'yaPickYeshiva');
   if (!/openModal\(/.test(picker))
     v.push({ kind: 'modal', msg: 'הבורר אינו נפתח ב-`openModal`' });
 
   /*  ג. האיפוס יושב בנקודת הניתוב האחת, ⛔ ובלי אישור שני (סבב 82):
       ⚠️ **הנימוק המדוד** (סבב 99): הטענה כאן מדדה את האיפוס **בתוך
-      `ysConfirmSwitch`** — ⛔ כלומר קורא אחד מתוך שניים: ⭐ ומסך הבחירה
+      `yaConfirmSwitch`** — ⛔ כלומר קורא אחד מתוך שניים: ⭐ ומסך הבחירה
       שבעלייה קרא ל-`selectYeshiva` חשופה, ⚠️ `ctxSwitch` לא נקרא, ⛔ וכל
       שערי ההקשר היו מנוטרלים — ⭐ ורשומת קטגוריה זרה דרסה רשימת משימות.
       ⛔ **ולכן נמדד הניתוב ולא הקורא**: האיפוס בתוך `selectYeshiva`,
       ⚠️ לפני שנקבע ולו גלובל פר-מוסד אחד, ⭐ ואתר קריאה **אחד** בקובץ.
       ⚠️ והבחירה במוסד בבורר **היא** האישור, ⛔ ואין דיאלוג שני. */
   const sel = bodyOf(page, 'selectYeshiva');
-  const iRst = sel.indexOf('ysResetTenantState()');
+  const iRst = sel.indexOf('yaResetTenantState()');
   const iSet = Math.min(...['YESHIVA', 'KV_TABLE', 'LS']
     .map((n) => { const i = sel.search(new RegExp('(?<![\\w$])' + n + '\\s*=[^=]')); return i < 0 ? 1e9 : i; }));
   if (iRst < 0 || !(iRst < iSet))
@@ -180,18 +180,18 @@ function audit(root) {
       `האיפוס אינו בנקודת הניתוב — איפוס ${iRst} · גלובל פר-מוסד ${iSet}; הצפוי עולה` });
   /*  ⛔ ההגדרה אינה אתר קריאה — ⚠️ `function X()` נושא את אותם תווים,
    *  ⭐ ומדידה גולמית הייתה סופרת אותו. */
-  const calls = (page.match(/(?<!function\s)ysResetTenantState\(\)/g) || []).length;
+  const calls = (page.match(/(?<!function\s)yaResetTenantState\(\)/g) || []).length;
   if (calls !== 1)
     v.push({ kind: 'order', msg:
-      `אתרי קריאה ל-ysResetTenantState — נמדדו ${calls} והצפוי 1: ⛔ האיפוס ` +
+      `אתרי קריאה ל-yaResetTenantState — נמדדו ${calls} והצפוי 1: ⛔ האיפוס ` +
       'הוא אחריות נקודת הניתוב, ולא של הקורא' });
-  const conf = bodyOf(page, 'ysConfirmSwitch');
+  const conf = bodyOf(page, 'yaConfirmSwitch');
   if (/(?<![\w$])ask\s*\(/.test(conf))
     v.push({ kind: 'order', msg:
-      'אישור שני במעבר — נמדדה קריאת `ask` ב-`ysConfirmSwitch` והצפוי אפס' });
+      'אישור שני במעבר — נמדדה קריאת `ask` ב-`yaConfirmSwitch` והצפוי אפס' });
 
   /* ד. האיפוס מכסה את כל המצב הפר-מוסדי */
-  const reset = bodyOf(page, 'ysResetTenantState');
+  const reset = bodyOf(page, 'yaResetTenantState');
   const missReset = TENANT_STATE.filter((n) => !new RegExp('(?<![\\w$])' + n + '\\s*=').test(reset));
   const missVar = TENANT_STATE.filter((n) => !new RegExp('(?:var|let)\\s[^;\\n]*(?<![\\w$])' + n + '\\b').test(page));
   if (missReset.length)
@@ -288,18 +288,18 @@ mutate('מ1 · מוטציה: שורת האיפוס של אות הפולינג נ
   (s) => s.replace('  _lastKnownTimestamp = 0;\n', ''), ['reset']);
 
 mutate('מ2 · מוטציה: האיפוס אחרי קביעת הגלובלים במקום לפניה — טענה ג נופלת',
-  (s) => s.replace('  if (reentry) ysResetTenantState();\n  var again = reentry;\n  YESHIVA  = y;',
-                   '  var again = reentry;\n  YESHIVA  = y;\n  if (reentry) ysResetTenantState();'), ['order']);
+  (s) => s.replace('  if (reentry) yaResetTenantState();\n  var again = reentry;\n  YESHIVA  = y;',
+                   '  var again = reentry;\n  YESHIVA  = y;\n  if (reentry) yaResetTenantState();'), ['order']);
 
 /*  ⛔⛔ החזרת האיפוס לקורא היא **המוטציה של הסבב** — ⚠️ זו בדיוק הצורה
  *  שהייתה כאן, ⭐ ושבה קורא אחד איפס והשני לא: ⛔ והשער אישר אותה. */
 mutate('מ2א · מוטציה: האיפוס חוזר לאחריות הקורא — טענה ג נופלת',
-  (s) => s.replace('  if (reentry) ysResetTenantState();\n', '')
-          .replace('  selectYeshiva(y);\n', '  ysResetTenantState();\n  selectYeshiva(y);\n'), ['order']);
+  (s) => s.replace('  if (reentry) yaResetTenantState();\n', '')
+          .replace('  selectYeshiva(y);\n', '  yaResetTenantState();\n  selectYeshiva(y);\n'), ['order']);
 
 /*  ⛔ החזרת האישור השני היא מוטציה על המנגנון — ⚠️ הכפתור ממשיך לעבוד,
  *  ⭐ ולכן רק שער תופס את הדיאלוג הכפול שחזר. */
-mutate('מ2ב · מוטציה: אישור שני חוזר ל-ysConfirmSwitch — טענה ג נופלת',
+mutate('מ2ב · מוטציה: אישור שני חוזר ל-yaConfirmSwitch — טענה ג נופלת',
   (s) => s.replace('  selectYeshiva(y);\n',
                    "  if (!ask('החלפת ישיבה', 'להחליף?')) return;\n  selectYeshiva(y);\n"), ['order']);
 
@@ -328,8 +328,8 @@ mutate('מ6 · מוטציה: הלוגו מפסיק לנתב את הבורר — 
 /*  ⭐ מוטציות-נגד — ⛔ שינויים חיים שאסור להם להפיל: ⚠️ שורת איפוס
  *  שנוספת, וניסוח הודעה שמשתנה. */
 mutate('נ1 · ⭐ מוטציית-נגד: שורת איפוס **נוספת** ⛔ אינה מפילה את טענה ד',
-  (s) => s.replace('  _tombPrunePending = false;\n',
-                   '  _tombPrunePending = false;\n  _plBusy = false;\n'), ['__none__']);
+  (s) => s.replace('  _pendMap = null;\n',
+                   '  _pendMap = null;\n  _plBusy = false;\n'), ['__none__']);
 
 /*  ⭐ מוטציית-נגד חיה: ניסוח ההודעה שאחרי ההחלפה — ⛔ מחרוזת שקיימת בקובץ,
  *  ⚠️ ולא כזו שנעלמה ממנו: ⛔ מוטציה שהחלפתה אינה מחליפה דבר אינה רצה. */

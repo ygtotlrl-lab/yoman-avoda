@@ -27,10 +27,10 @@ import { appSrc } from './appsrc.mjs';
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
   checks: [
-    [/var TB_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (TB_KV_LEGACY_WRITE=false)'],
+    [/var YA_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (YA_KV_LEGACY_WRITE=false)'],
     [/kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את ya_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
-    [/function tbSyncLog\(/, 'עוטף sh_sync_log קיים (tbSyncLog)'],
-    [/var p = parseGregLike\(g\);/, '_tbGdateTs מפענחת דרך parseGregLike (סגירת פער סבב 31)'],
+    [/function yaSyncLog\(/, 'עוטף sh_sync_log קיים (yaSyncLog)'],
+    [/var p = parseGregLike\(g\);/, '_yaGdateTs מפענחת דרך parseGregLike (סגירת פער סבב 31)'],
     [/HW_CFG = \{\s*\n\s*enabled: true,/, 'החלון החם פעיל (HW_CFG.enabled)'],
     [/hwNoteCloud\('ya_archive'\+LS, _rowsA\.data\)/, 'הראיה העננית ניזונה ממשיכת ya_archive'],
   ],

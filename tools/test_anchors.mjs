@@ -35,7 +35,7 @@ import { execFileSync } from 'node:child_process';
 const APP = {
   app: 'yoman-avoda',
   actMap: 'DOM_ACTIONS',
-  sortFn: 'tbSortEntries',
+  sortFn: 'yaSortEntries',
   cdnSym: 'supabase',
   /* ⚠️ אתרי הקריאה של מסלול הייצוא, וההחלפה שמנטרלת כל אחד — ריק כשאין ייצוא */
   exportCalls: [['html2canvas(', 'html2canvasZ('], ['navigator.share(', 'navigator.shareZ(']],

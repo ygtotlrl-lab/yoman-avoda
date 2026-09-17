@@ -37,17 +37,17 @@ const APP = {
    *  מקבלת את **מעטפת המשיכה**, ⛔ ולא את הנתון: ⭐ «נכשל» ו«אין בענן»
    *  חוזרים שניהם כ-`null`, ⛔ ומשיכה למפתח הייתה קריאת רשת לכל אחד מהם. */
   stamp: {
-    fn: 'tbMetaTs',
-    deps: ['metaTs', 'tbMetaMap'],
+    fn: 'yaMetaTs',
+    deps: ['metaTs', 'yaMetaMap'],
     kind: 'map-key',
     wired: [
-      ['if \\(cloudSubs && tbMetaMap\\(cloudSubsMetaR\\)\\)',
+      ['if \\(cloudSubs && yaMetaMap\\(cloudSubsMetaR\\)\\)',
        'המיזוג רץ רק מול ראיה שמפת החותמות הגיעה'],
       ['var ms = mergeSubs\\(SUBS, SUBS_META, cloudSubs, cloudSubsMetaR\\)',
        'והמיזוג מקבל את מעטפת המשיכה — ⛔ ולא מפה חשופה'],
-      ['metaTs\\(Lm\\[k\\]\\) > tbMetaTs\\(remoteMetaRes, k\\)',
+      ['metaTs\\(Lm\\[k\\]\\) > yaMetaTs\\(remoteMetaRes, k\\)',
        'וההשוואה הפר-מפתחית עוברת בנקודת המעבר האחת'],
-      ['SUBS_META = tbMetaMap\\(cloudSubsMetaR\\) \\|\\| \\{\\}',
+      ['SUBS_META = yaMetaMap\\(cloudSubsMetaR\\) \\|\\| \\{\\}',
        'וגם מסלול הניקוי קורא את המפה דרכה'],
     ],
     noSecond: [

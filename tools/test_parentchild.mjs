@@ -65,7 +65,7 @@ const APP = {
   rowKeys: {
     layers: ['merge', 'pend'],
     defaultKey: 'rec_key',
-    keyFn: { name: 'tbPendPrefix', arg: 'kvKey', why: '' },
+    keyFn: { name: 'yaPendPrefix', arg: 'kvKey', why: '' },
     tables: { ya_entries: 'rec_key', ya_archive: 'rec_key' },
     gapWhy: {},
   },
