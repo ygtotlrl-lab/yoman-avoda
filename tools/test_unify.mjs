@@ -147,7 +147,7 @@ function cutObj(decl) {
 const NAMES = [
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ בלעדיו `yaRowsGet` זורקת
    *  ונתפסת ב-catch שלה עצמה, ⭐ והבדיקה הייתה מדווחת «אין רשת». */
-  '_ysRowsPaged',
+  '_rowsPaged',
   'recTs', 'isLive', 'liveOnly', '_mergePick', 'mergeCore', 'mergeRecords', 'entryKey',
   // ⚠️ נוספו בסבב 37 — פרדיקטי ה-⏳ שמנוע המיזוג מקבל. בלעדיהם
   //    `mergeEntries`/`mergeArchive` זורקות ReferenceError בסביבה.
@@ -240,8 +240,8 @@ function makeEnv(opts = {}) {
   vm.runInContext(cutVar('var YA_ROW_TABLES = '), sandbox);
   // ⚠️ נוסף בסבב 55 — `yaRowsGet` מושכת בעמודים, ובלי הקבוע היא זורקת
   //    ונתפסת ב-catch שלה עצמה, כלומר הבדיקה הייתה מדווחת «אין רשת».
-  vm.runInContext(cutVar('var YS_ROWS_PAGE = '), sandbox);
-  vm.runInContext(cutVar('var YS_ROWS_CAP = '), sandbox);
+  vm.runInContext(cutVar('var ROWS_PAGE = '), sandbox);
+  vm.runInContext(cutVar('var ROWS_CAP = '), sandbox);
   vm.runInContext(cutVar('var _yaRemote = '), sandbox);
   /*  ⛔ שער ההקשר נטען מהמקור (סבב 89) — ⚠️ `yaRowsGet` ו-`yaSendRows`
    *  בודקות אותו אחרי ההמתנה, ⭐ ובלעדיו הן זורקות ⛔ ונתפסות ב-`catch`

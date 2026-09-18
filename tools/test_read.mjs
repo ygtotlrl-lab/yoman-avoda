@@ -210,14 +210,14 @@ function env(total, mode, mutSrc) {
   sb.globalThis = sb;
   vm.createContext(sb);
   for (const d of ['var YA_ROWS = true;', 'var YA_ARC_UNIFIED = true;',
-                   'var YA_ROW_TABLES = ', 'var YS_ROWS_PAGE = ', 'var YS_ROWS_CAP = ',
+                   'var YA_ROW_TABLES = ', 'var ROWS_PAGE = ', 'var ROWS_CAP = ',
                    'var _yaRemote = ']) {
     vm.runInContext(cutVar(d), sb);
   }
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
    *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
   vm.runInContext(cutVar('var _ctxEpoch = 0;'), sb);
-  for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
+  for (const n of ['_rowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
                    'yaSortRows', 'yaTableOf', 'yaArchivedFlag', 'ctxEpoch', 'ctxSwitch', 'ctxStale', 'yaRowsGet']) {
     vm.runInContext(cut(n, mutSrc), sb, { filename: n + '.js' });
   }
@@ -228,8 +228,8 @@ function env(total, mode, mutSrc) {
   return { sb, st };
 }
 
-const PAGE = Number((cutVar('var YS_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
-assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
+const PAGE = Number((cutVar('var ROWS_PAGE = ').match(/\d+/) || [0])[0]);
+assert(PAGE > 0, '2א · ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(PAGE + 250);
   const r = await e.sb.yaRowsGet('ya_entries');
@@ -330,7 +330,7 @@ console.log('— מוטציות —');
 }
 {
   const e = env(PAGE + 250);
-  vm.runInContext('YS_ROWS_PAGE = 1e9;', e.sb);
+  vm.runInContext('ROWS_PAGE = 1e9;', e.sb);
   const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');

@@ -902,9 +902,9 @@ function errMsg(e) {
    ⛔ ותקרת בטיחות ללולאה שתלויה בגודל התשובה — ⚠️ מסד שמחזיר עמוד מלא
       לנצח תולה את הדף.
    ═══════════════════════════════════════════════════════════════════════ */
-var YS_ROWS_PAGE = 1000;
-var YS_ROWS_CAP = 500000;
-async function _ysRowsPaged(mkQuery, order, win) {
+var ROWS_PAGE = 1000;
+var ROWS_CAP = 500000;
+async function _rowsPaged(mkQuery, order, win) {
   var out = [], from = 0;
   for (;;) {
     var q = mkQuery();
@@ -913,12 +913,12 @@ async function _ysRowsPaged(mkQuery, order, win) {
       if (win.to) q = q.lte(win.col, win.to);
     }
     if (order) q = q.order(order, { ascending: true });
-    var res = await withTimeout(q.range(from, from + YS_ROWS_PAGE - 1));
+    var res = await withTimeout(q.range(from, from + ROWS_PAGE - 1));
     if (!res || res.error || !Array.isArray(res.data)) return null;
     out = out.concat(res.data);
-    if (res.data.length < YS_ROWS_PAGE) return out;
-    from += YS_ROWS_PAGE;
-    if (from > YS_ROWS_CAP) return out;
+    if (res.data.length < ROWS_PAGE) return out;
+    from += ROWS_PAGE;
+    if (from > ROWS_CAP) return out;
   }
 }
 /* ═══════════════ סוף מודול משיכה מסוננת בשרת ═══════════════════════════ */
@@ -2067,7 +2067,7 @@ function _bkLayer(bkey, s) {
  *  יש: ⛔ אי-התאמה מחזירה `null` ⛔ ונכשלת בקול, ⚠️ ואינה שומרת חצי גיבוי. */
 async function _bkReadRows(c, s, win) {
   var sel = s.cols || '*';
-  var rows = await _ysRowsPaged(function () {
+  var rows = await _rowsPaged(function () {
     var q = c.from(s.name).select(sel);
     if (s.eq) q = q.eq(s.eq[0], s.eq[1]);
     return q;
@@ -3803,7 +3803,7 @@ async function yaRowsGet(kvKey) {
   var t = yaTableOf(kvKey);
   if (!YA_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
-   *  המדוד: `_ysRowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
+   *  המדוד: `_rowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
    *  של מוסד אחד עם עמוד 2 של השני ⛔ לתוך תוצאה אחת שנראית שלמה. */
   var yesh = YESHIVA, _ep = ctxEpoch();
@@ -3817,7 +3817,7 @@ async function yaRowsGet(kvKey) {
        אין עמודת תאריך בת-סינון: `gdate` מלאה ב-351 שורות מתוך 2,483
        ⛔ ובשני כתיבים שונים, ⭐ ולכן `.gte` עליה היה מחזיר תמונה חלקית
        שנראית שלמה. ⚠️ החלון כאן הוא **הדגל**, והוא מפריד 2,108 מ-375. */
-    var rows = await _ysRowsPaged(function () {
+    var rows = await _rowsPaged(function () {
       var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', yesh);
       if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
       return q;
@@ -4427,7 +4427,7 @@ async function syncFromCloud() {
 /* ══════════════════════════════════════════════════════════════════════════
    תאריך עברי — מקור אמת יחיד
    ══════════════════════════════════════════════════════════════════════════
-   ⚠️ המנוע הוא `Intl.DateTimeFormat('en-u-ca-hebrew')`, ו-`ysHebDate`
+   ⚠️ המנוע הוא `Intl.DateTimeFormat('en-u-ca-hebrew')`, ו-`hebDate`
    היא הפונקציה שכל צרכן תאריך עובר דרכה. ⛔ אין למחוק את `_hcST`
    (סבב 80) — היא רשת הנפילה-חזרה כשאין Intl, והיא אומתה מול מימוש
    אריתמטי של הלוח הקבוע ולא מול ICU.
@@ -4435,117 +4435,6 @@ async function syncFromCloud() {
    נכתב בצורה אחת: ⭐ «מנחם אב», ו«אדר א׳»/«אדר ב׳» בגרש עברי — ⛔ ושינוי
    בו הוא המרה במסד ⛔ ולא מיפוי בקוד: ⚠️ מיפוי הוא מקור אמת שני שמתיישן.
    ══════════════════════════════════════════════════════════════════════════ */
-window.DAYS_HEB=["","א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ז׳","ח׳","ט׳","י׳","י״א","י״ב","י״ג","י״ד","ט״ו","ט״ז","י״ז","י״ח","י״ט","כ׳","כ״א","כ״ב","כ״ג","כ״ד","כ״ה","כ״ו","כ״ז","כ״ח","כ״ט","ל׳"];
-window.MONTHS_HEB     =["תשרי","חשון","כסלו","טבת","שבט","אדר","ניסן","אייר","סיון","תמוז","מנחם אב","אלול"];
-window.MONTHS_HEB_LEAP=["תשרי","חשון","כסלו","טבת","שבט","אדר א׳","אדר ב׳","ניסן","אייר","סיון","תמוז","מנחם אב","אלול"];
-window.YS_DOW_HEB=["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
-
-// שנה מעוברת — מחזור 19 השנים (7 שנים מעוברות)
-window.ysHebIsLeap=function(hy){return ((7*(+hy)+1)%19)<7;};
-window.ysHebMonthNames=function(hy){return window.ysHebIsLeap(hy)?window.MONTHS_HEB_LEAP:window.MONTHS_HEB;};
-
-// גימטריה — מספר → אותיות (כולל ט״ו/ט״ז). sep = התו שלפני האות האחרונה
-window.ysGematria=function(n,sep){
-  n=Math.floor(Math.abs(+n))||0;
-  if(!n) return '';
-  if(n>=1000) n=n%1000;
-  var HUN=['','ק','ר','ש','ת'],TENS=['','י','כ','ל','מ','נ','ס','ע','פ','צ'],ONES=['','א','ב','ג','ד','ה','ו','ז','ח','ט'];
-  var s='',h=Math.floor(n/100),r=n%100;
-  while(h>4){s+='ת';h-=4;}
-  s+=HUN[h]||'';
-  if(r===15) s+='טו';
-  else if(r===16) s+='טז';
-  else s+=TENS[Math.floor(r/10)]+ONES[r%10];
-  if(sep===undefined) sep='״';
-  if(!sep||!s) return s;
-  if(s.length===1) return s+'׳';
-  return s.slice(0,-1)+sep+s.slice(-1);
-};
-window.ysHebDayLabel=function(day){var T=window.DAYS_HEB;return (T&&T[day])||window.ysGematria(day)||String(day);};
-// תווית שנה מלאה — ה׳תשפ״ו
-window.ysHebYearLabelFull=function(hy){
-  var ONES=['','א','ב','ג','ד','ה','ו','ז','ח','ט'],th=Math.floor((+hy)/1000);
-  return ((th>0&&th<10)?ONES[th]+'׳':'')+window.ysGematria((+hy)%1000,'״');
-};
-
-// ---- קריאת הלוח העברי של הדפדפן ----
-// שמות החודשים נקראים באנגלית ('en-u-ca-hebrew') כי הם יציבים בין גרסאות ICU,
-// וממופים לאינדקס בטבלאות התצוגה שלנו.
-window._ysMICodeLeap={tishri:0,heshvan:1,kislev:2,tevet:3,shevat:4,adar1:5,adar2:6,nisan:7,iyar:8,sivan:9,tamuz:10,av:11,elul:12};
-window._ysMICodeStd ={tishri:0,heshvan:1,kislev:2,tevet:3,shevat:4,adar:5,nisan:6,iyar:7,sivan:8,tamuz:9,av:10,elul:11};
-window._ysMonthCode=function(name){
-  var s=(name||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-  if(s.indexOf('adar')===0){
-    var t=s.slice(4);
-    if(t==='i'||t==='1'||t==='a') return 'adar1';
-    if(t==='ii'||t==='2'||t==='b') return 'adar2';
-    return 'adar';
-  }
-  if(s.indexOf('tishr')===0) return 'tishri';
-  if(s.indexOf('hesh')!==-1||s.indexOf('chesh')!==-1) return 'heshvan';
-  if(s.indexOf('kislev')===0||s.indexOf('chislev')===0) return 'kislev';
-  if(s.indexOf('tevet')===0||s.indexOf('teveth')===0) return 'tevet';
-  if(s.indexOf('shevat')===0||s.indexOf('shvat')===0||s.indexOf('shebat')===0) return 'shevat';
-  if(s.indexOf('nisan')===0||s.indexOf('nissan')===0) return 'nisan';
-  if(s.indexOf('iyar')===0||s.indexOf('iyyar')===0) return 'iyar';
-  if(s.indexOf('sivan')===0) return 'sivan';
-  if(s.indexOf('tamuz')===0||s.indexOf('tammuz')===0) return 'tamuz';
-  if(s==='av'||s==='ab') return 'av';
-  if(s.indexOf('elul')===0) return 'elul';
-  return null;
-};
-window._ysIntlFmt=null;window._ysIntlOK=null;
-// גרגוריאני → {hy,mi,day,leap} דרך Intl. מחזיר null אם לא זמין / תוצאה לא צפויה
-window.ysIntlHeb=function(d){
-  try{
-    if(window._ysIntlOK===false) return null;
-    if(!window._ysIntlFmt){
-      if(typeof Intl==='undefined'||!Intl.DateTimeFormat){window._ysIntlOK=false;return null;}
-      var f=new Intl.DateTimeFormat('en-u-ca-hebrew',{year:'numeric',month:'long',day:'numeric'});
-      var ro=f.resolvedOptions?f.resolvedOptions():null;
-      if(!ro||ro.calendar!=='hebrew'||!f.formatToParts){window._ysIntlOK=false;return null;}
-      window._ysIntlFmt=f;window._ysIntlOK=true;
-    }
-    var o={};
-    window._ysIntlFmt.formatToParts(d).forEach(function(p){o[p.type]=p.value;});
-    var hy=parseInt(String(o.year||'').replace(/[^0-9]/g,''),10);
-    var day=parseInt(String(o.day||'').replace(/[^0-9]/g,''),10);
-    var code=window._ysMonthCode(o.month);
-    if(!(hy>=4000&&hy<=7000)||!(day>=1&&day<=30)||!code) return null;
-    var leap=window.ysHebIsLeap(hy);
-    var mi=leap?window._ysMICodeLeap[code]:window._ysMICodeStd[code];
-    if(mi===undefined){
-      // אי-התאמה בין חישוב העיבור לשם החודש — סימן שמשהו לא צפוי; לא מנחשים
-      return null;
-    }
-    return {hy:hy,mi:mi,day:day,leap:leap};
-  }catch(e){ window._ysIntlOK=false; return null; }
-};
-
-/*  ⛔ אין לבדוק `d instanceof Date` ואין ליפול-חזרה ל«היום» (סבב 57) —
- *  `instanceof` תלוי-realm: אובייקט תאריך שנוצר ב-realm אחר (iframe,
- *  רתמת `vm`) מחזיר `false`, והשורה שהייתה כאן החליפה אותו **בשקט**
- *  בתאריך של היום. שני כשלים בשורה אחת — בדיקה שתלויה במי יצר את
- *  האובייקט, ⛔ ונפילה-חזרה שקטה שמציגה תאריך שגוי כאילו הוא נכון.
- *  ⭐ הבדיקה כאן היא על **החוזה** (`getTime` שמחזיר מספר) ואינה
- *  תלוית-realm; ⛔ וקלט שאינו עובר אותה מוחזר כ«לא תקף» ונרשם.
- *  ⚠️ קריאה **בלי ארגומנט** היא חוזה קיים ומשמעה «היום» — היא נשארת,
- *  ורק ארגומנט שנמסר ואינו תאריך תקף נחשב שגיאה.                       */
-window._ysIsDate=function(d){
-  return !!d&&typeof d.getTime==='function'&&!isNaN(d.getTime());
-};
-window._ysBadDates=[];
-window._ysBadDate=function(where,d){
-  var got;
-  try{ got=Object.prototype.toString.call(d); }catch(e){ got='?'; }
-  window._ysBadDates.push({at:Date.now(),where:where,got:got});
-  if(window._ysBadDates.length>12) window._ysBadDates.shift();
-  try{ console.warn('ysHebDate: קלט שאינו תאריך תקף ב-'+where+' — '+got); }catch(e){}
-};
-window._ysHebNone=function(src){
-  return {year:0,monthIndex:0,monthName:'',day:0,dayLabel:'',
-          yearLabelFull:'',ok:false,src:src};
-};
 
 // ── נרמול שמות חודשים עבריים ──
 // בנתונים הקיימים מופיע "מרחשון" בעוד הקוד מייצר "חשון" — בלי איחוד נוצרים

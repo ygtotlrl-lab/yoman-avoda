@@ -182,14 +182,14 @@ function makeCtx(opts) {
    *  משתמש בהם, ⚠️ ולא שם פונקציה שנשבר כשהיא נמחקת. */
   if (opts.realHeb) {
     const L = SRC.split('\n');
-    const a = L.findIndex((l) => l.startsWith('window.DAYS_HEB='));
-    const b = L.findIndex((l, i) => i > a && l.startsWith('// ═══ סוף אזור התאריך העברי'));
+    const a = L.findIndex((l) => l.startsWith('/* ═══ מנוע התאריך העברי — מודול משותף'));
+    const b = L.findIndex((l, i) => i > a && l.startsWith('/* ═══════════════ סוף מודול מנוע התאריך העברי'));
     if (a < 0 || b <= a) throw new Error('אזור התאריך העברי לא אותר');
     sandbox.window = sandbox;
     vm.runInContext(L.slice(a, b + 1).join('\n'), sandbox);
     /*  ⛔ המנוע עצמו חי במודול הליבה ⛔ ואינו באזור שבקובץ — ⚠️ הוא יצא
      *  ל-`core/hebrew.js`, ⭐ והאזור שבקובץ נושא את מה שמסביבו: ⛔ בלי
-     *  הרצתו כאן `ysHebDate` אינה קיימת, ⚠️ והנפילה-חזרה אינה נמדדת. */
+     *  הרצתו כאן `hebDate` אינה קיימת, ⚠️ והנפילה-חזרה אינה נמדדת. */
     vm.runInContext(fs.readFileSync(path.join(ROOT, 'core', 'hebrew.js'), 'utf8'), sandbox);
   }
   return sandbox;
