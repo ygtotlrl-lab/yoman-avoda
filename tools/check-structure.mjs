@@ -48,6 +48,12 @@ const APP = {
        ליישרו בכוח: רק יומן מייצאת קובץ החוצה. */
     'app/src/main/res/xml/file_paths.xml': 'גשר השיתוף — ה-FileProvider שבמניפסט מצביע עליו (שורת גשר השיתוף במטריצה)',
   },
+  /*  ⛔ תיקיית נכסים שקיימת כאן בלבד — ⚠️ **מה נכנס**: השם ⟵ תפקיד
+   *  הנכסים שבתוכה; ⛔ **ומה מפיל**: תיקייה שאינה מוכרזת, ⛔ והכרזה
+   *  שאין לה תיקייה. */
+  dirExtra: {
+    logos: 'לוגואי המוסדות שהאפליקציה מציגה — ⛔ ליומן שתי ישיבות ולשאר אחת: ⚠️ ואין בהן גוף שני שמוצג בכותרת',
+  },
   toolsDirs: {
     'fixtures': 'פיקסטורות לבדיקות הסבבים (סבב 31 — הארכיון)',
   },
@@ -167,8 +173,16 @@ const dirs  = entries.filter((e) => e.isDirectory()).map((e) => e.name).sort();
 const files = entries.filter((e) => !e.isDirectory()).map((e) => e.name).sort();
 
 /* ── א. סט התיקיות ─────────────────────────────────────────────────────── */
+/*  ⛔ תיקיית נכסים פר-אפליקציה — ⚠️ היא נגזרת מתפקיד הנכס, ⭐ ולא כל
+ *  אפליקציה מציגה גוף חיצוני: ⛔ וההצהרה נמדדת משני צדדיה — ⚠️ תיקייה
+ *  שאינה מוכרזת, ⛔ והכרזה שאין לה תיקייה. */
+const dirExtra = APP.dirExtra || {};
 const missingD = DIRS.filter((d) => !dirs.includes(d));
-const extraD   = dirs.filter((d) => !DIRS.includes(d));
+const extraD   = dirs.filter((d) => !DIRS.includes(d) && !(d in dirExtra));
+const ghostD   = Object.keys(dirExtra).filter((d) => !dirs.includes(d));
+if (ghostD.length) fail(`תיקיות מוכרזות שאינן קיימות: ${ghostD.join(', ')} — נמדדו ` +
+                        `${ghostD.length} מתוך ${Object.keys(dirExtra).length} הכרזות והצפוי אפס. ` +
+                        `מסירים אותן מ-APP.dirExtra`);
 if (missingD.length) fail(`תיקיות חסרות בשורש: ${missingD.join(', ')} — נמדדו ${DIRS.length - missingD.length} ` +
                           `מתוך ${DIRS.length} התיקיות הקנוניות. מוסיפים את החסרות`);
 if (extraD.length)   fail(`תיקיות עודפות בשורש: ${extraD.join(', ')} — נמדדו ${extraD.length} ` +
