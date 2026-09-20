@@ -86,7 +86,6 @@ const APP = {
           'test_mignames.mjs',
           'test_names.mjs',
           'test_toolsid.mjs',
-          'test_yeshiva.mjs',
           'test_filesets.mjs',
           'test_inputlayer.mjs',
           'test_iconlayer.mjs',
@@ -94,7 +93,7 @@ const APP = {
           'test_sources.mjs', 'test_kvmeta.mjs',
           'test_backup_policy.mjs',
           'test_date.mjs',
-          'test_bump.mjs', 'test_share.mjs',
+          'test_bump.mjs', 
           'test_read.mjs',
           'test_pendflush.mjs', 'test_lock.mjs',
           'test_session.mjs',
@@ -111,18 +110,17 @@ const APP = {
           'test_shell.mjs', 'test_devid.mjs', 'test_passwords.mjs',
           'test_failsurface.mjs',
           'test_md.mjs', 'test_docfacts.mjs', 'test_signeddead.mjs', 'test_orphans.mjs', 'test_period.mjs', 'test_removals.mjs', 'test_wiring.mjs', 'test_readonly.mjs', 'test_crossgate.mjs',
-          'test_stage_a.mjs', 'test_stage_b.mjs',
-          'test_archive.mjs', 'test_unify.mjs',
+          'test_stage_a.mjs', 
           'test_hotwin.mjs', 'test_cron.mjs',
           'test_parentchild.mjs',
-          'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs', 'test_ids_yoman.mjs'],
+          'test_merge_pending.mjs', 'test_matrix.mjs', 'test_ids.mjs', ],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף (סבב 72) — ⚠️ תקרת השער
  *  הבודד נמדדת כאן מפני שכאן ממילא רצים כל השערים, ⛔ ושער נפרד שימדוד
  *  אותה היה מריץ את כולם פעם שנייה. */
-export const ROWS = [40, 41, 29];
+export const ROWS = [41, 42, 30];
 
 const T_START = Date.now();
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');

@@ -77,6 +77,13 @@
   }
 }
 *{box-sizing:border-box;margin:0;padding:0;}
+/*  ⛔ המשוב בלחיצה נקבע ⛔ ולא נירש — ⚠️ ברירת המחדל של הדפדפן היא ריבוע
+ *  כחול שאינו מערכת הצבעים שלנו, ⭐ והיא מופיעה במגע בלבד: ⛔ ומי שבודק
+ *  בעכבר אינו רואה אותה. */
+body{-webkit-tap-highlight-color:transparent}
+/*  ⛔ לחיצה ארוכה על משטח לחיץ אינה בחירת טקסט — ⚠️ והכלל חל על הלחיצים
+ *  בלבד, ⭐ ולא על טקסט שהמשתמש מעתיק. */
+button,[data-act]{-webkit-user-select:none;user-select:none}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
 .app{max-width:960px;margin:0 auto;padding:var(--sp-6);}
 
