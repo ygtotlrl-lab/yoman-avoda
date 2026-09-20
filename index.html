@@ -2126,31 +2126,61 @@ document.addEventListener('focusout', function (e) {
   if (el && el.dataset && el.dataset.blr === 'cat-name') saveCatName(+el.dataset.ci);
 });
 
-/*  ⛔ חמשת אירועי הגרירה בהאצלה — ⚠️ **מה נכנס**: `data-drag` ⟵ הרכיב
- *  הנגרר (`cat` · `task` · `sub`) והמדדים שלו; ⛔ **ומה מפיל**: רכיב
- *  נגרר בלי המאפיין — ⭐ הוא פשוט אינו נגרר. ⚠️ **ולמה המבנה קיים**:
- *  האלמנטים נבנים מחדש בכל ציור של ההגדרות, ⭐ ומאזין שנקשר אליהם מת
- *  איתם: ⛔ ו-`closest` בוחר את הפנימי, ⚠️ ולכן משימה שבתוך קטגוריה
- *  מכריעה לפני הקטגוריה — ⭐ בדיוק מה ש-`stopPropagation` עשה קודם. */
-var DRAG_START = { cat: catDragStart, task: taskDragStart, sub: subDragStart };
-var DRAG_OVER  = { cat: catDragOver,  task: taskDragOver,  sub: subDragOver  };
-/*  ⛔ לקטגוריה אין יציאה — ⚠️ היא אינה מסמנת «מעליי», ⭐ ואין מה לנקות. */
-var DRAG_LEAVE = { task: taskDragLeave, sub: subDragLeave };
-var DRAG_DROP  = { cat: catDrop,      task: taskDrop,      sub: subDrop      };
-var DRAG_END   = { cat: catDragEnd,   task: taskDragEnd,   sub: subDragEnd   };
-function dragRoute(map) {
-  return function (e) {
-    var el = e.target && e.target.closest ? e.target.closest('[data-drag]') : null;
-    if (!el) return;
-    var fn = map[el.dataset.drag];
-    if (fn) fn(e, el);
-  };
-}
-document.addEventListener('dragstart', dragRoute(DRAG_START));
-document.addEventListener('dragover',  dragRoute(DRAG_OVER));
-document.addEventListener('dragleave', dragRoute(DRAG_LEAVE));
-document.addEventListener('drop',      dragRoute(DRAG_DROP));
-document.addEventListener('dragend',   dragRoute(DRAG_END));
+/*  ⛔ הגרירה על אירועי מצביע ⛔ ולא על גרירת HTML5 — ⚠️ **במגע היא אינה
+ *  קיימת כלל**: ⭐ נמדד בדפדפן — `dragstart` · `dragover` ו-`drop` לא
+ *  נורו אף פעם באצבע, ⛔ ורק `pointer*` הגיעו; ⚠️ ואירועי מצביע חיים
+ *  בעכבר ובאצבע כאחד.
+ *  ⛔ **והגרירה מתחילה מהידית בלבד** — ⚠️ שורה שכולה נגררת חוטפת את
+ *  גלילת המסך, ⭐ ו-`touch-action` שמבטל אותה על כל השורה נועל את הדף.
+ *  ⚠️ **והם באצלה מ-`document`** — ⭐ ההגדרות נבנות מחדש בכל ציור,
+ *  ⛔ ומאזין פר-אלמנט היה מת איתן. */
+/*  ⛔ **מה נכנס**: `data-drag` ⟵ סוג הרכיב הנגרר (`cat` · `task` · `sub`);
+ *  ⚠️ **ומה מפיל**: סוג שאין לו מחיל סדר — ⭐ הגרירה מסתיימת בלי כתיבה.
+ *  ⛔ **ולמה המבנה קיים**: הניתוב אחד לשלושת הרכיבים, ⚠️ והשוני היחיד
+ *  ביניהם הוא איזה מערך מקבל את הסדר שנקרא מה-DOM. */
+var DRAG_APPLY = { cat: applyCatOrder, task: applyTaskOrder, sub: applySubOrder };
+var DRAG = { el: null, list: null, kind: null, moved: false };
+
+document.addEventListener('pointerdown', function (e) {
+  var g = e.target && e.target.closest ? e.target.closest('.grip') : null;
+  if (!g) return;
+  var el = g.closest('[data-drag]');
+  if (!el) return;
+  DRAG.el = el; DRAG.list = el.parentNode;
+  DRAG.kind = el.dataset.drag; DRAG.moved = false;
+  el.classList.add('dragging');
+  /*  ⛔ המצביע נלכד על הידית — ⚠️ בלעדיו אצבע שיוצאת מגבול האלמנט
+   *  מפסיקה לשדר, ⭐ והגרירה נתקעת באמצע. */
+  try { g.setPointerCapture(e.pointerId); } catch (e1) {}
+  e.preventDefault();
+});
+document.addEventListener('pointermove', function (e) {
+  if (!DRAG.el) return;
+  e.preventDefault();
+  var over = document.elementFromPoint(e.clientX, e.clientY);
+  var el = over && over.closest ? over.closest('[data-drag="' + DRAG.kind + '"]') : null;
+  if (!el || el === DRAG.el || el.parentNode !== DRAG.list) return;
+  DRAG.moved = true;
+  /*  ⛔ ההזזה בעץ בזמן הגרירה — ⚠️ היא המשוב היחיד שהמשתמש מקבל.
+   *  ⛔ **והציר נקרא מהמיכל** — ⚠️ `data-drag-axis="x"` ברשימה שנפרסת
+   *  לרוחב, ⭐ והשוואה בציר הלא נכון מחזירה תמיד את אותו צד:
+   *  ⛔ **והדף מימין לשמאל** — ⚠️ `nextSibling` יושב **משמאל**, ⭐ ולכן
+   *  מצביע שמאלה מהמרכז מכניס אחרי היעד. */
+  var r = el.getBoundingClientRect();
+  var after = DRAG.list.dataset.dragAxis === 'x'
+    ? e.clientX < r.left + r.width / 2
+    : e.clientY > r.top + r.height / 2;
+  DRAG.list.insertBefore(DRAG.el, after ? el.nextSibling : el);
+});
+document.addEventListener('pointerup', function () {
+  if (!DRAG.el) return;
+  var el = DRAG.el, list = DRAG.list, kind = DRAG.kind, moved = DRAG.moved;
+  DRAG.el = null; DRAG.list = null; DRAG.kind = null; DRAG.moved = false;
+  el.classList.remove('dragging');
+  if (!moved) return;
+  var fn = DRAG_APPLY[kind];
+  if (fn) fn(list, kind);
+});
 
 /* ── RTY_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
 /* ⚠️ ביומן אין תור אופליין: «ממתין» הוא סימון ⏳, והריקון הוא דחיפת-מצב
@@ -4822,105 +4852,53 @@ function _shareDownloadFallback(canvas){
   document.body.removeChild(a);
 }
 // הגדרות
-var _dragKind = null; // "cat" | "task" | "sub" — סוג הגרירה
-var _dragData = {};
-
 /* ══════════════════════════════════════════════════════════════════════════
    מסך ההגדרות — קטגוריות, משימות ותתי-משימות (כולל גרירה)
    ══════════════════════════════════════════════════════════════════════════ */
-// ── גרירת קטגוריה ──
-/*  ⛔ המדדים נקראים מה-DOM ⛔ ואינם ארגומנטים — ⚠️ הניתוב אחד לשלושת
- *  הרכיבים, ⭐ והאלמנט שנתפס הוא מה שנמסר: ⛔ חתימה שנבדלת בין הרכיבים
- *  הייתה שלוש מפות ניתוב. */
-function catDragStart(e, el) {
-  _dragKind = "cat";
-  e.dataTransfer.setData("text/plain", el.dataset.idx);
-  setTimeout(function(){ el.classList.add("dragging"); }, 0);
+// ── הסדר נגזר מה-DOM הסופי ──
+/*  ⛔ הסדר נקרא מהעץ אחרי הגרירה ⛔ ולא מצמד «מאיפה לאן» — ⚠️ הצמד מתאר
+ *  צעד אחד, ⭐ והעץ מתאר את התוצאה: ⛔ גרירה שעברה כמה שורות בדרך הייתה
+ *  נכתבת כקפיצה אחת שאינה מה שנראה על המסך.
+ *  ⛔ **ומה נכנס**: המדדים המקוריים בסדר שבו הם יושבים עכשיו; ⚠️ **ומה
+ *  מפיל**: מדד שאינו מספר — ⭐ הוא פשוט אינו נכנס לסדר. */
+function domOrder(list, kind, attr) {
+  var out = [];
+  for (var i = 0; i < list.children.length; i++) {
+    var x = list.children[i];
+    if (x.dataset && x.dataset.drag === kind) out.push(+x.dataset[attr]);
+  }
+  return out;
 }
-function catDragEnd(e, el) { _dragKind = null; el.classList.remove("dragging"); }
-function catDragOver(e) { e.preventDefault(); }
-function catDrop(e, el) {
-  e.preventDefault();
-  // מטפל רק בגרירת קטגוריה לקטגוריה; גרירת משימה או תת-משימה אינה אמורה להגיע לכאן
-  if (_dragKind !== "cat") { _dragKind = null; return; }
-  var fromIdx = parseInt(e.dataTransfer.getData("text/plain"));
-  var toIdx = parseInt(el.dataset.idx);
-  if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
-  var moved = CATS.splice(fromIdx, 1)[0];
-  CATS.splice(toIdx, 0, moved);
-  _dragKind = null;
+/*  ⛔ הסידור משמר את המקומות שלא צוירו — ⚠️ קטגוריה מחוקה אינה ברשימה,
+ *  ⭐ ומיקומה במערך נשאר שלה: ⛔ סידור שמתעלם ממנה היה מזיז אותה. */
+function reorderKeep(arr, order) {
+  var slots = order.slice().sort(function (a, b) { return a - b; });
+  var out = arr.slice();
+  for (var i = 0; i < order.length; i++) out[slots[i]] = arr[order[i]];
+  return out;
+}
+function applyCatOrder(list, kind) {
+  CATS = reorderKeep(CATS, domOrder(list, kind, 'idx'));
   saveCats();
   renderSettings();
   buildCatGrid();
 }
-
-// ── גרירת משימה ──
-function taskDragStart(e, el) {
-  _dragKind = "task";
-  _dragData = {ci:+el.dataset.ci, ti:+el.dataset.ti};
-  e.dataTransfer.setData("text/plain", "task");
-  e.dataTransfer.effectAllowed = "move";
-  requestAnimationFrame(function(){ el.classList.add("dragging"); });
-}
-function taskDragEnd(e, el) {
-  _dragKind = null;
-  el.classList.remove("dragging");
-  document.querySelectorAll(".drag-over").forEach(function(x){ x.classList.remove("drag-over"); });
-}
-function taskDragOver(e, el) {
-  if (_dragKind !== "task") return;
-  e.preventDefault();
-  el.classList.add("drag-over");
-}
-function taskDragLeave(e, el) {
-  el.classList.remove("drag-over");
-}
-function taskDrop(e, el) {
-  var ci = +el.dataset.ci, ti = +el.dataset.ti;
-  e.preventDefault();
-  el.classList.remove("drag-over");
-  if (_dragKind !== "task" || _dragData.ci !== ci || _dragData.ti === ti) return;
-  var moved = CATS[ci].tasks.splice(_dragData.ti, 1)[0];
-  CATS[ci].tasks.splice(ti, 0, moved);
+function applyTaskOrder(list, kind) {
+  var order = domOrder(list, kind, 'ti');
+  var ci = +list.querySelector('[data-drag="' + kind + '"]').dataset.ci;
+  CATS[ci].tasks = reorderKeep(CATS[ci].tasks, order);
   recTouch(CATS[ci]);   // סדר המשימות הוא חלק מרשומת הקטגוריה
-  _dragKind = null;
   saveCats();
   renderSettings();
 }
-
-// ── גרירת תת-משימה ──
-function subDragStart(e, el) {
-  _dragKind = "sub";
-  _dragData = {ci:+el.dataset.ci, ti:+el.dataset.ti, si:+el.dataset.si};
-  e.dataTransfer.setData("text/plain", "sub");
-  e.dataTransfer.effectAllowed = "move";
-  requestAnimationFrame(function(){ el.classList.add("dragging"); });
-}
-function subDragEnd(e, el) {
-  _dragKind = null;
-  el.classList.remove("dragging");
-  document.querySelectorAll(".drag-over").forEach(function(x){ x.classList.remove("drag-over"); });
-}
-function subDragOver(e, el) {
-  if (_dragKind !== "sub") return;
-  e.preventDefault();
-  el.classList.add("drag-over");
-}
-function subDragLeave(e, el) {
-  el.classList.remove("drag-over");
-}
-function subDrop(e, el) {
-  var ci = +el.dataset.ci, ti = +el.dataset.ti, si = +el.dataset.si;
-  e.preventDefault();
-  el.classList.remove("drag-over");
-  if (_dragKind !== "sub" || _dragData.ci !== ci || _dragData.ti !== ti || _dragData.si === si) return;
+function applySubOrder(list, kind) {
+  var one = list.querySelector('[data-drag="' + kind + '"]');
+  var ci = +one.dataset.ci, ti = +one.dataset.ti;
   var taskName = CATS[ci].tasks[ti];
   var sk = subKey(ci, taskName);
   if (!SUBS[sk]) { SUBS[sk] = SUBS[taskName] || []; }
-  var moved = SUBS[sk].splice(_dragData.si, 1)[0];
-  SUBS[sk].splice(si, 0, moved);
+  SUBS[sk] = reorderKeep(SUBS[sk], domOrder(list, kind, 'si'));
   touchSubKey(sk);
-  _dragKind = null;
   saveSubs();
   renderSettings();
 }
@@ -5048,11 +5026,10 @@ function renderSettings() {
     if (!isLive(cat)) return;   // ci חייב להישאר האינדקס הגולמי — עליו בנויים מפתחות SUBS
     var div = document.createElement("div");
     div.className = "set-card";
-    div.draggable = true;
     div.dataset.idx = ci;
     div.dataset.drag = "cat";
     var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
-      + '<span class="drag-handle">⠿</span>'
+      + '<span class="drag-handle grip">⠿</span>'
       + '<div class="set-badge u-bg-cat"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
@@ -5062,11 +5039,11 @@ function renderSettings() {
           var subsSection = '';
           if(subs.length > 0) {
             subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-text3 set-lbl">תתי משימות:</div>'
-              + '<div class="sub-chips">'
+              + '<div class="sub-chips" data-drag-axis="x">'
               + subs.map(function(s,si){
-                  return '<div class="chip chip-sub" draggable="true" '
+                  return '<div class="chip chip-sub" '
                     + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
-                    + '<span class="u-cur-grab u-c-text3 u-fs-1 u-ml-1">⠿</span>'
+                    + '<span class="grip u-c-text3 u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
@@ -5078,10 +5055,10 @@ function renderSettings() {
             + '<input aria-label="תת-משימה חדשה" class="u-fs-1 set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
             + '<button class="u-fs-1 u-p-2-4 u-ws-nw btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
-          return '<div class="task-block" draggable="true" '
+          return '<div class="task-block" '
             + 'data-drag="task" data-ci="'+ci+'" data-ti="'+ti+'">'
             + '<div class="task-block-hdr">'
-            + '<span class="task-drag-icon">⠿</span>'
+            + '<span class="task-drag-icon grip">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
             + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
