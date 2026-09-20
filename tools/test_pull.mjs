@@ -40,7 +40,7 @@ const APP = {
    *  ⚠️ מפני שהוא זקוק לתוצאה כדי להזהיר את המשתמש. */
   touchFns: ['yaSyncPushNow'],
   every: 3000,
-  stampKey: 'ya_last_changed',
+  stampKey: 'last_changed',
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 

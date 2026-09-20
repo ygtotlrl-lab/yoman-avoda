@@ -38,7 +38,7 @@ const APP = {
   rowsVars: ['_rowsE', '_rowsA'],
   legacyOff: /var YA_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
-  kvOnly: ['ya_cats', 'ya_subs', 'ya_subs_meta'],
+  kvOnly: ['cats', 'subs', 'subs_meta'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 

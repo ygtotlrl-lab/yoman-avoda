@@ -38,7 +38,7 @@ const RUN_MUT = process.env.GATE_MUT === '1';
 const APP = {
   name: 'yoman-avoda',
   /* ⛔ הטבלה המאוחדת בלבד (סבב 32) — היומן והארכיון כאחד, עם דגל
-     `archived`. ⚠️ `ya_cats`/`ya_subs`/`ya_subs_meta` הם מפתחות `kv`
+     `archived`. ⚠️ `cats`/`subs`/`subs_meta` הם מפתחות `kv`
      ואינם טבלאות, ולכן אינם כאן. ⛔ נמדד מול המסד ב-26.8.2026. */
   tables: ['ya_entries'],
   /* דגלים שמותר להם לשער מקור — ⛔ מקור מאחורי דגל אינו נדרש להיות

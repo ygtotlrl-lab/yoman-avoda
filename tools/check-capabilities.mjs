@@ -88,7 +88,7 @@ const APP = {
    *  ואינה מוצהרת, ⛔ והיעדר בלי נימוק. ⭐ **ולמה המבנה קיים**:
    *  חותמת שנכשלת פתוח דורסת עריכה שלא עלתה — ⚠️ והשכבה חיה
    *  בשתיים בלבד, ⛔ והיעדר בשתיים האחרות הוא החלטה רשומה. */
-  kvMeta: { table: 'ya_subs_meta', why: '' },
+  kvMeta: { table: 'subs_meta', why: '' },
   sealExempt: { 'check-capabilities': 'רץ בתוך תהליך של שער אחר, והסגירה בסוף `run` ולא במאזין' },
   app: 'yoman-avoda',
   file: 'index.html',
@@ -323,7 +323,7 @@ const APP = {
    *  באותו ענף, ⛔ ושתי חותמות לענף אחד היו מתירות להן להיזרק בנפרד.
    *  ⛔ **ואות הפולינג אינה כאן** — ⚠️ היא נדרסת ואינה ממוזגת, ⭐ ואין
    *  עותק מקומי שאפשר לזרוק. */
-  kvResets: { ya_cats: 'ya_cats_reset', ya_subs: 'ya_subs_reset', ya_subs_meta: 'ya_subs_reset' },
+  kvResets: { cats: 'cats_reset', subs: 'subs_reset', subs_meta: 'subs_reset' },
   /*  ⛔ ידית ב-`SW_CFG` שנבדלת מהבסיס — ⚠️ **מה נכנס**: שם הידית ונימוקה;
    *  ⛔ **ומה מפיל**: ידית שנבדלת ואינה כאן, ⛔ הצהרה לידית שערכה שווה
    *  לבסיס, ⛔ והצהרה בלי נימוק. ⭐ **ולמה בשם ולא במספר**: הצהרה שנוקבת
@@ -2697,10 +2697,15 @@ function kvMetaGaps() {
   const d = APP.kvMeta || {};
   const found = [...new Set(readOnce(APP.file).match(KVMETA_NAME) || [])].sort();
   const out = [];
+  /*  ⛔ אותה שכבה חיה בשני מרחבי שמות ⛔ ובכוונה — ⚠️ בענן המפתח בלי
+   *  תחילית, שהטבלה כבר נושאת אותה, ⭐ ובמכשיר הוא נושא אותה: ⛔ האחסון
+   *  המקומי משותף לכל האפליקציות שעל אותו origin. ⚠️ ולכן שם שנגמר
+   *  ב-`_<השכבה>` הוא **אותה שכבה** ⛔ ואינו שכבה שנייה. */
+  const sameLayer = (x) => x === d.table || x.endsWith('_' + d.table);
   if (d.table) {
     if (found.indexOf(d.table) < 0)
       out.push(`${d.table}: מוצהרת ואינה במקור — נמדדו ${found.length} שכבות`);
-    const stray = found.filter((x) => x !== d.table);
+    const stray = found.filter((x) => !sameLayer(x));
     if (stray.length) out.push(`שכבה שאינה מוצהרת: ${stray.join(', ')}`);
     if (String(d.why || '').trim()) out.push('נימוק להיעדר לצד שכבה מוצהרת');
   } else {
@@ -7104,7 +7109,8 @@ const GATES = {
   46: { claims: { test_period: ['[period-store]', '[period-calendar]'] } },
   /*  ⭐ סבב 148 — ⛔ אוצר מילים אחד לפעולה אחת: ⚠️ המרשם מלא בארבעת
    *  הפעלים, ⭐ ואפס שם ישן ואפס איות משובש. */
-  117: { claims: { test_period: ['[verb-registry]', '[verb-old-name]'] } },
+  117: { claims: { test_period: ['[verb-registry]', '[verb-old-name]'],
+                   test_dbfacts: 'טז. מפתח הגדרה בלי תחילית' } },
   /*  ⭐ סבב 148 — ⛔ תחילית הטבלאות והאחסון נגזרת משם הריפו: ⚠️ ראשי
    *  התיבות מול הסכימה המוצהרת, ⭐ וההגירה המקומית שנוקבת בתחילית שירדה. */
   120: { claims: { test_period: ['[prefix-derived]', '[prefix-legacy]'] } },

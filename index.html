@@ -1919,8 +1919,14 @@ var BK_CFG = {
        נשארים מקורות `kv` — זה ביתם היחיד בענן. */
     var out = [{ kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',
                  eq: ['yeshiva', YESHIVA], order: 'rec_key', ts: 'updated_at' }];
-    return out.concat(['ya_cats', 'ya_subs', 'ya_subs_meta']
-      .map(function (k) { return { kind: 'kv', table: KV_TABLE, name: k }; }));
+    /* ⛔ `name` הוא המפתח בטבלת ההגדרות ⛔ והוא בלי תחילית — ⚠️ הטבלה
+       כבר נושאת אותה; ⭐ ו-`key` הוא מפתח הגיבוי ב-`sh_backup`, ⛔ שהיא
+       משותפת לכל הפרויקט: ⚠️ ושם בלי תחילית שם מתנגש בין אפליקציות. */
+    return out.concat([
+      { kind: 'kv', table: KV_TABLE, name: 'cats',      key: 'ya_cats' },
+      { kind: 'kv', table: KV_TABLE, name: 'subs',      key: 'ya_subs' },
+      { kind: 'kv', table: KV_TABLE, name: 'subs_meta', key: 'ya_subs_meta' }
+    ]);
   }
 };
 
@@ -2762,7 +2768,7 @@ function rtyBoot() {
 /* ═══════════════ סוף מודול הניסיון החוזר ════════════════════════════════ */
 
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
-/* ⚠️ ביומן החותמת היא שורת `ya_last_changed` שבטבלת המוסד (`KV_TABLE`),
+/* ⚠️ ביומן החותמת היא שורת `last_changed` שבטבלת המוסד (`KV_TABLE`),
    ⛔ ולכן `active()` נבדק מול `YESHIVA` (סבב 51) — פולינג לפני בחירת מוסד
    היה נוגע בנתונים של דייר שאיש לא בחר.
    ⛔ **וזה ההבדל היחיד ב-`active()` ביניהן** — ⚠️ בשלוש האחרות הוא
@@ -2775,13 +2781,13 @@ var PL_CFG = {
   seen:   function () { return _lastKnownTimestamp; },
   note:   function (ts) { _lastKnownTimestamp = ts; },
   ok:     function () { _yaMarkSynced(); },
-  stamp:  function (ts) { return sbSet("ya_last_changed", ts); },
+  stamp:  function (ts) { return sbSet("last_changed", ts); },
   pull:   function () { return yaPullFromCloud(); },
   remote: function () {
-    return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "ya_last_changed").maybeSingle())
+    return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "last_changed").maybeSingle())
       .then(function (r) {
         if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(kvParse("ya_last_changed", r.data.value).value) : null };
+        return { ok: true, ts: r.data ? plNum(kvParse("last_changed", r.data.value).value) : null };
       }, function () { return { ok: false, ts: null }; });
   },
 };
@@ -3713,7 +3719,7 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
 var YA_ROWS = true;
 var YA_ARC_UNIFIED = true;
 /* ⭐ הטבלאות הן המאסטר, והכתיבה הכפולה ל-`kv` כבויה
-   (`YA_KV_LEGACY_WRITE`) — ⚠️ `ya_cats`/`ya_subs`/`ya_subs_meta` אינם חלק
+   (`YA_KV_LEGACY_WRITE`) — ⚠️ `cats`/`subs`/`subs_meta` אינם חלק
    מהכיבוי: ⛔ ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
 var YA_KV_LEGACY_WRITE = false;
 var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_archive' };
@@ -3885,10 +3891,10 @@ async function yaSendRows(kvKey, rows, ep) {
 function saveCats() {
   var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — עֵד הפינוי הוא פר-מוסד
   lsSet("ya_cats"+LS, JSON.stringify(CATS));
-  sbSet("ya_cats", CATS).then(function(r){
+  sbSet("cats", CATS).then(function(r){
     if (ctxStale(_ep)) return;
     if (!(r && r.ok)) return;
-    _yaMarkPushed('ya_cats');
+    _yaMarkPushed('cats');
     /*  ⛔ כתיבה שהצליחה מקדמת את אות הפולינג — ⚠️ בלעדיה השינוי
      *  נשאר בלתי-נראה לכל מכשיר אחר לנצח: ⭐ הם מושכים רק כשהיא מתקדמת. */
     plTouch();
@@ -3967,12 +3973,18 @@ function delSubKey(sk, ts) {
  *  נוקה ומתי, ⭐ ומי שפותח את המסד רואה «2» ואינו יודע דבר: ⛔ וחותמת
  *  מתעדת את עצמה. ⚠️ **והשוואת מחרוזות ISO היא השוואה כרונולוגית**,
  *  ⭐ ואין צורך בהמרה.
- *  ⚠️ **ו-`ya_subs_meta` חולק את חותמת ה-`ya_subs`** — ⭐ שניהם נזרקים
+ *  ⚠️ **ו-`subs_meta` חולק את חותמת ה-`subs`** — ⭐ שניהם נזרקים
  *  באותו ענף, ⛔ ושתי חותמות לענף אחד היו מתירות למפה ולחותמות שלה
  *  להיזרק בנפרד: ⚠️ מפה בלי החותמות שלה חוזרת במיזוג הראשון. */
-var CATS_RESET_KEY = 'ya_cats_reset';
+/*  ⛔ שני שמות לאותה חותמת ⛔ ובכוונה — ⚠️ `..._KEY` הוא המפתח **בענן**
+ *  ובלי תחילית, ⭐ ו-`..._LS` הוא המפתח **במכשיר** ואיתה: ⛔ האחסון
+ *  המקומי משותף לכל האפליקציות שעל אותו origin, ⚠️ וטבלת ההגדרות בענן
+ *  כבר נושאת את התחילית בשמה. */
+var CATS_RESET_KEY = 'cats_reset';
+var CATS_RESET_LS = 'ya_cats_reset';
 var _catsResetSeen = '';
-var SUBS_RESET_KEY = 'ya_subs_reset';
+var SUBS_RESET_KEY = 'subs_reset';
+var SUBS_RESET_LS = 'ya_subs_reset';
 var _subsResetSeen = '';
 function saveSubs() {
   lsSet("ya_subs"+LS, JSON.stringify(SUBS));
@@ -3982,7 +3994,7 @@ function saveSubs() {
   /*  ⛔ כתיבה שהצליחה מקדמת את אות הפולינג — ⚠️ בלעדיה שינוי
    *  בתת-משימה נשאר בלתי-נראה לכל מכשיר אחר לנצח: ⭐ הם מושכים
    *  רק כשהיא מתקדמת, ⛔ ושתי הכתיבות הן אירוע אחד. */
-  Promise.all([sbSet("ya_subs", SUBS), sbSet("ya_subs_meta", SUBS_META)])
+  Promise.all([sbSet("subs", SUBS), sbSet("subs_meta", SUBS_META)])
     .then(function (rs) { if (rs.every(function (r) { return r && r.ok; })) plTouch(); });
 }
 // יוצר מפתח ייחודי לכל (אינדקס קטגוריה, שם משימה) כדי למנוע התנגשות בין קטגוריות
@@ -4044,7 +4056,7 @@ function saveEntries() {
     //    `YA_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
     var _rows = await pushTable('ya_entries', ENTRIES);
     if (ctxStale(_ep)) return;
-    var _r = YA_KV_LEGACY_WRITE ? await sbSet("ya_entries", ENTRIES) : null;
+    var _r = YA_KV_LEGACY_WRITE ? await sbSet("entries", ENTRIES) : null;
     if (ctxStale(_ep)) return;
     /*  ⛔ עֵד הפינוי מסומן בשכבה המשותפת ⛔ ואינו נכתב כאן שוב —
      *  ⚠️ שני אתרי סימון לאותו עֵד הם שתי הכרעות על אותה ראיה. */
@@ -4066,7 +4078,7 @@ function saveArchive() {
     //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('ya_archive', ARCHIVE);
     if (ctxStale(_ep)) return;
-    var _r = YA_KV_LEGACY_WRITE ? await sbSet("ya_archive", ARCHIVE) : null;
+    var _r = YA_KV_LEGACY_WRITE ? await sbSet("archive", ARCHIVE) : null;
     if (ctxStale(_ep)) return;
     var _ok = _rows.ok && (!YA_KV_LEGACY_WRITE || !!(_r && _r.ok));
     if (_ok) pendConfirmPush(PK_ARC, _t0);
@@ -4284,7 +4296,7 @@ async function syncFromCloud() {
 
     // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
     // שנוספה במכשיר לא-מסונכרן נעלמה.
-    var cloudCats = await pull('ya_cats', 'קטגוריות');
+    var cloudCats = await pull('cats', 'קטגוריות');
     var cloudCatsReset = String(await pull(CATS_RESET_KEY, 'חותמת ניקוי קטגוריות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
@@ -4300,19 +4312,19 @@ async function syncFromCloud() {
       if (cloudCatsReset > _catsResetSeen) {
         CATS = Array.isArray(cloudCats) ? cloudCats : [];
         _catsResetSeen = cloudCatsReset;
-        lsSet(CATS_RESET_KEY+LS, JSON.stringify(cloudCatsReset));
+        lsSet(CATS_RESET_LS+LS, JSON.stringify(cloudCatsReset));
         lsSet('ya_cats'+LS, JSON.stringify(CATS));
         console.log('[sync] ניקוי קטגוריות ' + cloudCatsReset + ' — העותק המקומי נזרק ונמשך מלא');
       } else if (cloudCats.length) {
         CATS = mergeCats(CATS, cloudCats);
         lsSet('ya_cats'+LS, JSON.stringify(CATS));
-        sbSet('ya_cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _yaMarkPushed('ya_cats'); });
+        sbSet('cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _yaMarkPushed('cats'); });
       }
     }
 
     // SUBS: מיזוג פר-מפתח לפי SUBS_META
-    var cloudSubs = await pull('ya_subs', 'תתי-משימות');
-    var cloudSubsMetaR = await pullRes('ya_subs_meta', 'חותמות תתי-משימות');
+    var cloudSubs = await pull('subs', 'תתי-משימות');
+    var cloudSubsMetaR = await pullRes('subs_meta', 'חותמות תתי-משימות');
     var cloudSubsReset = String(await pull(SUBS_RESET_KEY, 'חותמת ניקוי תתי-משימות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
@@ -4328,7 +4340,7 @@ async function syncFromCloud() {
         SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
         SUBS_META = yaMetaMap(cloudSubsMetaR) || {};
         _subsResetSeen = cloudSubsReset;
-        lsSet(SUBS_RESET_KEY+LS, JSON.stringify(cloudSubsReset));
+        lsSet(SUBS_RESET_LS+LS, JSON.stringify(cloudSubsReset));
         lsSet('ya_subs'+LS, JSON.stringify(SUBS));
         lsSet('ya_subs_meta'+LS, JSON.stringify(SUBS_META));
         console.log('[sync] ניקוי תתי-משימות ' + cloudSubsReset + ' — העותק המקומי נזרק ונמשך מלא');
@@ -4337,8 +4349,8 @@ async function syncFromCloud() {
         SUBS = ms.subs; SUBS_META = ms.meta;
         lsSet('ya_subs'+LS, JSON.stringify(SUBS));
         lsSet('ya_subs_meta'+LS, JSON.stringify(SUBS_META));
-        sbSet('ya_subs', SUBS);
-        sbSet('ya_subs_meta', SUBS_META);
+        sbSet('subs', SUBS);
+        sbSet('subs_meta', SUBS_META);
       }
     } else if (cloudSubs) {
       /*  ⛔ הדחייה נאמרת ⛔ ואינה שקטה — ⚠️ המשיכה כבר נרשמה כשנכשלה,
@@ -4367,10 +4379,10 @@ async function syncFromCloud() {
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('ya_entries'+LS, ENTRIES, _yaRecTs);
       pushTable('ya_entries', ENTRIES);
-      if (YA_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES);
+      if (YA_KV_LEGACY_WRITE) sbSet('entries', ENTRIES);
     } else if (ENTRIES.length) {
       pushTable('ya_entries', ENTRIES);
-      if (YA_KV_LEGACY_WRITE) sbSet('ya_entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
+      if (YA_KV_LEGACY_WRITE) sbSet('entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
     }
     }
 
@@ -4390,11 +4402,11 @@ async function syncFromCloud() {
       lsSetArray('ya_archive'+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
       // דוחף את הארכיון הממוזג בחזרה לענן כדי שכל המכשירים יישארו מסונכרנים
       pushTable('ya_archive', ARCHIVE);
-      if (YA_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
+      if (YA_KV_LEGACY_WRITE) sbSet('archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
       pushTable('ya_archive', ARCHIVE);
-      if (YA_KV_LEGACY_WRITE) sbSet('ya_archive', ARCHIVE);
+      if (YA_KV_LEGACY_WRITE) sbSet('archive', ARCHIVE);
     }
     }
 
@@ -5265,7 +5277,7 @@ async function yaSyncPushNow() {
     if (ctxStale(_ep)) return;
     var rArchive = await pushTable("ya_archive", ARCHIVE);
     if (ctxStale(_ep)) return;
-    if (YA_KV_LEGACY_WRITE) { await sbSet("ya_entries", ENTRIES); await sbSet("ya_archive", ARCHIVE); }
+    if (YA_KV_LEGACY_WRITE) { await sbSet("entries", ENTRIES); await sbSet("archive", ARCHIVE); }
     if (ctxStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive (סבב 52) —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
@@ -5276,7 +5288,7 @@ async function yaSyncPushNow() {
     if (rEntries.ok) pendConfirmPush(PK_ENTRY, _t0);
     if (rArchive.ok) pendConfirmPush(PK_ARC, _t0);
     if (!rEntries.ok || !rArchive.ok) {
-      // ⛔ אין לחתום ya_last_changed על נתון שלא הגיע (נרשם בסבב 67) —
+      // ⛔ אין לחתום את `last_changed` על נתון שלא הגיע —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
       toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
@@ -6468,8 +6480,8 @@ function loadLocalData() {
     // חותמות פר-מפתח של SUBS. אין קובץ? כל המפתחות "ותיקים" (0) — בדיוק כמו
     // רשומה בלי updatedAt: לא נופלים, אבל מפסידים לכל עדכון מתוארך.
     SUBS_META = lsRead("ya_subs_meta"+LS, null, 'object') || {};
-    _catsResetSeen = String(lsRead(CATS_RESET_KEY+LS, '') || '');
-    _subsResetSeen = String(lsRead(SUBS_RESET_KEY+LS, '') || '');
+    _catsResetSeen = String(lsRead(CATS_RESET_LS+LS, '') || '');
+    _subsResetSeen = String(lsRead(SUBS_RESET_LS+LS, '') || '');
     ENTRIES = lsRead("ya_entries"+LS, null, 'array') || [];
     // רשומות זבל (null / לא-אובייקט) לא מפילות את הרינדור
     ENTRIES = ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
