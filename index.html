@@ -5385,7 +5385,7 @@ function renderArcYears() {
     return a > b ? 1 : -1;
   });
 
-  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר שנה:</div><div class="arc-grid">';
+  var html = '<div class="arc-pick-label">בחר שנה:</div><div class="arc-grid">';
   yearList.forEach(function(y) {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
@@ -5423,7 +5423,7 @@ function renderArcMonths(year) {
     return ia - ib;
   });
 
-  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="arc-pick-label">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
   monthList.forEach(function(m) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
@@ -5455,7 +5455,7 @@ function renderArcDays(year, month) {
     return;
   }
 
-  var html = '<div class="u-fs-1 u-c-text2 u-mb-4">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="arc-pick-label">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
   days.forEach(function(d) {
     // Show day-of-month only (first token of hdate = גמטריה)
     var parts = (d.hdate||"").split(" ");
