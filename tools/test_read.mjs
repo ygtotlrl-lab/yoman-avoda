@@ -38,7 +38,7 @@ const APP = {
   rowsVars: ['_rowsE', '_rowsA'],
   legacyOff: /var YA_KV_LEGACY_WRITE = false;/,
   // המפתחות שביתם היחיד בענן הוא ה-kv — ⛔ ולכן אין להם שכבת שורות.
-  kvOnly: ['ya_cats', 'ya_subs', 'ya_subs_meta'],
+  kvOnly: ['cats', 'subs', 'subs_meta'],
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
 
@@ -74,8 +74,12 @@ let RAN = 0;
 let PRE_MUT = null;
 const mutStage = () => { if (PRE_MUT === null) PRE_MUT = RAN; };
 /*  ⛔ הדגל נלכד ברישום ⛔ ולא בסגירה — ⚠️ שער שמריץ שער אחר מציב אותו
- *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו. */
-const SUBRUN = !!process.env.GATE_SUBRUN;
+ *  **אחרי** הרישום, ⭐ ולכן הוא חל על הילד ⛔ ולא על עצמו.
+ *  ⛔ **ושומר הרקורסיה הוא ריצת-משנה אף הוא** — ⚠️ הסט רץ שם על **עותק
+ *  סינתטי** שאין לצידו אחיות ואין בו `.git`, ⭐ ולכן שער שמשווה מול אחות
+ *  או קורא את סט המעקב מגיע לחלק מטענותיו **בכוונה**: ⛔ והריצפה נמדדת
+ *  על עץ אמיתי ⛔ ולא שם. */
+const SUBRUN = !!process.env.GATE_SUBRUN || !!process.env.R33_INNER;
 /*  ⛔ הריצפה נמדדת בשני הכיוונים (סבב 118) — ⚠️ **מה נכנס**: מספר הטענות
  *  שרצו עד שלב המוטציות; ⛔ **ומה מפיל**: פחות מהמוצהר — ריצה חלקית —
  *  ⛔ ויותר ממנו — ריצפה מיושנת. ⭐ **ולמה שני הכיוונים**: ריצפה שאינה
@@ -210,14 +214,14 @@ function env(total, mode, mutSrc) {
   sb.globalThis = sb;
   vm.createContext(sb);
   for (const d of ['var YA_ROWS = true;', 'var YA_ARC_UNIFIED = true;',
-                   'var YA_ROW_TABLES = ', 'var YS_ROWS_PAGE = ', 'var YS_ROWS_CAP = ',
+                   'var YA_ROW_TABLES = ', 'var ROWS_PAGE = ', 'var ROWS_CAP = ',
                    'var _yaRemote = ']) {
     vm.runInContext(cutVar(d), sb);
   }
   /*  ⛔ העימוד עבר למודול המשותף (סבב 87) — ⚠️ הסביבה טוענת אותו כמו כל
    *  פונקציה אחרת, ⭐ ולכן הטענות למטה מודדות את **אותו** קוד שרץ באפליקציה. */
   vm.runInContext(cutVar('var _ctxEpoch = 0;'), sb);
-  for (const n of ['_ysRowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
+  for (const n of ['_rowsPaged', 'entryKey', 'archiveKey', 'parseGregLike', 'gdateOrderTs', 'legacyIdStamp', 'entryOrderTs',
                    'yaSortRows', 'yaTableOf', 'yaArchivedFlag', 'ctxEpoch', 'ctxSwitch', 'ctxStale', 'yaRowsGet']) {
     vm.runInContext(cut(n, mutSrc), sb, { filename: n + '.js' });
   }
@@ -228,8 +232,8 @@ function env(total, mode, mutSrc) {
   return { sb, st };
 }
 
-const PAGE = Number((cutVar('var YS_ROWS_PAGE = ').match(/\d+/) || [0])[0]);
-assert(PAGE > 0, '2א · YS_ROWS_PAGE מוגדר (' + PAGE + ')');
+const PAGE = Number((cutVar('var ROWS_PAGE = ').match(/\d+/) || [0])[0]);
+assert(PAGE > 0, '2א · ROWS_PAGE מוגדר (' + PAGE + ')');
 {
   const e = env(PAGE + 250);
   const r = await e.sb.yaRowsGet('ya_entries');
@@ -330,7 +334,7 @@ console.log('— מוטציות —');
 }
 {
   const e = env(PAGE + 250);
-  vm.runInContext('YS_ROWS_PAGE = 1e9;', e.sb);
+  vm.runInContext('ROWS_PAGE = 1e9;', e.sb);
   const r = await e.sb.yaRowsGet('ya_entries');
   assert(r.ok && e.st.pages.length === 1,
     'מוטציית-נגד: עמוד ענק מחזיר הכל בבקשה אחת — הלולאה אינה מיותרת אלא גבולית');
