@@ -454,11 +454,21 @@ body.locked{overflow:hidden}
 --on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
 }
 .u-mt-2{margin-top:var(--sp-2)}
+.u-mt-5{margin-top:var(--sp-5)}
 /* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
+/* ══ מחלקות השירות הפרטיות — אינן חיות בכולן ═════════════
+   ⚠️ הן ישבו בבלוק המשותף ולא היה להן קורא בקופה — ⛔ ומחלקה
+   בבלוק משותף שאין לה קורא באחת מהן היא סלקטור בלי קורא. */
+.u-ai-c{align-items:center}
+.u-d-flex{display:flex}
+.u-fs-2{font-size:var(--fs-2)}
+.u-fs-3{font-size:var(--fs-3)}
+.u-fw-700{font-weight:700}
+.u-fx-1{flex:1}
+.u-g-5{gap:var(--sp-5)}
 /* ══ מחלקות הסולם הפרטיות — אינן חיות בכולן ═════════════════════════════
    ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
    המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
-.u-ai-c{align-items:center}
 .u-bd-1-solid-border{border:1px solid var(--border)}
 .u-bd-15-solid-border{border:1.5px solid var(--border)}
 .u-bd-none{border:none}
@@ -473,9 +483,9 @@ body.locked{overflow:hidden}
 .u-c-ok{color:var(--ok)}
 .u-c-on-primary{color:var(--on-primary)}
 .u-c-primary-ink{color:var(--primary-ink)}
+.u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
-.u-c-text{color:var(--text)}
 .u-cat-0{--cat:#888888}
 .u-cat-1{--cat:#E8622A}
 .u-cat-2{--cat:#E8A020}
@@ -487,29 +497,23 @@ body.locked{overflow:hidden}
 .u-cat-8{--cat:#7A7A7A}
 .u-cur-p{cursor:pointer}
 .u-d-block{display:block}
-.u-d-flex{display:flex}
 .u-d-none{display:none}
 .u-fd-col{flex-direction:column}
 .u-ff-frank{font-family:'Frank Ruhl Libre',serif}
-.u-ff-heebo-sans-serif{font-family:Heebo,sans-serif}
 .u-ff-heebo{font-family:Heebo}
+.u-ff-heebo-sans-serif{font-family:Heebo,sans-serif}
 .u-fs-1{font-size:var(--fs-1)}
-.u-fs-2{font-size:var(--fs-2)}
-.u-fs-3{font-size:var(--fs-3)}
 .u-fs-4{font-size:var(--fs-4)}
 .u-fsh-0{flex-shrink:0}
 .u-fw-400{font-weight:400}
-.u-fw-700{font-weight:700}
 .u-fw-800{font-weight:800}
 .u-fw-900{font-weight:900}
 .u-fwr-wrap{flex-wrap:wrap}
-.u-fx-1{flex:1}
 .u-fx-2{flex:2}
 .u-fx-3{flex:3}
 .u-g-2{gap:var(--sp-2)}
 .u-g-3{gap:var(--sp-3)}
 .u-g-4{gap:var(--sp-4)}
-.u-g-5{gap:var(--sp-5)}
 .u-h-12{height:12px}
 .u-m-0{margin:0}
 .u-m-2-0-1-0{margin:var(--sp-2) 0 var(--sp-1) 0}
@@ -520,16 +524,15 @@ body.locked{overflow:hidden}
 .u-minw-80{min-width:80px}
 .u-ml-1{margin-left:var(--sp-1)}
 .u-mt-4{margin-top:var(--sp-4)}
-.u-mt-5{margin-top:var(--sp-5)}
 .u-op-55{opacity:var(--op-4)}
 .u-op-8{opacity:var(--op-6)}
 .u-p-1-2{padding:var(--sp-1) var(--sp-2)}
+.u-p-2{padding:var(--sp-2)}
 .u-p-2-4{padding:var(--sp-2) var(--sp-4)}
 .u-p-2-5{padding:var(--sp-2) var(--sp-5)}
-.u-p-2{padding:var(--sp-2)}
+.u-p-3{padding:var(--sp-3)}
 .u-p-3-4{padding:var(--sp-3) var(--sp-4)}
 .u-p-3-5{padding:var(--sp-3) var(--sp-5)}
-.u-p-3{padding:var(--sp-3)}
 .u-p-4{padding:var(--sp-4)}
 .u-p-5{padding:var(--sp-5)}
 .u-p-6{padding:var(--sp-6)}
@@ -539,18 +542,15 @@ body.locked{overflow:hidden}
 .u-r-3{border-radius:var(--r-3)}
 .u-ta-c{text-align:center}
 .u-ta-l{text-align:left}
-.u-w-100p{width:100%}
 .u-w-100{width:100px}
+.u-w-100p{width:100%}
 .u-w-12{width:12px}
 .u-w-55{width:55px}
 .u-w-60{width:60px}
 .u-ws-nw{white-space:nowrap}
-/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
-/* ══ מחלקות הרכיבים — שרשרת שירות שקופלה לשם אחד ═════════════════════════
-   ⛔ **מחלקת שירות היא התאמה נקודתית מעל מחלקה סמנטית** — ⚠️ ולא תחליף
-      לה: ⭐ שרשרת בת שלוש ומעלה שחוזרת יותר מפעמיים היא כלל CSS שנכתב
-      ב-HTML, ⛔ ושינויו דורש לערוך כל מופע.
-   ⛔ **והשם נגזר מתפקיד הרכיב** ⛔ ולא ממראהו — ⚠️ שם שנגזר מהמראה
-      מתיישן ביום שהמראה משתנה. */
+/* ══ מחלקות הרכיבים — שם שנגזר מתפקיד ═══════════════════════
+   ⛔ שרשרת שחוזרת היא כלל CSS שנכתב ב-HTML — ⚠️ ושינויו דורש לערוך
+   כל מופע: ⭐ והשם נגזר מתפקיד הרכיב ⚠️ ולא ממראהו. */
 .arc-pick-label{color:var(--text-2);font-size:var(--fs-1);margin-bottom:var(--sp-4)}
+/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
 /* ═══ סוף גיליון הסגנון — בלוק גיליון סגנון ══════════════════════════════ */
