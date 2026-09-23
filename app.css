@@ -1,4 +1,4 @@
-/* ═══ גיליון הסגנון — בלוק גיליון סגנון (סבב 155) ═══════════════════════════
+/* ═══ גיליון הסגנון — בלוק גיליון סגנון ═════════════════════════════════════
    ⛔ CSS של האפליקציה יושב בקובץ ⛔ ולא ב-`index.html` — ⚠️ בלוק שאינו
    נושא את סוגו נקרא כסוג אחר: ⭐ מחרוזת CSS בתוך JS נראית כ-CSS של
    האפליקציה, ⛔ ואינה.
@@ -362,7 +362,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-err{background:var(--bad-soft);border:1px solid var(--bad);border-radius:var(--r-5);padding:var(--sp-6);
   font-size:var(--fs-3);color:var(--bad);line-height:var(--lh-5)}
 /* ══════════════════════════════════════════════════════════════════════════ */
-/* ═══ שכבת הטוסט — מודול משותף (סבב 87ב) ════════════════════════════════════
+/* ═══ שכבת הטוסט — מודול משותף ══════════════════════════════════════════════
    זהה בית-לבית בכל האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
    המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
@@ -393,7 +393,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 }
 #updater button.x{
   margin-inline-start:0;background:none;color:var(--on-brand);opacity:var(--op-5);padding:0 var(--sp-2);font-size:var(--fs-4)}
-/* ══ שכבת המודאל — מיכל אחד (סבב 68) ═══════════════════════════════════ */
+/* ══ שכבת המודאל — מיכל אחד ════════════════════════════════════════════ */
 body.locked{overflow:hidden}
 .veil{position:fixed;inset:0;z-index:var(--z-4);background:var(--veil);
   display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
@@ -416,7 +416,7 @@ body.locked{overflow:hidden}
   background:var(--card-2);color:var(--text);font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
 .sheet-ft button.danger{border:none;background:var(--bad);color:var(--bad-soft)}
 /* ══ סוף שכבת המודאל ═══════════════════════════════════════════════════ */
-/* ═══ סולמות הערך החזותי — מודול משותף (סבב 141) ═════════════════════════
+/* ═══ סולמות הערך החזותי — מודול משותף ═══════════════════════════════════
    ⛔ שמונה סולמות, ⛔ ואותן דרגות בכל האפליקציות — ⚠️ כל ערך חזותי
       נגזר מהם ⛔ ואינו נבחר לכל אתר בנפרד: ⭐ ערך שנבחר באתר הוא סולם שלא
       הוגדר, ⛔ ושני אתרים שנבדלים בפיקסל אחד הם שני ערכים שאיש לא הכריע
