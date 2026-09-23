@@ -32,7 +32,7 @@ import java.util.Set;
  * the shell writes it to cache, exposes it through FileProvider and fires
  * ACTION_SEND.
  *
- * <p>⚠️ זו החריגה **המדודה** של המעטפת (סבב 40, ומעוגנת בחילוץ של סבב 41):
+ * <p>⚠️ זו החריגה **המדודה** של המעטפת:
  * שלוש האחיות אינן מכריזות גשר, אינן מכריזות \`FileProvider\`, ואין להן
  * תלויות androidx — ⛔ ואין להעתיק לשם את הבלוק הזה «לשם אחידות».
  */
@@ -137,7 +137,7 @@ public class MainActivity extends ShellActivity {
     }
 
     // ── The share itself. Reached only through one of the two guarded paths above. ──
-    // ⛔ אין כאן יעד — הבורר של המערכת הוא שבוחר (סבב 60) — ר' share-bridge-rule ב-CLAUDE.md
+    // ⛔ אין כאן יעד — הבורר של המערכת הוא שבוחר — ר' share-bridge-rule ב-CLAUDE.md
     private void shareImage(final String base64Data, final String mimeType) {
         try {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
@@ -161,7 +161,7 @@ public class MainActivity extends ShellActivity {
                     send.putExtra(Intent.EXTRA_STREAM, uri);
                     send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
-                    // ⛔ שיתוף רק ב-createChooser · אין FLAG_ACTIVITY_NEW_TASK (סבב 59) —
+                    // ⛔ שיתוף רק ב-createChooser · אין FLAG_ACTIVITY_NEW_TASK —
                     // ר' share-bridge-rule ב-CLAUDE.md
                     Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
                     try {
