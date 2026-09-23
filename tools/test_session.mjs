@@ -26,11 +26,10 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
-  app: 'yoman-avoda',
-  file: 'index.html',
   /*  ⛔ `present:false` הוא הצהרה מנומקת ולא היעדר שקט (סבב 53) — אין
    *  כאן מסך כניסה, אין משתמש מחובר, ואין מה להחזיק. */
   present: false,
@@ -138,8 +137,8 @@ process.on('exit', () => {
 const fail = (m) => { RAN++; failures++; console.error('❌ ' + m); };
 const pass = (m) => (RAN++, console.log('✅ ' + m));
 
-const src = fs.readFileSync(APP.file, 'utf8');
-console.log('\n🔎 מודל הסשן (סבב 53) — ' + APP.app + '\n');
+const src = fs.readFileSync(FACTS.entry, 'utf8');
+console.log('\n🔎 מודל הסשן (סבב 53) — ' + FACTS.slug + '\n');
 
 function codeOnly(text) {
   return text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ');

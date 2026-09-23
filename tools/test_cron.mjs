@@ -26,6 +26,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DB_SCHEMA } from './db-schema.mjs';
+import { FACTS } from './app-facts.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /* ⚠️ פר-אפליקציה — הפרויקט שהאפליקציה חיה בו והבעלות על מיגרציית הגיבוי נבדלים ביניהן */
@@ -36,8 +37,9 @@ import { DB_SCHEMA } from './db-schema.mjs';
    ⚠️ `prefixes` — כאן, ורק כאן, מפתח הגיבוי נושא את סיומת המוסד. */
 /* ⚠️ סוף פר-אפליקציה */
 const APP = {
-  name: 'yoman-avoda',
+  /*  ⭐ מפתחות הגיבוי שהרשימה במסד חייבת להכיל — ⛔ **אינו נגזר**: שמות טבלאות שהגיבוי כותב, ⚠️ והמסד הוא מה שנמדד מולם */
   keys: ['ya_entries_rows', 'ya_cats', 'ya_subs', 'ya_subs_meta'],
+  /*  ⭐ קידומות מפתחות הגיבוי — ⛔ **אינו נגזר**: מוסד שהגיבוי נושא בשמו, ⚠️ ואין קובץ שמצהיר עליו */
   prefixes: ['rishon_', 'ramataviv_'],
   /* ⭐ שמות גיבוי השגרה שרצו עד סבב 35, לפני המעבר לגיבוי-טבלאות (השלמת
      סבב 35ג): 23 שורות שלהם יושבות במסד, והן חייבות להתפנות ככל שגרה
@@ -541,7 +543,7 @@ async function tLive() {
 }
 
 /* ── הרצה ──────────────────────────────────────────────────────────────── */
-console.log('· ' + APP.name + ' — סבב 35ג: פינוי גיבויים אוטומטי במסד');
+console.log('· ' + FACTS.slug + ' — סבב 35ג: פינוי גיבויים אוטומטי במסד');
 t1();
 /*  ⛔ ההגדרה החיה נקראת בכל ריפו ⛔ ולא בבעלים בלבד — ⚠️ כל אחד מהם פונה
  *  למסד שלו, ⭐ ושם טבלה שהוסב מפיל את הפונקציה אצל כולם. */
@@ -619,7 +621,7 @@ t5();
       (defines.length ? ' (' + defines.join(' · ') + ')' : '') +
       '. מוחקים את העותק — הבעלות היא של ריפו אחד');
     const owner = (APP.migrationDoc || '').split('/')[0];
-    assert(owner && owner !== APP.name,
+    assert(owner && owner !== FACTS.slug,
       '6ב · ⛔ ו-`migrationDoc` מצביע על ריפו הבעלים — נמדד «' + owner +
       '» והצפוי שם ריפו אחר. מיישרים את ההצהרה לקובץ שבריפו שמחזיק אותה');
   } else {
@@ -663,7 +665,7 @@ t5();
       '» ואילך והצפוי אפס' + (defines.length ? ' (' + defines.join(' · ') + ')' : '') +
       '. כותבים את השינוי במיגרציה של ריפו הבעלים');
     const own = (K.migrationDoc || '').split('/')[0];
-    assert(own && own !== APP.name,
+    assert(own && own !== FACTS.slug,
       '6ו · ⛔ ו-`migrationDoc` מצביע על ריפו הבעלים — נמדד «' + own +
       '» והצפוי שם ריפו אחר. מיישרים את ההצהרה לקובץ שבריפו שמחזיק אותה');
     if (K.since) {

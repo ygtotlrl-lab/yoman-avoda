@@ -26,6 +26,7 @@ import { appSrc } from './appsrc.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
+  /*  ⭐ דפוסי החלון החם שהשער מחפש במקור — ⛔ **אינו נגזר**: שמות פונקציות ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליהן */
   checks: [
     [/var YA_KV_LEGACY_WRITE = false;/, 'הכתיבה הכפולה ל-kv כבויה (YA_KV_LEGACY_WRITE=false)'],
     [/kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',\s*\n\s*eq: \['yeshiva', YESHIVA\], order: 'rec_key'/, 'הגיבוי היומי כולל את ya_entries כטבלה (eq פר-מוסד, order דטרמיניסטי)'],
