@@ -25,6 +25,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { appSrc } from './appsrc.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 const APP = {
@@ -41,9 +42,14 @@ const APP = {
   /*  ⭐ דגל הכתיבה הכפולה כבוי — ⛔ **אינו נגזר**: שורה ב-`index.html`, ⚠️ ואין קובץ שמצהיר עליה */
   legacyOff: /var YA_KV_LEGACY_WRITE = false;/,
   /*  ⛔ המפתחות שביתם היחיד בענן הוא ה-kv — ⚠️ ולכן אין להם שכבת שורות: ⭐ החלטת סכימה, ואינה נגזרת. */
-  kvOnly: ['cats', 'subs', 'subs_meta'],
+  kvOnly: {
+    cats: 'הקטגוריות — ביתן בענן הוא ה-kv של הגדרות המוסד, ⛔ ואין להן טבלת שורות',
+    subs: 'תתי-הקטגוריות — ביתן בענן הוא ה-kv של הגדרות המוסד, ⛔ ואין להן טבלת שורות',
+    subs_meta: 'חותמות תתי-הקטגוריות — נקראות יחד איתן מה-kv, ⛔ ואין להן טבלת שורות',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -96,6 +102,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   /*  ⚠️ שער שיובא לתהליך של שער אחר אינו סוגר — ⛔ הספירה שלו לא רצה.
    *  ⛔ וגם ריצת-משנה מוצהרת אינה סוגרת — ⚠️ שער שמריץ את עצמו בעץ
    *  סינתטי מגיע לחלק מטענותיו בכוונה, ⭐ והרצפה נמדדת על עץ אמיתי. */
@@ -158,8 +165,10 @@ assert(ungated.length === 0,
   (ungated.join(', ') || 'אף אחד') + '. עוטפים את המיזוג ב-if (<res>.ok)');
 assert(APP.legacyOff.test(SRC),
   '1ה · ⛔ הכתיבה הכפולה ל-kv נשארה כבויה — הטבלאות הן המאסטר');
-for (const k of APP.kvOnly) {
-  assert(new RegExp("pull(?:Res)?\\('" + k + "'").test(SRC),
+for (const k of Object.keys(APP.kvOnly)) {
+  const hit = new RegExp("pull(?:Res)?\\('" + k + "'").test(SRC);
+  if (hit) CASE('kvOnly', k);
+  assert(hit,
     '1ו · ' + k + ' נקרא מ-kv — ⚠️ זה ביתו היחיד בענן, ולא סטייה');
 }
 

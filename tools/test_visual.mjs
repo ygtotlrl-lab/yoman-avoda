@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { PEERS } from './peers.mjs';
 import { appSrc } from './appsrc.mjs';
 import { FACTS } from './app-facts.mjs';
+import { declCases, dumpCases } from './decl-cases.mjs';
 
 /* ── APP — הדבר היחיד שנבדל בין הריפו ──────────────────────────────────── */
 /*  ⛔ החריגות הפרטיות — ⚠️ **מה נכנס**: בורר או שם קובץ שהסריקה מדלגת
@@ -61,9 +62,13 @@ const APP = {
     { sel: '.grip', why: 'ידית הגרירה האחת — קטגוריה, משימה ותת-משימה נגררות ממנה' },
   ],
   dragWhy: '',
-  visualAllow: { fns: ['_buildReportDiv', '_renderReport'] },
+  visualAllow: {
+    _buildReportDiv: 'בונה הדוח שנצרב לתמונה — ⛔ הגיליון אינו מגיע לתמונה, ⚠️ והערך המוטבע הוא מה שהיא נושאת',
+    _renderReport: 'מצייר את הדוח לקנבס — ⛔ הצבע נקרא מהסגנון המוטבע, ⚠️ ואסימון ערכה אינו מגיע לשם',
+  },
 };
 /* ── סוף APP ───────────────────────────────────────────────────────────── */
+const CASE = declCases(import.meta.url, APP);
 
 /*  ⛔ השורות בטבלת התשתית שהקובץ הזה אוכף — ⚠️ המיפוי נגזר מכאן ⛔ ואינו
  *  רשימה שנייה בבודק. */
@@ -107,6 +112,7 @@ const FLOOR_MAX = (() => {
   return r ? Number(r[2]) : EXPECTED;
 })();
 process.on('exit', () => {
+  dumpCases();
   if (!process.argv[1] || !process.argv[1].endsWith(GATE_ID)) return;
   if (SUBRUN) return;
   if (PRE_MUT === 0 && process.env.GATE_MUT !== '1') {
@@ -426,7 +432,7 @@ const IDX = rd('index.html') + '\n<style data-sheet="app">\n' + rd('app.css') + 
  *  ⭐ מחלקה שנוספת מ-`classList.add` שבמודול אינה ב-`index.html`,
  *  ⛔ וסריקה שלו לבדו מדווחת פחות ממה שיש. */
 const SRC_ALL = appSrc(ROOT);
-const F = scan(IDX, APP.visualAllow);
+const F = scan(IDX, { fns: Object.keys(APP.visualAllow) });
 
 t(F.color.length === 0,
   `ליטרל צבע בגיליון או ב-CSS שנכתב מ-JS — נמדדו ${F.color.length} והצפוי אפס` +
@@ -479,7 +485,8 @@ for (const g of ['enumProps', 'boxProps', 'edgeProps', 'effectProps']) {
 }
 /*  ⛔ החרגה פרטית נמדדת אף היא — ⚠️ בורר שאין לו אתר הוא היתר שלא נסגר. */
 {
-  const dead = (APP.visualAllow.fns || []).filter((s) => IDX.indexOf('function ' + s + '(') < 0);
+  const dead = Object.keys(APP.visualAllow).filter((s) => IDX.indexOf('function ' + s + '(') < 0);
+  for (const s of Object.keys(APP.visualAllow)) if (dead.indexOf(s) < 0) CASE('visualAllow', s);
   t(dead.length === 0,
     `החרגה פרטית בלי אתר — נמדדו ${dead.length} והצפוי אפס` +
     (dead.length ? ' · ' + dead.join(' · ') : ''));
@@ -1109,7 +1116,7 @@ const MUT = [
 for (const r of MUT) {
   const body = r.edit();
   if (body === null || body === IDX) { t(true, `${r.m} · ⭕ ${r.lbl} — ⛔ אין כאן מה למוטט`); continue; }
-  const g = scan(body, APP.visualAllow);
+  const g = scan(body, { fns: Object.keys(APP.visualAllow) });
   t(g[r.key].length > F[r.key].length, `${r.m} · ${r.lbl} **מפיל** את «${r.key}»`);
 }
 /*  ⭐ מוטציית-נגד: כלל חי שכל ערכיו נגזרים ⛔ אינו מפיל — ⚠️ הנמדד הוא
@@ -1118,7 +1125,7 @@ for (const r of MUT) {
   const ok = put(IDX, 'z-index:var(--z-3);opacity:var(--op-2);line-height:var(--lh-2);' +
                       'letter-spacing:var(--ls-2);transition:all var(--dur-2) var(--ease);' +
                       'color:var(--text);width:37px;border:1px solid var(--border);');
-  const g = scan(ok, APP.visualAllow);
+  const g = scan(ok, { fns: Object.keys(APP.visualAllow) });
   t(g.color.length === F.color.length && g.scaled.length === F.scaled.length
     && g.closing.length === F.closing.length,
     'נ1 · ⭐ כלל שכל ערכיו נגזרים ⛔ **אינו** מפיל');
