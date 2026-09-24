@@ -5,12 +5,13 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'yoman-avoda-v199';
+var CACHE_NAME = 'yoman-avoda-v200';
 
 // קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
   './',
   './index.html',
+  './core/ui.css',
   './app.css',
   './core/util.js',
   './core/sync.js',
