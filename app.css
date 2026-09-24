@@ -14,24 +14,25 @@
    *  ⛔ ולא מדיו הטקסט — ⚠️ הבאנרים בכל הגוונים נראו זהים.
    *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
   /*  ⛔ `--brand` ממופה לצבע הזהות ⛔ ולא להדגשה — ⚠️ הזהות כאן היא
-   *  `--primary-fill`, ⭐ והיא מה שהמניפסט צובע בו את שורת המערכת ומה
+   *  `--brand-fill`, ⭐ והיא מה שהמניפסט צובע בו את שורת המערכת ומה
    *  שכותרת המסך נגזרת ממנו: ⛔ מיפוי להדגשה צבע את באנר העדכון כתום,
    *  ⚠️ ובאחיות הוא צבע הזהות — ⭐ והמשתמש שעובר ביניהן קרא את זה כתקלה.
    *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם, ⭐ ונמדד 5.15. */
-  --brand:var(--primary-fill); --on-brand:#FFFFFF;
+  --brand:var(--brand-fill); --on-brand:#FFFFFF;
 
-  --primary-ink:#1E6FBF; --primary-fill:#1E6FBF;
-  --primaryl:#3A8FDF; --primaryd:#0D4A8A;
+  /*  ⛔ ארבעת אסימוני הזהות — ⚠️ לבן על `--brand-fill` 5.15 · `--brand-ink`
+   *  על הכרטיס 7.15 · ועל `--brand-soft` 6.10: ⭐ `--brand-ink` הוא גם
+   *  רקע הריחוף והלחיצה, ⛔ שהדיו עליו הוא `--bg` ומתחלף איתו. */
+  --brand-fill:#1E6FBF; --brand-ink:#1558A0; --brand-soft:#E4EEFA;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text-2:#4A5A7A; --text-3:#8A9ABB;
   --radius:var(--r-5);
-  --on-primary:#FFFFFF;
   --ok:#1A6A3A; --ok-soft:#E6F6EC;
   --warn:#B45309; --warn-soft:#FFFBE6;
   --bad:#B91C1C; --bad-soft:#FFE8E8;
   --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
-  --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+  --deep-1:#2A4E8C; --deep-2:#0E2145;
   --on-deep:#F7F3EA; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
   --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
   --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
@@ -46,15 +47,13 @@
     --bg:#0d151d; --card-2:#18242f; --card:#131e29;
     --text:#e8eef5; --text-2:#c2cfdc; --text-3:#93a5b8;
     --border:#24333f;
-    --on-primary:#FFFFFF;
-    --ok:#84DBA6; --ok-soft:#12251C;
+      --ok:#84DBA6; --ok-soft:#12251C;
     --warn:#FBBF24; --warn-soft:#2B2012;
     --bad:#F87171; --bad-soft:#2D1717;
-    --primary-ink:#7FB2F0; --primary-fill:#1E6FBF;
-    --primaryl:#5AA6EE; --primaryd:#9EC8F2;
+    --brand-fill:#1E6FBF; --brand-ink:#7FB2F0; --brand-soft:#16283A;
     --accent:#FFB930;
     --shadow:rgba(0,0,0,0.45);
-    --primary-deep:#1558A0; --deep-1:#2A4E8C; --deep-2:#0E2145;
+    --deep-1:#2A4E8C; --deep-2:#0E2145;
     --on-deep:#F7F3EA; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
     --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
     --shadow-brand:rgba(0,0,0,0.45); --shadow-brand-soft:rgba(0,0,0,0.25);
@@ -75,7 +74,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
-.hdr{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
+.hdr{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
   border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
@@ -94,7 +93,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⚠️ מקור האמת הוא בלוק `APP` שב-`gen-icons.mjs` — `bg.start` · `bg.end`
    · `ink` · והזווית שנגזרת מ-`bg.p1`/`bg.p2`, ⭐ ומוטיב הפסים הוא
    `mark.shapes` אות באות. ⛔ מי שמשנה ערך כאן בלי לשנות שם מייצר מקור
-   שני לאותו צבע. ⚠️ ואין כאן `--primary`
+   שני לאותו צבע. ⚠️ ואין כאן `--brand`
    ו-`--bg` של פנים האפליקציה: ⛔ הם הכחול הבהיר, ⭐ והם אינם גוון האייקון. */
 /* ⛔ מסך הבחירה הוא **מסך** ⛔ ואינו נעילה — ⚠️ הוא נושא כפתור שפותח
    דיאלוג, ⭐ ודרגת «נעילה» היא התקרה: ⛔ מודאל שנפתח ממנה קיים ב-DOM
@@ -130,22 +129,22 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .ys-pick-btn:hover{background:var(--fill-deep-2);border-color:var(--on-deep);}
   .ys-pick-alt:hover{background:var(--fill-deep);border-color:var(--edge-deep-2);}
-  .arc-btn:hover{border-color:var(--primary-ink);color:var(--primary-ink);background:var(--card-2);}
-  .arc-crumb:hover{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);}
+  .arc-btn:hover{border-color:var(--brand-ink);color:var(--brand-ink);background:var(--card-2);}
+  .arc-crumb:hover{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);}
   .arc-entry-del:hover{color:var(--bad);}
-  .tab-btn:hover{background:var(--card-2);color:var(--primary-ink);border-color:var(--primary-ink);}
-  .day-chip:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
+  .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
+  .day-chip:hover{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
   .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
-  .qbtn:hover{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
-  .btn-add:hover{background:linear-gradient(135deg,var(--deep-1),var(--primary-deep));transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-brand);}
+  .qbtn:hover{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
+  .btn-add:hover{background:linear-gradient(135deg,var(--deep-1),var(--deep-2));transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-brand);}
   .del-btn:hover{background:var(--bad-soft);color:var(--bad);}
-  .btn-blue:hover{background:var(--primary-fill);color:var(--on-primary);}
+  .btn-blue:hover{background:var(--brand-fill);color:var(--on-brand);}
   .btn-red:hover{background:var(--bad);color:var(--bad-soft);}
   .chip button:hover{color:var(--bad);}
   .task-block:hover{box-shadow:0 2px 10px var(--shadow);}
   .task-del-btn:hover{color:var(--bad);}
-  .btn-mini:hover{background:var(--primaryl);}
-  .btn-save:hover{background:linear-gradient(135deg,var(--deep-1),var(--primary-deep));}
+  .btn-mini:hover{background:var(--brand-ink);}
+  .btn-save:hover{background:linear-gradient(135deg,var(--deep-1),var(--deep-2));}
   .sheet-hd .x:hover{background:var(--card-2)}
 }
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
@@ -161,7 +160,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
 .hdr-bh{font-size:var(--fs-1);color:var(--on-dark-3);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
-.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--on-primary);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
+.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--on-brand);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 
 .hdr-title-wrap::after{content:none;}
 /* ⛔ הכתובית בשורה אחת ⛔ ואינה נשברת — ⚠️ שם המוסד שנשבר לשתיים מזיז
@@ -200,7 +199,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);
   font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;color:var(--text);cursor:pointer;
   transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
-.arc-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
+.arc-btn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
 .arc-grid{display:flex;flex-wrap:wrap;gap:var(--sp-4);margin-bottom:var(--sp-4);}
 .arc-crumb{font-size:var(--fs-2);color:var(--text-2);cursor:pointer;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-2);
@@ -215,12 +214,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .tab-btn{flex:1;background:var(--card);color:var(--text-2);border:2px solid var(--border);
   border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);}
-.tab-btn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 4px 12px var(--shadow-brand);}
+.tab-btn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
 /* כרטיס */
 .card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
-.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--primary-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
+.card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--brand-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
 .card-ttl::before{content:"▸";color:var(--accent);font-size:var(--fs-3);}
 
 /* תאריך */
@@ -229,10 +228,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
 .day-chip{background:var(--card-2);color:var(--text-2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all var(--dur-3);white-space:nowrap;}
-.day-chip.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);box-shadow:0 2px 8px var(--shadow-brand);}
+.day-chip.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);box-shadow:0 2px 8px var(--shadow-brand);}
 .heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
   font-weight:700;background:var(--card);direction:rtl;min-width:155px;flex:1;color:var(--text);}
-.heb-inp:focus{outline:none;border-color:var(--primary-ink);}
+.heb-inp:focus{outline:none;border-color:var(--brand-ink);}
 
 /* רשת הקטגוריות */
 /* ⛔ שתי עמודות בברירת המחדל — ⚠️ שלוש נכנסות בנקודה שמעל, וארבע בזו
@@ -252,12 +251,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ⛔ הנבחרת מתמלאת בגוון העמוק ⛔ ולא ב-`--cat` — ⚠️ לבן על `--cat` נמדד
    מתחת ל-4.5 בחמש מתשע: ⭐ `--cat-deep` נבחר כך שהלבן עליו 4.6 לפחות,
    ⛔ והוא קבוע בשני המצבים — ⚠️ ולכן הצמד עומד בשניהם. */
-.cat-btn.sel{background:var(--cat-deep);color:var(--on-primary);}
+.cat-btn.sel{background:var(--cat-deep);color:var(--on-brand);}
 @media (prefers-color-scheme:dark){.cat-btn{color:var(--cat-lite);}}
 
 /* ⛔ שדה העריכה במקום של משימה ותת-משימה — ⚠️ מחלקה ולא `style.cssText`:
    ⭐ מצב קבוע יושב בגיליון. */
-.inl-inp{border:1px solid var(--primary-ink);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-3);font-family:Heebo;font-size:var(--fs-2);width:90px;}
+.inl-inp{border:1px solid var(--brand-ink);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-3);font-family:Heebo;font-size:var(--fs-2);width:90px;}
 .inl-inp-task{padding:var(--sp-1) var(--sp-4);font-size:var(--fs-3);width:120px;font-weight:600;}
 
 /* כפתורים מהירים */
@@ -266,8 +265,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text-2);white-space:nowrap;}
-.qbtn.active{background:var(--primary-fill);color:var(--on-primary);border-color:var(--primary-fill);font-weight:700;}
-.qbtn.tapped{background:var(--primaryl);color:var(--bg);border-color:var(--primaryl);}
+.qbtn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);font-weight:700;}
+.qbtn.tapped{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
 .hint{color:var(--text-3);font-size:var(--fs-1);}
 
 /* שדות קלט */
@@ -279,12 +278,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .fld label{font-size:var(--fs-1);font-weight:700;color:var(--text-2);}
 .fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
   color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
-.fld input:focus{outline:none;border-color:var(--primary-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
+.fld input:focus{outline:none;border-color:var(--brand-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
 
 /* כפתור ההוספה הגדול */
-/* ⛔ שני קצוות המעבר נושאים לבן ב-4.5 לפחות — ⚠️ `--primaryl` נמדד 3.4:
-   ⭐ `--primary-fill` 5.15 ⟵ `--primary-deep` 7.15, ⛔ קבועים בשני המצבים. */
-.btn-add{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primary-deep));color:var(--on-primary);border:none;
+/* ⛔ שני קצוות המעבר נושאים לבן ב-4.5 לפחות — ⭐ `--brand-fill` 5.15 ⟵
+   `--deep-1` 8.18, ⛔ קבועים בשני המצבים: ⚠️ `--brand-ink` מתבהר בכהה,
+   ⭐ ולכן אינו קצה המעבר. */
+.btn-add{width:100%;background:linear-gradient(135deg,var(--brand-fill),var(--deep-1));color:var(--on-brand);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
 /* ⛔ הלחיצה במשפחת צבע הזהות ⛔ ולא בירוק — ⚠️ וגוונה עמוק מהריחוף:
@@ -293,7 +293,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
-.log-cnt{background:var(--primary-fill);color:var(--on-primary);border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
+.log-cnt{background:var(--brand-fill);color:var(--on-brand);border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
 .entry-row{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-5);display:grid;grid-template-columns:auto 1fr auto;
   gap:var(--sp-4);align-items:start;margin-bottom:var(--sp-3);box-shadow:0 2px 8px var(--shadow);border:1px solid var(--border);animation:fadein var(--dur-4);}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
@@ -308,7 +308,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
 .btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all var(--dur-3);}
 
-.btn-blue{background:var(--card-2);color:var(--primary-ink);border:1px solid var(--border);}
+.btn-blue{background:var(--card-2);color:var(--brand-ink);border:1px solid var(--border);}
 .btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);}
 
 /* הגדרות */
@@ -322,12 +322,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
  *  פעולת המגע גולל את הדף במקום לגרור; ⭐ וביטולו על כל השורה היה נועל
  *  את גלילת המסך בכל הרשימה. */
 .grip{color:var(--text-3);touch-action:none;cursor:grab}
-.grip:active{cursor:grabbing;color:var(--primary-ink)}
+.grip:active{cursor:grabbing;color:var(--brand-ink)}
 .set-hdr{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
 .set-badge{width:30px;height:30px;border-radius:var(--r-3);display:flex;align-items:center;justify-content:center;
   font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900;flex-shrink:0;}
 .set-name-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);direction:rtl;color:var(--text);}
-.set-name-inp:focus{outline:none;border-color:var(--primary-ink);}
+.set-name-inp:focus{outline:none;border-color:var(--brand-ink);}
 .set-lbl{font-size:var(--fs-1);color:var(--text-3);margin-bottom:var(--sp-3);}
 
 .chip{display:flex;align-items:center;gap:var(--sp-2);background:var(--card-2);border:1px solid var(--border);
@@ -345,9 +345,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .task-del-btn{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:var(--fs-3);padding:0;line-height:var(--lh-1);flex-shrink:0;}
 .set-add-row{display:flex;gap:var(--sp-3);}
 .set-add-inp{flex:1;border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);direction:rtl;color:var(--text);}
-.set-add-inp:focus{outline:none;border-color:var(--primary-ink);}
-.btn-mini{background:var(--primary-fill);color:var(--on-primary);border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
-.btn-save{width:100%;background:linear-gradient(135deg,var(--primary-fill),var(--primary-deep));color:var(--on-primary);border:none;
+.set-add-inp:focus{outline:none;border-color:var(--brand-ink);}
+.btn-mini{background:var(--brand-fill);color:var(--on-brand);border:none;border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);cursor:pointer;white-space:nowrap;}
+.btn-save{width:100%;background:linear-gradient(135deg,var(--brand-fill),var(--deep-1));color:var(--on-brand);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;cursor:pointer;margin-top:var(--sp-5);transition:all var(--dur-3);}
 
 /* טוסט */
@@ -361,19 +361,19 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⭐ ומי שקורא אותו רואה טבלה שכבר אינה התקן. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
-.inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);color:var(--on-primary);
+.inf-hd{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);color:var(--on-brand);
   border-radius:var(--r-5);padding:var(--sp-6) var(--sp-6);margin-bottom:var(--sp-6)}
 .inf-hd b{font-size:var(--fs-4);font-weight:800;display:block}
 .inf-hd span{font-size:var(--fs-2);opacity:var(--op-7)}
 .inf-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-5);
   box-shadow:0 2px 10px var(--shadow);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
-.inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--primaryd)}
+.inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--brand-ink)}
 .inf-bar{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:center;margin-bottom:var(--sp-5)}
 .inf-bar button{font:inherit;font-size:var(--fs-2);font-weight:700;padding:var(--sp-3) var(--sp-5);border-radius:var(--r-3);
   border:1px solid var(--border);background:var(--card-2);color:var(--text);cursor:pointer}
 .inf-cat{border:1px solid var(--border);border-radius:var(--r-4);margin-bottom:var(--sp-4);overflow:hidden}
 .inf-cat>summary{cursor:pointer;list-style:none;padding:var(--sp-4) var(--sp-5);background:var(--card-2);
-  font-weight:800;font-size:var(--fs-3);color:var(--primaryd)}
+  font-weight:800;font-size:var(--fs-3);color:var(--brand-ink)}
 .inf-cat>summary::-webkit-details-marker{display:none}
 .inf-ord{padding:var(--sp-3) var(--sp-5);background:var(--card-2);font-size:var(--fs-2);color:var(--text-2);
   border-top:1px solid var(--border)}
@@ -393,17 +393,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-size:var(--fs-3);color:var(--bad);line-height:var(--lh-5)}
 /* ══════════════════════════════════════════════════════════════════════════ */
 /* ═══ שכבת הטוסט — מודול משותף ══════════════════════════════════════════════
-   זהה בית-לבית בכל האפליקציות. ⛔ שני סיווגי המצב נשענים על אסימוני
-   המצב — ⚠️ צמד הפוך שמתחלף יחד, ⭐ והנייטרלי כתוב במפורש: אין לו מצב.
+   זהה בית-לבית בכל האפליקציות. ⛔ שלושה סוגים בלבד, ⚠️ וכולם בגוון
+   האפליקציה: ⭐ הצלחה על `--brand-fill` · מידע על `--brand-soft` · ⛔ ושגיאה
+   נשארת בצבע שגיאה — ⚠️ שגיאה צריכה להיראות כשגיאה.
    ⛔ מיכל אחד ובתוכו `div` לכל הודעה — ⚠️ הנימוק המדוד: בשלוש מהן היה
       אלמנט **קבוע** אחד, ⛔ והודעה שנייה דרסה את הראשונה: ⭐ «נשמר»
       ו«שגיאת רשת» ברצף השאירו על המסך אחת בלבד.
    ⛔ ו-`--toast-bottom` הוא הערך היחיד שנבדל — ⚠️ לשתיים מהן יש סרגל
       תחתון קבוע, ⭐ ולטוסט שיושב מתחתיו אין מי שיראה אותו. */
 #toasts{position:fixed;inset-inline:0;bottom:calc(var(--toast-bottom) + env(safe-area-inset-bottom));z-index:var(--z-5);display:grid;gap:var(--sp-4);justify-items:center;pointer-events:none;padding:0 var(--sp-6)}
-.toast{background:var(--chip);color:var(--on-chip);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
+.toast{background:var(--brand-soft);color:var(--brand-ink);border-radius:var(--r-6);padding:var(--sp-5) var(--sp-7);font-size:var(--fs-3);font-weight:600;line-height:var(--lh-3);box-shadow:0 6px 20px var(--sh-2);max-width:92vw;text-align:center;animation:toastUp var(--dur-3) ease-out}
 .toast.bad{background:var(--bad);color:var(--bad-soft)}
-.toast.good{background:var(--ok);color:var(--ok-soft)}
+.toast.good{background:var(--brand-fill);color:var(--on-brand)}
 .toast.out{opacity:0;transition:opacity var(--dur-4)}
 @keyframes toastUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 /* ═══ סוף CSS שכבת הטוסט ════════════════════════════════════════════════ */
@@ -426,10 +427,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 #ls-alert button{position:absolute;right:var(--sp-4);top:var(--sp-4);background:transparent;border:0;color:var(--on-alert);
   font-weight:700;font-size:var(--fs-5);line-height:var(--lh-1);cursor:pointer;padding:var(--sp-2) var(--sp-4)}
 /* ═══ סוף CSS באנר כשל האחסון ═══════════════════════════════════════════ */
-/* ⛔ טוסט הצלחה בגוון הזהות — ⚠️ מחוץ לבלוק המשותף ⛔ ואינו נוגע בו: ⭐ כל
-   הצלחה כאן יוצאת בצבע אחד, ⚠️ ו-`.good` הירוק ו-`--chip` הנייטרלי נתנו
-   לאותה הצלחה שני צבעים. ⛔ `--brand`/`--on-brand` צמד הפוך, ⭐ לבן 5.15. */
-.toast.brand{background:var(--brand);color:var(--on-brand)}
 /* ================================================================= מעדכן */
 #updater{
   position:fixed;inset-inline:0;z-index:var(--z-6);
@@ -504,7 +501,7 @@ body.locked{overflow:hidden}
 --op-1:.3;--op-2:.4;--op-3:.5;--op-4:.6;--op-5:.7;--op-6:.8;--op-7:.85;
 --lh-1:1;--lh-2:1.3;--lh-3:1.45;--lh-4:1.6;--lh-5:1.75;--lh-6:2;
 --ls-1:.3px;--ls-2:1px;--ls-3:4px;--ls-n1:-.4px;--ls-n2:-1px;
---chip:#1A1A1A;--on-chip:#FFFFFF;--veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
+--veil:rgba(10,20,30,.5);--veil-deep:rgba(0,0,0,.75);
 --alert:#B3261E;--on-alert:#FFFFFF;
 --sh-1:rgba(0,0,0,.10);--sh-2:rgba(0,0,0,.22);--sh-3:rgba(0,0,0,.35);
 --on-dark:#FFFFFF;--on-dark-2:rgba(255,255,255,.9);--on-dark-3:rgba(255,255,255,.65);--fill-dark:rgba(255,255,255,.15)
@@ -536,12 +533,12 @@ body.locked{overflow:hidden}
 .u-bg-cat{background:var(--cat)}
 .u-bg-none{background:none}
 .u-bg-ok-soft{background:var(--ok-soft)}
-.u-bg-primary-fill{background:var(--primary-fill)}
+.u-bg-brand-fill{background:var(--brand-fill)}
 .u-bg-warn-soft{background:var(--warn-soft)}
 .u-bt-2-dashed-accent{border-top:2px dashed var(--accent)}
 .u-c-ok{color:var(--ok)}
-.u-c-on-primary{color:var(--on-primary)}
-.u-c-primary-ink{color:var(--primary-ink)}
+.u-c-on-brand{color:var(--on-brand)}
+.u-c-brand-ink{color:var(--brand-ink)}
 .u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
