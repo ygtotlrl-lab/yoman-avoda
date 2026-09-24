@@ -3422,13 +3422,16 @@ function _infDot(cell) {
  *  היא ההוראה, ⛔ ופרק שני שמנה סעיפים היה מונה משהו שאינו קיים. */
 function _infParse(md) {
   var lines = md.split('\n');
-  var cats = [], cur = null, rows = [];
+  var cats = [], cur = null, rows = [], apps = null, width = 0;
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
     if (l.charAt(0) !== '|') continue;
     var c = _infCells(l);
-    if (c.length < 8) continue;
-    if (c[0] === '#') continue;
+    /*  ⛔ האפליקציות נגזרות משורת הכותרת — ⚠️ העמודות שבין «מה זה»
+     *  ל«הערה»: ⭐ רשימה מוקלדת הייתה מציגה את הקופה תחת «הערה», ⛔ ואפליקציה
+     *  שנוספת לטבלה לא הייתה מופיעה כלל. */
+    if (c[0] === '#') { apps = c.slice(3, -1); width = c.length; continue; }
+    if (!width || c.length !== width) continue;
     /*  ⛔ שורת סדר-הפנים נקלטת לקטגוריה שמעליה ⛔ ואינה נבלעת — ⚠️ היא
      *  אינה שורת נתונים ואינה כותרת, ⭐ ובלי הענף הזה היא נקראה ונזרקה:
      *  ⛔ הקורא היה רואה כותרת בלי הסדר שהיא מצהירה. */
@@ -3445,14 +3448,13 @@ function _infParse(md) {
     }
     if (!/^\d+$/.test(c[0])) continue;
     var row = { n: Number(c[0]), name: c[1], std: c[2],
-                apps: [c[3], c[4], c[5], c[6]], note: c[7] };
+                apps: c.slice(3, -1), note: c[c.length - 1] };
     rows.push(row);
     if (!cur) { cur = { title: '—', rows: [] }; cats.push(cur); }
     cur.rows.push(row);
   }
-  return { cats: cats, rows: rows };
+  return { cats: cats, rows: rows, apps: apps || [] };
 }
-var YA_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
 /*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
  *  ⭐ והמשיכה נשמרת בזיכרון. */
 function _infHtml(d) {
@@ -3472,9 +3474,9 @@ function _infHtml(d) {
          (c.order ? '<div class="inf-ord">↳ ' + _infMd(c.order) + '</div>' : '') +
          '<div class="inf-wrap"><table class="inf-tbl">' +
          '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
-         '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
+         d.apps.map(function () { return '<col class="c-a">'; }).join('') +
          '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
-         YA_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
+         d.apps.map(function (a) { return '<th>' + esc(a) + '</th>'; }).join('') +
          '<th>הערה</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
       h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
