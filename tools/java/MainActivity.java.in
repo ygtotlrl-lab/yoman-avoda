@@ -1,4 +1,5 @@
-package com.yoman.avoda;
+package @@PACKAGE@@;
+//@@share
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Base64;
@@ -20,6 +21,7 @@ import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+//@@end
 
 /**
  * The app shell — identity.
@@ -27,23 +29,26 @@ import java.util.Set;
  * <p>⛔ Generated from the app config by {@code tools/gen-app.mjs} and never
  * edited by hand. All of the shell behaviour lives in {@link ShellActivity};
  * this class supplies the values that differ, and each one comes from the config.
+//@@share
  *
  * <p>⚠️ And the share bridge — present because this app's config declares
  * {@code android.share}: the page produces an image, and the shell writes it to
  * cache, exposes it through FileProvider and fires ACTION_SEND.
  * ⛔ An app that does not declare it carries no bridge, no FileProvider and no
  * androidx dependency.
+//@@end
  */
 public class MainActivity extends ShellActivity {
 
     @Override
-    protected String appUrl() { return "https://ygtotlrl-lab.github.io/yoman-avoda/"; }
+    protected String appUrl() { return "@@URL@@"; }
 
     @Override
-    protected String offlineLine() { return "יומן עבודה לא הצליח להתחבר."; }
+    protected String offlineLine() { return "@@OFFLINE@@"; }
 
     @Override
-    protected String accentColor() { return "#2563eb"; }
+    protected String accentColor() { return "@@ACCENT@@"; }
+//@@share
 
     /**
      * The only origin allowed to reach the native share bridge.
@@ -55,8 +60,8 @@ public class MainActivity extends ShellActivity {
      * <p>Origin, not URL: scheme + host + port — derived from the app URL in the config;
      * the path is irrelevant to the security boundary.
      */
-    private static final String APP_ORIGIN = "https://ygtotlrl-lab.github.io";
-    private static final String APP_HOST = "ygtotlrl-lab.github.io";
+    private static final String APP_ORIGIN = "@@ORIGIN@@";
+    private static final String APP_HOST = "@@HOST@@";
     private static final Set<String> ALLOWED_ORIGINS = new HashSet<>(Arrays.asList(APP_ORIGIN));
 
     /** legacy-bridge path only: is the interface currently attached? */
@@ -141,7 +146,7 @@ public class MainActivity extends ShellActivity {
             byte[] bytes = Base64.decode(base64Data, Base64.DEFAULT);
             File dir = new File(getCacheDir(), "shared");
             dir.mkdirs();
-            final File f = new File(dir, "ya_" + System.currentTimeMillis() + ".jpg");
+            final File f = new File(dir, "@@FILEPREFIX@@" + System.currentTimeMillis() + ".jpg");
             FileOutputStream fos = new FileOutputStream(f);
             fos.write(bytes);
             fos.flush();
@@ -161,7 +166,7 @@ public class MainActivity extends ShellActivity {
 
                     // ⛔ שיתוף רק ב-createChooser · אין FLAG_ACTIVITY_NEW_TASK — ⚠️ המשתמש
                     // בוחר יעד בכל פעם, ⭐ והחזרה מביאה אותו חזרה למעטפת.
-                    Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
+                    Intent toStart = Intent.createChooser(send, "@@CHOOSER@@");
                     try {
                         startActivity(toStart);
                     } catch (Exception e) {
@@ -192,4 +197,5 @@ public class MainActivity extends ShellActivity {
             });
         }
     }
+//@@end
 }
