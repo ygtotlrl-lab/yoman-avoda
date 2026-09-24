@@ -180,8 +180,8 @@
  *  מודול: ⭐ סקריפט קלאסי רץ **לפני** כל מודול, ⛔ וקריאה אליו בעלייה
  *  הייתה מוצאת `undefined`. */
 import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SERVER_ERR, MSG_SWITCHED_TO,
-         MSG_SYNC_BACK, appConfigure, errMsg, getDeviceId, kvParse, uniqHas,
-         uniqList, withTimeout } from './core/util.js';
+         MSG_SYNC_BACK, appConfigure, dayNoon, errMsg, getDeviceId, kvParse,
+         uniqHas, uniqList, withTimeout } from './core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
          legacyIdStamp, mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
@@ -356,7 +356,7 @@ function _yaGdateTs(g) {
   //    בצהריים מקומיים — כמו כל חישוב תאריך בפרויקטים האלה.
   var p = parseGregLike(g);
   if (!p) return 0;
-  var d = new Date(p.y, p.m - 1, p.d, 12, 0, 0);
+  var d = dayNoon(p.y, p.m - 1, p.d);
   var t = d.getTime();
   return isFinite(t) ? t : 0;
 }
@@ -1533,7 +1533,7 @@ function arcCleanupCorrupted() {
                : (gdateIndex[alt] ? alt : (gdateIndex[alt2] ? alt2 : gregKeyFromParts(p)));
           // hdate בלי חודש עברי — אפשר לגזור אותו מהתאריך הלועזי ששוחזר
           if (!hasHebMonth(snap.hdate)) {
-            var h = hebrewDate(new Date(p.y, p.m - 1, p.d, 12, 0, 0));
+            var h = hebrewDate(dayNoon(p.y, p.m - 1, p.d));
             if (h) { snap.hdate = h; if (!snap.name || parseGregLike(snap.name)) snap.name = h; }
           }
         }
@@ -1555,7 +1555,7 @@ function arcCleanupCorrupted() {
     if (snap.gdate && !hasHebMonth(snap.hdate)) {
       var pg = parseGregLike(snap.gdate);
       if (pg) {
-        var hg = hebrewDate(new Date(pg.y, pg.m - 1, pg.d, 12, 0, 0));
+        var hg = hebrewDate(dayNoon(pg.y, pg.m - 1, pg.d));
         if (hg) {
           snap.hdate = hg;
           if (!snap.name || parseGregLike(snap.name)) snap.name = hg;
@@ -2944,7 +2944,7 @@ function snapHDate(rec) {
           parseGregLike((rec && rec.gdate) || "");
   if (g) {
     // ⛔ עוגן בצהריים מקומיים — מעבר לשעון חורף מפיל חצות ליום הקודם
-    var hd = hebrewDate(new Date(g.y, g.m - 1, g.d, 12, 0, 0));
+    var hd = hebrewDate(dayNoon(g.y, g.m - 1, g.d));
     if (hd && extractYM(hd).year !== HUNKNOWN) return hd;
   }
   return h;
