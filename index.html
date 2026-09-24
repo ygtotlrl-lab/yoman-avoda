@@ -70,7 +70,7 @@
   </div>
 
   <!-- ENTRY -->
-  <div class="u-d-block panel" id="panel-entry">
+  <div class="panel" id="panel-entry">
     <div class="card">
       <div class="card-ttl">תאריך ויום</div>
       <div class="date-row">
@@ -153,7 +153,7 @@
       <!-- Breadcrumb -->
       <div id="arc-breadcrumb" class="u-d-flex u-ai-c u-g-3 u-mb-5 u-fwr-wrap u-minh-28"></div>
       <!-- Level: years -->
-      <div id="arc-years" class="u-d-block"></div>
+      <div id="arc-years"></div>
       <!-- Level: months -->
       <div id="arc-months" class="u-d-none"></div>
       <!-- Level: days -->
@@ -179,7 +179,7 @@
 /*  ⛔ הליבה המשותפת נטענת כמודול ⛔ ואינה מוכפלת כאן — ⚠️ והמסמך עצמו הוא
  *  מודול: ⭐ סקריפט קלאסי רץ **לפני** כל מודול, ⛔ וקריאה אליו בעלייה
  *  הייתה מוצאת `undefined`. */
-import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SERVER_ERR, MSG_SWITCHED_TO,
+import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          MSG_SYNC_BACK, appConfigure, dayNoon, errMsg, getDeviceId, kvParse,
          uniqHas, uniqList, withTimeout } from './core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
@@ -255,7 +255,6 @@ var HE = _heColl || { compare: function (a, b) { return String(a).localeCompare(
    מסלולים בעיני הקורא.
    ⚠️ **ומה שיותר מאפליקציה אחת אומרת אינו כאן** — ⛔ הוא במודול המשותף,
    ⭐ ששם הנוסח אחד לכל הריפו. */
-var MSG_SYNCING = '🔄 מסנכרן...';
 var MSG_SYNCED = '✅ מסונכרן';
 var MSG_SYNC_FAIL_LOCAL = '⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
 var MSG_SYNC_PARTIAL = '⚠️ סנכרון חלקי — נכשל: ';
@@ -263,12 +262,9 @@ var MSG_OFFLINE_LOCAL = '⚠️ אין חיבור לאינטרנט — עובד 
 var MSG_DAY_ARCHIVED = '📅 יום חדש! הרשומות הועברו לארכיון אוטומטית';
 var MSG_PICK_CATEGORY = '⚠️ יש לבחור קטגוריה';
 var MSG_NEED_TASK = '⚠️ יש להזין משימה';
-var MSG_ADDED_SAVING = '✅ נוסף — שומר בענן…';
-var MSG_ROWS_DELETED = '✅ הרשומות נמחקו';
 var MSG_NO_ROWS = 'אין רשומות';
 var MSG_PDF_PREP = 'מכין PDF...';
 var MSG_POPUP_BLOCKED = '⚠️ החלון נחסם — אפשר חלונות קופצים לאתר ונסה שוב';
-var MSG_PDF_OPENED = '📄 PDF נפתח!';
 var MSG_IMG_OFFLINE = '⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
 var MSG_IMG_FAIL = '⚠️ יצירת התמונה נכשלה — נסה שוב';
 var MSG_LOCAL_ONLY = '⚠️ נשמר במכשיר בלבד — הענן לא עודכן';
@@ -278,6 +274,9 @@ var MSG_SUBTASK_EXISTS = '⚠️ תת-המשימה כבר קיימת';
 var MSG_TASK_EXISTS = '⚠️ המשימה כבר קיימת בקטגוריה';
 var MSG_INFRA_TABLE = 'טבלת התשתית';
 var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
+/*  ⚠️ המסך הריק אינו מבטיח פעולה — ⛔ אין במסך דרך להוסיף קטגוריה:
+ *  ⭐ הקטגוריות של מוסד נבנות במסד. */
+var MSG_NO_CATS = '⚠️ אין קטגוריות למוסד הזה';
 var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
 var MSG_ALREADY_AT = 'כבר במוסד ';
 var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
@@ -472,11 +471,11 @@ var DOM_ACTIONS = {
   'pick-sub':            function (el) { pickSub(el.dataset.sub, el); },
   /*  ⛔ שלוש התראות התשתית מנותבות במפה — ⚠️ הכפתור נבנה ב-JS,
    *  ⭐ והמאזין הישיר שעליו היה בדיוק ההיקף שיצא מהמנגנון. */
-  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.style.display = 'none'; },
+  'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
   'pend-alert-ok':       function () { pendAlertDismiss(); },
   'entry-edit':     function (el) { editEntry(el.getAttribute('data-id')); },
   'entry-del':      function (el) { delEntry(el.getAttribute('data-id')); },
-  'entry-save':     function (el) { return runSave(function () { return saveEntry(el.getAttribute('data-id')); }, MSG_SAVED); },
+  'entry-save':     function (el) { return runSave(function () { return saveEntry(el.getAttribute('data-id')); }); },
   'arc-pdf':        function (el) { exportArchivePDF(el.getAttribute('data-id')); },
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
@@ -530,7 +529,7 @@ var DOM_ACTIONS = {
   'switch-yeshiva': function (el) { yaConfirmSwitch(el.getAttribute('data-yeshiva')); },
   'add-entry':      function () { addEntry(); },
   'clear-all':      function () { clearAll(); },
-  'save-settings':  function () { return runSave(saveSettings, MSG_SAVED); },
+  'save-settings':  function () { return runSave(saveSettings); },
   'share-report':   function () { shareReport(); },
   'arc-go-years':   function () { arcGoYears(); },
   'arc-toggle-edit': function () { arcToggleEdit(); },
@@ -1655,7 +1654,6 @@ function yaSyncLog(action, key, recordCount, details) {
 var _yaPullLogged = false;
 
 async function syncFromCloud() {
-  toast(MSG_SYNCING, 3000);
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
   /*  ⛔ ההקשר נלכד **בכניסה** ⛔ ונבדק לפני כל כתיבה — ⚠️ הבדיקה יושבת
@@ -1808,7 +1806,7 @@ async function syncFromCloud() {
     renderSettings();
     if (failed.length === 0 && !_yaPullLogged) { _yaPullLogged = true; yaSyncLog('pull', null, null); }
     if (failed.length === 0) {
-      toast(MSG_SYNCED);
+      toast(MSG_SYNCED, null, 'brand');
     } else if (failed.length >= 5) {
       toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
     } else {
@@ -1901,11 +1899,21 @@ function getTodayKey() {
   return gregDateStr(new Date());
 }
 
+// ⛔ רמה אחת גלויה בארכיון — ⚠️ ארבעת המיכלים מוסתרים ומוצג אחד, ⭐ בנקודה אחת.
+function arcShowLevel(level) {
+  ["years", "months", "days", "detail"].forEach(function (x) {
+    showEl(document.getElementById("arc-" + x), x === level);
+  });
+}
 // לשוניות
+/*  ⛔ הסתרה והצגה במחלקה ⛔ ולא ב-`.style.display` — ⚠️ מצב קבוע יושב
+ *  בגיליון: ⭐ סגנון מוטבע גובר על כל מחלקה, ⛔ ומי שמשנה את הגיליון
+ *  אינו רואה אותו. */
+function showEl(el, on) { if (el) el.classList.toggle("u-d-none", !on); }
 function showTab(name, el) {
-  document.querySelectorAll(".panel").forEach(function(p){ p.style.display="none"; });
+  document.querySelectorAll(".panel").forEach(function(p){ showEl(p, false); });
   document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
-  document.getElementById("panel-"+name).style.display="block";
+  showEl(document.getElementById("panel-"+name), true);
   el.classList.add("active");
   renderTab(name);
 }
@@ -1921,7 +1929,7 @@ function renderTab(name) {
  *  מוציאה את המשתמש מהמקום שבו הוא עומד. */
 function saveRefresh() {
   var on = document.querySelector(".tab-btn.active");
-  var p = document.querySelector('.panel[style*="block"]');
+  var p = document.querySelector('.panel:not(.u-d-none)');
   if (p && p.id) renderTab(String(p.id).replace(/^panel-/, ""));
   else if (on) renderTab("log");
 }
@@ -1967,7 +1975,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("ya_entries"+LS, ENTRIES, _yaRecTs);
-    toast(MSG_DAY_ARCHIVED);
+    toast(MSG_DAY_ARCHIVED, null, 'brand');
   }
   lsSet("ya_last_day"+LS, today);
 }
@@ -2052,7 +2060,7 @@ function buildCatGrid() {
   /*  ⛔ מצב ריק מוצג כריק — ⚠️ מוסד שאין לו קטגוריות בענן אינו מקבל ערך
    *  מומצא: ⭐ הודעה אחת, ⛔ ולא רשימה שתמוזג חזרה לענן. */
   if (!live.length) {
-    g.innerHTML = '<span class="hint">⚠️ אין עדיין קטגוריות — הוסף את הראשונה</span>';
+    g.innerHTML = '<span class="hint">' + esc(MSG_NO_CATS) + '</span>';
     return;
   }
   live.forEach(function(cat) {
@@ -2221,9 +2229,8 @@ function addEntry() {
   saveEntries();
   autoArchiveDay(entry.day, entry.hdate, entry.gdate);
   clearForm();
-  // השמירה המקומית הושלמה בנקודה זו; דחיפת הענן עוד לא התחילה —
-  // schedulePush() מדווחת על התוצאה האמיתית כשהיא מסתיימת.
-  toast(MSG_ADDED_SAVING);
+  /*  ⛔ אין טוסט כאן — ⚠️ הדחיפה שאחרי מודיעה את התוצאה, ⭐ ושני טוסטים
+   *  על אותה שמירה אומרים «הצלחה» פעמיים. */
   schedulePush();
 }
 
@@ -2287,7 +2294,6 @@ function clearAll() {
     saveEntries(); renderLog();
     // מעבירים את ה-tombstones גם לסנאפשוט של אותו יום, אחרת הארכיון ימשיך להציג אותן
     if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
-    toast(MSG_ROWS_DELETED);
     schedulePush();
   });
 }
@@ -2327,7 +2333,7 @@ function exportPDF() {
   toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
-      div.style.left = '-9999px';
+      _hideReportDiv(div);
       _printCanvas(canvas, fileTitle);
     }).catch(function (e) { _reportError(div, e); });
   }, live);
@@ -2351,7 +2357,6 @@ function _printCanvas(canvas, title) {
     + '</body></html>');
   w.document.close();
   setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
-  toast(MSG_PDF_OPENED);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -2359,7 +2364,7 @@ function _printCanvas(canvas, title) {
 // אם הרינדור זורק (אופליין ⇐ html2canvas לא נטען ⇐ ReferenceError, או כשל
 // canvas/CORS), הפאנל היה נשאר מעל האפליקציה עד רענון.
 function _hideReportDiv(div){
-  try { if (div) div.style.left = '-9999px'; } catch(e) {}
+  showEl(div, false);
 }
 function _reportError(div, e){
   _hideReportDiv(div);
@@ -2404,6 +2409,9 @@ function _renderReport(div){
 function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
+  /*  ⚠️ המיכל נושא את סגנונו מוטבע ⛔ ואינו מחלקה — ⭐ הוא שורש הפלט שנצרב
+   *  לתמונה, ⚠️ וכל ילדיו מוטבעים מאותו נימוק: ⛔ מחלקה כאן הייתה מפצלת
+   *  את הדוח בין הגיליון לבונה. ⭐ וההצגה וההסתרה — `showEl`, במחלקה. */
   div.style.cssText='position:fixed;top:0;left:0;background:#FFFFFF;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
@@ -2453,7 +2461,7 @@ function _buildReportDiv(cb, entries){
     // סה״כ = בדיוק השורות שבטבלה (רשומות היום הנבחר). קודם נספרו כל ENTRIES,
     // כך שהדוח שנשלח הציג סיכום שלא תאם את השורות שבו.
     div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#8A9ABB;border-top:1px solid #E4EBF5;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
-  div.style.left='0';cb(div);
+  showEl(div, true);cb(div);
 }
 
 
@@ -2492,7 +2500,10 @@ async function yaSyncPushNow() {
     if (!rEntries.ok || !rArchive.ok) {
       // ⛔ אין לחתום את `last_changed` על נתון שלא הגיע —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
-      toast(MSG_LOCAL_ONLY, null, 'bad');
+      /*  ⚠️ בלי רשת השמירה הצליחה במכשיר ⛔ ואינה שגיאה — ⭐ הנתון בתור
+       *  ויעלה בחזרת הרשת; ⛔ כשל עם רשת הוא שגיאה. */
+      if (!navigator.onLine) toast(MSG_SAVED_LOCAL, null, 'brand');
+      else toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
     // Write timestamp AFTER data is saved — so other devices always get fresh data
@@ -2505,7 +2516,7 @@ async function yaSyncPushNow() {
     if (ctxStale(_ep)) return;
     if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
-    toast(MSG_SAVED_CLOUD);
+    toast(MSG_SAVED_CLOUD, null, 'brand');
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -2616,7 +2627,7 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
   if (!lbl) return;
   var inp = document.createElement("input");
   inp.value = oldVal;
-  inp.style.cssText = "border:1px solid var(--primary-ink);border-radius:6px;padding:2px 6px;font-family:Heebo;font-size:12px;width:90px;";
+  inp.className = "inl-inp";
   lbl.replaceWith(inp);
   inp.focus();
   inp.select();
@@ -2667,7 +2678,7 @@ function editTaskInline(ci, ti) {
   var oldVal = CATS[ci].tasks[ti];
   var inp = document.createElement("input");
   inp.value = oldVal;
-  inp.style.cssText = "border:1px solid var(--primary-ink);border-radius:6px;padding:2px 8px;font-family:Heebo;font-size:13px;width:120px;font-weight:600;";
+  inp.className = "inl-inp inl-inp-task";
   lbl.replaceWith(inp);
   inp.focus(); inp.select();
   function save() {
@@ -3067,10 +3078,7 @@ function renderArcBreadcrumb() {
 // ── רמה 1: שנים ──
 function arcGoYears() {
   arcSelYear = null; arcSelMonth = null; arcSelDayKey = null;
-  document.getElementById("arc-years").style.display = "block";
-  document.getElementById("arc-months").style.display = "none";
-  document.getElementById("arc-days").style.display = "none";
-  document.getElementById("arc-detail").style.display = "none";
+  arcShowLevel("years");
   renderArcYears();
   renderArcBreadcrumb();
 }
@@ -3107,10 +3115,7 @@ function renderArcYears() {
 // ── רמה 2: חודשים ──
 function arcGoMonths(year) {
   arcSelYear = year; arcSelMonth = null; arcSelDayKey = null;
-  document.getElementById("arc-years").style.display = "none";
-  document.getElementById("arc-months").style.display = "block";
-  document.getElementById("arc-days").style.display = "none";
-  document.getElementById("arc-detail").style.display = "none";
+  arcShowLevel("months");
   renderArcMonths(year);
   renderArcBreadcrumb();
 }
@@ -3145,10 +3150,7 @@ function renderArcMonths(year) {
 // ── רמה 3: ימים ──
 function arcGoDays(year, month) {
   arcSelYear = year; arcSelMonth = month; arcSelDayKey = null;
-  document.getElementById("arc-years").style.display = "none";
-  document.getElementById("arc-months").style.display = "none";
-  document.getElementById("arc-days").style.display = "block";
-  document.getElementById("arc-detail").style.display = "none";
+  arcShowLevel("days");
   renderArcDays(year, month);
   renderArcBreadcrumb();
 }
@@ -3182,10 +3184,7 @@ function renderArcDays(year, month) {
 // ── רמה 4: פירוט יום ועריכה ──
 function arcGoDetail(gdateKey) {
   arcSelDayKey = gdateKey;
-  document.getElementById("arc-years").style.display = "none";
-  document.getElementById("arc-months").style.display = "none";
-  document.getElementById("arc-days").style.display = "none";
-  document.getElementById("arc-detail").style.display = "block";
+  arcShowLevel("detail");
   arcEditMode = false;
   renderArcDetail();
   renderArcBreadcrumb();
@@ -3330,10 +3329,7 @@ function renderArchive() {
   arcEditMode = false;
 
   // מציג את פאנל השנים ומסתיר את השאר
-  document.getElementById("arc-years").style.display = "block";
-  document.getElementById("arc-months").style.display = "none";
-  document.getElementById("arc-days").style.display = "none";
-  document.getElementById("arc-detail").style.display = "none";
+  arcShowLevel("years");
 
   renderArcYears();
   renderArcBreadcrumb();
@@ -3381,7 +3377,7 @@ function _yaMarkSynced() {
   _yaLastSyncAt = Date.now();
   // הכישלון עצמו נשאר שקט כאן (הפולינג הוא כל 3 שניות — טוסט על כל מחזור
   // היה רעש), אבל **החזרה** כן נאמרת: היא הרגע שבו מה שהמתין מתחיל לעלות.
-  if (_yaNetWarned) { _yaNetWarned = false; toast(MSG_SYNC_BACK); }
+  if (_yaNetWarned) { _yaNetWarned = false; toast(MSG_SYNC_BACK, null, 'brand'); }
   // ⛔ הגיבוי והיומן **אינם** נתלים כאן — הניסוח הראשון
   //    תלה אותם בשיחה מוצלחת עם הענן, כלומר בפעילות סנכרון. זו בדיוק
   //    הצורה שהשביתה גיבוי ל-25 יום בלי שאיש ידע: מנגנון
@@ -3433,7 +3429,7 @@ async function yaPullFromCloud() {
         lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _yaRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && arcPanel.style.display !== "none" && arcSelDayKey) renderArcDetail();
+        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) renderArcDetail();
       }
     }
   } catch(e) { _yaNetWarned = true; console.error("[sync] error:", e); }
@@ -3750,7 +3746,6 @@ function yaConfirmSwitch(y) {
    *  של המוסד הקודם אינה קיימת בהכרח בחדש, ⭐ ומסך שנשאר בעומק היה
    *  מציג ריק בלי שהמשתמש יודע למה. */
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
-  toast(MSG_SWITCHED_TO + yaNameOf(y));
 }
 
 /*  ⛔ `again` מסמן מעבר בין מוסדות ⛔ ולא עלייה — ⚠️ כל
@@ -3826,7 +3821,7 @@ function selectYeshiva(y) {
   //    שנבחר מוסד, ותקתוק לפני כן היה שואל טבלה שאינה קיימת.
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
   var ov = document.getElementById('yeshivaSelect');
-  if (ov) ov.style.display = 'none';
+  showEl(ov, false);
   // מסך הבחירה כבר נסגר — כישלון כאן חייב להשאיר אפליקציה שמישה ולא מסך ריק
   try {
     startApp();
@@ -3848,7 +3843,7 @@ function shareReport(){
   toast(MSG_IMG_PREP);
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
-      div.style.left='-9999px';
+      _hideReportDiv(div);
       // גשר ה-WebView המקורי של אנדרואיד ⇐ גיליון השיתוף של המערכת (המשתמש בוחר Signal)
       if (_androidShareImage(canvas)) return;
       canvas.toBlob(function(blob){
@@ -3985,7 +3980,7 @@ function arcSaveEntry(gdateKey, entryId) {
   saveArchive();
   renderArcDetail();
   renderLog();
-  toast(MSG_SAVED);
+  toast(MSG_SAVED, null, 'brand');
 }
 
 </script>
