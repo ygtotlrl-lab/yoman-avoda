@@ -524,7 +524,7 @@ var DOM_ACTIONS = {
   /*  ⛔ שלוש הפעולות של מציג טבלת התשתית עוברות בדלגציה — ⚠️ הכפתורים
    *  נבנים מחדש בכל ציור של המודאל, ⭐ ומאזין פר-כפתור היה צריך חיווט
    *  מחדש בכל פעם. */
-  'inf-open':       function () { yaInfraOpen(); },
+  'inf-open':       function () { return yaInfraOpen(); },
   'inf-all':        function (el) { yaInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { yaConfirmSwitch(el.getAttribute('data-yeshiva')); },
   'add-entry':      function () { addEntry(); },
