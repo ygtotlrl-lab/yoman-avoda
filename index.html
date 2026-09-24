@@ -3,61 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title></title>
-<link rel="manifest" href="manifest.json">
-<script src="app.config.js"></script>
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="יומן עבודה">
+<title></title>
+<link rel="manifest" href="manifest.json">
+<script src="app.config.js"></script>
+<script src="core/boot.js"></script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.b8f26c23.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.98eaf57d.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.987dce4d.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="core/ui.css">
-<link rel="stylesheet" href="app.css">
 <!-- ⚠️ גרסאות CDN נעוצות במדויק — אין לחזור ל-'@2'/'@4' צפים: שחרור בצד הספק
      שובר את האפליקציה בלי שינוי קוד, וזה בלתי ניתן לשחזור מהריפו.
      חייב להישאר זהה לרשימת CDN_ASSETS ב-sw.js. -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="core/ui.css">
+<link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div id="yeshivaSelect">
-  <div class="ys-pick-card">
-    <svg class="ys-pick-mark" viewBox="0 0 268 264" aria-hidden="true" focusable="false">
-      <rect x="72" y="0" width="196" height="48" rx="24" opacity="0.6"></rect>
-      <rect x="0" y="72" width="268" height="48" rx="24" opacity="0.73"></rect>
-      <rect x="28" y="144" width="240" height="48" rx="24" opacity="0.87"></rect>
-      <rect x="114" y="216" width="154" height="48" rx="24" opacity="1"></rect>
-    </svg>
-    <h1 class="ys-pick-h1">יומן עבודה</h1>
-    <div class="ys-pick-lead">בחר ישיבה</div>
-    <div class="ys-pick-btns">
-      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
-      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="ramataviv">רמת אביב</button>
-    </div>
-    <!--  ⛔ מציג הטבלה יושב כאן ⛔ ולא בתוך הישיבה — ⚠️ הטבלה היא של הארגון
-          ואינה שייכת למוסד, ⭐ ומסך שנפתח מתוך מוסד נקרא כאילו הוא מתאר
-          אותו. ⛔ והכפתור מובחן משני הכפתורים שמעליו — ⚠️ הם בחירה
-          שממשיכה לאפליקציה, ⭐ וזה מסך קריאה שחוזר לכאן.  -->
-    <div class="ys-pick-aside">
-      <button class="ys-pick-alt" data-act="inf-open">📊 טבלת התשתית</button>
-    </div>
-  </div>
-</div>
-
 <div class="app">
 
   <div class="hdr">
     <div class="hdr-top">
-      <div class="hdr-logo-wrap"><button class="hdr-logo-btn" data-act="open-yeshiva-picker" aria-label="החלפת ישיבה" title="החלפת ישיבה"><img id="appLogo" class="hdr-logo" src="logos/rishon.png" alt="לוגו" /></button></div>
+      <div class="hdr-logo-wrap"><button class="hdr-logo-btn" data-act="open-yeshiva-picker" aria-label="החלפת ישיבה" title="החלפת ישיבה"><img id="appLogo" class="hdr-logo" alt="" /></button></div>
       <div class="hdr-mid">
         <div class="hdr-bh">ב״ה | ימות המשיח</div>
         <div class="hdr-title-wrap"><div class="hdr-h1">יומן עבודה</div></div>
-        <div class="hdr-sub" id="hdrSub">ישיבת תומכי תמימים ליובאוויטש ראשון לציון</div>
+        <div class="hdr-sub" id="hdrSub"></div>
       </div>
     </div>
     <div class="hdr-div"></div>
@@ -71,99 +48,7 @@
     <button class="tab-btn" data-act="show-tab" data-tab="archive">🗄 ארכיון</button>
   </div>
 
-  <!-- ENTRY -->
-  <div class="panel" id="panel-entry">
-    <div class="card">
-      <div class="card-ttl">תאריך ויום</div>
-      <div class="date-row">
-        <span class="date-lbl">יום:</span>
-        <div class="day-chips">
-          <button class="day-chip" data-act="pick-day" data-day="יום ראשון">ראשון</button>
-          <button class="day-chip" data-act="pick-day" data-day="יום שני">שני</button>
-          <button class="day-chip" data-act="pick-day" data-day="יום שלישי">שלישי</button>
-          <button class="day-chip" data-act="pick-day" data-day="יום רביעי">רביעי</button>
-          <button class="day-chip" data-act="pick-day" data-day="יום חמישי">חמישי</button>
-          <button class="day-chip" data-act="pick-day" data-day="ערב שבת">ערב שבת</button>
-          <button class="day-chip" data-act="pick-day" data-day="מוצאי שבת">מוצ"ש</button>
-        </div>
-        <!-- ⛔ תאריך עברי נשאר טקסט חופשי — אין בורר תאריך עברי
-             מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
-             ⚠️ הערך נגזר ממילא מ-gregDateInput דרך hebrewDate(). -->
-        <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" autocomplete="off" placeholder="תאריך עברי..." />
-        <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy או
-             yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
-             ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
-             שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-        <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-ttl">קטגוריה ומשימה</div>
-      <div class="cat-grid" id="catGrid"></div>
-      <div class="qsec">
-        <div class="qlbl">משימה</div>
-        <div class="qrow" id="taskBtns"><span class="hint">בחר קטגוריה...</span></div>
-      </div>
-      <div class="qsec">
-        <div class="qlbl">תת-משימה</div>
-        <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
-      </div>
-      <div class="ksave">
-      <div class="inp-grid">
-        <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
-        <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
-      </div>
-      <div class="inp-grid">
-        <div class="fld"><label for="notesInput">הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
-        <div class="fld"><label for="countInput">כמות</label><input id="countInput" type="text" inputmode="numeric" autocomplete="off" placeholder="1" /></div>
-      </div>
-      <button class="btn-add" data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- LOG -->
-  <div class="is-hidden panel" id="panel-log">
-    <div class="card">
-      <div class="log-hd">
-        <div class="log-ttl card-ttl">רשומות יומן</div>
-        <div class="log-cnt" id="logCount">0</div>
-      </div>
-      <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
-      <div class="exp-row">
-        <button class="btn-sm btn-red" data-act="clear-all">🗑 נקה</button>
-        <span id="outputBtnSlot"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- SETTINGS -->
-  <div class="is-hidden panel" id="panel-settings">
-    <div class="card">
-      <div class="card-ttl">עריכת קטגוריות ומשימות</div>
-      <div id="settingsEditor"></div>
-      <button class="btn-save" data-act="save-settings">💾 שמור שינויים</button>
-    </div>
-    <!-- אזור מצב — שני האלמנטים האחרונים במסך, בסדר הזה -->
-  </div>
-
-  <!-- ARCHIVE -->
-  <div class="is-hidden panel" id="panel-archive">
-    <div class="card">
-      <!-- Breadcrumb -->
-      <div id="arc-breadcrumb" class="arc-crumbs"></div>
-      <!-- Level: years -->
-      <div id="arc-years"></div>
-      <!-- Level: months -->
-      <div id="arc-months" class="is-hidden"></div>
-      <!-- Level: days -->
-      <div id="arc-days" class="is-hidden"></div>
-      <!-- Level: day detail / edit -->
-      <div id="arc-detail" class="is-hidden"></div>
-    </div>
-  </div>
+  <main id="view"><div class="view-loading" role="status" aria-label="טוען"><span class="view-spin"></span></div></main>
 
 </div>
 
@@ -217,6 +102,144 @@ appConfigure({
 });
 
 /* ══════════════════════════════════════════════════════════════════════════
+   המסכים — מצוירים בקוד, לתוך `#view`
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ הקליפה ב-HTML נושאת מבנה בלבד — כותרת · לשוניות · מיכל תוכן · שכבות:
+   ⚠️ ותוכן המסכים כאן, ⭐ ו-`mountView()` מציירת אותם לפני כל קוד שמחפש
+   אלמנט בתוכם. ⛔ אין להזיז את הקריאה אליה מטה. */
+/*  ⛔ מציג הטבלה יושב במסך הבחירה ⛔ ולא בתוך הישיבה — ⚠️ הטבלה היא של
+ *  הארגון ואינה שייכת למוסד, ⭐ ומסך שנפתח מתוך מוסד נקרא כאילו הוא מתאר
+ *  אותו. ⛔ והכפתור מובחן משני כפתורי הבחירה — ⚠️ הם ממשיכים לאפליקציה,
+ *  ⭐ וזה מסך קריאה שחוזר לכאן. */
+function screenPickHTML() {
+  return `
+<div id="yeshivaSelect">
+  <div class="ys-pick-card">
+    <svg class="ys-pick-mark" viewBox="0 0 268 264" aria-hidden="true" focusable="false">
+      <rect x="72" y="0" width="196" height="48" rx="24" opacity="0.6"></rect>
+      <rect x="0" y="72" width="268" height="48" rx="24" opacity="0.73"></rect>
+      <rect x="28" y="144" width="240" height="48" rx="24" opacity="0.87"></rect>
+      <rect x="114" y="216" width="154" height="48" rx="24" opacity="1"></rect>
+    </svg>
+    <h1 class="ys-pick-h1">יומן עבודה</h1>
+    <div class="ys-pick-lead">בחר ישיבה</div>
+    <div class="ys-pick-btns">
+      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
+      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="ramataviv">רמת אביב</button>
+    </div>
+    <div class="ys-pick-aside">
+      <button class="ys-pick-alt" data-act="inf-open">📊 טבלת התשתית</button>
+    </div>
+  </div>
+</div>
+`;
+}
+/*  ⛔ תאריך עברי נשאר טקסט חופשי — ר' ההערות שעל שני השדות. */
+function screenEntryHTML() {
+  return `
+<div class="panel" id="panel-entry">
+  <div class="card">
+    <div class="card-ttl">תאריך ויום</div>
+    <div class="date-row">
+      <span class="date-lbl">יום:</span>
+      <div class="day-chips">
+        <button class="day-chip" data-act="pick-day" data-day="יום ראשון">ראשון</button>
+        <button class="day-chip" data-act="pick-day" data-day="יום שני">שני</button>
+        <button class="day-chip" data-act="pick-day" data-day="יום שלישי">שלישי</button>
+        <button class="day-chip" data-act="pick-day" data-day="יום רביעי">רביעי</button>
+        <button class="day-chip" data-act="pick-day" data-day="יום חמישי">חמישי</button>
+        <button class="day-chip" data-act="pick-day" data-day="ערב שבת">ערב שבת</button>
+        <button class="day-chip" data-act="pick-day" data-day="מוצאי שבת">מוצ"ש</button>
+      </div>
+      <!-- ⛔ תאריך עברי נשאר טקסט חופשי — אין בורר תאריך עברי
+           מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
+           ⚠️ הערך נגזר ממילא מ-gregDateInput דרך hebrewDate(). -->
+      <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" autocomplete="off" placeholder="תאריך עברי..." />
+      <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy או
+           yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
+           ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
+           שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
+      <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl">קטגוריה ומשימה</div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="qsec">
+      <div class="qlbl">משימה</div>
+      <div class="qrow" id="taskBtns"><span class="hint">בחר קטגוריה...</span></div>
+    </div>
+    <div class="qsec">
+      <div class="qlbl">תת-משימה</div>
+      <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
+    </div>
+    <div class="ksave">
+    <div class="inp-grid">
+      <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
+      <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>
+    </div>
+    <div class="inp-grid">
+      <div class="fld"><label for="notesInput">הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
+      <div class="fld"><label for="countInput">כמות</label><input id="countInput" type="text" inputmode="numeric" autocomplete="off" placeholder="1" /></div>
+    </div>
+    <button class="btn-add" data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
+    </div>
+
+  </div>
+</div>
+`;
+}
+function screenLogHTML() {
+  return `
+<div class="is-hidden panel" id="panel-log">
+  <div class="card">
+    <div class="log-hd">
+      <div class="log-ttl card-ttl">רשומות יומן</div>
+      <div class="log-cnt" id="logCount">0</div>
+    </div>
+    <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
+    <div class="exp-row">
+      <button class="btn-sm btn-red" data-act="clear-all">🗑 נקה</button>
+      <span id="outputBtnSlot"></span>
+    </div>
+  </div>
+</div>
+`;
+}
+function screenSettingsHTML() {
+  return `
+<div class="is-hidden panel" id="panel-settings">
+  <div class="card">
+    <div class="card-ttl">עריכת קטגוריות ומשימות</div>
+    <div id="settingsEditor"></div>
+    <button class="btn-save" data-act="save-settings">💾 שמור שינויים</button>
+  </div>
+</div>
+`;
+}
+function screenArchiveHTML() {
+  return `
+<div class="is-hidden panel" id="panel-archive">
+  <div class="card">
+    <div id="arc-breadcrumb" class="arc-crumbs"></div>
+    <div id="arc-years"></div>
+    <div id="arc-months" class="is-hidden"></div>
+    <div id="arc-days" class="is-hidden"></div>
+    <div id="arc-detail" class="is-hidden"></div>
+  </div>
+</div>
+`;
+}
+function mountView() {
+  var v = document.getElementById('view');
+  if (!v) { console.error('[ui] אין מיכל תוכן — #view'); return; }
+  v.innerHTML = screenPickHTML() + screenEntryHTML() + screenLogHTML() +
+    screenSettingsHTML() + screenArchiveHTML();
+}
+mountView();
+
+/* ══════════════════════════════════════════════════════════════════════════
    שכבת Supabase ועוזרים משותפים — בריחת HTML, שגיאות רשת וטיים-אאוט
    ══════════════════════════════════════════════════════════════════════════
    ⚠️ העוזרים כאן (`esc`, `isNetErr`, `errMsg`, `withTimeout`) נושאים את
@@ -229,11 +252,13 @@ const SB_KEY = self.APP.supabase.key;
 var YESHIVA = null;     // 'rishon' | 'ramataviv' — נבחר בכל עלייה, ואינו נשמר לדיסק
 var KV_TABLE = null;    // 'ya_settings_rishon' | 'ya_settings_ramataviv' — טבלת הענן פר-מוסד
 var LS = '';            // סיומת מפתח ה-localStorage פר-מוסד (בידוד אופליין)
-/*  ⛔ שני הלוגואים נטענים באותה דרך — ⚠️ נתיב לקובץ ב-`logos/`,
- *  ⭐ ולא אחד ממשתנה ואחד שנלכד מה-DOM: ⛔ לכידה מה-DOM אינה נראית
- *  לאף סורק, ⚠️ ומי שמחפש את הנכס אינו מוצא אותו. */
-var RISHON_LOGO = 'logos/rishon.png';
-var RAMATAVIV_LOGO = 'logos/ramataviv.png';
+/*  ⛔ מפה אחת: ישיבה ⟵ הלוגו שלה, נתיב לקובץ ב-`logos/` — ⚠️ ואין ברירת
+ *  מחדל: ⭐ ישיבה שאין לה רשומה כאן מוצגת בלי לוגו, ⛔ ולא בלוגו של אחרת.
+ *  ⛔ ואין `src` ב-HTML — ⚠️ לפני שנבחרה ישיבה אין לוגו שנכון להציג. */
+var YA_LOGOS = {
+  rishon: 'logos/rishon.png',
+  ramataviv: 'logos/ramataviv.png'
+};
 
 var _sb = null;
 
@@ -3724,7 +3749,9 @@ function selectYeshiva(y) {
   // לוגו הכותרת — נתיב פר-מוסד לקובץ שב-`logos/`
   var logoEl = document.getElementById('appLogo');
   if (logoEl) {
-    logoEl.src = (y === 'ramataviv') ? RAMATAVIV_LOGO : RISHON_LOGO;
+    var logo = YA_LOGOS[y];
+    if (logo) { logoEl.src = logo; logoEl.alt = 'לוגו'; }
+    else { logoEl.removeAttribute('src'); logoEl.alt = ''; }
   }
   // כותרת משנה
   var sub = document.getElementById('hdrSub');
@@ -3930,6 +3957,8 @@ function arcSaveEntry(gdateKey, entryId) {
   toast(MSG_SAVED, null, 'good');
 }
 
+/*  ⛔ העלייה הסתיימה — ⚠️ קריאה אחת, בסוף האתחול: ⭐ שומר העלייה ממתין לה. */
+bootOk();
 </script>
 <!-- ⛔ מיכל מודאל אחד ב-DOM — ⚠️ פתיחה, סגירה,
      מיקוד, Escape ונעילת הגלילה חיים במקום אחד; ⛔ בדפוס הדינמי כל דיאלוג

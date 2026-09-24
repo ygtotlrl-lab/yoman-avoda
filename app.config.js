@@ -14,8 +14,9 @@ self.APP = Object.freeze({
   /*  ⛔ תחילית הטבלאות והאחסון — ⚠️ כל אות בה פותחת מילה בשם הריפו, בסדר. */
   prefix: 'ya_',
   colors: { theme: '#1E6FBF', background: '#F0F4FA' },
-  /*  ⚠️ דף האופליין של ה-service worker — ⭐ צבע הרקע והדיו שלו, והסמל. */
-  offline: { bg: '#101A3A', ink: '#F5EDD6', mark: '📕' },
+  /*  ⚠️ דף האופליין של ה-service worker — ⭐ רקע ודיו לכל מצב, והסמל:
+      ⛔ הכהה הוא אסימוני הערכה הכהה של האפליקציה. */
+  offline: { light: { bg: '#101A3A', ink: '#F5EDD6' }, dark: { bg: '#0d151d', ink: '#e8eef5' }, mark: '📕' },
   /*  ⚠️ המפתח הוא מפתח `anon` ציבורי — ⛔ ולא מפתח שירות: ההרשאות במסד. */
   supabase: {
     url: 'https://kxbtskqobynewvnckaaz.supabase.co',
@@ -23,15 +24,21 @@ self.APP = Object.freeze({
   },
   android: {
     package: 'com.yoman.avoda',
+    /*  ⛔ הכתובת שהמעטפת טוענת — ⚠️ וממנה נגזר המקור היחיד שגשר השיתוף מקבל. */
+    url: 'https://ygtotlrl-lab.github.io/yoman-avoda/',
+    /*  ⚠️ המשפט שלם ⛔ ולא שם בלבד — ⭐ הפועל מתאים למין השם. */
+    offlineLine: 'יומן עבודה לא הצליח להתחבר.',
+    /*  ⚠️ צבע כפתור הניסיון החוזר בדף האופליין של המעטפת. */
+    accent: '#2563eb',
     /*  ⛔ `versionCode` לעולם אינו יורד, ⚠️ ומקודם בכל שינוי תחת `android/` —
         ⭐ בלי קידום המכשיר המותקן אינו מקבל את ה-APK החדש. */
-    versionCode: 25,
+    versionCode: 26,
     versionName: '20.0',
     /*  ⚠️ שוליי `ic_launcher` אינם צבע אחד אלא מדרג באלכסון — ⭐ צבע אחיד
         מחטיא ב-36 יחידות לערוץ, והמדרג ב-5: 315° הוא שמאל-עליון ← ימין-תחתון. */
     launcherBg: { kind: 'gradient', angle: 315, start: '#2B508F', end: '#0D1F42' },
     /*  ⚠️ גשר השיתוף — ⭐ `FileProvider` ו-`androidx`, רק באפליקציה שמייצאת קובץ. */
-    share: true
+    share: { chooser: 'שיתוף הדו"ח' }
   },
   /*  ⛔ טביעת מפתח החתימה הקבוע — ⚠️ `sign-apk.sh` מסרב לחתום בכל מפתח אחר. */
   signSha256: 'C1:03:A4:39:26:F0:9B:8F:6D:4E:DB:1A:68:2F:13:37:5A:AC:E2:08:50:72:A6:E1:CE:1D:C8:70:0D:5B:6A:58',
