@@ -107,6 +107,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
   color:var(--on-deep);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
+/* ⛔ הסגירה במחלקה ⛔ ולא ב-`.style.display` — ⚠️ וכלל ה-`id` שמעל גובר
+   על `.u-d-none` בסגוליות: ⭐ ולכן מצב הסגירה נכתב כאן, בסגוליות שלו. */
+#yeshivaSelect.u-d-none{display:none;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
 /* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
@@ -243,6 +246,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
+/* ⛔ הטקסט בגוון של צבע הקטגוריה ⛔ ולא ב-`--cat` עצמו — ⚠️ חמש מתשע
+   אינן מגיעות ל-4.5 על משטח הכרטיס: ⭐ `--cat-deep` בבהיר ו-`--cat-lite`
+   בכהה, ⛔ וכל אחד נבחר כך שהוא עומד ב-4.5 מול `--card` שבמצבו.
+   ⚠️ והמסגרת נשארת `--cat` — ⭐ היא הזהות, ⛔ ואינה טקסט. */
+.cat-btn{color:var(--cat-deep);}
+/* ⛔ הנבחרת מתמלאת בגוון העמוק ⛔ ולא ב-`--cat` — ⚠️ לבן על `--cat` נמדד
+   מתחת ל-4.5 בחמש מתשע: ⭐ `--cat-deep` נבחר כך שהלבן עליו 4.6 לפחות,
+   ⛔ והוא קבוע בשני המצבים — ⚠️ ולכן הצמד עומד בשניהם. */
+.cat-btn.sel{background:var(--cat-deep);color:var(--on-primary);}
+@media (prefers-color-scheme:dark){.cat-btn{color:var(--cat-lite);}}
+
+/* ⛔ שדה העריכה במקום של משימה ותת-משימה — ⚠️ מחלקה ולא `style.cssText`:
+   ⭐ מצב קבוע יושב בגיליון. */
+.inl-inp{border:1px solid var(--primary-ink);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-3);font-family:Heebo;font-size:var(--fs-2);width:90px;}
+.inl-inp-task{padding:var(--sp-1) var(--sp-4);font-size:var(--fs-3);width:120px;font-weight:600;}
 
 /* כפתורים מהירים */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
@@ -501,17 +519,16 @@ body.locked{overflow:hidden}
 .u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
-.u-cat-0{--cat:#888888}
-.u-cat-1{--cat:#E8622A}
-.u-cat-2{--cat:#E8A020}
-.u-cat-3{--cat:#4BAD5B}
-.u-cat-4{--cat:#2A9E8E}
-.u-cat-5{--cat:#3A7EC6}
-.u-cat-6{--cat:#6A4FC6}
-.u-cat-7{--cat:#C64F9E}
-.u-cat-8{--cat:#7A7A7A}
+.u-cat-0{--cat:#888888;--cat-deep:#757575;--cat-lite:#888888}
+.u-cat-1{--cat:#E8622A;--cat-deep:#C94B16;--cat-lite:#E8622A}
+.u-cat-2{--cat:#E8A020;--cat-deep:#9E6B10;--cat-lite:#E8A020}
+.u-cat-3{--cat:#4BAD5B;--cat-deep:#398445;--cat-lite:#4BAD5B}
+.u-cat-4{--cat:#2A9E8E;--cat-deep:#238275;--cat-lite:#2A9E8E}
+.u-cat-5{--cat:#3A7EC6;--cat-deep:#3676BB;--cat-lite:#4C8ACB}
+.u-cat-6{--cat:#6A4FC6;--cat-deep:#6A4FC6;--cat-lite:#8E79D4}
+.u-cat-7{--cat:#C64F9E;--cat-deep:#C24398;--cat-lite:#CC60A8}
+.u-cat-8{--cat:#7A7A7A;--cat-deep:#6B6B6B;--cat-lite:#878787}
 .u-cur-p{cursor:pointer}
-.u-d-block{display:block}
 .u-d-none{display:none}
 .u-fd-col{flex-direction:column}
 .u-ff-frank{font-family:'Frank Ruhl Libre',serif}
