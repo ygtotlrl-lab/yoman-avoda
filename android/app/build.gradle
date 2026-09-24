@@ -1,3 +1,4 @@
+// ⛔ נוצר מהתצורה — `app.config.js`, ב-`node tools/gen-app.mjs`: אין לערוך ביד
 plugins {
     id 'com.android.application'
 }
@@ -7,15 +8,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.yoman.avoda"   // same ID as the existing app
+        applicationId "com.yoman.avoda"
         minSdk 21
         targetSdk 34
-        // ⛔ versionCode לעולם אינו יורד — מספר נמוך ממה
-        // שמותקן במכשיר חוסם את העדכון.
-        // ⛔ קדם בכל שינוי ב-`android/` — ⚠️ בלי קידום המכשיר המותקן
-        // אינו מקבל את ה-APK החדש, ⭐ וההיסטוריה ב-git ⛔ ולא כאן.
-        versionCode 24
-        versionName "19.0"
+        versionCode 25
+        versionName "20.0"
     }
 
     buildTypes {

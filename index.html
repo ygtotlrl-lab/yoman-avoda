@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>יומן עבודה</title>
+<title></title>
 <link rel="manifest" href="manifest.json">
+<script src="app.config.js"></script>
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;700;900&family=Heebo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="core/ui.css">
 <link rel="stylesheet" href="app.css">
 <!-- ⚠️ גרסאות CDN נעוצות במדויק — אין לחזור ל-'@2'/'@4' צפים: שחרור בצד הספק
      שובר את האפליקציה בלי שינוי קוד, וזה בלתי ניתן לשחזור מהריפו.
@@ -92,7 +94,7 @@
              yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
              ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
              שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-        <input aria-label="תאריך לועזי" class="u-minw-130 heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
+        <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
       </div>
     </div>
 
@@ -123,10 +125,10 @@
   </div>
 
   <!-- LOG -->
-  <div class="u-d-none panel" id="panel-log">
+  <div class="is-hidden panel" id="panel-log">
     <div class="card">
       <div class="log-hd">
-        <div class="u-m-0 card-ttl">רשומות יומן</div>
+        <div class="log-ttl card-ttl">רשומות יומן</div>
         <div class="log-cnt" id="logCount">0</div>
       </div>
       <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
@@ -138,7 +140,7 @@
   </div>
 
   <!-- SETTINGS -->
-  <div class="u-d-none panel" id="panel-settings">
+  <div class="is-hidden panel" id="panel-settings">
     <div class="card">
       <div class="card-ttl">עריכת קטגוריות ומשימות</div>
       <div id="settingsEditor"></div>
@@ -148,18 +150,18 @@
   </div>
 
   <!-- ARCHIVE -->
-  <div class="u-d-none panel" id="panel-archive">
+  <div class="is-hidden panel" id="panel-archive">
     <div class="card">
       <!-- Breadcrumb -->
-      <div id="arc-breadcrumb" class="u-d-flex u-ai-c u-g-3 u-mb-5 u-fwr-wrap u-minh-28"></div>
+      <div id="arc-breadcrumb" class="arc-crumbs"></div>
       <!-- Level: years -->
       <div id="arc-years"></div>
       <!-- Level: months -->
-      <div id="arc-months" class="u-d-none"></div>
+      <div id="arc-months" class="is-hidden"></div>
       <!-- Level: days -->
-      <div id="arc-days" class="u-d-none"></div>
+      <div id="arc-days" class="is-hidden"></div>
       <!-- Level: day detail / edit -->
-      <div id="arc-detail" class="u-d-none"></div>
+      <div id="arc-detail" class="is-hidden"></div>
     </div>
   </div>
 
@@ -197,6 +199,7 @@ import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
  *  ⭐ והשומר קורא אותה בזמן הקריאה ⛔ ולא בזמן המסירה. */
+document.title = self.APP.name;
 appConfigure({
   get BK_CFG() { return BK_CFG; },
   get DATA_ERA() { return DATA_ERA; },
@@ -220,8 +223,8 @@ appConfigure({
    אותם שמות ואת אותה התנהגות בכל האפליקציות — ⛔ אין לשנות כאן שם בלי
    לשנות בכולן.
    ══════════════════════════════════════════════════════════════════════════ */
-const SB_URL = "https://kxbtskqobynewvnckaaz.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg";
+const SB_URL = self.APP.supabase.url;
+const SB_KEY = self.APP.supabase.key;
 // ── משתנים גלובליים של רב-דיירות (מוסד) ──
 var YESHIVA = null;     // 'rishon' | 'ramataviv' — נבחר בכל עלייה, ואינו נשמר לדיסק
 var KV_TABLE = null;    // 'ya_settings_rishon' | 'ya_settings_ramataviv' — טבלת הענן פר-מוסד
@@ -295,11 +298,11 @@ var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנ
 // `oldRecords` נבנית מחדש ב-`selectYeshiva` — ראה `lsRebuildPolicy()`. עד שנבחר
 // מוסד היא ריקה, וזה נכון: אין עֵד סנכרון למוסד שלא נטען.
 var LS_CFG = {
-  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: שם האפליקציה שבתצורה — אותו מקור של `SW_CFG.prefix`,
    *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
    *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
    *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
-  cachePrefix: 'yoman-avoda-',
+  cachePrefix: self.APP.id + '-',
   logKey: 'ya_ls_log',
   hzPrefix: 'ya_ls_hz_',
   /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
@@ -725,7 +728,7 @@ var HW_CFG = {
  *  ⛔ ולא לפניה** — ⚠️ סדר הפוך זורק תור שטרם הוגר. */
 var DATA_ERA = 2;
 var ERA_CFG = {
-  prefix: 'ya_',
+  prefix: self.APP.prefix,
   client: function () { return getSB(); },
   table:  function () { return KV_TABLE; },
   /*  ⛔ המוחק — ⚠️ **כל סיומות המוסד**, ⛔ ולא רק הפעיל: ⭐ העידן הוא
@@ -1813,7 +1816,7 @@ function monthKeyOf(m) {
 const CAT_LETTERS = 'אבגדהוזח';
 function catCls(letter) {
   var i = CAT_LETTERS.indexOf(letter);
-  return 'u-cat-' + (i < 0 ? 0 : i + 1);
+  return 'cat-' + (i < 0 ? 0 : i + 1);
 }
 
 /*  ⛔ אין ערך קבוע שנכנס למיזוג עם הענן — ⚠️ **הנימוק המדוד**: שבע
@@ -1870,7 +1873,7 @@ function arcShowLevel(level) {
 /*  ⛔ הסתרה והצגה במחלקה ⛔ ולא ב-`.style.display` — ⚠️ מצב קבוע יושב
  *  בגיליון: ⭐ סגנון מוטבע גובר על כל מחלקה, ⛔ ומי שמשנה את הגיליון
  *  אינו רואה אותו. */
-function showEl(el, on) { if (el) el.classList.toggle("u-d-none", !on); }
+function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 function showTab(name, el) {
   document.querySelectorAll(".panel").forEach(function(p){ showEl(p, false); });
   document.querySelectorAll(".tab-btn").forEach(function(b){ b.classList.remove("active"); });
@@ -1890,7 +1893,7 @@ function renderTab(name) {
  *  מוציאה את המשתמש מהמקום שבו הוא עומד. */
 function saveRefresh() {
   var on = document.querySelector(".tab-btn.active");
-  var p = document.querySelector('.panel:not(.u-d-none)');
+  var p = document.querySelector('.panel:not(.is-hidden)');
   if (p && p.id) renderTab(String(p.id).replace(/^panel-/, ""));
   else if (on) renderTab("log");
 }
@@ -2028,7 +2031,7 @@ function buildCatGrid() {
     var btn = document.createElement("button");
     btn.className = "cat-btn " + catCls(cat.letter) +
       ((selCat && selCat.letter === cat.letter) ? " sel" : "");
-    btn.innerHTML = "<span class=\"u-fs-2 u-fw-700\">" + esc(cat.name) + "</span>";
+    btn.innerHTML = "<span class=\"cat-btn-name\">" + esc(cat.name) + "</span>";
     btn.dataset.act = 'pick-cat';
     btn.dataset.letter = cat.letter;
     g.appendChild(btn);
@@ -2216,14 +2219,14 @@ function renderLog() {
   filtered = yaSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
     var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
-    return '<div class="entry-row u-bdr-cat ' + catCls(e.cat) + '">'
-      + '<div class="entry-badge u-bg-cat"></div>'
+    return '<div class="entry-row cat-edge ' + catCls(e.cat) + '">'
+      + '<div class="entry-badge cat-fill"></div>'
       + '<div class="entry-body">'
       + '<div class="e-main">' + esc(catNameOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2">✏️</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" class="entry-edit">✏️</button>'
       + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
       + '</div>';
   }).join("");
@@ -2385,7 +2388,7 @@ function _buildReportDiv(cb, entries){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat u-fw-900" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
         if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
@@ -2695,7 +2698,7 @@ function renderSettings() {
     div.dataset.drag = "cat";
     var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
       + '<span class="drag-handle grip">⠿</span>'
-      + '<div class="set-badge u-bg-cat"></div>'
+      + '<div class="set-badge cat-fill"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
@@ -2703,36 +2706,36 @@ function renderSettings() {
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
           var subsSection = '';
           if(subs.length > 0) {
-            subsSection = '<div class="u-fs-1 u-m-2-0-1-0 u-c-text3 set-lbl">תתי משימות:</div>'
+            subsSection = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips" data-drag-axis="x">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" '
                     + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
-                    + '<span class="grip u-c-text3 u-fs-1 u-ml-1">⠿</span>'
+                    + '<span class="grip sub-grip">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-brand-ink">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="set-edit">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
           }
-          var addSubRow = '<div class="u-d-flex u-g-2 u-mt-2 ksave">'
-            + '<input aria-label="תת-משימה חדשה" class="u-fs-1 set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
-            + '<button class="u-fs-1 u-p-2-4 u-ws-nw btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
+          var addSubRow = '<div class="sub-add-row ksave">'
+            + '<input aria-label="תת-משימה חדשה" class="sub-add-inp set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
+            + '<button class="sub-add-btn btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" '
             + 'data-drag="task" data-ci="'+ci+'" data-ti="'+ti+'">'
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon grip">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-brand-ink">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
             + addSubRow
             + '</div>';
         }).join('')
-      + '<div class="u-mt-4 set-add-row ksave">'
+      + '<div class="task-add-row set-add-row ksave">'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
       + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
@@ -3104,7 +3107,7 @@ function renderArcDays(year, month) {
   var nowKey = getTodayKey();
 
   if (!days.length) {
-    el.innerHTML = '<div class="u-c-text3 u-fs-2 u-p-4">אין רשומות לחודש זה</div>';
+    el.innerHTML = '<div class="arc-empty-month">אין רשומות לחודש זה</div>';
     return;
   }
 
@@ -3118,7 +3121,7 @@ function renderArcDays(year, month) {
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
           + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
-          + dayNum + '<br><small class="u-fs-1 u-fw-400 u-op-8">' + (d.entries.length) + ' רש׳</small></button>';
+          + dayNum + '<br><small class="day-count">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -3145,46 +3148,46 @@ function renderArcDetail() {
   var sortedE = yaSortEntries(d.entries);
 
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
-    '<div class="u-d-flex u-ai-c u-g-4 u-mb-5">'+
-    '<div class="u-fx-1">'+
-      '<div class="u-ff-frank u-fs-4 u-fw-900 u-c-brand-ink">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
-      '<div class="u-fs-1 u-c-text2">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
+    '<div class="arc-day-head">'+
+    '<div class="arc-day-id">'+
+      '<div class="arc-day-hdate">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div class="arc-day-gdate">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
-    '<button class="u-fs-1 u-p-3-5 btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="u-fs-1 u-p-3-5 u-bg-ok-soft u-c-ok btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
+    '<button class="arc-edit-btn btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
+    (d.snapId ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
-    html += '<div class="u-c-text3 u-fs-2 u-ta-c u-p-5">אין רשומות</div>';
+    html += '<div class="arc-empty-day">אין רשומות</div>';
   } else {
     sortedE.forEach(function(e, ei) {
       html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
-        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" class="u-bg-none u-bd-none u-cur-p u-fs-3 u-p-1-2" title="ערוך">✏️</button>' +
+        (arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'" class="entry-edit" title="ערוך">✏️</button>' +
         '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
-        '<div class="u-w-12 u-h-12 u-r-1 u-bg-cat u-fsh-0"></div>'+
-        '<span class="u-c-text2 u-fs-1">'+esc(catNameOf(e))+'</span>'+
-        '<span class="u-c-text3">←</span>'+
-        '<span class="u-fw-700 u-c-text">'+esc(e.task)+'</span>'+
-        (e.sub ? '<span class="u-c-text3">→</span><span class="u-c-text3">'+esc(e.sub)+'</span>' : '')+
-        (e.notes ? '<span class="u-c-text3 u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
-        (e.count ? '<span class="u-c-brand-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
+        '<div class="arc-dot cat-fill"></div>'+
+        '<span class="arc-cat">'+esc(catNameOf(e))+'</span>'+
+        '<span class="arc-muted">←</span>'+
+        '<span class="arc-task">'+esc(e.task)+'</span>'+
+        (e.sub ? '<span class="arc-muted">→</span><span class="arc-muted">'+esc(e.sub)+'</span>' : '')+
+        (e.notes ? '<span class="arc-notes"> · '+esc(e.notes)+'</span>' : '<span class="arc-spacer"></span>')+
+        (e.count ? '<span class="arc-count">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
   }
 
   // מצב עריכה: הוספת רשומה
   if (arcEditMode) {
-    html += '<div class="u-bt-2-dashed-accent u-mt-5 u-pt-5">'+
-      '<div class="u-fs-1 u-fw-700 u-c-brand-ink u-mb-3">+ הוסף רשומה</div>'+
-      '<div class="u-d-flex u-g-3 u-fwr-wrap u-ai-c ksave">'+
-      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
+    html += '<div class="arc-add">'+
+      '<div class="arc-add-ttl">+ הוסף רשומה</div>'+
+      '<div class="arc-add-row ksave">'+
+      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
-      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
+      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel">'+
       (liveOnly(CATS)[0]?liveOnly(CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
       '</select>'+
-      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2 u-w-100" />'+
-      '<button class="u-ws-nw btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
+      '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes" />'+
+      '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
       '</div></div>';
   }
 
@@ -3372,7 +3375,7 @@ async function yaPullFromCloud() {
         lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _yaRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) pullRender(renderArcDetail);
+        if (arcPanel && !arcPanel.classList.contains("is-hidden") && arcSelDayKey) pullRender(renderArcDetail);
       }
     }
   } catch(e) { _yaNetWarned = true; console.error("[sync] error:", e); }
@@ -3419,13 +3422,16 @@ function _infDot(cell) {
  *  היא ההוראה, ⛔ ופרק שני שמנה סעיפים היה מונה משהו שאינו קיים. */
 function _infParse(md) {
   var lines = md.split('\n');
-  var cats = [], cur = null, rows = [];
+  var cats = [], cur = null, rows = [], apps = null, width = 0;
   for (var i = 0; i < lines.length; i++) {
     var l = lines[i];
     if (l.charAt(0) !== '|') continue;
     var c = _infCells(l);
-    if (c.length < 8) continue;
-    if (c[0] === '#') continue;
+    /*  ⛔ האפליקציות נגזרות משורת הכותרת — ⚠️ העמודות שבין «מה זה»
+     *  ל«הערה»: ⭐ רשימה מוקלדת הייתה מציגה את הקופה תחת «הערה», ⛔ ואפליקציה
+     *  שנוספת לטבלה לא הייתה מופיעה כלל. */
+    if (c[0] === '#') { apps = c.slice(3, -1); width = c.length; continue; }
+    if (!width || c.length !== width) continue;
     /*  ⛔ שורת סדר-הפנים נקלטת לקטגוריה שמעליה ⛔ ואינה נבלעת — ⚠️ היא
      *  אינה שורת נתונים ואינה כותרת, ⭐ ובלי הענף הזה היא נקראה ונזרקה:
      *  ⛔ הקורא היה רואה כותרת בלי הסדר שהיא מצהירה. */
@@ -3442,14 +3448,13 @@ function _infParse(md) {
     }
     if (!/^\d+$/.test(c[0])) continue;
     var row = { n: Number(c[0]), name: c[1], std: c[2],
-                apps: [c[3], c[4], c[5], c[6]], note: c[7] };
+                apps: c.slice(3, -1), note: c[c.length - 1] };
     rows.push(row);
     if (!cur) { cur = { title: '—', rows: [] }; cats.push(cur); }
     cur.rows.push(row);
   }
-  return { cats: cats, rows: rows };
+  return { cats: cats, rows: rows, apps: apps || [] };
 }
-var YA_INF_APPS = ['יומן', 'הנהלה', 'שכר', 'גיוס'];
 /*  ⛔ הציור נפרד מהפירוק — ⚠️ «פתח/סגור הכל» מצייר מחדש בלי למשוך שוב,
  *  ⭐ והמשיכה נשמרת בזיכרון. */
 function _infHtml(d) {
@@ -3469,9 +3474,9 @@ function _infHtml(d) {
          (c.order ? '<div class="inf-ord">↳ ' + _infMd(c.order) + '</div>' : '') +
          '<div class="inf-wrap"><table class="inf-tbl">' +
          '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
-         '<col class="c-a"><col class="c-a"><col class="c-a"><col class="c-a">' +
+         d.apps.map(function () { return '<col class="c-a">'; }).join('') +
          '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
-         YA_INF_APPS.map(function (a) { return '<th>' + a + '</th>'; }).join('') +
+         d.apps.map(function (a) { return '<th>' + esc(a) + '</th>'; }).join('') +
          '<th>הערה</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
       h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
@@ -3664,11 +3669,11 @@ function yaResetTenantState() {
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
 function yaPickYeshiva() {
-  var body = '<div class="u-d-flex u-fd-col u-g-5">';
+  var body = '<div class="yeshiva-list">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
-    body += '<button class="btn-sm u-bg-brand-fill u-c-on-brand u-p-6 u-fs-4 u-fw-800' +
-            (cur ? ' u-op-55' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
+    body += '<button class="btn-sm yeshiva-pick' +
+            (cur ? ' is-current' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
             esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
@@ -3733,7 +3738,7 @@ function selectYeshiva(y) {
   //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
-    '<button class="u-bg-brand-fill u-c-on-brand btn-sm" ' +
+    '<button class="share-btn btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון: המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק עכשיו —
@@ -3822,13 +3827,13 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
-    '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
-    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
-    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
-    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
-    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="u-p-2-5 u-bg-brand-fill u-c-on-brand u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
-    '<button data-act="entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">ביטול</button>' +
+    '<div data-editing class="ei-row ksave">' +
+    '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="ei-inp">' +
+    '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="ei-inp">' +
+    '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="ei-count">' +
+    '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="ei-notes">' +
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="ei-save">שמור</button>' +
+    '<button data-act="entry-edit-cancel" data-kesc class="ei-cancel">ביטול</button>' +
     '</div>';
   container.innerHTML = '';
   container.appendChild(div);
@@ -3869,13 +3874,13 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
-    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
-    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
-    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
-    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="u-p-2-5 u-bg-brand-fill u-c-on-brand u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">בטל</button>' +
+    '<div data-editing class="aei-row ksave">' +
+    '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="aei-inp">' +
+    '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="aei-inp">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="aei-count">' +
+    '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="aei-notes">' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="ei-save">שמור</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc class="ei-cancel">בטל</button>' +
     '</div>';
 }
 
