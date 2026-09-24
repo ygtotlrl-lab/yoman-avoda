@@ -10,6 +10,7 @@
 <title></title>
 <link rel="manifest" href="manifest.json">
 <script src="app.config.js"></script>
+<script src="core/boot.js"></script>
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.b8f26c23.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.98eaf57d.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.987dce4d.png">
@@ -3934,6 +3935,8 @@ function arcSaveEntry(gdateKey, entryId) {
   toast(MSG_SAVED, null, 'good');
 }
 
+/*  ⛔ העלייה הסתיימה — ⚠️ קריאה אחת, בסוף האתחול: ⭐ שומר העלייה ממתין לה. */
+bootOk();
 </script>
 <!-- ⛔ מיכל מודאל אחד ב-DOM — ⚠️ פתיחה, סגירה,
      מיקוד, Escape ונעילת הגלילה חיים במקום אחד; ⛔ בדפוס הדינמי כל דיאלוג
