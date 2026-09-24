@@ -5,7 +5,7 @@
  *  ⚠️ כל הלוגיקה יושבת במודול המשותף שלמטה — זהה בית-לבית
  *  בכל האפליקציות. ⛔ מה שנבדל יושב ב-SW_CFG בלבד.
  */
-var CACHE_NAME = 'yoman-avoda-v180';
+var CACHE_NAME = 'yoman-avoda-v181';
 
 // קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
@@ -14,6 +14,7 @@ var CORE = [
   './app.css',
   './core/util.js',
   './core/sync.js',
+  './core/storage.js',
   './core/hebrew.js',
   './manifest.json',
   './icons/icon-192.49794220.png',
