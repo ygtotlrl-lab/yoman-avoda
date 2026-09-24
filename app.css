@@ -385,8 +385,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
   vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
 .inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text-2)}
-.inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:170px}.inf-tbl col.c-s{width:auto}
-.inf-tbl col.c-a{width:56px}.inf-tbl col.c-r{width:210px}
+.inf-tbl col.c-n{width:44px}.inf-tbl col.c-t{width:150px}.inf-tbl col.c-s{width:auto}
+.inf-tbl col.c-a{width:36px}.inf-tbl col.c-r{width:160px}
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
 .inf-dot.ok{background:var(--ok)}.inf-dot.gap{background:var(--warn)}.inf-dot.bad{background:var(--bad)}
 .inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
@@ -438,7 +438,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 #updater.show{display:flex}
 #updater .in{
   background:var(--brand);color:var(--on-brand);border-radius:var(--r-5);padding:var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
-  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--shadow);
+  display:flex;align-items:center;gap:var(--sp-5);box-shadow:0 6px 24px var(--sh-3);
   font-size:var(--fs-3);font-weight:700;max-width:520px;width:100%
 }
 #updater button{
