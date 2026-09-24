@@ -168,8 +168,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    את גוש הטקסט שהלוגו ממורכז אליו, ⭐ ומקצר את הכרטיס במסך צר בלבד. */
 .hdr-sub{font-size:var(--fs-1);color:var(--on-dark-3);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-/* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ הרכיב שישב כאן
-   הוסר והשאיר חלל שנראה כטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
+/* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ בלעדיו הרווח
+   נראה כחלל שנשאר בטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
 .hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--sp-7);}
 .hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
   letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
@@ -358,7 +358,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    ⛔ אין לו שורה בטבלת התשתית — ⚠️ הוא אינו יכולת תשתיתית אלא מסך תצוגה
    של האפליקציה הזו, ⭐ ולוגיקה עסקית אינה נכנסת לטבלה.
    ⛔ והתוכן נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד היה מקור אמת שני,
-   ⭐ ומי שקורא אותו רואה את הטבלה של הסבב שבו הוא נכתב. */
+   ⭐ ומי שקורא אותו רואה טבלה שכבר אינה התקן. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
 .inf-hd{background:linear-gradient(135deg,var(--primary-fill) 0%,var(--primary-deep) 100%);color:var(--on-primary);
