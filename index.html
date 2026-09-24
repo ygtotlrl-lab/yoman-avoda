@@ -3426,16 +3426,18 @@ function _infParse(md) {
     var c = _infCells(l);
     if (c.length < 8) continue;
     if (c[0] === '#') continue;
-    if (c[0] === '' && /^\*\*/.test(c[1])) {
-      cur = { title: c[1].replace(/\*\*/g, ''), order: '', rows: [] };
-      cats.push(cur);
-      continue;
-    }
     /*  ⛔ שורת סדר-הפנים נקלטת לקטגוריה שמעליה ⛔ ואינה נבלעת — ⚠️ היא
      *  אינה שורת נתונים ואינה כותרת, ⭐ ובלי הענף הזה היא נקראה ונזרקה:
      *  ⛔ הקורא היה רואה כותרת בלי הסדר שהיא מצהירה. */
     if (c[0] === '' && cur && c[1].charAt(0) === '↳') {
       cur.order = c[1].slice(1).trim();
+      continue;
+    }
+    /*  ⛔ כותרת הקטגוריה מזוהה בתא המספר הריק ⛔ ולא בהדגשה — ⚠️ הטבלה
+     *  נכתבת כטקסט נקי, ⭐ ושורת הסדר כבר נקלטה מעליה. */
+    if (c[0] === '') {
+      cur = { title: c[1].replace(/\*\*/g, ''), order: '', rows: [] };
+      cats.push(cur);
       continue;
     }
     if (!/^\d+$/.test(c[0])) continue;
