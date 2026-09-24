@@ -139,6 +139,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
   .day-chip:hover{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
   .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
+  .cat-btn.sel:hover{box-shadow:inset 0 0 0 1px var(--cat-deep),0 6px 16px var(--shadow);}
   .qbtn:hover{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
   .btn-add:hover{background:linear-gradient(135deg,var(--deep-1),var(--deep-2));transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-brand);}
   .del-btn:hover{background:var(--bad-soft);color:var(--bad);}
@@ -251,7 +252,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    הערכה — ⚠️ שחור על כרטיס כהה אינו נקרא. */
 .cat-btn{color:var(--on-cat);}
 @media (prefers-color-scheme:dark){.cat-btn{color:var(--text);}}
-.cat-btn.sel{background:var(--cat);color:var(--on-cat);}
+/*  ⛔ מסגרת הנבחר בגוון עמוק של אותו צבע — ⚠️ מסגרת בצבע המילוי נבלעת בו.
+ *  ⭐ העובי הנוסף בפנים, ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור
+ *  אינו גדל ואינו זז כשהוא נבחר. */
+.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--on-cat));
+  background:var(--cat);color:var(--on-cat);border-color:var(--cat-deep);box-shadow:inset 0 0 0 1px var(--cat-deep);}
 
 /* ⛔ שדה העריכה במקום של משימה ותת-משימה — ⚠️ מחלקה ולא `style.cssText`:
    ⭐ מצב קבוע יושב בגיליון. */
