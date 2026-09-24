@@ -2341,7 +2341,7 @@ function _renderReport(div){
   }
   try {
     return Promise.resolve(
-      html2canvas(div,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false})
+      html2canvas(div,{scale:2,useCORS:true,backgroundColor:getComputedStyle(div).backgroundColor,logging:false})
     );
   } catch(e) {
     return Promise.reject(e);
@@ -2351,26 +2351,18 @@ function _renderReport(div){
 /*  ⛔ `entries` אופציונלי ⛔ ואינו נקודת הפעלה שנייה — ⚠️ המשמיט מקבל את
  *  רשומות היום, ⭐ והייצוא מוסר את רשומות הארכיון: ⛔ סינון קשיח ליום
  *  הנוכחי היה מוציא דוח ריק לכל יום שאינו היום. */
-/*  ⛔ צבעי הדוח ליטרלים בכוונה ⛔ ואינם אסימוני ערכה — ⚠️ הדיב
- *  הזה נצרב לתמונה ונשלח החוצה, ⭐ והתמונה חייבת להיראות אותו דבר לכל
- *  מי שמקבל אותה: ⛔ אסימון שמתחלף עם מצב כהה היה שולח שני דוחות שונים
- *  לאותו יום, ⚠️ לפי הערכה של מי שלחץ. */
-/*  ⛔ הדוח נצרב לתמונה ⛔ ולכן צבעיו ליטרלים — ⚠️ אסימון ערכה היה משנה
- *  את התמונה לפי המצב של מי שלחץ, ⭐ ושני מקבלים היו רואים שני דוחות.
- *  ⛔ **וכל ליטרל כאן הוא ערכו הבהיר של אסימון**:
- *  `#1A2540` ⟵ `--text` · `#4A5A7A` ⟵ `--text-2` · `#8A9ABB` ⟵ `--text-3` ·
- *  `#D0DAF0` ⟵ `--border` · `#E4EBF5` ⟵ `--card-2` · `#F0F4FA` ⟵ `--bg` ·
- *  `#FFFFFF` ⟵ `--card`. ⭐ **וששת התווים מלאים** ⛔ ואינם קיצור בן שלושה:
- *  ⚠️ ההצלבה משווה טקסט, ⛔ ו-`#fff` אינו `#FFFFFF`.
- *  ⚠️ **ובמצב כהה הדוח יוצא בהיר אף הוא** — ⭐ זו התמונה שנשלחת, ⛔ והיא
- *  אינה נגזרת מהמצב של מי שצילם אותה. */
+/*  ⛔ הדוח נצרב לתמונה ⛔ ולכן אינו נגזר מהמצב של מי שלחץ — ⚠️ שורשו נושא
+ *  `.rp`, ⭐ והערכה הבהירה חלה עליו גם במצב כהה: ⛔ ולכן כל צבע כאן הוא
+ *  `var(--…)` ⛔ ואפס ליטרל — ⚠️ ליטרל היה עותק שני של הערכה, ⭐ ומי שמשנה
+ *  גוון בגיליון לא היה רואה אותו כאן. ⚠️ `html2canvas` קורא את הסגנון
+ *  המחושב, ⭐ ולכן המשתנה נפתר לפני הצריבה. */
 function _buildReportDiv(cb, entries){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
   /*  ⚠️ המיכל נושא את סגנונו מוטבע ⛔ ואינו מחלקה — ⭐ הוא שורש הפלט שנצרב
    *  לתמונה, ⚠️ וכל ילדיו מוטבעים מאותו נימוק: ⛔ מחלקה כאן הייתה מפצלת
    *  את הדוח בין הגיליון לבונה. ⭐ וההצגה וההסתרה — `showEl`, במחלקה. */
-  div.style.cssText='position:fixed;top:0;left:0;background:#FFFFFF;padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
+  div.className='rp';div.style.cssText='position:fixed;top:0;left:0;background:var(--card);padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
   var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
   var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
@@ -2390,26 +2382,26 @@ function _buildReportDiv(cb, entries){
     var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
     var cri=0;
     tgs.forEach(function(tg,ti){
-      var bg=(globalTaskIdx%2===0)?'#FFFFFF':'#F0F4FA'; globalTaskIdx++;
+      var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat" style="color:#FFFFFF;font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid #D0DAF0;padding:8px;min-width:65px">'+data.name+'</td>';
-        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid #D0DAF0;font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid #D0DAF0;font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat" style="color:var(--on-cat);font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
+        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
         rows+='</tr>';cri++;
       });
     });
   });
   var li=logoUrl?'<img src="'+logoUrl+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
-  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid #1A2540;padding-bottom:12px;margin-bottom:14px;">'+li
-    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:#8A9ABB;letter-spacing:2px;">ב"ה | ימות המשיח</div>'
-    +'<div style="font-size:26px;font-weight:900;color:#1A2540;">יומן עבודה</div>'
-    +'<div style="font-size:11px;color:#4A5A7A;">'+instTitle+'</div></div>'
-    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:#1A2540;">'+dayLabel+'</div>'
-    +'<div style="font-size:11px;color:#1A2540;">'+today+'</div><div style="font-size:10px;color:#8A9ABB;">'+todayGreg+'</div></div></div>'
-    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:#1A2540;color:#FFFFFF;">'
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--text);padding-bottom:12px;margin-bottom:14px;">'+li
+    +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:var(--text-3);letter-spacing:2px;">ב"ה | ימות המשיח</div>'
+    +'<div style="font-size:26px;font-weight:900;color:var(--text);">יומן עבודה</div>'
+    +'<div style="font-size:11px;color:var(--text-2);">'+instTitle+'</div></div>'
+    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:var(--text);">'+dayLabel+'</div>'
+    +'<div style="font-size:11px;color:var(--text);">'+today+'</div><div style="font-size:10px;color:var(--text-3);">'+todayGreg+'</div></div></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:var(--text);color:var(--card);">'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">קטגוריה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">משימה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
@@ -2418,7 +2410,7 @@ function _buildReportDiv(cb, entries){
     +'</tr></thead><tbody>'+rows+'</tbody></table>';
     // סה״כ = בדיוק השורות שבטבלה (רשומות היום הנבחר). קודם נספרו כל ENTRIES,
     // כך שהדוח שנשלח הציג סיכום שלא תאם את השורות שבו.
-    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:#8A9ABB;border-top:1px solid #E4EBF5;padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
+    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:var(--text-3);border-top:1px solid var(--card-2);padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
   showEl(div, true);cb(div);
 }
 

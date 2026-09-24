@@ -3,7 +3,10 @@
    נושא את סוגו נקרא כסוג אחר: ⭐ מחרוזת CSS בתוך JS נראית כ-CSS של
    האפליקציה, ⛔ ואינה.
    ════════════════════════════════════════════════════════════ */
-:root {
+/*  ⛔ הערכה הבהירה חלה גם על `.rp` — ⚠️ שורש הדוח שנצרב לתמונה:
+ *  ⭐ הכלל הכהה שלמטה חל על `:root` בלבד, ⛔ ולכן הדוח יוצא בהיר בכל מצב
+ *  מאותם ערכים בדיוק, ⚠️ ובלי עותק שני שלהם. */
+:root, .rp {
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  אין סרגל תחתון קבוע. */
   --toast-bottom:26px;
@@ -24,6 +27,11 @@
    *  על הכרטיס 7.15 · ועל `--brand-soft` 6.10: ⭐ `--brand-ink` הוא גם
    *  רקע הריחוף והלחיצה, ⛔ שהדיו עליו הוא `--bg` ומתחלף איתו. */
   --brand-fill:#1E6FBF; --brand-ink:#1558A0; --brand-soft:#E4EEFA;
+  /*  ⛔ הדיו על צבע הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
+   *  בה יש מניפת קטגוריות: ⛔ שחור ⛔ ולא לבן — ⚠️ לבן על `--cat` נמדד
+   *  מתחת ל-4.5 בחמש מתשע, ⭐ ושחור עומד ב-4.9 לפחות בכל התשע.
+   *  ⛔ והוא קבוע בשני המצבים — ⚠️ המילוי קבוע בשניהם, ⭐ ולכן הצמד אחד. */
+  --on-cat:#000000;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text-2:#4A5A7A; --text-3:#8A9ABB;
@@ -243,16 +251,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* ⛔ הטקסט בגוון של צבע הקטגוריה ⛔ ולא ב-`--cat` עצמו — ⚠️ חמש מתשע
-   אינן מגיעות ל-4.5 על משטח הכרטיס: ⭐ `--cat-deep` בבהיר ו-`--cat-lite`
-   בכהה, ⛔ וכל אחד נבחר כך שהוא עומד ב-4.5 מול `--card` שבמצבו.
-   ⚠️ והמסגרת נשארת `--cat` — ⭐ היא הזהות, ⛔ ואינה טקסט. */
-.cat-btn{color:var(--cat-deep);}
-/* ⛔ הנבחרת מתמלאת בגוון העמוק ⛔ ולא ב-`--cat` — ⚠️ לבן על `--cat` נמדד
-   מתחת ל-4.5 בחמש מתשע: ⭐ `--cat-deep` נבחר כך שהלבן עליו 4.6 לפחות,
-   ⛔ והוא קבוע בשני המצבים — ⚠️ ולכן הצמד עומד בשניהם. */
-.cat-btn.sel{background:var(--cat-deep);color:var(--on-brand);}
-@media (prefers-color-scheme:dark){.cat-btn{color:var(--cat-lite);}}
+/* ⛔ מניפה אחת — ⚠️ `--cat` הוא מילוי ומסגרת בלבד ⛔ ואינו דיו: ⭐ אסימון
+   אחד לכל קטגוריה, ⛔ ולא גוון נפרד לטקסט ולכל מצב. ⚠️ הטקסט על הכרטיס
+   הוא `--text`, ⭐ והנבחרת מתמלאת ב-`--cat` עם `--on-cat` עליו. */
+.cat-btn{color:var(--text);}
+.cat-btn.sel{background:var(--cat);color:var(--on-cat);}
 
 /* ⛔ שדה העריכה במקום של משימה ותת-משימה — ⚠️ מחלקה ולא `style.cssText`:
    ⭐ מצב קבוע יושב בגיליון. */
@@ -542,15 +545,17 @@ body.locked{overflow:hidden}
 .u-c-text{color:var(--text)}
 .u-c-text2{color:var(--text-2)}
 .u-c-text3{color:var(--text-3)}
-.u-cat-0{--cat:#888888;--cat-deep:#757575;--cat-lite:#888888}
-.u-cat-1{--cat:#E8622A;--cat-deep:#C94B16;--cat-lite:#E8622A}
-.u-cat-2{--cat:#E8A020;--cat-deep:#9E6B10;--cat-lite:#E8A020}
-.u-cat-3{--cat:#4BAD5B;--cat-deep:#398445;--cat-lite:#4BAD5B}
-.u-cat-4{--cat:#2A9E8E;--cat-deep:#238275;--cat-lite:#2A9E8E}
-.u-cat-5{--cat:#3A7EC6;--cat-deep:#3676BB;--cat-lite:#4C8ACB}
-.u-cat-6{--cat:#6A4FC6;--cat-deep:#6A4FC6;--cat-lite:#8E79D4}
-.u-cat-7{--cat:#C64F9E;--cat-deep:#C24398;--cat-lite:#CC60A8}
-.u-cat-8{--cat:#7A7A7A;--cat-deep:#6B6B6B;--cat-lite:#878787}
+/* ⚠️ `u-cat-6` הובהר ⛔ ואינו הסגול העמוק — ⭐ שחור על העמוק 3.5, ⛔ ועל
+   זה 5.8. */
+.u-cat-0{--cat:#888888}
+.u-cat-1{--cat:#E8622A}
+.u-cat-2{--cat:#E8A020}
+.u-cat-3{--cat:#4BAD5B}
+.u-cat-4{--cat:#2A9E8E}
+.u-cat-5{--cat:#3A7EC6}
+.u-cat-6{--cat:#8E79D4}
+.u-cat-7{--cat:#C64F9E}
+.u-cat-8{--cat:#7A7A7A}
 .u-cur-p{cursor:pointer}
 .u-d-none{display:none}
 .u-fd-col{flex-direction:column}
