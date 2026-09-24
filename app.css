@@ -112,8 +112,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   color:var(--on-deep);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 /* ⛔ הסגירה במחלקה ⛔ ולא ב-`.style.display` — ⚠️ וכלל ה-`id` שמעל גובר
-   על `.u-d-none` בסגוליות: ⭐ ולכן מצב הסגירה נכתב כאן, בסגוליות שלו. */
-#yeshivaSelect.u-d-none{display:none;}
+   על `.is-hidden` בסגוליות: ⭐ ולכן מצב הסגירה נכתב כאן, בסגוליות שלו. */
+#yeshivaSelect.is-hidden{display:none;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
 /* ⛔ ה-`padding` הוא בדיוק המקום ששתי השורות שירדו תפסו — ⚠️ נמדד בדפדפן:
@@ -512,104 +512,75 @@ body.locked{overflow:hidden}
 @media (prefers-reduced-motion:reduce){
   :root{--dur-1:0s;--dur-2:0s;--dur-3:0s;--dur-4:0s;--dur-5:0s;--dur-6:0s}
 }
-.u-mt-2{margin-top:var(--sp-2)}
-.u-mt-5{margin-top:var(--sp-5)}
 /* ═══ סוף CSS הסולמות ═══════════════════════════════════════════════════ */
-/* ══ מחלקות השירות הפרטיות — אינן חיות בכולן ═════════════
-   ⚠️ הן ישבו בבלוק המשותף ולא היה להן קורא בקופה — ⛔ ומחלקה
-   בבלוק משותף שאין לה קורא באחת מהן היא סלקטור בלי קורא. */
-.u-ai-c{align-items:center}
-.u-d-flex{display:flex}
-.u-fs-2{font-size:var(--fs-2)}
-.u-fs-3{font-size:var(--fs-3)}
-.u-fw-700{font-weight:700}
-.u-fx-1{flex:1}
-.u-g-5{gap:var(--sp-5)}
-/* ══ מחלקות הסולם הפרטיות — אינן חיות בכולן ═════════════════════════════
-   ⚠️ כל מחלקה כאן משרתת אתר שקיים באפליקציה הזו בלבד, ⛔ ולכן אינה בבלוק
-   המשותף: ⭐ מחלקה משותפת שאין לה קורא כאן היא סלקטור בלי קורא. */
-.u-bd-1-solid-border{border:1px solid var(--border)}
-.u-bd-15-solid-border{border:1.5px solid var(--border)}
-.u-bd-none{border:none}
-.u-bdr-cat{border-right:4px solid var(--cat)}
-.u-bg-card-2{background:var(--card-2)}
-.u-bg-cat{background:var(--cat)}
-.u-bg-none{background:none}
-.u-bg-ok-soft{background:var(--ok-soft)}
-.u-bg-brand-fill{background:var(--brand-fill)}
-.u-bg-warn-soft{background:var(--warn-soft)}
-.u-bt-2-dashed-accent{border-top:2px dashed var(--accent)}
-.u-c-ok{color:var(--ok)}
-.u-c-on-brand{color:var(--on-brand)}
-.u-c-brand-ink{color:var(--brand-ink)}
-.u-c-text{color:var(--text)}
-.u-c-text2{color:var(--text-2)}
-.u-c-text3{color:var(--text-3)}
-/* ⚠️ `u-cat-6` הובהר מעט — ⛔ שחור על הסגול העמוק 3.55, ⭐ ועל זה 4.62. */
-.u-cat-0{--cat:#888888}
-.u-cat-1{--cat:#E8622A}
-.u-cat-2{--cat:#E8A020}
-.u-cat-3{--cat:#4BAD5B}
-.u-cat-4{--cat:#2A9E8E}
-.u-cat-5{--cat:#3A7EC6}
-.u-cat-6{--cat:#7D65CD}
-.u-cat-7{--cat:#C64F9E}
-.u-cat-8{--cat:#7A7A7A}
-.u-cur-p{cursor:pointer}
-.u-d-none{display:none}
-.u-fd-col{flex-direction:column}
-.u-ff-frank{font-family:'Frank Ruhl Libre',serif}
-.u-ff-heebo{font-family:Heebo}
-.u-ff-heebo-sans-serif{font-family:Heebo,sans-serif}
-.u-fs-1{font-size:var(--fs-1)}
-.u-fs-4{font-size:var(--fs-4)}
-.u-fsh-0{flex-shrink:0}
-.u-fw-400{font-weight:400}
-.u-fw-800{font-weight:800}
-.u-fw-900{font-weight:900}
-.u-fwr-wrap{flex-wrap:wrap}
-.u-fx-2{flex:2}
-.u-fx-3{flex:3}
-.u-g-2{gap:var(--sp-2)}
-.u-g-3{gap:var(--sp-3)}
-.u-g-4{gap:var(--sp-4)}
-.u-h-12{height:12px}
-.u-m-0{margin:0}
-.u-m-2-0-1-0{margin:var(--sp-2) 0 var(--sp-1) 0}
-.u-mb-3{margin-bottom:var(--sp-3)}
-.u-mb-5{margin-bottom:var(--sp-5)}
-.u-minh-28{min-height:28px}
-.u-minw-130{min-width:130px}
-.u-minw-80{min-width:80px}
-.u-ml-1{margin-left:var(--sp-1)}
-.u-mt-4{margin-top:var(--sp-4)}
-.u-op-55{opacity:var(--op-4)}
-.u-op-8{opacity:var(--op-6)}
-.u-p-1-2{padding:var(--sp-1) var(--sp-2)}
-.u-p-2{padding:var(--sp-2)}
-.u-p-2-4{padding:var(--sp-2) var(--sp-4)}
-.u-p-2-5{padding:var(--sp-2) var(--sp-5)}
-.u-p-3{padding:var(--sp-3)}
-.u-p-3-4{padding:var(--sp-3) var(--sp-4)}
-.u-p-3-5{padding:var(--sp-3) var(--sp-5)}
-.u-p-4{padding:var(--sp-4)}
-.u-p-5{padding:var(--sp-5)}
-.u-p-6{padding:var(--sp-6)}
-.u-pt-5{padding-top:var(--sp-5)}
-.u-r-1{border-radius:var(--r-1)}
-.u-r-2{border-radius:var(--r-2)}
-.u-r-3{border-radius:var(--r-3)}
-.u-ta-c{text-align:center}
-.u-ta-l{text-align:left}
-.u-w-100{width:100px}
-.u-w-100p{width:100%}
-.u-w-12{width:12px}
-.u-w-55{width:55px}
-.u-w-60{width:60px}
-.u-ws-nw{white-space:nowrap}
 /* ══ מחלקות הרכיבים — שם שנגזר מתפקיד ═══════════════════════
    ⛔ שרשרת שחוזרת היא כלל CSS שנכתב ב-HTML — ⚠️ ושינויו דורש לערוך
    כל מופע: ⭐ והשם נגזר מתפקיד הרכיב ⚠️ ולא ממראהו. */
 .arc-pick-label{color:var(--text-2);font-size:var(--fs-1);margin-bottom:var(--sp-4)}
-/* ══ סוף המחלקות הפרטיות ═══════════════════════════════════════════════ */
+/* ══ מחלקות התפקיד — מחלקה אחת לכל תפקיד ═════════════════════════════════
+   ⛔ שם המחלקה אומר את תפקיד הרכיב, ⚠️ ואין מחלקת עזר של תכונה אחת:
+   ⭐ הבלוק יושב אחרי הגיליון כולו, ולכן הוא גובר על הכלל הכללי של הרכיב. */
+.aei-count{font-size:var(--fs-2);border:1px solid var(--border);font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1);width:55px}
+.aei-inp{font-size:var(--fs-2);border:1px solid var(--border);font-family:Heebo,sans-serif;flex:2;min-width:80px;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1)}
+.aei-notes{font-size:var(--fs-2);border:1px solid var(--border);font-family:Heebo,sans-serif;flex:3;min-width:80px;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1)}
+.aei-row{align-items:center;display:flex;background:var(--warn-soft);flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-2);border-radius:var(--r-2);width:100%}
+.arc-add{margin-top:var(--sp-5);border-top:2px dashed var(--accent);padding-top:var(--sp-5)}
+.arc-add-btn{white-space:nowrap}
+.arc-add-notes{font-size:var(--fs-2);border:1.5px solid var(--border);font-family:Heebo;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-3);width:100px}
+.arc-add-row{align-items:center;display:flex;flex-wrap:wrap;gap:var(--sp-3)}
+.arc-add-sel{font-size:var(--fs-2);border:1.5px solid var(--border);font-family:Heebo;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-3)}
+.arc-add-ttl{font-weight:700;color:var(--brand-ink);font-size:var(--fs-1);margin-bottom:var(--sp-3)}
+.arc-cat{color:var(--text-2);font-size:var(--fs-1)}
+.arc-count{font-weight:700;color:var(--brand-ink);font-size:var(--fs-1)}
+.arc-crumbs{align-items:center;display:flex;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-5);min-height:28px}
+.arc-day-gdate{color:var(--text-2);font-size:var(--fs-1)}
+.arc-day-hdate{color:var(--brand-ink);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900}
+.arc-day-head{align-items:center;display:flex;gap:var(--sp-4);margin-bottom:var(--sp-5)}
+.arc-day-id{flex:1}
+.arc-dot{flex-shrink:0;height:12px;border-radius:var(--r-1);width:12px}
+.arc-edit-btn{font-size:var(--fs-1);padding:var(--sp-3) var(--sp-5)}
+.arc-empty-day{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-5);text-align:center}
+.arc-empty-month{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-4)}
+.arc-muted{color:var(--text-3)}
+.arc-notes{flex:1;color:var(--text-3);font-size:var(--fs-1);text-align:left}
+.arc-pdf-btn{background:var(--ok-soft);color:var(--ok);font-size:var(--fs-1);padding:var(--sp-3) var(--sp-5)}
+.arc-spacer{flex:1}
+.arc-task{font-weight:700;color:var(--text)}
+.day-count{font-size:var(--fs-1);font-weight:400;opacity:var(--op-6)}
+.ei-cancel{border:none;background:var(--card-2);color:var(--text-2);cursor:pointer;font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-5);border-radius:var(--r-1)}
+.ei-count{border:1px solid var(--border);font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1);width:60px}
+.ei-inp{border:1px solid var(--border);font-family:Heebo,sans-serif;flex:2;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1)}
+.ei-notes{border:1px solid var(--border);font-family:Heebo,sans-serif;flex:3;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1)}
+.ei-row{align-items:center;display:flex;background:var(--warn-soft);flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-2)}
+.ei-save{border:none;background:var(--brand-fill);color:var(--on-brand);cursor:pointer;font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-5);border-radius:var(--r-1)}
+.entry-edit{font-size:var(--fs-3);border:none;background:none;cursor:pointer;padding:var(--sp-1) var(--sp-2)}
+.greg-inp{min-width:130px}
+.log-ttl{margin:0}
+.rp-cat{font-weight:900}
+.set-edit{border:none;background:none;color:var(--brand-ink);cursor:pointer;font-size:var(--fs-1);padding:var(--sp-1) var(--sp-2)}
+.share-btn{background:var(--brand-fill);color:var(--on-brand)}
+.sub-add-btn{font-size:var(--fs-1);padding:var(--sp-2) var(--sp-4);white-space:nowrap}
+.sub-add-inp{font-size:var(--fs-1)}
+.sub-add-row{margin-top:var(--sp-2);display:flex;gap:var(--sp-2)}
+.sub-grip{color:var(--text-3);font-size:var(--fs-1);margin-left:var(--sp-1)}
+.subs-lbl{color:var(--text-3);font-size:var(--fs-1);margin:var(--sp-2) 0 var(--sp-1) 0}
+.task-add-row{margin-top:var(--sp-4)}
+.yeshiva-list{display:flex;gap:var(--sp-5);flex-direction:column}
+.cat-btn-name{font-size:var(--fs-2);font-weight:700}
+.yeshiva-pick{background:var(--brand-fill);color:var(--on-brand);padding:var(--sp-6);font-size:var(--fs-4);font-weight:800}
+.is-current{opacity:var(--op-4)}
+.cat-edge{border-right:4px solid var(--cat)}
+.cat-fill{background:var(--cat)}
+/* ⚠️ `cat-6` הובהר מעט — ⛔ שחור על הסגול העמוק 3.55, ⭐ ועל זה 4.62. */
+.cat-0{--cat:#888888}
+.cat-1{--cat:#E8622A}
+.cat-2{--cat:#E8A020}
+.cat-3{--cat:#4BAD5B}
+.cat-4{--cat:#2A9E8E}
+.cat-5{--cat:#3A7EC6}
+.cat-6{--cat:#7D65CD}
+.cat-7{--cat:#C64F9E}
+.cat-8{--cat:#7A7A7A}
+.is-hidden{display:none}
+/* ══ סוף מחלקות התפקיד ═════════════════════════════════════════════════ */
 /* ═══ סוף גיליון הסגנון — בלוק גיליון סגנון ══════════════════════════════ */
