@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>יומן עבודה</title>
+<title></title>
 <link rel="manifest" href="manifest.json">
+<script src="app.config.js"></script>
 <meta name="theme-color" content="#1E6FBF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -198,6 +199,7 @@ import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
  *  ⭐ והשומר קורא אותה בזמן הקריאה ⛔ ולא בזמן המסירה. */
+document.title = self.APP.name;
 appConfigure({
   get BK_CFG() { return BK_CFG; },
   get DATA_ERA() { return DATA_ERA; },
@@ -221,8 +223,8 @@ appConfigure({
    אותם שמות ואת אותה התנהגות בכל האפליקציות — ⛔ אין לשנות כאן שם בלי
    לשנות בכולן.
    ══════════════════════════════════════════════════════════════════════════ */
-const SB_URL = "https://kxbtskqobynewvnckaaz.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4YnRza3FvYnluZXd2bmNrYWF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMDI4NDAsImV4cCI6MjA4ODg3ODg0MH0.WLwPgTJp0Y-p1AuzeXhuHDPWEbWRanVMrvEN4V9Xbeg";
+const SB_URL = self.APP.supabase.url;
+const SB_KEY = self.APP.supabase.key;
 // ── משתנים גלובליים של רב-דיירות (מוסד) ──
 var YESHIVA = null;     // 'rishon' | 'ramataviv' — נבחר בכל עלייה, ואינו נשמר לדיסק
 var KV_TABLE = null;    // 'ya_settings_rishon' | 'ya_settings_ramataviv' — טבלת הענן פר-מוסד
@@ -296,11 +298,11 @@ var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנ
 // `oldRecords` נבנית מחדש ב-`selectYeshiva` — ראה `lsRebuildPolicy()`. עד שנבחר
 // מוסד היא ריקה, וזה נכון: אין עֵד סנכרון למוסד שלא נטען.
 var LS_CFG = {
-  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: הערך שב-`SW_CFG.prefix` שב-`sw.js`,
+  /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: שם האפליקציה שבתצורה — אותו מקור של `SW_CFG.prefix`,
    *  ⭐ **וזה המקור**: ⛔ סינון המטמון לפי קידומת האחסון הוא צירוף מקרי
    *  ⛔ ולא מנגנון — ⚠️ שם אחסון שישתנה יחזיר רשימה ריקה, ⭐ וסימן דחייה
    *  שנשען על מחרוזת ריקה מת בשקט: ⛔ הבאנר חוזר בכל טעינה בלי דרך לצאת. */
-  cachePrefix: 'yoman-avoda-',
+  cachePrefix: self.APP.id + '-',
   logKey: 'ya_ls_log',
   hzPrefix: 'ya_ls_hz_',
   /*  ⛔ מפתח סימן הדחייה של באנר העדכון — ⚠️ **מה נכנס**: שם
@@ -726,7 +728,7 @@ var HW_CFG = {
  *  ⛔ ולא לפניה** — ⚠️ סדר הפוך זורק תור שטרם הוגר. */
 var DATA_ERA = 2;
 var ERA_CFG = {
-  prefix: 'ya_',
+  prefix: self.APP.prefix,
   client: function () { return getSB(); },
   table:  function () { return KV_TABLE; },
   /*  ⛔ המוחק — ⚠️ **כל סיומות המוסד**, ⛔ ולא רק הפעיל: ⭐ העידן הוא
