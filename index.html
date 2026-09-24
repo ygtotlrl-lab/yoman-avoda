@@ -2385,7 +2385,7 @@ function _buildReportDiv(cb, entries){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat" style="color:var(--on-cat);font-weight:900;font-size:14px;text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' u-bg-cat u-fw-900" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
         if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
