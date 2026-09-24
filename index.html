@@ -53,7 +53,7 @@
 
   <div class="hdr">
     <div class="hdr-top">
-      <div class="hdr-logo-wrap"><button class="hdr-logo-btn" data-act="open-yeshiva-picker" aria-label="החלפת ישיבה" title="החלפת ישיבה"><img id="appLogo" class="hdr-logo" src="logos/rishon.png" alt="לוגו" /></button></div>
+      <div class="hdr-logo-wrap"><button class="hdr-logo-btn" data-act="open-yeshiva-picker" aria-label="החלפת ישיבה" title="החלפת ישיבה"><img id="appLogo" class="hdr-logo" alt="" /></button></div>
       <div class="hdr-mid">
         <div class="hdr-bh">ב״ה | ימות המשיח</div>
         <div class="hdr-title-wrap"><div class="hdr-h1">יומן עבודה</div></div>
@@ -229,11 +229,13 @@ const SB_KEY = self.APP.supabase.key;
 var YESHIVA = null;     // 'rishon' | 'ramataviv' — נבחר בכל עלייה, ואינו נשמר לדיסק
 var KV_TABLE = null;    // 'ya_settings_rishon' | 'ya_settings_ramataviv' — טבלת הענן פר-מוסד
 var LS = '';            // סיומת מפתח ה-localStorage פר-מוסד (בידוד אופליין)
-/*  ⛔ שני הלוגואים נטענים באותה דרך — ⚠️ נתיב לקובץ ב-`logos/`,
- *  ⭐ ולא אחד ממשתנה ואחד שנלכד מה-DOM: ⛔ לכידה מה-DOM אינה נראית
- *  לאף סורק, ⚠️ ומי שמחפש את הנכס אינו מוצא אותו. */
-var RISHON_LOGO = 'logos/rishon.png';
-var RAMATAVIV_LOGO = 'logos/ramataviv.png';
+/*  ⛔ מפה אחת: ישיבה ⟵ הלוגו שלה, נתיב לקובץ ב-`logos/` — ⚠️ ואין ברירת
+ *  מחדל: ⭐ ישיבה שאין לה רשומה כאן מוצגת בלי לוגו, ⛔ ולא בלוגו של אחרת.
+ *  ⛔ ואין `src` ב-HTML — ⚠️ לפני שנבחרה ישיבה אין לוגו שנכון להציג. */
+var YA_LOGOS = {
+  rishon: 'logos/rishon.png',
+  ramataviv: 'logos/ramataviv.png'
+};
 
 var _sb = null;
 
@@ -3724,7 +3726,9 @@ function selectYeshiva(y) {
   // לוגו הכותרת — נתיב פר-מוסד לקובץ שב-`logos/`
   var logoEl = document.getElementById('appLogo');
   if (logoEl) {
-    logoEl.src = (y === 'ramataviv') ? RAMATAVIV_LOGO : RISHON_LOGO;
+    var logo = YA_LOGOS[y];
+    if (logo) { logoEl.src = logo; logoEl.alt = 'לוגו'; }
+    else { logoEl.removeAttribute('src'); logoEl.alt = ''; }
   }
   // כותרת משנה
   var sub = document.getElementById('hdrSub');

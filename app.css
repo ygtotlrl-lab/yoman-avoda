@@ -86,11 +86,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
    מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
 .hdr{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
+  --hdr-inset:var(--sp-7);border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ שורת «יחי» יושבת
    מתחת לשורה הזו, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
-.hdr-logo-wrap{padding:0 var(--sp-6);display:flex;align-items:center;justify-content:center;}
+/* ⛔ הלוגו, הקו ו«יחי» על קו אחד — ⚠️ שלושתם קוראים את `--hdr-inset`, ⭐ והמרווח
+   מהטקסט הוא של גוש הטקסט: ⛔ ערך שני ללוגו בנקודת שבירה שובר את הקו. */
+.hdr-logo-wrap{padding:0;padding-inline-start:var(--hdr-inset);display:flex;align-items:center;justify-content:center;}
 /* ⛔ הסטה של 2% למעלה ⛔ ואינה מספר פיקסלים — ⚠️ איזון אופטי: העין תופסת
    מרכז מעט גבוה מהחישוב, ⭐ והאחוז נגזר מגובה הלוגו ונע איתו. */
 .hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-2);
@@ -113,15 +115,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ בלעדיו הרווח
    נראה כחלל שנשאר בטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
-.hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--sp-7);}
-.hdr-yechi{padding:var(--sp-4) var(--sp-7) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
+.hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--hdr-inset);}
+.hdr-yechi{padding:var(--sp-4) var(--hdr-inset) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
   letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
 /* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
    נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
    בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
    את הגודל המלא. */
 .hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
-.hdr-logo-wrap{padding:0 var(--sp-5);}
 /* לשוניות */
 .tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .tab-btn{flex:1;background:var(--card);color:var(--text-2);border:2px solid var(--border);
@@ -488,9 +489,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ══ נקודות שבירה ══════════════════════════════════════════════════════ */
 @media (min-width:360px){
   .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
-}
-@media (min-width:360px){
-  .hdr-logo-wrap{padding:0 var(--sp-6);}
 }
 /* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ הכותרת מרוכזת עד
    כאן לחלל שנשאר אחרי הלוגו ושורת «יחי» לכרטיס כולו, ⭐ ושני מרכזים במרחק
