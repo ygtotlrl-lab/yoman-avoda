@@ -192,7 +192,7 @@ import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, swApply, swHideUpdate, toast } from './core/ui.js';
+         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast } from './core/ui.js';
 import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -1616,6 +1616,11 @@ function yaSyncLog(action, key, recordCount, details) {
  *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
 var _yaPullLogged = false;
 
+/*  ⛔ הציור שאחרי משיכה — ⚠️ כל המסכים שהמשיכה משנה, ⭐ והוא עובר
+ *  ב-`pullRender`: ⛔ הגדרות ושורות יומן נבנים מחדש, ⚠️ ושדה פתוח בהם נמחק. */
+function yaPullDraw() {
+  buildCatGrid(); buildTaskBtns(); buildSubBtns(); renderLog(); renderSettings();
+}
 async function syncFromCloud() {
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
@@ -1753,17 +1758,13 @@ async function syncFromCloud() {
     // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
     arcCleanupCorrupted();
 
-    buildCatGrid();
     // מיישב את selCat אחרי ש-CATS הוחלף — ההפניה הישנה אינה במערך החדש
     if (selCat) {
       selCat = CATS.find(function(c){ return c.letter === selCat.letter && isLive(c); }) || null;
     }
-    buildTaskBtns();
-    buildSubBtns();
-    renderLog();
     // הסימון לפני הרינדור — שורת המצב שבאזור המצב נבנית בתוך renderSettings.
     if (failed.length === 0) _yaMarkSynced();
-    renderSettings();
+    pullRender(yaPullDraw);
     if (failed.length === 0 && !_yaPullLogged) { _yaPullLogged = true; yaSyncLog('pull', null, null); }
     if (failed.length === 0) {
       toast(MSG_SYNCED, null, 'good');
@@ -2834,8 +2835,6 @@ var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר �
 // דלי "לא ידוע" — יום שאי אפשר לפענח את תאריכו העברי. ⛔ הוא אינו נשמט
 // מרשימת השנים — ⚠️ אחרת הרשומות שבו בלתי נגישות.
 var HUNKNOWN = "לא ידוע";
-// מפתח יום מוטמע בתוך מחרוזת JS בתוך אטריביוט onclick — חייב בריחה
-function jsQ(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
 
 function extractYM(hdate) {
   function unknown() { return {year: HUNKNOWN, month: HUNKNOWN, order: 99}; }
@@ -3366,7 +3365,7 @@ async function yaPullFromCloud() {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
         lsSetArray("ya_entries"+_ls, ENTRIES, _yaRecTs);
-        renderLog();
+        pullRender(renderLog);
         console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
                     " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
@@ -3381,7 +3380,7 @@ async function yaPullFromCloud() {
         lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _yaRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) renderArcDetail();
+        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) pullRender(renderArcDetail);
       }
     }
   } catch(e) { _yaNetWarned = true; console.error("[sync] error:", e); }
@@ -3829,7 +3828,7 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
+    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
     '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
@@ -3866,20 +3865,17 @@ function arcEditEntry(gdateKey, entryId) {
   if(!d) return;
   var e = d.entries.find(function(x){ return idEq(x.id, entryId); });
   if(!e) return;
-  // מאתר את אלמנט השורה ומחליף אותו בטופס עריכה במקום
-  var rows = document.querySelectorAll('.arc-entry-row');
+  /*  ⛔ השורה מאותרת לפי `data-key` ו-`data-id` שעל כפתור העריכה — ⚠️ חיפוש
+   *  מחרוזת `onclick` בתוך השורה לא מצא דבר מאז שהמאפיין ירד, ⭐ והעריכה
+   *  בארכיון לא נפתחה כלל. ⛔ וההשוואה בערך ⛔ ולא בבורר — ⚠️ מפתח היום
+   *  עברי, ⭐ ו-`cssQ` מסנן אותו לספרות בלבד. */
   var target = null;
-  var qk = jsQ(gdateKey);
-  rows.forEach(function(r){
-    // ⛔ `idArg` חובה — מזהה טקסט, ⛔ והציטוט נשבר בשקט בלעדיו.
-    if(r.innerHTML.indexOf('arcDeleteEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1 ||
-       r.innerHTML.indexOf('arcEditEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1) {
-      target = r;
-    }
+  document.querySelectorAll('[data-act="arc-entry-edit"]').forEach(function (b) {
+    if (b.getAttribute('data-key') === gdateKey && idEq(b.getAttribute('data-id'), entryId)) target = b.closest('.arc-entry-row');
   });
   if(!target) return;
   target.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
+    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
