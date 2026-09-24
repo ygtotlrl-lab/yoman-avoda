@@ -192,7 +192,7 @@ import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, swApply, swHideUpdate, toast } from './core/ui.js';
+         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast } from './core/ui.js';
 import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -524,7 +524,7 @@ var DOM_ACTIONS = {
   /*  ⛔ שלוש הפעולות של מציג טבלת התשתית עוברות בדלגציה — ⚠️ הכפתורים
    *  נבנים מחדש בכל ציור של המודאל, ⭐ ומאזין פר-כפתור היה צריך חיווט
    *  מחדש בכל פעם. */
-  'inf-open':       function () { yaInfraOpen(); },
+  'inf-open':       function () { return yaInfraOpen(); },
   'inf-all':        function (el) { yaInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { yaConfirmSwitch(el.getAttribute('data-yeshiva')); },
   'add-entry':      function () { addEntry(); },
@@ -844,10 +844,9 @@ async function sbGet(key) {
 // אינו מחיקה. מחיקה היא אך ורק tombstone מפורש — deleted:true + updatedAt.
 // מכשיר לעולם לא מוחק רשומה שהוא פשוט לא מכיר.
 //
-// נתונים קיימים (legacy): בענן יש רשומות שנוצרו לפני הסבב הזה, בלי updatedAt.
-// recTs() מחזיר עבורן 0 — כלומר הן "ותיקות" ומפסידות לכל רשומה מתוארכת —
-// אבל הן לעולם לא נופלות מהמיזוג רק בגלל שהצד השני לא מכיר אותן. לכן המיזוג
-// הראשון אחרי השדרוג הוא איחוד מלא של מקומי + ענן, בלי אובדן נתונים.
+// רשומה בלי updatedAt: recTs() מחזיר עבורה 0 — כלומר היא "ותיקה" ומפסידה
+// לכל רשומה מתוארכת — ⛔ אבל היא לעולם לא נופלת מהמיזוג רק בגלל שהצד השני
+// לא מכיר אותה: ⭐ האיחוד של מקומי + ענן הוא בלי אובדן נתונים.
 /* ══════════════════════════════════════════════════════════════════════════
    מנוע המיזוג ברמת רשומה — חותמות ו-tombstones
    ══════════════════════════════════════════════════════════════════════════
@@ -1037,65 +1036,31 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   שכבת השורות בענן — ya_entries / ya_archive
+   שכבת השורות בענן — ya_entries
    ══════════════════════════════════════════════════════════════════════════
-   עד הסבב הזה נתוני היומן ישבו בענן כ**ערך יחיד** לכל מפתח kv: כל עריכה
-   דרסה את מלוא הערך (`ya_archive` של ראשון לציון — 1.2MB), המיזוג בענן היה
-   ברמת קובץ, ולא היה פינוי סלקטיבי. מעכשיו כל רשומה היא שורה.
+   ⭐ **כל רשומה היא שורה** ⛔ ולא ערך יחיד למפתח `kv` — ⚠️ ערך יחיד נדרס
+   כולו בכל עריכה, המיזוג עליו בענן הוא ברמת קובץ, ⛔ ואין בו פינוי
+   סלקטיבי.
 
-   ⭐ **הצד המקומי לא נגע.** localStorage ממשיך להחזיק את אותם מערכים באותם
-      מפתחות (`ya_entries`+LS / `ya_archive`+LS), ולכן מודול האחסון הקפוא,
-      מודול ה-⏳ ומדיניות הפינוי אינם מושפעים. מה שהשתנה הוא **הייצוג
-      בענן** בלבד, וזה מה שמצמצם את השינוי לשכבה אחת.
+   ⭐ **היומן והארכיון בטבלה אחת**, ⚠️ ומה שמפריד ביניהם הוא **עמודת
+   `archived`** — «העברה לארכיון» היא עדכון דגל ⛔ ולא העברה בין מקומות.
+   השליפה מסננת עליו (`.eq('archived', …)`), ⭐ ושולפת רק את מה שמוצג.
 
-   ⭐ **כתיבה כפולה, ובכוונה.** הרשומות נכתבות גם לטבלאות וגם לבלוק ה-kv
-      הישן. הבלוק הוא נקודת החזרה, וכל עוד הוא מתעדכן החזרה היא **החלפת
-      דגל אחד** ולא שחזור נתונים.
-      ⚠️ המחיר המודע: כתיבת ה-1.2MB לא נעלמה כאן — היא נעלמת בסבב
-      שיפסיק את הכתיבה הכפולה, וזה הטריגר שרשום ב-`migrations/003`.
-      מה שכן הושג כבר עכשיו: המשיכה והמיזוג בענן הם פר-רשומה.
+   ⚠️ **הסנאפשוט הוא יחידת הארכיון** — שורה ליום ⛔ ולא שורה לרשומה שבתוכו:
+      ⭐ הוא היחידה שמנוע המיזוג מכיר (`archiveKey`), יש לו מטא-דאטה
+      ו-tombstone משלו, ובתוכו כבר רץ מיזוג פר-רשומה. ⛔ פירוקו לרשומות
+      הוא מנוע מיזוג אחר, ⚠️ ולא תופעת לוואי.
+   ⚠️ **והצד המקומי נפרד:** localStorage מחזיק שני מפתחות
+      (`ya_entries`+LS / `ya_archive`+LS) ושני מערכים, ⭐ ולכן מודול האחסון,
+      מודול ה-⏳ ומדיניות הפינוי אינם תלויים בייצוג שבענן.
 
-   ⭐ **בטוח לפרוס לפני שהמיגרציה רצה.** `yaRowsGet` מחזירה `ok:false`
-      כשהטבלה חסרה או שהמשיכה נכשלה, וכל אתר קריאה נופל-חזרה לבלוק ה-kv —
-      כלומר בדיוק ההתנהגות שלפני הסבב. זה מה שמאפשר את הסדר שהסבב מחייב:
-      קוד קודם, מיגרציה אחרי שהגיבוי אומת.
-
-   ⛔ `YA_ROWS = false` הוא נתיב החזרה המלא — הקריאה חוזרת ל-kv,
-      הכתיבה ממשיכה לשם ממילא, ואין מה לשחזר במסד. ר' `migrations/003`.
    ⛔ `client_id` נגזר ממפתח המיזוג ואינו uuid חדש — לרשומה כאן
       כבר יש זהות שנוצרה במכשיר (`id`/`gdate`), ומזהה שני ועצמאי היה מאפשר
       לאותה רשומה לוגית להתקיים פעמיים. הנוסחה זהה לזו שב-`migrations/002`,
       ו⛔ אין לשנות אחד מהם בלי השני.
-   ══════════════════════════════════════════════════════════════════════════ */
-/* ══════════════════════════════════════════════════════════════════════════
-   ⭐ איחוד הארכיון — טבלה אחת ודגל `archived`
-   ══════════════════════════════════════════════════════════════════════════
-   בעבר היו **שתי** טבלאות לאותו סוג נתונים, `ya_entries` ו-`ya_archive`,
-   מפני שכך הן ישבו ב-`kv`. וב-`kv` הפיצול היה **מנגנון פיצוי**: כל המפתח
-   נמשך כערך יחיד, ולכן הדרך היחידה למנוע מהיומן להיטען בשלמותו בכל פתיחה
-   הייתה להעביר את הישן הצידה. ⭐ הטבלאות המובנות ביטלו את הסיבה — יש
-   אינדקס, ואפשר לשלוף **רק את מה שמוצג** — ולכן הפיצול נשאר בלי מה שהוליד
-   אותו — מנגנון פיצוי ששרד את הסיבה לו הוא חוב טכני שנראה
-   כמו ארכיטקטורה.
-
-   מעכשיו שני סוגי הרשומות יושבים ב-`ya_entries`, ומה שמפריד ביניהם הוא
-   **עמודת `archived`** — כלומר «העברה לארכיון» היא עדכון דגל ולא העברה בין
-   מקומות. השליפה מסננת עליו (`.eq('archived', …)`), וזו בדיוק ה«שליפה רק של
-   מה שמוצג» שהמנגנון הישן חיקה ביד.
-
-   ⚠️ **מה **לא** השתנה, ובכוונה:** הסנאפשוט נשאר יחידת הארכיון — שורה ליום
-      ולא שורה לרשומה שבתוכו. הנימוק המלא בראש `migrations/002` ועומד בעינו:
-      הסנאפשוט הוא היחידה שמנוע המיזוג מכיר (`archiveKey`), יש לו מטא-דאטה
-      ו-tombstone משלו, ובתוכו כבר רץ מיזוג פר-רשומה. הסבב הזה מאחד **טבלאות**,
-      לא ממוסס סנאפשוטים. ⛔ ואין לפרק אותם כתופעת לוואי של הסבב הזה — זה
-      מנוע מיזוג אחר, והוא נרשם כפער עם טריגר.
-   ⚠️ **והצד המקומי לא נגע:** localStorage מחזיק את אותם שני מפתחות
-      (`ya_entries`+LS / `ya_archive`+LS) ואת אותם שני מערכים, ולכן מודול
-      האחסון הקפוא, מודול ה-⏳ ומדיניות הפינוי אינם מושפעים כלל.
-
-   ⛔ אין להחזיר כתיבה כפולה ל-`ya_archive` — הטבלה נגרעה מהמסד, ⚠️ וכתיבה
-      אליה נכשלת בכל קריאה: ⭐ `ya_archive` הוא **מפתח localStorage** בלבד,
-      ⛔ ואינו שם של טבלה.
+   ⛔ אין להחזיר כתיבה כפולה ל-`ya_archive` — ⚠️ כתיבה לשם נכשלת בכל
+      קריאה: ⭐ `ya_archive` הוא **מפתח localStorage** בלבד, ⛔ ואינו שם של
+      טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
 var YA_ROWS = true;
 var YA_ARC_UNIFIED = true;
@@ -1143,18 +1108,16 @@ function yaRowOf(kvKey, rec, tbl) {
 /* ══════════════════════════════════════════════════════════════════════════
    סדר טעינה יציב לשורות הענן
    ══════════════════════════════════════════════════════════════════════════
-   בעבר הנתונים נטענו כמערך יחיד מ-`kv`, ולכן הם הגיעו **בסדר שבו נשמרו**.
-   שכבת השורות החליפה את זה בשאילתה בלי `ORDER BY` — ו-Postgres אינו מבטיח סדר
-   בלעדיה. הסדר נקבע לפי תוכנית הריצה ומשתנה בין טעינה לטעינה.
+   ⚠️ Postgres אינו מבטיח סדר בלי `ORDER BY` — ⭐ הסדר נקבע לפי תוכנית
+   הריצה ומשתנה בין טעינה לטעינה.
 
    ⚠️ וזה **לא** רק עניין של אסתטיקה: `getAllArchiveDays` ממפתחת יום לפי `gdate`,
       ומטא-הדאטה נלקחת מהסנאפשוט ה**ראשון** שנתקלים בו. כשקיימים שני סנאפשוטים
-      לאותו יום — וקיימים, ר' `checkDayChange` — התאריך העברי של אותו יום התחלף
-      בין טעינה לטעינה. נמדד ברמת אביב: «11 אוגוסט 2026» הופיע פעם כ«כ״ח אב»
-      ופעם כ«כ״ט אב», משני סנאפשוטים מתחרים.
+      לאותו יום, ⛔ בלי סדר יציב התאריך העברי של אותו יום מתחלף בין טעינה
+      לטעינה.
 
    ⛔ אין להסיר את הסדר משני המקומות — `order()` בשאילתה נותן דטרמיניזם
-      ברמת המסד, ו-`yaSortRows` נותן את הסדר ה**סמנטי** שהיה לפני המעבר: ארכיון
+      ברמת המסד, ו-`yaSortRows` נותן את הסדר ה**סמנטי**: ארכיון
       מהיום החדש לישן (כמו `ARCHIVE.unshift`), רשומות לפי `id` יורד (כמו המיון
       שרץ בסוף המיזוג). שאילתה לבדה אינה מספיקה — `rec_key` הוא מחרוזת,
       ומיון לקסיקוגרפי שלה אינו סדר תאריכים.
@@ -1547,8 +1510,8 @@ function arcCleanupCorrupted() {
       }
     }
     // א2. סנאפשוט מתוארך שה-hdate שלו שבור — נרפא גם הוא
-    // ⛔ בעבר הריפוי ישב **בתוך** ענף «אין gdate» — ולכן
-    //    סנאפשוט שכבר היה לו gdate ו-hdate שבור לא רופא לעולם.
+    // ⛔ הריפוי אינו **בתוך** ענף «אין gdate» — ⚠️ שם סנאפשוט שיש לו
+    //    gdate ו-hdate שבור לא היה נרפא לעולם.
     // ⛔ הגזירה היא מ-gdate בלבד ולא מהשעון — שעון היה נותן את
     //    היום שבו רץ הניקוי במקום את יומו של הסנאפשוט.
     if (snap.gdate && !hasHebMonth(snap.hdate)) {
@@ -1653,6 +1616,11 @@ function yaSyncLog(action, key, recordCount, details) {
  *  ⭐ החלפה הלוך-ושוב מחזירה את אותו שם ⛔ והזיכרון בינתיים כבר הוחלף. */
 var _yaPullLogged = false;
 
+/*  ⛔ הציור שאחרי משיכה — ⚠️ כל המסכים שהמשיכה משנה, ⭐ והוא עובר
+ *  ב-`pullRender`: ⛔ הגדרות ושורות יומן נבנים מחדש, ⚠️ ושדה פתוח בהם נמחק. */
+function yaPullDraw() {
+  buildCatGrid(); buildTaskBtns(); buildSubBtns(); renderLog(); renderSettings();
+}
 async function syncFromCloud() {
   // אילו משיכות באמת נכשלו — ההודעה הסופית חייבת לתאר את מה שקרה בפועל.
   var failed = [];
@@ -1671,11 +1639,8 @@ async function syncFromCloud() {
   }
   async function pull(key, label) { return (await pullRes(key, label)).data; }
   try {
-    // משתמש ב-sbGet, שמשתמש נכון בלקוח של Supabase
-    // (בגרסה הקודמת היה באג: getSB() מחזירה אובייקט לקוח ולא מחרוזת מפתח)
-
-    // CATS: מיזוג ברמת קטגוריה (מפתח = אות). קודם: הענן דרס תמיד, וקטגוריה
-    // שנוספה במכשיר לא-מסונכרן נעלמה.
+    // CATS: מיזוג ברמת קטגוריה (מפתח = אות) — ⛔ ולא דריסה מהענן:
+    // ⚠️ קטגוריה שנוספה במכשיר לא-מסונכרן הייתה נעלמת.
     var cloudCats = await pull('cats', 'קטגוריות');
     var cloudCatsReset = String(await pull(CATS_RESET_KEY, 'חותמת ניקוי קטגוריות') || '');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
@@ -1688,7 +1653,7 @@ async function syncFromCloud() {
        *  ⛔ **והיא נבדקת לפני האורך** — ⚠️ כאן, ובניגוד ל-`SUBS`, המיזוג
        *  מותנה ברשימה לא-ריקה: ⭐ רשימה שרוקנה בענן בכוונה מגיעה ריקה,
        *  ⛔ ותנאי אורך שקודם לחותמת היה מדלג עליה — ⚠️ והמכשיר המזוהם
-       *  היה דוחף את שלו חזרה בסבב הבא. */
+       *  היה דוחף את שלו חזרה במחזור הסנכרון הבא. */
       if (cloudCatsReset > _catsResetSeen) {
         CATS = Array.isArray(cloudCats) ? cloudCats : [];
         _catsResetSeen = cloudCatsReset;
@@ -1738,8 +1703,8 @@ async function syncFromCloud() {
       console.warn('[sync] מפת חותמות תתי-המשימות לא הגיעה — המיזוג נדחה, ואין ראיה שהענן חדש יותר');
     }
 
-    // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones). קודם: איחוד לפי id
-    // בלבד — עדכון שנעשה במכשיר אחד לא ניצח את הגרסה הישנה של השני.
+    // ENTRIES: מיזוג ברמת רשומה (updatedAt + tombstones) ⛔ ולא איחוד לפי id
+    // בלבד — ⚠️ שם עדכון שנעשה במכשיר אחד אינו גובר על הגרסה הישנה של השני.
     /* ⛔ מהטבלה בלבד, ⛔ ובלי נפילה-חזרה לערך השלם — ⚠️ וכשל אינו נכנס
        לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
        את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
@@ -1767,8 +1732,8 @@ async function syncFromCloud() {
     }
 
     // ARCHIVE: מיזוג סנאפשוטים לפי gdate + מיזוג הרשומות שבתוך כל סנאפשוט.
-    // קודם: "למי שיש יותר רשומות מנצח" — שני מכשירים שהוסיפו רשומות לאותו יום
-    // איבדו את הצד הקטן יותר.
+    // ⛔ ולא "למי שיש יותר רשומות מנצח" — ⚠️ שני מכשירים שהוסיפו רשומות
+    // לאותו יום היו מאבדים את הצד הקטן יותר.
     var _rowsA = await yaRowsGet('ya_archive');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
@@ -1793,20 +1758,16 @@ async function syncFromCloud() {
     // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
     arcCleanupCorrupted();
 
-    buildCatGrid();
     // מיישב את selCat אחרי ש-CATS הוחלף — ההפניה הישנה אינה במערך החדש
     if (selCat) {
       selCat = CATS.find(function(c){ return c.letter === selCat.letter && isLive(c); }) || null;
     }
-    buildTaskBtns();
-    buildSubBtns();
-    renderLog();
     // הסימון לפני הרינדור — שורת המצב שבאזור המצב נבנית בתוך renderSettings.
     if (failed.length === 0) _yaMarkSynced();
-    renderSettings();
+    pullRender(yaPullDraw);
     if (failed.length === 0 && !_yaPullLogged) { _yaPullLogged = true; yaSyncLog('pull', null, null); }
     if (failed.length === 0) {
-      toast(MSG_SYNCED, null, 'brand');
+      toast(MSG_SYNCED, null, 'good');
     } else if (failed.length >= 5) {
       toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
     } else {
@@ -1975,7 +1936,7 @@ function checkDayChange() {
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
     ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
     lsSetArray("ya_entries"+LS, ENTRIES, _yaRecTs);
-    toast(MSG_DAY_ARCHIVED, null, 'brand');
+    toast(MSG_DAY_ARCHIVED, null, 'good');
   }
   lsSet("ya_last_day"+LS, today);
 }
@@ -2146,13 +2107,11 @@ function tapFlash(btn) {
 /* ══════════════════════════════════════════════════════════════════════════
    בניית סנאפשוט ארכיון — מסלול אחד לידני ולאוטומטי
    ══════════════════════════════════════════════════════════════════════════
-   ⭐ בעבר היו כאן **שני** מסלולי יצירה עם שדות שונים: `autoArchiveDay`
-      (נקרא מהוספה/מחיקה/עריכה) מילא `hdate`, `gdate`, `day`, `date` ו-`name`,
-      ואילו `checkDayChange` (מעבר יום) מילא `name` ו-`date` בלבד — בלי `gdate`,
-      בלי `hdate` ובלי `day`. זה שורש שתי תקלות שנמדדו:
-      • הסנאפשוט נפל לדלי «לא ידוע» בארכיון, כי אין ממה לגזור חודש ושנה.
-      • `archiveKey` נפל ל-`i:<id>` במקום ל-`g:<gdate>`, ולכן אותו יום הופיע
-        כשתי שורות מתחרות בענן (נמדד ברמת אביב: «11 אוגוסט 2026»).
+   ⭐ **מסלול יצירה אחד** לשני הקוראים — `autoArchiveDay` (הוספה/מחיקה/
+      עריכה) ו-`checkDayChange` (מעבר יום): ⚠️ סנאפשוט בלי `gdate`, `hdate`
+      ו-`day` נופל לדלי «לא ידוע» בארכיון, ⛔ ו-`archiveKey` שלו נופל
+      ל-`i:<id>` במקום ל-`g:<gdate>` — ⚠️ ואותו יום מופיע כשתי שורות
+      מתחרות בענן.
 
    ⛔ אין להחזיר מסלול יצירה שני — רשומה אוטומטית חייבת להיות זהה
       בשדותיה לרשומה ידנית, ושדה שנשאר ריק בשקט הוא בדיוק מה שייצר את
@@ -2221,7 +2180,6 @@ function addEntry() {
     cat: selCat.letter,
     task: task, sub: sub, notes: notes, count: count,
     updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
-    // השעה הוסרה
   };
   ENTRIES.unshift(entry);
   // ⚠️ הרשומה נשמרה במכשיר בלבד — סימון ⏳ יורד רק כש-`sbSet` תחזיר `ok`.
@@ -2502,7 +2460,7 @@ async function yaSyncPushNow() {
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
       /*  ⚠️ בלי רשת השמירה הצליחה במכשיר ⛔ ואינה שגיאה — ⭐ הנתון בתור
        *  ויעלה בחזרת הרשת; ⛔ כשל עם רשת הוא שגיאה. */
-      if (!navigator.onLine) toast(MSG_SAVED_LOCAL, null, 'brand');
+      if (!navigator.onLine) toast(MSG_SAVED_LOCAL, null, 'good');
       else toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
@@ -2516,7 +2474,7 @@ async function yaSyncPushNow() {
     if (ctxStale(_ep)) return;
     if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
-    toast(MSG_SAVED_CLOUD, null, 'brand');
+    toast(MSG_SAVED_CLOUD, null, 'good');
 }
 
 // Native share bridge: in the WebView APK the shell decodes the image to a cache file
@@ -2528,8 +2486,8 @@ async function yaSyncPushNow() {
 // ⚠️ הגשר הוא חוזה בין הדף ל-Java, ולכן החתימה ירדה בשני הצדדים
 //    באותו קומיט; ⛔ הסרה בצד אחד בלבד שוברת את השיתוף.
 //
-// ⚠️ שני גשרים, ולא במקרה. מאז שהמעטפת טוענת את האתר **מהרשת** ולא מנכסים
-// מוטבעים, גשר מקורי הוא הרשאה שניתנת לדף שמגיע מהרשת — ולכן הוא חייב להיות
+// ⚠️ שני גשרים, ולא במקרה. המעטפת טוענת את האתר **מהרשת** ולא מנכסים
+// מוטבעים, ⭐ ולכן גשר מקורי הוא הרשאה שניתנת לדף שמגיע מהרשת — ולכן הוא חייב להיות
 // מוגבל לדומיין שלנו:
 //   • `AndroidShareBridge.postMessage` — `WebViewCompat.addWebMessageListener`,
 //     שבו **WebView עצמו** בודק את רשימת המקורות המותרים, פר-frame, לפני
@@ -2711,16 +2669,12 @@ function editTaskInline(ci, ti) {
    ⛔ **אין להוסיף שער סיסמה נפרד מעל מסך ההגדרות.** ההרשאה נגזרת
    מהמשתמש המחובר בלבד, ואין שכבה שנייה מעליה.
 
-   **הרקע — וזו אינה זהירות תיאורטית.** באחת האפליקציות היה שער כזה בדיוק
-   (`admin_pass` ב-`sl_settings`), והוא הוסר משתי סיבות שכל
-   אחת מהן מספיקה לבדה:
-   1. הוא יצר **שכבת הרשאה כפולה** שלא הייתה קיימת באף אחת
-      מהאחרות — מנגנון שני עם מסך משלו, מסלול שינוי משלו ותחזוקה
-      משלו, לאותו אדם.
-   2. **בהתקנה טרייה הוא נפל חזרה למחרוזת `'admin'`** — כלומר השער
-      נפתח לכל מי שהקליד «admin». מה שעמד בין ההתקנה לשער
-      הפתוח היה שורת זריעה בקובץ הסכימה; הגנה שתלויה בכך
-      שמישהו הריץ קובץ אינה הגנה.
+   **הנימוק — שתי סיבות, וכל אחת מהן מספיקה לבדה:**
+   1. שער כזה הוא **שכבת הרשאה כפולה** — מנגנון שני עם מסך משלו,
+      מסלול שינוי משלו ותחזוקה משלו, לאותו אדם.
+   2. **בהתקנה טרייה שער כזה נופל חזרה לערך ברירת מחדל** — ⚠️ ונפתח
+      לכל מי שמקליד אותו: ⛔ הגנה שתלויה בכך שמישהו הריץ שורת זריעה
+      בקובץ הסכימה אינה הגנה.
 
    ⛔ **ואין לזרוע ערך ברירת מחדל לסיסמה או לתפקיד בשום מקום** — לא
    בסכימה, לא במיגרציה, לא בקוד ולא בקובץ בדיקה. ברירת מחדל
@@ -2764,7 +2718,7 @@ function renderSettings() {
                     + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
                     + '<span class="grip u-c-text3 u-fs-1 u-ml-1">⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-brand-ink">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
                     + '</div>';
                 }).join('')
@@ -2779,7 +2733,7 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon grip">⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-primary-ink">✏️</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="u-bg-none u-bd-none u-cur-p u-fs-1 u-p-1-2 u-c-brand-ink">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
             + subsSection
@@ -2874,15 +2828,13 @@ var arcSelMonth = null;
 var arcSelDayKey = null;  // מחרוזת gdate
 var arcEditMode = false;
 
-// סדר החודשים לניווט בארכיון. "מרחשון" הוסר — monthKeyOf ממפה אותו ל"חשון",
+// סדר החודשים לניווט בארכיון. ⛔ אין בו "מרחשון" — monthKeyOf ממפה אותו ל"חשון",
 // אחרת אותה שנה מקבלת שני כפתורי חשוון. "אדר" (שנה פשוטה) ו"אדר א׳"/"אדר ב׳"
 // (שנה מעוברת) חיים זה לצד זה: בכל שנה נתונה מופיע רק אחד מהמצבים.
 var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א׳","אדר ב׳","ניסן","אייר","סיון","תמוז","מנחם אב","אלול"];
-// דלי "לא ידוע" — יום שאי אפשר לפענח את תאריכו העברי. קודם הוא נשמט לגמרי
-// מרשימת השנים והרשומות שבו היו בלתי נגישות; עכשיו הן נשארות בהישג יד.
+// דלי "לא ידוע" — יום שאי אפשר לפענח את תאריכו העברי. ⛔ הוא אינו נשמט
+// מרשימת השנים — ⚠️ אחרת הרשומות שבו בלתי נגישות.
 var HUNKNOWN = "לא ידוע";
-// מפתח יום מוטמע בתוך מחרוזת JS בתוך אטריביוט onclick — חייב בריחה
-function jsQ(s) { return String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
 
 function extractYM(hdate) {
   function unknown() { return {year: HUNKNOWN, month: HUNKNOWN, order: 99}; }
@@ -2974,9 +2926,8 @@ function getAllArchiveDays() {
       name:normHDate(snap.name||""), entries:[], seen:{}, snapId:snap.id};
     // merge entries from snapshot if not already there
     // ⛔ הבדיקה מול `seen` נדרשת גם כאן ולא רק בלולאת ENTRIES — כששני
-    //    סנאפשוטים ממופתחים לאותו יום, הרשומה המשותפת נדחפה פעמיים ונספרה
-    //    פעמיים בכפתור היום. נמדד ברמת אביב: «11 אוגוסט 2026» הציג 6 רשומות
-    //    במקום 5. ה-`seen` כבר נכתב כאן מאז ומעולם — רק אף אחד לא קרא אותו.
+    //    סנאפשוטים ממופתחים לאותו יום, ⚠️ בלעדיה הרשומה המשותפת נדחפת
+    //    פעמיים ונספרת פעמיים בכפתור היום.
     (snap.entries||[]).forEach(function(e){
       if (e && e.id != null) {
         if (days[k].seen[String(e.id)]) return;                   // כבר נכנסה מסנאפשוט אחר
@@ -3088,7 +3039,7 @@ function renderArcYears() {
   var nowYM = getNowHebYM();
   var allYears = {};
   // בונה את רשימת השנים **רק** משנים שיש להן רשומות במוסד הזה.
-  // ⛔ אין לזרוע מטווח קבוע — כך הוצגו בעבר שנים ריקות מדומות.
+  // ⛔ אין לזרוע מטווח קבוע — ⚠️ טווח קבוע מציג שנים ריקות מדומות.
   var withData = getYearsWithData();
   Object.keys(withData).forEach(function(y){ allYears[y] = true; });
   // תמיד כולל את השנה העברית הנוכחית (ייתכן שריקה — וזו תצוגת ברירת המחדל התקינה).
@@ -3204,7 +3155,7 @@ function renderArcDetail() {
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div class="u-d-flex u-ai-c u-g-4 u-mb-5">'+
     '<div class="u-fx-1">'+
-      '<div class="u-ff-frank u-fs-4 u-fw-900 u-c-primary-ink">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div class="u-ff-frank u-fs-4 u-fw-900 u-c-brand-ink">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
       '<div class="u-fs-1 u-c-text2">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
     '</div>'+
     '<button class="u-fs-1 u-p-3-5 btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
@@ -3224,7 +3175,7 @@ function renderArcDetail() {
         '<span class="u-fw-700 u-c-text">'+esc(e.task)+'</span>'+
         (e.sub ? '<span class="u-c-text3">→</span><span class="u-c-text3">'+esc(e.sub)+'</span>' : '')+
         (e.notes ? '<span class="u-c-text3 u-fs-1 u-fx-1 u-ta-l"> · '+esc(e.notes)+'</span>' : '<span class="u-fx-1"></span>')+
-        (e.count ? '<span class="u-c-primary-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
+        (e.count ? '<span class="u-c-brand-ink u-fs-1 u-fw-700">×'+esc(e.count)+'</span>' : '')+
         '</div>';
     });
   }
@@ -3232,7 +3183,7 @@ function renderArcDetail() {
   // מצב עריכה: הוספת רשומה
   if (arcEditMode) {
     html += '<div class="u-bt-2-dashed-accent u-mt-5 u-pt-5">'+
-      '<div class="u-fs-1 u-fw-700 u-c-primary-ink u-mb-3">+ הוסף רשומה</div>'+
+      '<div class="u-fs-1 u-fw-700 u-c-brand-ink u-mb-3">+ הוסף רשומה</div>'+
       '<div class="u-d-flex u-g-3 u-fwr-wrap u-ai-c ksave">'+
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="u-r-3 u-bd-15-solid-border u-p-3-4 u-ff-heebo u-fs-2">'+
       liveOnly(CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
@@ -3377,7 +3328,7 @@ function _yaMarkSynced() {
   _yaLastSyncAt = Date.now();
   // הכישלון עצמו נשאר שקט כאן (הפולינג הוא כל 3 שניות — טוסט על כל מחזור
   // היה רעש), אבל **החזרה** כן נאמרת: היא הרגע שבו מה שהמתין מתחיל לעלות.
-  if (_yaNetWarned) { _yaNetWarned = false; toast(MSG_SYNC_BACK, null, 'brand'); }
+  if (_yaNetWarned) { _yaNetWarned = false; toast(MSG_SYNC_BACK, null, 'good'); }
   // ⛔ הגיבוי והיומן **אינם** נתלים כאן — הניסוח הראשון
   //    תלה אותם בשיחה מוצלחת עם הענן, כלומר בפעילות סנכרון. זו בדיוק
   //    הצורה שהשביתה גיבוי ל-25 יום בלי שאיש ידע: מנגנון
@@ -3414,7 +3365,7 @@ async function yaPullFromCloud() {
         ENTRIES = mergeEntries(ENTRIES, cloudEntries);
         ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
         lsSetArray("ya_entries"+_ls, ENTRIES, _yaRecTs);
-        renderLog();
+        pullRender(renderLog);
         console.log("[sync] merged, entries=" + liveOnly(ENTRIES).length +
                     " (+" + (ENTRIES.length - liveOnly(ENTRIES).length) + " tombstones)");
       }
@@ -3429,7 +3380,7 @@ async function yaPullFromCloud() {
         lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, ARCHIVE), _yaRecTs);
         // הארכיון מוצג רק כשלוחצים על הלשונית — רענון רק אם הוא פתוח כרגע
         var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) renderArcDetail();
+        if (arcPanel && !arcPanel.classList.contains("u-d-none") && arcSelDayKey) pullRender(renderArcDetail);
       }
     }
   } catch(e) { _yaNetWarned = true; console.error("[sync] error:", e); }
@@ -3440,7 +3391,7 @@ async function yaPullFromCloud() {
 /* ══════════════════════════════════════════════════════════════════════════
    מציג טבלת התשתית — משיכה מ-GitHub ופירוק
    ══════════════════════════════════════════════════════════════════════════
-   ⛔ הקובץ נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד מתיישן בסבב הבא,
+   ⛔ הקובץ נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד מתיישן בשינוי הבא,
       ⭐ והמסך הזה נועד להראות את **המצב עכשיו**.
    ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
       הכשל השקט.
@@ -3722,7 +3673,7 @@ function yaPickYeshiva() {
   var body = '<div class="u-d-flex u-fd-col u-g-5">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
-    body += '<button class="btn-sm u-bg-primary-fill u-c-on-primary u-p-6 u-fs-4 u-fw-800' +
+    body += '<button class="btn-sm u-bg-brand-fill u-c-on-brand u-p-6 u-fs-4 u-fw-800' +
             (cur ? ' u-op-55' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
             esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
@@ -3788,7 +3739,7 @@ function selectYeshiva(y) {
   //    כפתור אחד, זהה בשני המוסדות, ואותה פונקציה מאחוריו.
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
-    '<button class="u-bg-primary-fill u-c-on-primary btn-sm" ' +
+    '<button class="u-bg-brand-fill u-c-on-brand btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
   // עמידות אחסון: המפתחות תלויי-מוסד, ולכן המדיניות נבנית רק עכשיו —
@@ -3877,12 +3828,12 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
+    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-3 u-bg-warn-soft u-r-2 ksave">' +
     '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="u-w-60 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
     '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif">' +
-    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="entry-save" data-ksave data-id="' + esc(id) + '" class="u-p-2-5 u-bg-brand-fill u-c-on-brand u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
     '<button data-act="entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">ביטול</button>' +
     '</div>';
   container.innerHTML = '';
@@ -3914,25 +3865,22 @@ function arcEditEntry(gdateKey, entryId) {
   if(!d) return;
   var e = d.entries.find(function(x){ return idEq(x.id, entryId); });
   if(!e) return;
-  // מאתר את אלמנט השורה ומחליף אותו בטופס עריכה במקום
-  var rows = document.querySelectorAll('.arc-entry-row');
+  /*  ⛔ השורה מאותרת לפי `data-key` ו-`data-id` שעל כפתור העריכה — ⚠️ חיפוש
+   *  מחרוזת `onclick` בתוך השורה לא מצא דבר מאז שהמאפיין ירד, ⭐ והעריכה
+   *  בארכיון לא נפתחה כלל. ⛔ וההשוואה בערך ⛔ ולא בבורר — ⚠️ מפתח היום
+   *  עברי, ⭐ ו-`cssQ` מסנן אותו לספרות בלבד. */
   var target = null;
-  var qk = jsQ(gdateKey);
-  rows.forEach(function(r){
-    // ⛔ `idArg` חובה — מזהה טקסט, ⛔ והציטוט נשבר בשקט בלעדיו.
-    if(r.innerHTML.indexOf('arcDeleteEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1 ||
-       r.innerHTML.indexOf('arcEditEntry(\'' + qk + '\',' + idArg(entryId) + ')') > -1) {
-      target = r;
-    }
+  document.querySelectorAll('[data-act="arc-entry-edit"]').forEach(function (b) {
+    if (b.getAttribute('data-key') === gdateKey && idEq(b.getAttribute('data-id'), entryId)) target = b.closest('.arc-entry-row');
   });
   if(!target) return;
   target.innerHTML =
-    '<div class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
+    '<div data-editing class="u-d-flex u-g-3 u-ai-c u-fwr-wrap u-p-2 u-bg-warn-soft u-r-2 u-w-100p ksave">' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="u-fx-2 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="u-w-55 u-p-2-4 u-bd-1-solid-border u-r-1 u-ff-heebo-sans-serif u-fs-2">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="u-fx-3 u-p-2-4 u-bd-1-solid-border u-r-1 u-minw-80 u-ff-heebo-sans-serif u-fs-2">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="u-p-2-5 u-bg-primary-fill u-c-on-primary u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="u-p-2-5 u-bg-brand-fill u-c-on-brand u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">שמור</button>' +
     '<button data-act="arc-entry-edit-cancel" data-kesc class="u-p-2-5 u-bg-card-2 u-c-text2 u-bd-none u-r-1 u-cur-p u-ff-heebo-sans-serif">בטל</button>' +
     '</div>';
 }
@@ -3971,16 +3919,16 @@ function arcSaveEntry(gdateKey, entryId) {
   //    `getAllArchiveDays` — המפה ממופתחת ב-gdate **גולמי**
   //    (`"3/09/2025"`), ואילו שלוש נקודות הקריאה — `yaDirtyRows`,
   //    `HW_CFG.specs[].isPending` ו-`mergeArchive` — קוראות
-  //    `PK_ARC + archiveKey(r)`, כלומר `arc:g:3/09/2025`. בעבר נכתב
-  //    כאן `arc:3/09/2025`, ולכן **אף אחת מהשלוש לא ראתה את הסימון**:
-  //    עריכת רשומה בארכיון לא נחשבה «לדחיפה», ושער הפינוי של החלון החם
-  //    היה רשאי לפנות סנאפשוט שהעריכה שלו טרם עלתה.
+  //    `PK_ARC + archiveKey(r)`, כלומר `arc:g:3/09/2025`. ⚠️ סימון במפתח
+  //    המפה (`arc:3/09/2025`) **אינו נראה לאף אחת מהשלוש**: ⛔ עריכת רשומה
+  //    בארכיון אינה נחשבת «לדחיפה», ושער הפינוי של החלון החם רשאי לפנות
+  //    סנאפשוט שהעריכה שלו טרם עלתה.
   touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
   saveEntries();
   saveArchive();
   renderArcDetail();
   renderLog();
-  toast(MSG_SAVED, null, 'brand');
+  toast(MSG_SAVED, null, 'good');
 }
 
 </script>
