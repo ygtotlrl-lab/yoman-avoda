@@ -1,11 +1,7 @@
 # יומן עבודה — Native WebView APK
 
 A native Android **WebView** shell (not a TWA) that loads the **live site** over the
-network:
-
-```
-https://ygtotlrl-lab.github.io/yoman-avoda/
-```
+network — כתובת האפליקציה, `android.url` שבתצורה.
 
 It replaces the PWABuilder TWA so that image sharing can attach the file via a
 native bridge.
@@ -14,10 +10,10 @@ native bridge.
 
 | | |
 |---|---|
-| **Package ID** | `com.yoman.avoda` — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
-| **טוען** | `https://ygtotlrl-lab.github.io/yoman-avoda/` — **מהרשת**, לא מנכסים מוטבעים |
-| **versionCode** | 24 — ⛔ עולה בכל שינוי תחת `android/`: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
-| **minSdk / targetSdk** | 21 / 34 |
+| **Package ID** | שם החבילה — `android.package` שבתצורה — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
+| **טוען** | כתובת האפליקציה — `android.url` שבתצורה — **מהרשת**, לא מנכסים מוטבעים |
+| **versionCode** | ⛔ עולה בכל שינוי ב-APK: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
+| **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ זהים בכולן |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
 | **גשר שיתוף** | מוגבל לדומיין שלנו — ר' הפרק הבא |
@@ -129,9 +125,9 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **קובץ** | ⛔ אינו בריפו — GitHub Secret `KEYSTORE_B64`, מפוענח לקובץ זמני בזמן בנייה ונמחק אחריה (PKCS12, RSA 4096) |
 | **alias** | ⛔ אינו מוקלד — `sign-apk.sh` גוזר אותו מהמפתח עצמו |
 | **storepass / keypass** | ⛔ אינה בריפו — GitHub Secret `KEYSTORE_PASS` |
-| **SHA256** | `C1:03:A4:39:26:F0:9B:8F:6D:4E:DB:1A:68:2F:13:37:5A:AC:E2:08:50:72:A6:E1:CE:1D:C8:70:0D:5B:6A:58` |
+| **SHA256** | טביעת המפתח — `signSha256` שבתצורה |
 
-אחרי חתימה מאמתים שה-SHA256 תואם לטבלה.
+אחרי חתימה מאמתים שה-SHA256 תואם לטביעה שבתצורה.
 
 > ⚠️ **המפתח הוחלף ב-2026-09-15.** APK חדש ⛔ אינו מתקין על גבי
 > התקנה שנחתמה במפתח הישן — נדרשת הסרה והתקנה מחדש, פעם אחת.
