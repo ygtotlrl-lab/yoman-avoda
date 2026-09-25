@@ -76,7 +76,7 @@ import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
          pendReload, pendTag, plBoot, plForget, plNum, plTouch,
          prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave,
-         sbWatch, schedulePush, tombBoot, tombPruneMerged } from './core/sync.js';
+         sbWatch, schedulePush, tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
@@ -455,11 +455,9 @@ var BK_CFG = {
   secrets: [],
   sources: function () {
     if (!KV_TABLE) return [];
-    /* ⭐ היומן והארכיון מגובים מטבלת השורות המאוחדת —
-       הכתיבה הכפולה ל-kv כובתה, ערכי ה-kv שלהם קפאו, וגיבוי שלהם היה
-       מגבה עבר. הדפוס הוא סריאליזציית שורות הטבלה
-       ל-`sh_backup`, כולל השורות המדוגלות `archived`. שאר המפתחות
-       נשארים מקורות `kv` — זה ביתם היחיד בענן. */
+    /* ⭐ היומן והארכיון מגובים מטבלת השורות המאוחדת — הדפוס הוא
+       סריאליזציית שורות הטבלה ל-`sh_backup`, כולל השורות המדוגלות
+       `archived`. שאר המפתחות נשארים מקורות `kv` — זה ביתם היחיד בענן. */
     var out = [{ kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',
                  eq: ['yeshiva', YESHIVA], order: 'rec_key', ts: 'updated_at' }];
     /* ⛔ `name` הוא המפתח בטבלת ההגדרות ⛔ והוא בלי תחילית — ⚠️ הטבלה
@@ -1088,16 +1086,14 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
       כבר יש זהות שנוצרה במכשיר (`id`/`gdate`), ומזהה שני ועצמאי היה מאפשר
       לאותה רשומה לוגית להתקיים פעמיים. הנוסחה זהה לזו שב-`migrations/002`,
       ו⛔ אין לשנות אחד מהם בלי השני.
-   ⛔ אין להחזיר כתיבה כפולה ל-`ya_archive` — ⚠️ כתיבה לשם נכשלת בכל
+   ⛔ אין לכתוב ל-`ya_archive` כטבלה — ⚠️ כתיבה לשם נכשלת בכל
       קריאה: ⭐ `ya_archive` הוא **מפתח localStorage** בלבד, ⛔ ואינו שם של
       טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
 var YA_ROWS = true;
 var YA_ARC_UNIFIED = true;
-/* ⭐ הטבלאות הן המאסטר, והכתיבה הכפולה ל-`kv` כבויה
-   (`YA_KV_LEGACY_WRITE`) — ⚠️ `cats`/`subs`/`subs_meta` אינם חלק
-   מהכיבוי: ⛔ ל-`kv` שלהם אין תחליף-שורות, והוא ביתם היחיד בענן. */
-var YA_KV_LEGACY_WRITE = false;
+/* ⭐ הרשומות והארכיון חיים בטבלת השורות בלבד — ⚠️ `cats`/`subs`/`subs_meta`
+   נשארים ב-`kv`: ⛔ אין להם תחליף-שורות, והוא ביתם היחיד בענן. */
 var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_archive' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
 function yaTableOf(kvKey) {
@@ -1126,6 +1122,7 @@ function yaRowOf(kvKey, rec, tbl) {
     rec_key: String(k),
     updated_at: Math.round(Number(recTs(rec)) || 0),
     deleted: !!(rec && rec.deleted),
+    deleted_at: (rec && rec.deleted) ? tombAt(recTs(rec)) : null,
     data: rec
   };
   // ⚠️ `gdate` נשמר לסנאפשוט — ⛔ הוא עמודת הסינון של הארכיון בענן,
@@ -1422,16 +1419,12 @@ function saveEntries() {
   var _ep = ctxEpoch();
   lsSetArray("ya_entries"+LS, ENTRIES, _yaRecTs);
   (async function(){
-    // ⭐ הטבלאות הן המאסטר — הכתיבה הכפולה לבלוק ה-kv כובתה,
-    //    ועֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד. כל עוד
-    //    `YA_KV_LEGACY_WRITE` כבוי, `sbSet` אינו נקרא כאן כלל.
+    // ⭐ עֵד הפינוי ואישור ה-⏳ נשענים על דחיפת השורות בלבד.
     var _rows = await pushTable('ya_entries', ENTRIES);
-    if (ctxStale(_ep)) return;
-    var _r = YA_KV_LEGACY_WRITE ? await sbSet("entries", ENTRIES) : null;
     if (ctxStale(_ep)) return;
     /*  ⛔ עֵד הפינוי מסומן בשכבה המשותפת ⛔ ואינו נכתב כאן שוב —
      *  ⚠️ שני אתרי סימון לאותו עֵד הם שתי הכרעות על אותה ראיה. */
-    var _ok = _rows.ok && (!YA_KV_LEGACY_WRITE || !!(_r && _r.ok));
+    var _ok = _rows.ok;
     if (_ok) pendConfirmPush(PK_ENTRY, _t0);
     if (_ok && _rows.n) yaSyncLog('push', 'ya_entries', _rows.n);
     /*  ⛔ החותמת מקודמת בשכבת הדחיפה ⛔ ואינה נכתבת כאן שוב — ⚠️ שכבת
@@ -1449,9 +1442,7 @@ function saveArchive() {
     //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('ya_archive', ARCHIVE);
     if (ctxStale(_ep)) return;
-    var _r = YA_KV_LEGACY_WRITE ? await sbSet("archive", ARCHIVE) : null;
-    if (ctxStale(_ep)) return;
-    var _ok = _rows.ok && (!YA_KV_LEGACY_WRITE || !!(_r && _r.ok));
+    var _ok = _rows.ok;
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) yaSyncLog('push', 'ya_archive', _rows.n);
     // ר' ההערה ב-saveEntries — החותמת מקודמת בשכבת הדחיפה
@@ -1716,10 +1707,8 @@ async function syncFromCloud() {
       ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('ya_entries'+LS, ENTRIES, _yaRecTs);
       pushTable('ya_entries', ENTRIES);
-      if (YA_KV_LEGACY_WRITE) sbSet('entries', ENTRIES);
     } else if (ENTRIES.length) {
-      pushTable('ya_entries', ENTRIES);
-      if (YA_KV_LEGACY_WRITE) sbSet('entries', ENTRIES); // הענן ריק — דוחפים את המקומי למעלה
+      pushTable('ya_entries', ENTRIES);   // הענן ריק — דוחפים את המקומי למעלה
     }
     }
 
@@ -1739,11 +1728,9 @@ async function syncFromCloud() {
       lsSetArray('ya_archive'+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
       // דוחף את הארכיון הממוזג בחזרה לענן כדי שכל המכשירים יישארו מסונכרנים
       pushTable('ya_archive', ARCHIVE);
-      if (YA_KV_LEGACY_WRITE) sbSet('archive', ARCHIVE);
     } else if (ARCHIVE.length) {
       // הענן ריק אך במכשיר יש נתונים — דוחף לענן
       pushTable('ya_archive', ARCHIVE);
-      if (YA_KV_LEGACY_WRITE) sbSet('archive', ARCHIVE);
     }
     }
 
@@ -2413,14 +2400,10 @@ async function yaSyncPushNow() {
      *  המושהה וגם ממודול הניסיון החוזר, ⭐ ושניהם יכולים להתעורר בדיוק
      *  בזמן ההחלפה. */
     var _ep = ctxEpoch();
-    // ⭐ הדחיפה כאן היא שורות — קודם המסלול הזה דחף את
-    //    בלוקי ה-kv בלבד, אסימטריה מול saveEntries/saveArchive שנסגרה
-    //    יחד עם כיבוי הכתיבה הכפולה.
+    // ⭐ הדחיפה כאן היא שורות — כמו ב-saveEntries/saveArchive.
     var rEntries = await pushTable("ya_entries", ENTRIES);
     if (ctxStale(_ep)) return;
     var rArchive = await pushTable("ya_archive", ARCHIVE);
-    if (ctxStale(_ep)) return;
-    if (YA_KV_LEGACY_WRITE) { await sbSet("entries", ENTRIES); await sbSet("archive", ARCHIVE); }
     if (ctxStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
