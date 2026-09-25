@@ -159,7 +159,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /*  ⛔ מציג טבלת התשתית — ⚠️ אין לו שורה בטבלת התשתית — ⚠️ הוא אינו יכולת תשתיתית אלא מסך תצוגה
    של האפליקציה הזו, ⭐ ולוגיקה עסקית אינה נכנסת לטבלה.
    ⛔ והתוכן נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד היה מקור אמת שני,
-   ⭐ ומי שקורא אותו רואה טבלה שכבר אינה התקן. */
+   ⭐ והוא מתיישן בכל שינוי בטבלה. */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
 .inf-hd{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);color:var(--on-brand);
