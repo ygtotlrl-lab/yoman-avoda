@@ -688,8 +688,7 @@ var RTY_CFG = {
 /* ⚠️ ביומן החותמת היא שורת `last_changed` שבטבלת המוסד (`KV_TABLE`),
    ⛔ ולכן `active()` נבדק מול `YESHIVA` — פולינג לפני בחירת מוסד
    היה נוגע בנתונים של דייר שאיש לא בחר.
-   ⛔ **וזה ההבדל היחיד ב-`active()` ביניהן** — ⚠️ בשלוש האחרות הוא
-   `sessActive()`, ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
+   ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
    ⚠️ `ok()` הוא `_yaMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
    ממנה את עֵד הפינוי — הוא `_yaPushedAt` פר-מפתח. */
 var PL_CFG = {
@@ -1202,7 +1201,7 @@ async function yaRowsGet(kvKey) {
   var t = yaTableOf(kvKey);
   if (!YA_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
-   *  המדוד: `_rowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
+   *  המדוד: `_rowsPaged` קורא לסגור שהוא מקבל **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
    *  של מוסד אחד עם עמוד 2 של השני ⛔ לתוך תוצאה אחת שנראית שלמה. */
   var yesh = YESHIVA, _ep = ctxEpoch();
@@ -2416,7 +2415,7 @@ function _buildReportDiv(cb, entries){
   var sortedPDF = yaSortEntries(src);
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catNameOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
-  var rows='';
+  var rowsHtml='';
   var globalTaskIdx = 0;
   catLetters.forEach(function(letter){
     var data=byCAT[letter];
@@ -2425,30 +2424,30 @@ function _buildReportDiv(cb, entries){
     tgs.forEach(function(tg,ti){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
-        rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
-        if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
-        rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
-        rows+='</tr>';cri++;
+        rowsHtml+='<tr>';
+        if(cri===0)rowsHtml+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+esc(data.name)+'</td>';
+        if(ii===0)rowsHtml+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+esc(tg.task)+'</td>';
+        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
+        rowsHtml+='</tr>';cri++;
       });
     });
   });
-  var li=logoUrl?'<img src="'+logoUrl+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
-  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--text);padding-bottom:12px;margin-bottom:14px;">'+li
+  var logoHtml=logoUrl?'<img src="'+esc(logoUrl)+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--text);padding-bottom:12px;margin-bottom:14px;">'+logoHtml
     +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:var(--text-3);letter-spacing:2px;">ב"ה | ימות המשיח</div>'
     +'<div style="font-size:26px;font-weight:900;color:var(--text);">יומן עבודה</div>'
-    +'<div style="font-size:11px;color:var(--text-2);">'+instTitle+'</div></div>'
-    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:var(--text);">'+dayLabel+'</div>'
-    +'<div style="font-size:11px;color:var(--text);">'+today+'</div><div style="font-size:10px;color:var(--text-3);">'+todayGreg+'</div></div></div>'
+    +'<div style="font-size:11px;color:var(--text-2);">'+esc(instTitle)+'</div></div>'
+    +'<div style="text-align:left;min-width:80px;"><div style="font-size:13px;font-weight:700;color:var(--text);">'+esc(dayLabel)+'</div>'
+    +'<div style="font-size:11px;color:var(--text);">'+esc(today)+'</div><div style="font-size:10px;color:var(--text-3);">'+esc(todayGreg)+'</div></div></div>'
     +'<table style="width:100%;border-collapse:collapse;font-family:Heebo,Arial,sans-serif;"><thead><tr style="background:var(--text);color:var(--card);">'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">קטגוריה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">משימה</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
     +'<th style="padding:9px 10px;text-align:center;font-size:12px;">כמות</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">הרחבה</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+    +'</tr></thead><tbody>'+rowsHtml+'</tbody></table>';
     // סה״כ = בדיוק השורות שבטבלה (רשומות היום הנבחר). קודם נספרו כל ENTRIES,
     // כך שהדוח שנשלח הציג סיכום שלא תאם את השורות שבו.
     div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:var(--text-3);border-top:1px solid var(--card-2);padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
@@ -2742,9 +2741,9 @@ function renderSettings() {
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
           var subs = SUBS[subKey(ci, t)] || SUBS[t] || [];
-          var subsSection = '';
+          var subsHtml = '';
           if(subs.length > 0) {
-            subsSection = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
+            subsHtml = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips" data-drag-axis="x">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" '
@@ -2769,7 +2768,7 @@ function renderSettings() {
             + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
-            + subsSection
+            + subsHtml
             + addSubRow
             + '</div>';
         }).join('')
@@ -3040,11 +3039,11 @@ function renderArcBreadcrumb() {
   parts.push('<span class="arc-crumb" data-act="arc-go-years">שנים</span>');
   if (arcSelYear) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" data-act="arc-nav-months" data-year="'+esc(arcSelYear)+'">' + arcSelYear + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-months" data-year="'+esc(arcSelYear)+'">' + esc(arcSelYear) + '</span>');
   }
   if (arcSelMonth) {
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb" data-act="arc-nav-days" data-year="'+esc(arcSelYear)+'" data-month="'+esc(arcSelMonth)+'">' + arcSelMonth + '</span>');
+    parts.push('<span class="arc-crumb" data-act="arc-nav-days" data-year="'+esc(arcSelYear)+'" data-month="'+esc(arcSelMonth)+'">' + esc(arcSelMonth) + '</span>');
   }
   if (arcSelDayKey) {
     var days = getAllArchiveDays();
@@ -3054,7 +3053,7 @@ function renderArcBreadcrumb() {
     var dayParts = label.split(" ");
     var shortLabel = dayParts.slice(0,2).join(" ");
     parts.push('<span class="arc-crumb-sep">›</span>');
-    parts.push('<span class="arc-crumb active">' + shortLabel + '</span>');
+    parts.push('<span class="arc-crumb active">' + esc(shortLabel) + '</span>');
   }
   bc.innerHTML = parts.join("");
 }
@@ -3090,7 +3089,7 @@ function renderArcYears() {
     var isNow = (y === nowYM.year);
     var hasDat = !!withData[y];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" data-act="arc-nav-months" data-year="'+esc(y)+'">' + y + '</button>';
+          + '" data-act="arc-nav-months" data-year="'+esc(y)+'">' + esc(y) + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -3120,12 +3119,12 @@ function renderArcMonths(year) {
     return ia - ib;
   });
 
-  var html = '<div class="arc-pick-label">בחר חודש <b>' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="arc-pick-label">בחר חודש <b>' + esc(year) + '</b>:</div><div class="arc-grid">';
   monthList.forEach(function(m) {
     var isNow = (year === nowYM.year && m === nowYM.month);
     var hasDat = !!withData[m];
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" data-act="arc-nav-days" data-year="'+esc(year)+'" data-month="'+esc(m)+'">' + m + '</button>';
+          + '" data-act="arc-nav-days" data-year="'+esc(year)+'" data-month="'+esc(m)+'">' + esc(m) + '</button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -3149,7 +3148,7 @@ function renderArcDays(year, month) {
     return;
   }
 
-  var html = '<div class="arc-pick-label">בחר יום ב<b>' + month + ' ' + year + '</b>:</div><div class="arc-grid">';
+  var html = '<div class="arc-pick-label">בחר יום ב<b>' + esc(month) + ' ' + esc(year) + '</b>:</div><div class="arc-grid">';
   days.forEach(function(d) {
     // Show day-of-month only (first token of hdate = גמטריה)
     var parts = (d.hdate||"").split(" ");
@@ -3158,8 +3157,8 @@ function renderArcDays(year, month) {
     // הניווט לפי d.key ולא לפי d.gdate — סנאפשוט ישן בלי gdate ממופתח לפי id,
     // ושליחת מחרוזת ריקה הייתה פותחת יום אחר לגמרי.
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+(d.hdate||d.name||"")+'">'
-          + dayNum + '<br><small class="day-count">' + (d.entries.length) + ' רש׳</small></button>';
+          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+esc(d.hdate||d.name||"")+'">'
+          + esc(dayNum) + '<br><small class="day-count">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
   el.innerHTML = html;
@@ -3188,8 +3187,8 @@ function renderArcDetail() {
   var html = '<div class="arc-day-card'+(arcEditMode?" editing":"")+'">'+
     '<div class="arc-day-head">'+
     '<div class="arc-day-id">'+
-      '<div class="arc-day-hdate">' + (d.hdate||d.gdate||arcSelDayKey) + '</div>'+
-      '<div class="arc-day-gdate">' + (d.day||"") + (d.gdate ? " | " + d.gdate : "") + '</div>'+
+      '<div class="arc-day-hdate">' + esc(d.hdate||d.gdate||arcSelDayKey) + '</div>'+
+      '<div class="arc-day-gdate">' + esc((d.day||"") + (d.gdate ? " | " + d.gdate : "")) + '</div>'+
     '</div>'+
     '<button class="arc-edit-btn btn-sm'+(arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
     (d.snapId ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
@@ -3458,11 +3457,11 @@ var INF_ICONS = {
   'קופה': '<circle cx="12" cy="4.5" r="2.5"/><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M9 13h6"/>'
 };
 function _infAppTh(a) {
-  var ico = INF_ICONS[a];
-  var body = ico
-    ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + ico + '</svg>'
+  var icoSvg = INF_ICONS[a];
+  var cellHtml = icoSvg
+    ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + icoSvg + '</svg>'
     : '<span class="inf-ico-l" aria-hidden="true">' + esc(String(a).charAt(0)) + '</span>';
-  return '<th title="' + esc(a) + '" aria-label="' + esc(a) + '">' + body + '</th>';
+  return '<th title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHtml + '</th>';
 }
 function _infDot(cell) {
   if (cell === '✅') return '<span class="inf-dot ok" title="תקין"></span>';
@@ -3545,8 +3544,6 @@ function _infHtml(d) {
 }
 window._infData = null;
 window._infOpen = false;
-/*  ⛔ שתי המשיכות במקביל ⛔ ולא בזו אחר זו — ⚠️ אין ביניהן תלות,
- *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
 async function yaInfraOpen() {
   window._infOpen = false;
   openModal(MSG_INFRA_TABLE,
@@ -3554,8 +3551,6 @@ async function yaInfraOpen() {
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
   try {
-    /*  ⛔ משיכה אחת — ⚠️ המשיכה השנייה הביאה את מפת הזיווג של
-     *  סעיפי הכללים, ⭐ ואין יותר כללים לזווג. */
     var res = await withTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
     md = await res.text();
@@ -3716,16 +3711,16 @@ function yaResetTenantState() {
 
 /*  ⛔ הבורר עובר ב-`openModal` הקיים — ⚠️ מיכל אחד ומסלול סגירה יחיד. */
 function yaPickYeshiva() {
-  var body = '<div class="yeshiva-list">';
+  var listHtml = '<div class="yeshiva-list">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, YESHIVA);
-    body += '<button class="btn-sm yeshiva-pick' +
+    listHtml += '<button class="btn-sm yeshiva-pick' +
             (cur ? ' is-current' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
             esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
-  body += '</div>';
-  openModal(MSG_SWITCH_YESHIVA, body, '');
+  listHtml += '</div>';
+  openModal(MSG_SWITCH_YESHIVA, listHtml, '');
 }
 
 /*  ⛔ המעבר מאפס את המצב **לפני** הטעינה מחדש — ⚠️ סדר הפוך
@@ -3927,7 +3922,7 @@ function arcEditEntry(gdateKey, entryId) {
     '<div data-editing class="aei-row ksave">' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="aei-inp">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="aei-inp">' +
-    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + (e.count||'') + '" placeholder="כמות" class="aei-count">' +
+    '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + esc(e.count||'') + '" placeholder="כמות" class="aei-count">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="aei-notes">' +
     '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="ei-save">שמור</button>' +
     '<button data-act="arc-entry-edit-cancel" data-kesc class="ei-cancel">בטל</button>' +
