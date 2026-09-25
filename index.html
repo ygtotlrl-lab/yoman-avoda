@@ -154,7 +154,8 @@ function screenPickHTML() {
 </div>
 `;
 }
-/*  ⛔ תאריך עברי נשאר טקסט חופשי — ר' ההערות שעל שני השדות. */
+/*  ⛔ תאריך עברי נשאר טקסט חופשי — ⚠️ אין לו פקד תאריך בדפדפן, ⭐ והוא
+ *  מוצג כפי שנכתב. */
 function screenEntryHTML() {
   return `
 <div class="panel" id="panel-entry">
@@ -334,7 +335,7 @@ var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנ
 // זו הטבלה **היחידה** שנבדלת בין האפליקציות; המודול שמתחתיה זהה בכולן.
 //
 // ⚠️ המפתחות כאן נושאים סיומת מוסד (`LS` = '_rishon' / '_ramataviv'), ולכן
-// `oldRecords` נבנית מחדש ב-`selectYeshiva` — ראה `lsRebuildPolicy()`. עד שנבחר
+// `oldRecords` נבנית מחדש ב-`lsRebuildPolicy()` בכל בחירת מוסד. עד שנבחר
 // מוסד היא ריקה, וזה נכון: אין עֵד סנכרון למוסד שלא נטען.
 var LS_CFG = {
   /*  ⛔ קידומת המטמון — ⚠️ **מה נכנס**: שם האפליקציה שבתצורה — אותו מקור של `SW_CFG.prefix`,
@@ -367,7 +368,7 @@ var LS_CFG = {
     { t: 'ya_subs_meta', why: 'חותמת לכל תת-קטגוריה — כמספרן, ⛔ ולא כמספר הימים' }
   ],
 
-  // אין כאן תור אופליין; העדות לסנכרון היא `_yaPushedAt` פר-מפתח (למטה).
+  // אין כאן תור אופליין; העדות לסנכרון היא `_yaPushedAt` פר-מפתח.
   pending: function () { return false; },
   syncedThrough: function () { return 0; }
 };
@@ -816,7 +817,7 @@ function getSB() {
 
 // שמירה כללית ל-Supabase (מאגר מפתח/ערך בטבלה "kv").
 // מחזירה {ok, error} — supabase-js **אינו זורק** בכשל רשת או הרשאה, אלא
-// נפתר עם res.error; ולכן קורא שהסתפק ב-try/catch לא ראה כשלים מעולם
+// נפתר עם res.error; ולכן קורא שהסתפק ב-try/catch לא קיבל כשל מעולם
 // והודיע למשתמש בשמחה שהכול נשמר.
 async function sbSet(key, value) {
   /*  ⛔ הטבלה וההקשר נלכדים **בשורה הראשונה** ⛔ ואינם נקראים מהגלובלי בהמשך
@@ -847,7 +848,7 @@ async function sbSet(key, value) {
 // אותה קריאה, עם התוצאה משומרת: {ok, data, error}.
 // מפתח חסר (PGRST116 מ-single()) הוא תוצאה ריקה, לא כישלון.
 async function sbGetResult(key) {
-  var tbl = KV_TABLE;   // ר' הנימוק ב-sbSet — הטבלה נלכדת ואינה נקראת מהגלובלי
+  var tbl = KV_TABLE;   // ⛔ נלכדת בכניסה — ⚠️ החלפת מוסד באמצע ההמתנה משנה את הגלובלי
   try {
     var sb = getSB();
     var res = await withTimeout(sb.from(tbl).select("value").eq("key", key).single());
@@ -1256,7 +1257,7 @@ async function yaSendRows(kvKey, rows, ep) {
 
 // פונקציות שמירה — כותבות גם ל-localStorage וגם ל-Supabase
 function saveCats() {
-  var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — עֵד הפינוי הוא פר-מוסד
+  var _ep = ctxEpoch();   // ⛔ נלכד לפני ההמתנה — ⚠️ עֵד הפינוי הוא פר-מוסד
   lsSet("ya_cats"+LS, JSON.stringify(CATS));
   sbSet("cats", CATS).then(function(r){
     if (ctxStale(_ep)) return;
@@ -1267,7 +1268,7 @@ function saveCats() {
     plTouch();
   });
 }
-// חותמות זמן פר-מפתח של SUBS (ראה mergeSubs). נטען ב-loadLocalData().
+// חותמות זמן פר-מפתח של SUBS — ⚠️ המיזוג מכריע לפיהן מפתח-מפתח. נטען ב-loadLocalData().
 var SUBS_META = {};
 /*  ⛔ ערך חי הוא **מספר**, ⛔ ופריט שנמחק הוא `{deleted, updatedAt}` — ⚠️ אותם
  *  שני שדות של רשומת יומן, ⭐ ולא קידוד שני לאותו מושג: ⛔ **והחי נשאר מספר**
@@ -1311,7 +1312,7 @@ function touchTask(cat, name) {
   cat.tasksMeta[String(name)] = Date.now();
 }
 /*  ⛔ ומחיקת משימה היא סימון ואינה היעדר — ⚠️ ההצהרה נשארת כדי שהמחיקה
- *  תתפשט: ⭐ מכשיר שלא ראה אותה מחזיר את המשימה. */
+ *  תתפשט: ⭐ מכשיר שלא קיבל אותה מחזיר את המשימה. */
 function delTaskMeta(cat, name, ts) {
   if (!cat || name == null) return;
   if (!cat.tasksMeta || typeof cat.tasksMeta !== 'object') cat.tasksMeta = {};
@@ -1320,7 +1321,7 @@ function delTaskMeta(cat, name, ts) {
 function metaDel(ts) { return { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() }; }
 function touchSubKey(sk) { if (sk != null) SUBS_META[String(sk)] = Date.now(); }
 /*  ⛔ מחיקת מפתח היא **סימון** ואינה היעדר — ⚠️ ההצהרה נשארת ב-`SUBS_META`
- *  כדי שהמחיקה תתפשט: ⭐ מכשיר שלא ראה אותה קורא היעדר כ«אין לי» ⛔ ולא
+ *  כדי שהמחיקה תתפשט: ⭐ מכשיר שלא קיבל אותה קורא היעדר כ«אין לי» ⛔ ולא
  *  כ«נמחק», ⚠️ ומחזיר את המפתח באיחוד. */
 function delSubKey(sk, ts) {
   if (sk == null) return;
@@ -1370,10 +1371,10 @@ function subKey(ci, taskName) { return ci + "::" + taskName; }
 /* ══ המיון היחיד לרשומות היומן ════════════════════════════════════════ */
 /*  ⛔ **`yaSortEntries` היא נקודת המיון היחידה** — ⚠️ המסך, הארכיון, גשר
     השיתוף וה-PDF קוראים לה כולם, ⛔ ואין מיון מקומי בשום מסך: ⭐ כל
-    העותקים של אותו משווה נתנו סדר שנבדל בין המסך לייצוא, ⛔ והמשתמש ראה
+    עותק של אותו משווה נותן סדר שנבדל בין המסך לייצוא, ⛔ והמשתמש מקבל
     דף שאינו מה שהוא ייצא.
-    ⛔ **ושש רמות ולא שלוש** — ⚠️ המשווה עצר אחרי תת-המשימה, ⭐ ורשומות
-    ששלוש רמותיהן זהות נשארו בסדר ההכנסה: ⛔ סדר שנראה אקראי במסך.
+    ⛔ **ושש רמות ולא שלוש** — ⚠️ משווה שעוצר אחרי תת-המשימה משאיר
+    רשומות ששלוש רמותיהן זהות בסדר ההכנסה: ⛔ סדר שנראה אקראי במסך.
     ⛔ **והמזהה הוא הרמה האחרונה** — ⚠️ בלעדיו שתי רשומות זהות לגמרי
     מתחלפות ביניהן בין רינדור לרינדור, ⭐ והמיון אינו יציב. */
 function yaSortEntries(list) {
@@ -1433,10 +1434,9 @@ function saveEntries() {
 }
 function saveArchive() {
   var _t0 = Date.now();
-  var _ep = ctxEpoch();   // ר' ההסבר ב-saveEntries — אותו שער בדיוק
+  var _ep = ctxEpoch();   // ⛔ נלכד לפני ההמתנה — ⚠️ עֵד הפינוי ואישור ה-⏳ הם פר-מוסד
   lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
   (async function(){
-    // ר' ההסבר ב-saveEntries — אותו כלל בדיוק.
     // ⭐ הדחיפה הזו הולכת ל-`ya_entries` עם `archived=true`, כלומר הארכוב
     //    הוא **דגל על השורה** ולא העברה בין טבלאות.
     var _rows = await pushTable('ya_archive', ARCHIVE);
@@ -1444,7 +1444,7 @@ function saveArchive() {
     var _ok = _rows.ok;
     if (_ok) pendConfirmPush(PK_ARC, _t0);
     if (_ok && _rows.n) yaSyncLog('push', 'ya_archive', _rows.n);
-    // ר' ההערה ב-saveEntries — החותמת מקודמת בשכבת הדחיפה
+    // ⛔ החותמת מקודמת בשכבת הדחיפה בלבד — ⚠️ רק כשבאמת נכתב משהו.
   })();
 }
 
@@ -1689,7 +1689,7 @@ async function syncFromCloud() {
     // בלבד — ⚠️ שם עדכון שנעשה במכשיר אחד אינו גובר על הגרסה הישנה של השני.
     /* ⛔ מהטבלה בלבד, ⛔ ובלי נפילה-חזרה לערך השלם — ⚠️ וכשל אינו נכנס
        לענף «הענן ריק»: ⭐ «אין ראיה» היא לא-לדעת, ⛔ ומשיכה שנכשלה שדוחפת
-       את המקומי למעלה מכריעה על סמך חוסר-ידיעה. */
+       את המקומי לענן מכריעה על סמך חוסר-ידיעה. */
     var _rowsE = await yaRowsGet('ya_entries');
     /*  ⛔ ההקשר התחלף באמצע המחזור — ⚠️ הנתונים שבזיכרון שייכים למוסד
      *  הקודם, ⭐ והכתיבה שאחרי הייתה כותבת אותם תחת החדש. */
@@ -1707,7 +1707,7 @@ async function syncFromCloud() {
       lsSetArray('ya_entries'+LS, ENTRIES, _yaRecTs);
       pushTable('ya_entries', ENTRIES);
     } else if (ENTRIES.length) {
-      pushTable('ya_entries', ENTRIES);   // הענן ריק — דוחפים את המקומי למעלה
+      pushTable('ya_entries', ENTRIES);   // הענן ריק — דוחפים את המקומי לענן
     }
     }
 
@@ -1820,8 +1820,6 @@ let selTask = null;
 let selSub = null;
 let selDay = "";
 
-// פונקציות השמירה מוגדרות למעלה, בשכבת Supabase
-
 /* ══════════════════════════════════════════════════════════════════════════
    מסך היומן — טופס ההזנה, הרשימה והארכוב היומי
    ══════════════════════════════════════════════════════════════════════════ */
@@ -1907,7 +1905,7 @@ function checkDayChange() {
     var carried = JSON.parse(JSON.stringify(live));
     carried.forEach(function(e){ recTouch(e, ts); });
     // ⛔ אותו בונה בדיוק כמו המסלול הידני — `auto` הוא סימון מקור
-    //    ותו לא, ואינו מחליף שדה. ר' הבלוק שמעל `arcPutSnapshot`.
+    //    ותו לא, ואינו מחליף שדה: ⚠️ שני בונים הם שני סנאפשוטים שונים לאותו יום.
     arcPutSnapshot(dayKey, hdate, gdate, carried, ts, { auto: true });
     lsSetArray("ya_archive"+LS, hwDiskFilter('ya_archive'+LS, ARCHIVE), _yaRecTs);
     // tombstones במקום ENTRIES = [] — אחרת הענן היה מחזיר את הרשומות לחיים
@@ -2087,7 +2085,8 @@ function tapFlash(btn) {
       בשדותיה לרשומה ידנית, ושדה שנשאר ריק בשקט הוא בדיוק מה שייצר את
       «לא ידוע».
    ⚠️ `arcPutSnapshot` **אינה** כותבת לענן — הקורא מחליט. זה מכוון:
-      `checkDayChange` חייבת להישאר מקומית (ר' ההערה שם).
+      `checkDayChange` חייבת להישאר מקומית — ⚠️ דחיפה לפני המיזוג שאחריה
+      הייתה מוחקת רשומות שמכשיר אחר כבר הוסיף להיום.
    ══════════════════════════════════════════════════════════════════════════ */
 function arcPutSnapshot(dayKey, hdate, gdate, dayEntries, ts, extra) {
   if (!gdate) return null;   // בלי תאריך אין סנאפשוט — אחרת נוצר סנאפשוט זבל עם gdate ריק
@@ -2144,7 +2143,7 @@ function addEntry() {
     //    היה רואה בהם רשומה אחת.
     id: newClientId(),
     // ⛔ `createdAt` נפרד מהמזהה — הסדר היה נגזר מה-`id`, ו-uuid
-    //    אינו ניתן להשוואה מספרית. ר' `entryOrderTs`.
+    //    אינו ניתן להשוואה מספרית.
     createdAt: now.getTime(),
     day: selDay, hdate: hdate, gdate: getCurrentDateKey(),
     cat: selCat.letter,
@@ -2399,7 +2398,7 @@ async function yaSyncPushNow() {
      *  המושהה וגם ממודול הניסיון החוזר, ⭐ ושניהם יכולים להתעורר בדיוק
      *  בזמן ההחלפה. */
     var _ep = ctxEpoch();
-    // ⭐ הדחיפה כאן היא שורות — כמו ב-saveEntries/saveArchive.
+    // ⭐ הדחיפה היא שורות ⛔ ולא ערך שלם — ⚠️ שתי כתיבות לאותה רשומה הן שני מקורות אמת.
     var rEntries = await pushTable("ya_entries", ENTRIES);
     if (ctxStale(_ep)) return;
     var rArchive = await pushTable("ya_archive", ARCHIVE);
@@ -2639,15 +2638,13 @@ function editTaskInline(ci, ti) {
    ברירת מחדל לתפקיד היא הרשאה שניתנת למי שאיש לא החליט
    להעניק לו אותה. תפקיד נכתב **במפורש** ביצירת המשתמש.
 
-   ⚠️ **הערה זו זהה בית-לבית בכל האפליקציות** פרט לשורת «כאן:» שבסופה.
-   לקח אבטחתי שנלמד באפליקציה אחת נרשם בכולן — גם כשהמנגנון עצמו
-   רלוונטי רק לאחת. הערה שיושבת במקום אחד אינה
-   מגינה על הארגון.
+   ⚠️ **הערה זו נרשמת גם במקום שבו המנגנון אינו חל** — ⭐ לקח אבטחתי
+   שנרשם רק במקום שבו נלמד אינו מגן על המקום שבו ייכתב הקוד הבא.
 
    כאן: `renderSettings` — ⚠️ **ליומן אין טבלת משתמשים, אין מסך כניסה
    ואין תפקידים כלל** — הכניסה היא בחירת מוסד, ולכן אין כאן הרשאה
    לגזור ואין סוד לשמור. ההערה נרשמת כדי שגם כאן לא יומצא שער
-   בעתיד — שער סיסמה כאן היה **שכבה שלמה יש מאין**, לא יישור לאחיות.
+   בעתיד — שער סיסמה כאן היה **שכבה שלמה יש מאין**.
    ═════════════════════════════════════════════════════════════════════ */
 function renderSettings() {
   var ed = document.getElementById("settingsEditor");
@@ -2772,8 +2769,6 @@ var TOAST_DEFAULT_MS = 2500;
 // מתמלא פר-מוסד ע"י loadLocalData() אחרי הבחירה, ⛔ מהדיסק בלבד — הזרע
 // המוטבע ירד, וההיסטוריה מגיעה מהענן
 var ARCHIVE = [];
-
-// saveArchive מוגדרת למעלה, בשכבת Supabase
 
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -3192,8 +3187,8 @@ function arcAddEntry(gdateKey) {
   if (!catSel || !taskSel) return;
   var letter = catSel.value;
   if (!CATS.some(function(c){ return c.letter === letter; })) return;
-  // ⭐ אותו דפוס בדיוק כמו ב-`addEntry`: מזהה מהמודול המשותף,
-  //    וחותמת יצירה נפרדת לסדר.
+  // ⭐ מזהה מהמודול המשותף, וחותמת יצירה נפרדת לסדר — ⚠️ uuid אינו
+  //    ניתן להשוואה מספרית.
   var _now = Date.now();
   var newEntry = {
     id: newClientId(),
@@ -3719,7 +3714,7 @@ function selectYeshiva(y) {
   // גיבוי יומי ויומן פעולות — נקודת ההפעלה היחידה של המודול.
   // ⚠️ כאן ולא מוקדם יותר, וזה פרטי ליומן: `BK_CFG.sources` נשענת על
   //    `KV_TABLE`, שהוא `null` עד שנבחר מוסד. ⛔ אין להזיז את הקריאה
-  //    למסלול סנכרון — ר' ההערה ב-`_yaMarkSynced`.
+  //    למסלול סנכרון — ⚠️ גיבוי שתלוי בסנכרון נעצר בדיוק כשאין סנכרון.
   try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
   try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
   // ניסיון חוזר בסנכרון — נקודת ההפעלה היחידה של המודול.
