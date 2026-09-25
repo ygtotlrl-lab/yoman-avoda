@@ -72,7 +72,7 @@ import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          MSG_SYNC_BACK, appConfigure, dayNoon, errMsg, getDeviceId, kvParse,
          uniqHas, uniqList, withTimeout } from './core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
-         legacyIdStamp, mergeCore, newClientId, pendAlertDismiss, pendBoot,
+         mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
          pendReload, pendTag, plBoot, plForget, plNum, plTouch,
          prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave,
@@ -175,11 +175,11 @@ function screenEntryHTML() {
            מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
            ⚠️ הערך נגזר ממילא מ-gregDateInput דרך hebrewDate(). -->
       <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" autocomplete="off" placeholder="תאריך עברי..." />
-      <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy או
-           yyyy-mm-dd, ומקלדת המספרים של iOS אינה מציעה «/» ולא «-»;
-           ⚠️ ה-pattern הוא רמז הצורה, וההכרעה נשארת ב-onGregDateChange
-           שנכשל-סגור על כל קלט שאינו תואם לאחת משתי התבניות. -->
-      <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
+      <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy,
+           yyyy-mm-dd או הפורמט השמור, ומקלדת המספרים של iOS אינה מציעה
+           «/» ולא «-»; ⚠️ ה-pattern הוא רמז הצורה, וההכרעה ב-parseGregLike,
+           שנכשלת-סגור על כל קלט אחר ⭐ ומתורגמת לפורמט השמור. -->
+      <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2} [א-ת]+ \d{4}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
     </div>
   </div>
 
@@ -388,14 +388,10 @@ function _yaRecTs(r) {
   if (r.updatedAt) return Number(r.updatedAt) || 0;
   return _yaGdateTs(r.gdate);
 }
-// gdate נשמר בצורה "3/09/2025" (d/mm/yyyy) — לא ISO. עוגן בצהריים מקומיים,
-// כמו כל חישוב תאריך בפרויקטים האלה.
+// gdate נשמר בצורה של `gregDateStr` — «25 נובמבר 2025», ולא ISO. ⛔ עוגן
+// בצהריים מקומיים, כמו כל חישוב תאריך בפרויקטים האלה.
 function _yaGdateTs(g) {
-  // ⭐ הפענוח הוא דרך `parseGregLike` — היא מכירה גם את
-  //    הצורה «19 יולי 2026» שמייצרת `gregDateStr`, שקודם החזירה כאן 0
-  //    ועיוותה את גיל הרשומה לצורך הפינוי (הפער שנרשם). העוגן
-  //    בצהריים מקומיים — כמו כל חישוב תאריך בפרויקטים האלה.
-  var p = parseGregLike(g);
+  var p = gdateParse(g);
   if (!p) return 0;
   var d = dayNoon(p.y, p.m - 1, p.d);
   var t = d.getTime();
@@ -944,17 +940,12 @@ function mergeRecords(local, remote, getKey, mergePair, isPending) {
    סדר הרשומות, שהוא פרטי ליומן.
    ══════════════════════════════════════════════════════════════════════════ */
 // מפתח הסדר של רשומת יומן. ⚠️ **`createdAt` ולא `id`** — מזהה אינו
-// מפתח סדר, ו-uuid אינו ניתן להשוואה מספרית.
-// ⚠️ ורשומות העבר: אצלן ה-`id` **הוא** חותמת היצירה (`Date.now()`), והוא
-//    מקור הזמן היחיד שיש להן. לכן הוא נשאר כנפילה-חזרה — בלעדיו כל
-//    ההיסטוריה הייתה מתמוטטת ל-0 ומאבדת את סדרה. `updatedAt` הוא הנפילה
-//    האחרונה, ורק כשאין אף אחד מהשניים.
+// מפתח סדר, ו-uuid אינו ניתן להשוואה מספרית. ⭐ ו-`updatedAt` הוא
+// הנפילה-חזרה היחידה.
 function entryOrderTs(e) {
   if (!e) return 0;
   var c = Number(e.createdAt);
   if (isFinite(c) && c > 0) return c;
-  var i = legacyIdStamp(e.id);
-  if (i > 0) return i;
   var u = Number(e.updatedAt);
   return (isFinite(u) && u > 0) ? u : 0;
 }
@@ -966,13 +957,11 @@ function pendEntry(k) { return pendHas(PK_ENTRY + k); }
 function pendArc(k) { return pendHas(PK_ARC + k); }
 function mergeEntries(local, remote) { return mergeRecords(local, remote, entryKey, null, pendEntry); }
 
-// סנאפשוט ארכיון מזוהה לפי היום שלו (gdate); רק סנאפשוטים ישנים בלי gdate
-// נופלים חזרה ל-id. שני מכשירים שארכבו את אותו יום מייצרים id שונה — gdate
-// הוא מה שמונע כפילות.
+// סנאפשוט ארכיון מזוהה לפי היום שלו (gdate) בלבד — ⚠️ שני מכשירים שארכבו
+// את אותו יום מייצרים id שונה, ⭐ ו-gdate הוא מה שמונע כפילות: ⛔ סנאפשוט
+// בלי gdate אין לו מפתח, ומנוע המיזוג אינו מקבל אותו.
 function archiveKey(s) {
-  if (!s) return null;
-  if (s.gdate) return 'g:' + s.gdate;
-  return (s.id != null) ? 'i:' + s.id : null;
+  return (s && s.gdate) ? 'g:' + s.gdate : null;
 }
 // מיזוג ארכיון: מטא-דאטה של הסנאפשוט ב-LWW, אבל הרשומות שבתוכו ממוזגות
 // אחת-אחת — אחרת שני מכשירים שהוסיפו רשומות לאותו יום היו דורסים זה את זה.
@@ -1168,7 +1157,7 @@ function yaRowOf(kvKey, rec, tbl) {
       הסמנטי ו**התוצאה המוצגת**, לא רצף ההכנסה.
    ══════════════════════════════════════════════════════════════════════════ */
 function gdateOrderTs(g) {
-  var p = parseGregLike(g);
+  var p = gdateParse(g);
   if (!p) return -1;
   return Date.UTC(p.y, p.m - 1, p.d);
 }
@@ -1178,15 +1167,12 @@ function yaSortRows(kvKey, arr) {
     a.sort(function (x, y) {
       var tx = gdateOrderTs(x && x.gdate), ty = gdateOrderTs(y && y.gdate);
       if (tx !== ty) return ty - tx;                       // יום חדש קודם
-      var ix = legacyIdStamp(x && x.id), iy = legacyIdStamp(y && y.id);
-      if (ix !== iy) return iy - ix;
       return String(archiveKey(x)) < String(archiveKey(y)) ? -1 : 1;   // שובר שוויון יציב
     });
   } else {
     a.sort(function (x, y) {
       // ⭐ `entryOrderTs` ולא `Number(id)`: מזהה רשומה הוא uuid,
-      //    ו-`Number` עליו הוא `NaN`. הסדר הסמנטי לא השתנה —
-      //    לרשומות העבר ה-`id` הוא עצמו חותמת היצירה.
+      //    ו-`Number` עליו הוא `NaN`.
       var ix = entryOrderTs(x), iy = entryOrderTs(y);
       if (ix !== iy) return iy - ix;
       return String(entryKey(x)) < String(entryKey(y)) ? -1 : 1;
@@ -1475,34 +1461,37 @@ function saveArchive() {
 /* ══════════════════════════════════════════════════════════════════════════
    תיקון נתונים היסטוריים — שחזור תאריכים וניקוי סנאפשוטים פגומים
    ══════════════════════════════════════════════════════════════════════════ */
-// ── שחזור תאריך לועזי ממחרוזת חופשית ──
-// תומך ב"30 בנוב׳ 2025" / "3 בנובמבר 2025" (הצורה שנכתבה ע"י גרסאות ישנות)
-// וגם ב-"3/09/2025" / "30.11.2025". מחזיר null כשאין תאריך מזוהה.
+// ⛔ **פורמט אחד ל-`gdate` שנשמר** — זה ש-`gregDateStr` מייצרת, «25 נובמבר
+//    2025»: ⚠️ הוא גם מפתח היום בארכיון, ⭐ ושתי צורות לאותו יום הן שני ימים.
 var GREG_MONTHS_HE = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+// פענוח `gdate` שנשמר — ⛔ בפורמט השמור בלבד; מחזיר null על כל צורה אחרת.
+function gdateParse(s) {
+  var m = String(s == null ? "" : s).trim().match(/^(\d{1,2}) (\S+) (\d{4})$/);
+  var i = m ? GREG_MONTHS_HE.indexOf(m[2]) : -1;
+  return (i >= 0) ? _gregValid(+m[1], i + 1, +m[3]) : null;
+}
+// ⛔ פענוח מה שהמשתמש **מקליד** בשדה התאריך הלועזי — ⚠️ ורק שם:
+//    dd/mm/yyyy · yyyy-mm-dd · והפורמט השמור, שהשדה מאותחל אליו.
+//    ⭐ הקלט מתורגם לפורמט השמור לפני שהוא נשמר.
 function parseGregLike(s) {
   s = String(s == null ? "" : s).trim();
-  if (!s) return null;
-  var m = s.match(/(\d{1,2})\s*[\/.\-]\s*(\d{1,2})\s*[\/.\-]\s*(\d{4})/);
-  if (m) {
-    var mm = +m[2];
-    if (mm >= 1 && mm <= 12) return {d:+m[1], m:mm, y:+m[3]};
-    return null;
-  }
-  m = s.match(/(\d{1,2})\s+ב?([א-ת]{2,})׳?\s+(\d{4})/);
-  if (m) {
-    var name = m[2];
-    for (var i = 0; i < GREG_MONTHS_HE.length; i++) {
-      if (GREG_MONTHS_HE[i].indexOf(name) === 0) return {d:+m[1], m:i+1, y:+m[3]};
-    }
-  }
-  return null;
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return _gregValid(+m[1], +m[2], +m[3]);
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return _gregValid(+m[3], +m[2], +m[1]);
+  return gdateParse(s);
+}
+// ⛔ «31/02» אינו יום — ⚠️ `Date` היה מגלגל אותו ל-3 במרץ בשקט.
+function _gregValid(d, m, y) {
+  var t = dayNoon(y, m - 1, d);
+  return (t.getDate() === d && t.getMonth() === m - 1) ? {d:d, m:m, y:y} : null;
 }
 // אותה צורה בדיוק ש-gregDateStr מייצרת — כדי שהמפתח שנשחזר יתלכד עם מפתחות חדשים
 function gregKeyFromParts(p) { return p ? (p.d + " " + GREG_MONTHS_HE[p.m-1] + " " + p.y) : ""; }
 // האם למחרוזת יש חודש עברי מזוהה (אחרת אי אפשר לנווט אליה בארכיון)
 function hasHebMonth(h) { return extractYM(h).year !== HUNKNOWN; }
 
-// ── ניקוי חד-פעמי של סנאפשוטים פגומים (באג autoArchiveDay gdate→day) ──
+// ── ניקוי סנאפשוטים פגומים (באג autoArchiveDay gdate→day) ──
 window._arcCleanupDone = false;
 function arcCleanupCorrupted() {
   if (window._arcCleanupDone) return;
@@ -1512,56 +1501,18 @@ function arcCleanupCorrupted() {
   var misplaced = [];
   var ts = Date.now();
 
-  // שלב 0: שחזור תאריכים חסרים. רשומה בלי gdate אינה זבל שיש להשמיד — היא
-  // רשומת עבודה אמיתית שנכתבה ע"י גרסה ישנה. במקום למחוק, מנסים לשחזר את
-  // התאריך מתוך הרשומה עצמה (הסנאפשוט שהיא יושבת בו, שדה date, או תאריך
-  // לועזי מוטבע ב-hdate/name). מה שלא ניתן לשחזור נשאר במקומו ונשאר נגיש
-  // (ראה HUNKNOWN ב-extractYM + ניווט לפי key ב-renderArcDays).
-  var gdateIndex = {};
-  ARCHIVE.forEach(function(s){ if (s && s.gdate) gdateIndex[s.gdate] = true; });
   ARCHIVE.forEach(function(snap) {
     if (!snap || !Array.isArray(snap.entries)) return;
-    // א. לסנאפשוט אין gdate — נסה לשחזר
-    if (!snap.gdate) {
-      var cand = "";
-      var fromEntry = snap.entries.find(function(e){ return e && e.gdate; });
-      if (fromEntry) cand = fromEntry.gdate;
-      if (!cand) {
-        var p = parseGregLike(snap.date) || parseGregLike(snap.hdate) || parseGregLike(snap.name);
-        if (p) {
-          // אם היום כבר קיים בארכיון בצורת כתיב אחרת — להתלכד אליו, לא ליצור כפילות
-          var alt = p.d + "/" + (p.m < 10 ? "0" + p.m : p.m) + "/" + p.y;
-          var alt2 = p.d + "/" + p.m + "/" + p.y;
-          cand = gdateIndex[gregKeyFromParts(p)] ? gregKeyFromParts(p)
-               : (gdateIndex[alt] ? alt : (gdateIndex[alt2] ? alt2 : gregKeyFromParts(p)));
-          // hdate בלי חודש עברי — אפשר לגזור אותו מהתאריך הלועזי ששוחזר
-          if (!hasHebMonth(snap.hdate)) {
-            var h = hebrewDate(dayNoon(p.y, p.m - 1, p.d));
-            if (h) { snap.hdate = h; if (!snap.name || parseGregLike(snap.name)) snap.name = h; }
-          }
-        }
-      }
-      if (cand) {
-        snap.gdate = cand;
-        if (!snap.date) snap.date = cand;
-        gdateIndex[cand] = true;
-        recTouch(snap, ts);
-        changed = true;
-        console.log('[arcCleanup] שוחזר תאריך לסנאפשוט:', cand, '(' + (snap.hdate||'') + ')');
-      }
-    }
-    // א2. סנאפשוט מתוארך שה-hdate שלו שבור — נרפא גם הוא
-    // ⛔ הריפוי אינו **בתוך** ענף «אין gdate» — ⚠️ שם סנאפשוט שיש לו
-    //    gdate ו-hdate שבור לא היה נרפא לעולם.
+    // א. סנאפשוט שה-hdate שלו שבור — נרפא מ-gdate.
     // ⛔ הגזירה היא מ-gdate בלבד ולא מהשעון — שעון היה נותן את
     //    היום שבו רץ הניקוי במקום את יומו של הסנאפשוט.
     if (snap.gdate && !hasHebMonth(snap.hdate)) {
-      var pg = parseGregLike(snap.gdate);
+      var pg = gdateParse(snap.gdate);
       if (pg) {
         var hg = hebrewDate(dayNoon(pg.y, pg.m - 1, pg.d));
         if (hg) {
           snap.hdate = hg;
-          if (!snap.name || parseGregLike(snap.name)) snap.name = hg;
+          if (!snap.name || gdateParse(snap.name)) snap.name = hg;
           recTouch(snap, ts); changed = true;
           console.log('[arcCleanup] שוחזר תאריך עברי לסנאפשוט', snap.gdate);
         }
@@ -1890,11 +1841,11 @@ let selDay = "";
    ══════════════════════════════════════════════════════════════════════════ */
 function getCurrentDateKey() {
   var g = document.getElementById("gregDateInput");
-  var v = g ? g.value.trim() : "";
-  // נפילה-חזרה: אם שדה התאריך טרם אותחל, משתמשים במפתח של היום כדי
-  // שרשומות לא יישמרו לעולם עם gdate ריק (ששובר את הארכוב ואת סינון
-  // היומן היומי). gregDateStr() היא JS טהור ואינה נשענת על הלוח העברי.
-  return v || getTodayKey();
+  var p = parseGregLike(g ? g.value : "");
+  // ⛔ הקלט נשמר בפורמט השמור בלבד — ⚠️ קלט שנשמר כמות שהוא היה יום שני
+  //    בארכיון. ⭐ נפילה-חזרה למפתח של היום: רשומה אינה נשמרת לעולם
+  //    עם gdate ריק (ששובר את הארכוב ואת סינון היומן היומי).
+  return p ? gregKeyFromParts(p) : getTodayKey();
 }
 
 function getTodayKey() {
@@ -1939,8 +1890,7 @@ function saveRefresh() {
 // תאריך
 function gregDateStr(jsDate) {
   var d = jsDate.getDate(), m = jsDate.getMonth()+1, y = jsDate.getFullYear();
-  var GREG_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-  return d + " " + GREG_MONTHS[m-1] + " " + y;
+  return d + " " + GREG_MONTHS_HE[m-1] + " " + y;
 }
 
 function checkDayChange() {
@@ -2031,16 +1981,10 @@ function syncDatesToDay(dayValue) {
 }
 
 function onGregDateChange() {
-  var val = document.getElementById("gregDateInput").value.trim();
-  // ניסיון פענוח dd/mm/yyyy או yyyy-mm-dd
-  var parts, d;
-  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) {
-    parts = val.split("/");
-    d = new Date(+parts[2], +parts[1]-1, +parts[0]);
-  } else if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-    d = new Date(val);
-  }
-  if (d && !isNaN(d.getTime())) {
+  var inp = document.getElementById("gregDateInput");
+  var p = parseGregLike(inp.value);
+  if (p) {
+    var d = dayNoon(p.y, p.m - 1, p.d);
     var dow = d.getDay();
     var label = DAY_LABEL_MAP[dow] || "";
     var value = DAY_VALUE_MAP[dow] || "";
@@ -2150,9 +2094,8 @@ function tapFlash(btn) {
    ══════════════════════════════════════════════════════════════════════════
    ⭐ **מסלול יצירה אחד** לשני הקוראים — `autoArchiveDay` (הוספה/מחיקה/
       עריכה) ו-`checkDayChange` (מעבר יום): ⚠️ סנאפשוט בלי `gdate`, `hdate`
-      ו-`day` נופל לדלי «לא ידוע» בארכיון, ⛔ ו-`archiveKey` שלו נופל
-      ל-`i:<id>` במקום ל-`g:<gdate>` — ⚠️ ואותו יום מופיע כשתי שורות
-      מתחרות בענן.
+      ו-`day` נופל לדלי «לא ידוע» בארכיון, ⛔ ובלי `gdate` אין לו
+      `archiveKey` כלל — ⚠️ ומנוע המיזוג אינו מקבל אותו.
 
    ⛔ אין להחזיר מסלול יצירה שני — רשומה אוטומטית חייבת להיות זהה
       בשדותיה לרשומה ידנית, ושדה שנשאר ריק בשקט הוא בדיוק מה שייצר את
@@ -2217,7 +2160,7 @@ function addEntry() {
     // ⛔ `createdAt` נפרד מהמזהה — הסדר היה נגזר מה-`id`, ו-uuid
     //    אינו ניתן להשוואה מספרית. ר' `entryOrderTs`.
     createdAt: now.getTime(),
-    day: selDay, hdate: hdate, gdate: document.getElementById("gregDateInput").value.trim(),
+    day: selDay, hdate: hdate, gdate: getCurrentDateKey(),
     cat: selCat.letter,
     task: task, sub: sub, notes: notes, count: count,
     updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
@@ -2326,7 +2269,7 @@ function exportPDF() {
    *  את `ENTRIES` ואת שדה התאריך ומשחזר אותם מיד אחרי הקריאה, ⭐ והרינדור
    *  מסתיים אחרי השחזור: ⛔ קריאה מאוחרת הייתה מקבלת את תאריך היום. */
   var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
-  var todayGreg = document.getElementById("gregDateInput").value || gregDateStr(new Date());
+  var todayGreg = getCurrentDateKey();
   var fileTitle = "יומן עבודה " + today + " " + todayGreg;
   toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
@@ -2404,7 +2347,7 @@ function _buildReportDiv(cb, entries){
    *  את הדוח בין הגיליון לבונה. ⭐ וההצגה וההסתרה — `showEl`, במחלקה. */
   div.className='rp';div.style.cssText='position:fixed;top:0;left:0;background:var(--card);padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
   var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
-  var todayGreg=document.getElementById("gregDateInput")?document.getElementById("gregDateInput").value:gregDateStr(new Date());
+  var todayGreg=getCurrentDateKey();
   var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
   var instTitle=instName();
   var logoEl=document.getElementById('appLogo')||document.querySelector('.hdr-logo');
@@ -2926,17 +2869,11 @@ function snapHDate(rec) {
   if (extractYM(h).year !== HUNKNOWN) return h;
   var t = hebFromText(rec && rec.name);
   if (t) return t;
-  /*  ⛔ ונפילה-חזרה שלישית: **תאריך לועזי שיושב בשדה העברי** —
-   *  ⚠️ הנימוק המדוד: ארבעה סנאפשוטים נושאים `hdate` בצורת «30 בנוב׳ 2025
-   *  ה׳תשפ״ו» — ⭐ לועזי במלואו, עם שנה עברית בזנב, ⛔ ו-`gdate` ריק בכולם:
-   *  ⚠️ `extractYM` מחפשת שם חודש עברי ואינה מוצאת אף אחד, ⛔ ו-138 רשומות
-   *  נערמו תחת «שנה לא ידוע». ⭐ והחודש העברי **גזיר** מהלועזי שבמחרוזת,
-   *  ⛔ ואין כאן מנוע שני — `hebrewDate` היא אותה נקודה שכל הצרכנים יושבים
-   *  עליה. ⛔ וכמו שתי הנפילות שמעליה, זהו תיקון **תצוגה** בלבד: ⚠️ הפונקציה
-   *  טהורה ואינה כותבת לסנאפשוט, ⭐ שכתיבה כאן הייתה משנה נתוני מסד בלי
-   *  שהמנהל ביקש ⛔ ומקדמת את `updatedAt` שלהם בבת אחת. */
-  var g = parseGregLike(h) || parseGregLike((rec && rec.name) || "") ||
-          parseGregLike((rec && rec.gdate) || "");
+  /*  ⛔ ונפילה-חזרה שלישית: **החודש העברי נגזר מ-`gdate`** — ⭐ דרך
+   *  `hebrewDate`, אותה נקודה שכל הצרכנים יושבים עליה. ⛔ וכמו שתי הנפילות
+   *  שמעליה, זהו תיקון **תצוגה** בלבד: ⚠️ הפונקציה טהורה ואינה כותבת
+   *  לסנאפשוט, ⭐ שכתיבה כאן הייתה משנה נתוני מסד בלי שהמנהל ביקש. */
+  var g = gdateParse(rec && rec.gdate);
   if (g) {
     // ⛔ עוגן בצהריים מקומיים — מעבר לשעון חורף מפיל חצות ליום הקודם
     var hd = hebrewDate(dayNoon(g.y, g.m - 1, g.d));
@@ -3961,10 +3898,10 @@ function arcSaveEntry(gdateKey, entryId) {
   pendMark(PK_ENTRY + entryId);
   // ⛔ מפתח הסימון של סנאפשוט הוא `archiveKey` ולא מפתח המפה של
   //    `getAllArchiveDays` — המפה ממופתחת ב-gdate **גולמי**
-  //    (`"3/09/2025"`), ואילו שלוש נקודות הקריאה — `yaDirtyRows`,
+  //    (`"25 נובמבר 2025"`), ואילו שלוש נקודות הקריאה — `yaDirtyRows`,
   //    `HW_CFG.specs[].isPending` ו-`mergeArchive` — קוראות
-  //    `PK_ARC + archiveKey(r)`, כלומר `arc:g:3/09/2025`. ⚠️ סימון במפתח
-  //    המפה (`arc:3/09/2025`) **אינו נראה לאף אחת מהשלוש**: ⛔ עריכת רשומה
+  //    `PK_ARC + archiveKey(r)`, כלומר `arc:g:25 נובמבר 2025`. ⚠️ סימון
+  //    במפתח המפה (`arc:25 נובמבר 2025`) **אינו נראה לאף אחת מהשלוש**: ⛔ עריכת רשומה
   //    בארכיון אינה נחשבת «לדחיפה», ושער הפינוי של החלון החם רשאי לפנות
   //    סנאפשוט שהעריכה שלו טרם עלתה.
   touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
