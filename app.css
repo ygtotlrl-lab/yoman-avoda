@@ -39,9 +39,6 @@
   /*  ⛔ השחור שהמסגרת העמוקה נמזגת בו — ⚠️ ולא `--on-cat`: ⭐ הדיו לבן,
    *  ⛔ ומסגרת שנמזגת בו מתבהרת במקום להעמיק. */
   --cat-shade:#000000;
-  /*  ⛔ הדיו על תא הקטגוריה בדוח שנצרב לתמונה — ⚠️ נפרד מ-`--on-cat`:
-   *  ⭐ הדוח נשלח החוצה, ⛔ וצבעיו אינם נגזרים מכפתור במסך. */
-  --rp-cat-ink:#000000;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text-2:#4A5A7A; --text-3:#8A9ABB;
@@ -49,6 +46,9 @@
   --ok:#1A6A3A; --ok-soft:#E6F6EC;
   --warn:#B45309; --warn-soft:#FFFBE6;
   --bad:#B91C1C; --bad-soft:#FFE8E8;
+  /*  ⛔ הרמזור של מציג הטבלה — ⚠️ נפרד מאסימוני המצב: ⭐ בבהיר «חסר-מנומק»
+   *  ו«לא מטופל» נקראו שם כמעט אותו צבע, ⛔ ורמזור נקרא בגוון ולא בבהירות. */
+  --inf-go:#16A34A; --inf-wait:#EAB308; --inf-stop:#DC2626;
   --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
   --deep-1:#2A4E8C; --deep-2:#0E2145;
   --on-deep:#F7F3EA; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
@@ -70,6 +70,7 @@
         --ok:#84DBA6; --ok-soft:#12251C;
       --warn:#FBBF24; --warn-soft:#2B2012;
       --bad:#F87171; --bad-soft:#2D1717;
+      --inf-go:#4ADE80; --inf-wait:#FACC15; --inf-stop:#F87171;
       --brand-fill:#1E6FBF; --brand-ink:#7FB2F0; --brand-soft:#16283A;
       --accent:#FFB930;
       --shadow:rgba(0,0,0,0.45);
@@ -188,9 +189,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl col.c-a{width:36px}
 .inf-tbl col.c-r{width:160px}
 .inf-dot{display:inline-block;width:11px;height:11px;border-radius:var(--r-7)}
-.inf-dot.ok{background:var(--ok)}
-.inf-dot.gap{background:var(--warn)}
-.inf-dot.bad{background:var(--bad)}
+.inf-dot.ok{background:var(--inf-go)}
+.inf-dot.gap{background:var(--inf-wait)}
+.inf-dot.bad{background:var(--inf-stop)}
+/*  ⛔ סמל לכל אפליקציה בכותרת העמודה — ⚠️ השם אינו נכנס בעמודה צרה,
+ *  ⭐ והוא נשאר ב-`title` וב-`aria-label`; ⛔ ואות שמחליפה סמל חסר באותו גודל. */
+.inf-ico{display:block;width:20px;height:20px;margin:0 auto;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+.inf-ico-l{display:block;width:20px;height:20px;margin:0 auto;line-height:20px;text-align:center;font-size:var(--fs-4)}
 .inf code{background:var(--card-2);border-radius:var(--r-2);padding:0 var(--sp-2);font-size:var(--fs-4)}
 .inf-tag{display:inline-block;background:var(--card-2);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-4);
   font-size:var(--fs-1);font-weight:700;margin-inline-start:var(--sp-2)}

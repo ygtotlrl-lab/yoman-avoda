@@ -26,7 +26,9 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="app">
+<!--  ⛔ שורש הקליפה — כותרת · לשוניות · מיכל תוכן: ⚠️ והיא מתחילה חשופה,
+      ⭐ והמסגרת נחשפת רק כשנבחרה ישיבה — ⛔ ולא בטעינה ובמסך הבחירה. -->
+<div class="app is-bare">
 
   <div class="hdr">
     <div class="hdr-top">
@@ -79,7 +81,8 @@ import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast } from './core/ui.js';
+         modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         toast } from './core/ui.js';
 import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -107,6 +110,24 @@ appConfigure({
    ⛔ הקליפה ב-HTML נושאת מבנה בלבד — כותרת · לשוניות · מיכל תוכן · שכבות:
    ⚠️ ותוכן המסכים כאן, ⭐ ו-`mountView()` מציירת אותם לפני כל קוד שמחפש
    אלמנט בתוכם. ⛔ אין להזיז את הקריאה אליה מטה. */
+/*  ⛔ מפה אחת: ישיבה ⟵ השם · השם המלא · טבלת הענן · הלוגו — ⚠️ וכל מקום
+ *  שנוקב בישיבה קורא ממנה: ⭐ הבורר, הכותרת, הדוחות והכתיבה לענן.
+ *  ⛔ **ואין ברירת מחדל** — ⚠️ ישיבה שאינה כאן אינה נבחרת כלל: ⭐ היא אינה
+ *  כותבת לשום טבלה ואינה מקבלת שם או לוגו של אחרת, ⛔ שתנאי «לא זו ⟵ אז
+ *  האחרת» כתב ישיבה שלישית לטבלה של הראשונה. ⚠️ והמפה לפני מסך הבחירה —
+ *  ⭐ הוא מצויר ממנה. */
+var YESHIVOT = [
+  { id: 'rishon',    name: 'ראשון לציון',
+    full: 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון',
+    table: 'ya_settings_rishon',    logo: 'logos/rishon.png' },
+  { id: 'ramataviv', name: 'רמת אביב',
+    full: 'ישיבת תומכי תמימים ליובאוויטש רמת אביב',
+    table: 'ya_settings_ramataviv', logo: 'logos/ramataviv.png' },
+];
+function yaYeshiva(y) {
+  for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i];
+  return null;
+}
 /*  ⛔ מציג הטבלה יושב במסך הבחירה ⛔ ולא בתוך הישיבה — ⚠️ הטבלה היא של
  *  הארגון ואינה שייכת למוסד, ⭐ ומסך שנפתח מתוך מוסד נקרא כאילו הוא מתאר
  *  אותו. ⛔ והכפתור מובחן משני כפתורי הבחירה — ⚠️ הם ממשיכים לאפליקציה,
@@ -123,10 +144,9 @@ function screenPickHTML() {
     </svg>
     <h1 class="ys-pick-h1">יומן עבודה</h1>
     <div class="ys-pick-lead">בחר ישיבה</div>
-    <div class="ys-pick-btns">
-      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="rishon">ראשון לציון</button>
-      <button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="ramataviv">רמת אביב</button>
-    </div>
+    <div class="ys-pick-btns">${YESHIVOT.map(function (y) {
+      return '<button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="' + y.id + '">' + esc(y.name) + '</button>';
+    }).join('')}</div>
     <div class="ys-pick-aside">
       <button class="ys-pick-alt" data-act="inf-open">📊 טבלת התשתית</button>
     </div>
@@ -249,16 +269,9 @@ mountView();
 const SB_URL = self.APP.supabase.url;
 const SB_KEY = self.APP.supabase.key;
 // ── משתנים גלובליים של רב-דיירות (מוסד) ──
-var YESHIVA = null;     // 'rishon' | 'ramataviv' — נבחר בכל עלייה, ואינו נשמר לדיסק
-var KV_TABLE = null;    // 'ya_settings_rishon' | 'ya_settings_ramataviv' — טבלת הענן פר-מוסד
+var YESHIVA = null;     // מפתח ב-`YESHIVOT` — נבחר בכל עלייה, ואינו נשמר לדיסק
+var KV_TABLE = null;    // טבלת הענן פר-מוסד — מ-`YESHIVOT`
 var LS = '';            // סיומת מפתח ה-localStorage פר-מוסד (בידוד אופליין)
-/*  ⛔ מפה אחת: ישיבה ⟵ הלוגו שלה, נתיב לקובץ ב-`logos/` — ⚠️ ואין ברירת
- *  מחדל: ⭐ ישיבה שאין לה רשומה כאן מוצגת בלי לוגו, ⛔ ולא בלוגו של אחרת.
- *  ⛔ ואין `src` ב-HTML — ⚠️ לפני שנבחרה ישיבה אין לוגו שנכון להציג. */
-var YA_LOGOS = {
-  rishon: 'logos/rishon.png',
-  ramataviv: 'logos/ramataviv.png'
-};
 
 var _sb = null;
 
@@ -307,6 +320,7 @@ var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
 var MSG_NO_CATS = '⚠️ אין קטגוריות למוסד הזה';
 var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
 var MSG_ALREADY_AT = 'כבר במוסד ';
+var MSG_YESHIVA_UNKNOWN = '❌ הישיבה אינה מוכרת — לא נבחרה';
 var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
 var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
 var MSG_IMG_PREP = 'מכין תמונה...';
@@ -2293,9 +2307,8 @@ function instName() {
   var el = document.getElementById("instNameInput");
   var v = el && el.value ? el.value.trim() : '';
   if (v) return v;
-  return (YESHIVA === 'ramataviv')
-    ? 'ישיבת תומכי תמימים ליובאוויטש רמת אביב'
-    : 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון';
+  var y = yaYeshiva(YESHIVA);
+  return y ? y.full : '';
 }
 
 
@@ -2413,7 +2426,7 @@ function _buildReportDiv(cb, entries){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rows+='<tr>';
-        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--rp-cat-ink);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
+        if(cri===0)rows+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+data.name+'</td>';
         if(ii===0)rows+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+tg.task+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
         rows+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
@@ -3435,6 +3448,22 @@ function _infMd(t) {
 }
 /*  ⛔ הסימון נגזר מהתא ⛔ ואינו נבדק מול רשימה סגורה — ⚠️ תא שאינו אחד
  *  משלושת הסימנים מוצג כפי שהוא, ⭐ ולא נבלע בשקט. */
+/*  ⛔ סמל לכל עמודת אפליקציה, בשם שבכותרת הטבלה — ⚠️ ושם שאין לו סמל
+ *  מוצג באות הראשונה שלו: ⭐ אפליקציה שנוספה לטבלה אינה נחתכת ואינה נעלמת. */
+var INF_ICONS = {
+  'יומן': '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v18"/><path d="M12 8h4M12 12h4M12 16h4"/>',
+  'הנהלה': '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 11l2 2 4-4"/>',
+  'שכר': '<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/><path d="M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/>',
+  'גיוס': '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  'קופה': '<circle cx="12" cy="4.5" r="2.5"/><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M9 13h6"/>'
+};
+function _infAppTh(a) {
+  var ico = INF_ICONS[a];
+  var body = ico
+    ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + ico + '</svg>'
+    : '<span class="inf-ico-l" aria-hidden="true">' + esc(String(a).charAt(0)) + '</span>';
+  return '<th title="' + esc(a) + '" aria-label="' + esc(a) + '">' + body + '</th>';
+}
 function _infDot(cell) {
   if (cell === '✅') return '<span class="inf-dot ok" title="תקין"></span>';
   if (cell === '⭕') return '<span class="inf-dot gap" title="חסר-מנומק"></span>';
@@ -3501,7 +3530,7 @@ function _infHtml(d) {
          '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
          d.apps.map(function () { return '<col class="c-a">'; }).join('') +
          '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
-         d.apps.map(function (a) { return '<th>' + esc(a) + '</th>'; }).join('') +
+         d.apps.map(_infAppTh).join('') +
          '<th>הערה</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
       h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
@@ -3634,19 +3663,12 @@ function loadLocalData() {
   }
 }
 
-/*  ⛔ שמות שני המוסדות במקום אחד — ⚠️ הם מופיעים בבורר, בכותרת המשנה
- *  ובאישור, ⭐ ושלושה מקומות שכל אחד מחזיק את השם הם שלוש הזדמנויות
- *  לכתוב אותו אחרת. */
-var YESHIVOT = [
-  { id: 'rishon',    name: 'ראשון לציון' },
-  { id: 'ramataviv', name: 'רמת אביב' },
-];
 /* ══════════════════════════════════════════════════════════════════════════
    החלפת מוסד — הבורר, איפוס המצב, והעלייה מחדש
    ══════════════════════════════════════════════════════════════════════════ */
 function yaNameOf(y) {
-  for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i].name;
-  return '';
+  var e = yaYeshiva(y);
+  return e ? e.name : '';
 }
 
 /*  ⛔ המצב שאינו נטען מחדש מהדיסק — ⚠️ `loadLocalData` מחליפה את
@@ -3739,25 +3761,25 @@ function selectYeshiva(y) {
    *  ⛔ **וכניסה חוזרת נגזרת ואינה נמסרת** — ⚠️ הפרמטר `again` נמסר בקורא
    *  אחד ולא בשני, ⭐ ולכן `pendBoot` רץ פעם שנייה במסלול השני ⛔ והוסיף
    *  מאזיני רשת כפולים. */
+  var ent = yaYeshiva(y);
+  if (!ent) { console.error('[ya] ישיבה שאינה במפה:', y); toast(MSG_YESHIVA_UNKNOWN, null, 'bad'); return; }
   var reentry = !!YESHIVA;
   if (reentry) yaResetTenantState();
   var again = reentry;
   YESHIVA  = y;
-  KV_TABLE = (y === 'ramataviv') ? 'ya_settings_ramataviv' : 'ya_settings_rishon';
+  KV_TABLE = ent.table;
   LS       = '_' + y;
 
   // לוגו הכותרת — נתיב פר-מוסד לקובץ שב-`logos/`
   var logoEl = document.getElementById('appLogo');
   if (logoEl) {
-    var logo = YA_LOGOS[y];
+    var logo = ent.logo;
     if (logo) { logoEl.src = logo; logoEl.alt = 'לוגו'; }
     else { logoEl.removeAttribute('src'); logoEl.alt = ''; }
   }
   // כותרת משנה
   var sub = document.getElementById('hdrSub');
-  if (sub) sub.textContent = (y === 'ramataviv')
-    ? 'ישיבת תומכי תמימים ליובאוויטש רמת אביב'
-    : 'ישיבת תומכי תמימים ליובאוויטש ראשון לציון';
+  if (sub) sub.textContent = ent.full;
   // ⛔ כפתור שיתוף **לשני המוסדות** — ⚠️ ועד כאן הוא הוצג
   //    לרמת אביב בלבד: כפתור ראשון לציון היה «שלח לוואטסאפ», והוא ירד יחד
   //    עם יכולת הוואטסאפ במקום להיגזר ממנה. ⛔ ההסרה הפילה קורא.
@@ -3799,6 +3821,7 @@ function selectYeshiva(y) {
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
+  shellBare(false);
   // מסך הבחירה כבר נסגר — כישלון כאן חייב להשאיר אפליקציה שמישה ולא מסך ריק
   try {
     startApp();
