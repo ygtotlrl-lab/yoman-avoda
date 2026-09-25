@@ -688,8 +688,7 @@ var RTY_CFG = {
 /* ⚠️ ביומן החותמת היא שורת `last_changed` שבטבלת המוסד (`KV_TABLE`),
    ⛔ ולכן `active()` נבדק מול `YESHIVA` — פולינג לפני בחירת מוסד
    היה נוגע בנתונים של דייר שאיש לא בחר.
-   ⛔ **וזה ההבדל היחיד ב-`active()` ביניהן** — ⚠️ בשלוש האחרות הוא
-   `sessActive()`, ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
+   ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
    ⚠️ `ok()` הוא `_yaMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
    ממנה את עֵד הפינוי — הוא `_yaPushedAt` פר-מפתח. */
 var PL_CFG = {
@@ -1202,7 +1201,7 @@ async function yaRowsGet(kvKey) {
   var t = yaTableOf(kvKey);
   if (!YA_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
-   *  המדוד: `_rowsPaged` קורא ל-`mkQuery()` **פעם אחת לכל עמוד**, כלומר
+   *  המדוד: `_rowsPaged` קורא לסגור שהוא מקבל **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
    *  של מוסד אחד עם עמוד 2 של השני ⛔ לתוך תוצאה אחת שנראית שלמה. */
   var yesh = YESHIVA, _ep = ctxEpoch();
@@ -3545,8 +3544,6 @@ function _infHtml(d) {
 }
 window._infData = null;
 window._infOpen = false;
-/*  ⛔ שתי המשיכות במקביל ⛔ ולא בזו אחר זו — ⚠️ אין ביניהן תלות,
- *  ⭐ וההמתנה היא של האיטית מבין השתיים ⛔ ולא של סכומן. */
 async function yaInfraOpen() {
   window._infOpen = false;
   openModal(MSG_INFRA_TABLE,
@@ -3554,8 +3551,6 @@ async function yaInfraOpen() {
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
   try {
-    /*  ⛔ משיכה אחת — ⚠️ המשיכה השנייה הביאה את מפת הזיווג של
-     *  סעיפי הכללים, ⭐ ואין יותר כללים לזווג. */
     var res = await withTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
     md = await res.text();
