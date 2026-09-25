@@ -32,10 +32,16 @@
   /*  ⛔ ארבעת אסימוני הזהות — ⭐ `--brand-ink` הוא גם
    *  רקע הריחוף והלחיצה, ⛔ שהדיו עליו הוא `--bg` ומתחלף איתו. */
   --brand-fill:#1E6FBF; --brand-ink:#1558A0; --brand-soft:#E4EEFA;
-  /*  ⛔ הדיו על צבע הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
+  /*  ⛔ הדיו על מילוי הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
    *  בה יש מניפת קטגוריות: ⛔ אחד לכל התשע, ⚠️ וקבוע בשני המצבים —
    *  ⭐ `--cat` אינו מתחלף עם הערכה, ⛔ ולכן הצמד אחד. */
-  --on-cat:#000000;
+  --on-cat:#FFFFFF;
+  /*  ⛔ השחור שהמסגרת העמוקה נמזגת בו — ⚠️ ולא `--on-cat`: ⭐ הדיו לבן,
+   *  ⛔ ומסגרת שנמזגת בו מתבהרת במקום להעמיק. */
+  --cat-shade:#000000;
+  /*  ⛔ הדיו על תא הקטגוריה בדוח שנצרב לתמונה — ⚠️ נפרד מ-`--on-cat`:
+   *  ⭐ הדוח נשלח החוצה, ⛔ וצבעיו אינם נגזרים מכפתור במסך. */
+  --rp-cat-ink:#000000;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text-2:#4A5A7A; --text-3:#8A9ABB;
@@ -305,14 +311,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* ⛔ צבע אחד לקטגוריה — ⚠️ `--cat` הוא המסגרת והמילוי כאחד. ⛔ ובמצב כהה הכפתור שאינו נבחר נושא את דיו
-   הערכה — ⚠️ שחור על כרטיס כהה אינו נקרא. */
-.cat-btn{color:var(--on-cat);}
-@media (prefers-color-scheme:dark){.cat-btn{color:var(--text);}}
-/*  ⛔ מסגרת הנבחר בגוון עמוק של אותו צבע — ⚠️ מסגרת בצבע המילוי נבלעת בו.
- *  ⭐ העובי הנוסף בפנים, ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור
- *  אינו גדל ואינו זז כשהוא נבחר. */
-.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--on-cat));
+/* ⛔ שם הקטגוריה בצבע שלה — ⚠️ `--cat` הוא המסגרת והדיו כאחד, ⭐ בבהיר
+   ובכהה: ⛔ הצבע אינו מתחלף עם הערכה, ⚠️ ולכן אין לו כלל כהה. */
+.cat-btn{color:var(--cat);}
+/*  ⛔ הנבחר — מילוי בצבע הקטגוריה, ⚠️ ועליו הטקסט לבן.
+ *  ⭐ המסגרת בגוון עמוק של אותו צבע — ⛔ מסגרת בצבע המילוי נבלעת בו,
+ *  ⚠️ והגוון נמזג ב-`--cat-shade` ⛔ ולא בדיו. ⭐ העובי הנוסף בפנים,
+ *  ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור אינו גדל ואינו זז. */
+.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--cat-shade));
   background:var(--cat);color:var(--on-cat);border-color:var(--cat-deep);box-shadow:inset 0 0 0 1px var(--cat-deep);}
 /* כפתורים מהירים */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
