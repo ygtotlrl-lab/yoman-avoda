@@ -2,12 +2,12 @@
 
 אפליקציית PWA לניהול יומן עבודה יומי בשתי ישיבות. עברית מלאה, RTL, מובייל ודסקטופ.
 
-**https://ygtotlrl-lab.github.io/yoman-avoda/**
+**כתובת האפליקציה** — `android.url` שבתצורה.
 
 ## הפעלה ראשונה
 
 1. הריצו את `migrations/000_initial_schema.sql` מול פרויקט ה-Supabase
-   (`kxbtskqobynewvnckaaz`) דרך ה-SQL Editor. הקובץ אידמפוטנטי.
+   (`supabase.url` שבתצורה) דרך ה-SQL Editor. הקובץ אידמפוטנטי.
 2. פתחו את האפליקציה ובחרו מוסד — **ראשון לציון** או **רמת אביב**.
    ⛔ אין כאן מסך כניסה, אין טבלת משתמשים ואין סיסמאות: בחירת המוסד היא
    מה שקובע לאיזו טבלה בענן (`ya_settings_rishon` / `ya_settings_ramataviv`) האפליקציה כותבת.

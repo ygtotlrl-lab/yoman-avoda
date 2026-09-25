@@ -2,10 +2,10 @@
 
 ## פרטי ריפו
 - **ריפו:** `ygtotlrl-lab/yoman-avoda`
-- **GitHub Pages:** `https://ygtotlrl-lab.github.io/yoman-avoda/`
+- **GitHub Pages:** כתובת האפליקציה — `android.url` שבתצורה
 - **טוקן:** מנוהל ב-Windows Credential Manager (host `github.com`) — לעולם לא בקובץ
 - **קובץ ראשי:** `index.html`
-- **Supabase:** project `kxbtskqobynewvnckaaz` | טבלאות `ya_settings_rishon` / `ya_settings_ramataviv`
+- **Supabase:** project — `supabase.url` שבתצורה | טבלאות `ya_settings_rishon` / `ya_settings_ramataviv`
   ו-`ya_entries` (ראה למטה)
 
 ---
