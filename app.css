@@ -206,7 +206,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .rp-cat{font-weight:900}
 .is-current{opacity:var(--op-4)}
 .cat-fill{background:var(--cat)}
-/* ⚠️ `cat-6` הובהר מעט — ⛔ שחור על הסגול העמוק 3.55, ⭐ ועל זה 4.62. */
 .cat-0{--cat:#888888}
 .cat-1{--cat:#E8622A}
 .cat-2{--cat:#E8A020}
@@ -307,8 +306,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* ⛔ צבע אחד לקטגוריה — ⚠️ `--cat` הוא המסגרת והמילוי כאחד, ⭐ וטקסט שחור
-   עליו עומד ב-4.5 בכל התשע. ⛔ ובמצב כהה הכפתור שאינו נבחר נושא את דיו
+/* ⛔ צבע אחד לקטגוריה — ⚠️ `--cat` הוא המסגרת והמילוי כאחד. ⛔ ובמצב כהה הכפתור שאינו נבחר נושא את דיו
    הערכה — ⚠️ שחור על כרטיס כהה אינו נקרא. */
 .cat-btn{color:var(--on-cat);}
 @media (prefers-color-scheme:dark){.cat-btn{color:var(--text);}}
@@ -335,9 +333,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
 .fld input:focus{outline:none;border-color:var(--brand-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
 /* כפתור ההוספה הגדול */
-/* ⛔ שני קצוות המעבר נושאים לבן ב-4.5 לפחות — ⭐ `--brand-fill` 5.15 ⟵
-   `--deep-1` 8.18, ⛔ קבועים בשני המצבים: ⚠️ `--brand-ink` מתבהר בכהה,
-   ⭐ ולכן אינו קצה המעבר. */
+/* ⛔ קצוות המעבר — `--brand-fill` ⟵ `--deep-1`, ⭐ קבועים בשני המצבים:
+   ⚠️ `--brand-ink` מתבהר בכהה, ⛔ ולכן אינו קצה המעבר. */
 .btn-add{width:100%;background:linear-gradient(135deg,var(--brand-fill),var(--deep-1));color:var(--on-brand);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
