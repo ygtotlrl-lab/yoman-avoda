@@ -76,7 +76,7 @@ import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
          pendReload, pendTag, plBoot, plForget, plNum, plTouch,
          prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave,
-         sbWatch, schedulePush, tombBoot, tombPruneMerged } from './core/sync.js';
+         sbWatch, schedulePush, tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
@@ -1126,6 +1126,7 @@ function yaRowOf(kvKey, rec, tbl) {
     rec_key: String(k),
     updated_at: Math.round(Number(recTs(rec)) || 0),
     deleted: !!(rec && rec.deleted),
+    deleted_at: (rec && rec.deleted) ? tombAt(recTs(rec)) : null,
     data: rec
   };
   // ⚠️ `gdate` נשמר לסנאפשוט — ⛔ הוא עמודת הסינון של הארכיון בענן,
