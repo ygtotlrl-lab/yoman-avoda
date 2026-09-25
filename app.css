@@ -12,6 +12,10 @@
   /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
    *  אין סרגל תחתון קבוע. */
   --toast-bottom:26px;
+  /*  ⛔ רוחב עמודת התוכן — ⚠️ המיכל וכל פס קבוע קוראים אותו: ⭐ ערך
+   *  שכל צרכניו קוראים ממקום אחד משתנה פעם אחת, ⛔ ופס שרוחבו מוקלד
+   *  נפרד מהעמודה ביום שהיא משתנה. */
+  --col:960px;
   /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד בכולן,
    *  ⭐ והגוון בלבד נבדל: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
   /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד בכולן,
@@ -22,17 +26,22 @@
    *  `--brand-fill`, ⭐ והיא מה שהמניפסט צובע בו את שורת המערכת ומה
    *  שכותרת המסך נגזרת ממנו: ⛔ מיפוי להדגשה צבע את באנר העדכון כתום,
    *  ⚠️ ובאחיות הוא צבע הזהות — ⭐ והמשתמש שעובר ביניהן קרא את זה כתקלה.
-   *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם, ⭐ ונמדד 5.15. */
+   *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם. */
   --brand:var(--brand-fill); --on-brand:#FFFFFF;
 
-  /*  ⛔ ארבעת אסימוני הזהות — ⚠️ לבן על `--brand-fill` 5.15 · `--brand-ink`
-   *  על הכרטיס 7.15 · ועל `--brand-soft` 6.10: ⭐ `--brand-ink` הוא גם
+  /*  ⛔ ארבעת אסימוני הזהות — ⭐ `--brand-ink` הוא גם
    *  רקע הריחוף והלחיצה, ⛔ שהדיו עליו הוא `--bg` ומתחלף איתו. */
   --brand-fill:#1E6FBF; --brand-ink:#1558A0; --brand-soft:#E4EEFA;
-  /*  ⛔ הדיו על צבע הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
+  /*  ⛔ הדיו על מילוי הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
    *  בה יש מניפת קטגוריות: ⛔ אחד לכל התשע, ⚠️ וקבוע בשני המצבים —
    *  ⭐ `--cat` אינו מתחלף עם הערכה, ⛔ ולכן הצמד אחד. */
-  --on-cat:#000000;
+  --on-cat:#FFFFFF;
+  /*  ⛔ השחור שהמסגרת העמוקה נמזגת בו — ⚠️ ולא `--on-cat`: ⭐ הדיו לבן,
+   *  ⛔ ומסגרת שנמזגת בו מתבהרת במקום להעמיק. */
+  --cat-shade:#000000;
+  /*  ⛔ הדיו על תא הקטגוריה בדוח שנצרב לתמונה — ⚠️ נפרד מ-`--on-cat`:
+   *  ⭐ הדוח נשלח החוצה, ⛔ וצבעיו אינם נגזרים מכפתור במסך. */
+  --rp-cat-ink:#000000;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
   --text:#1A2540; --text-2:#4A5A7A; --text-3:#8A9ABB;
@@ -80,7 +89,7 @@ body{-webkit-tap-highlight-color:transparent}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
 
 /* ══ קליפה ═════════════════════════════════════════════════════════════ */
-.app{max-width:960px;margin:0 auto;padding:var(--sp-6);}
+.app{max-width:var(--col);margin:0 auto;padding:var(--sp-6);}
 /* כותרת עליונה */
 /* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
    טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
@@ -202,7 +211,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .rp-cat{font-weight:900}
 .is-current{opacity:var(--op-4)}
 .cat-fill{background:var(--cat)}
-/* ⚠️ `cat-6` הובהר מעט — ⛔ שחור על הסגול העמוק 3.55, ⭐ ועל זה 4.62. */
 .cat-0{--cat:#888888}
 .cat-1{--cat:#E8622A}
 .cat-2{--cat:#E8A020}
@@ -303,15 +311,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* ⛔ צבע אחד לקטגוריה — ⚠️ `--cat` הוא המסגרת והמילוי כאחד, ⭐ וטקסט שחור
-   עליו עומד ב-4.5 בכל התשע. ⛔ ובמצב כהה הכפתור שאינו נבחר נושא את דיו
-   הערכה — ⚠️ שחור על כרטיס כהה אינו נקרא. */
-.cat-btn{color:var(--on-cat);}
-@media (prefers-color-scheme:dark){.cat-btn{color:var(--text);}}
-/*  ⛔ מסגרת הנבחר בגוון עמוק של אותו צבע — ⚠️ מסגרת בצבע המילוי נבלעת בו.
- *  ⭐ העובי הנוסף בפנים, ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור
- *  אינו גדל ואינו זז כשהוא נבחר. */
-.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--on-cat));
+/* ⛔ שם הקטגוריה בצבע שלה — ⚠️ `--cat` הוא המסגרת והדיו כאחד, ⭐ בבהיר
+   ובכהה: ⛔ הצבע אינו מתחלף עם הערכה, ⚠️ ולכן אין לו כלל כהה. */
+.cat-btn{color:var(--cat);}
+/*  ⛔ הנבחר — מילוי בצבע הקטגוריה, ⚠️ ועליו הטקסט לבן.
+ *  ⭐ המסגרת בגוון עמוק של אותו צבע — ⛔ מסגרת בצבע המילוי נבלעת בו,
+ *  ⚠️ והגוון נמזג ב-`--cat-shade` ⛔ ולא בדיו. ⭐ העובי הנוסף בפנים,
+ *  ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור אינו גדל ואינו זז. */
+.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--cat-shade));
   background:var(--cat);color:var(--on-cat);border-color:var(--cat-deep);box-shadow:inset 0 0 0 1px var(--cat-deep);}
 /* כפתורים מהירים */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
@@ -331,9 +338,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
 .fld input:focus{outline:none;border-color:var(--brand-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
 /* כפתור ההוספה הגדול */
-/* ⛔ שני קצוות המעבר נושאים לבן ב-4.5 לפחות — ⭐ `--brand-fill` 5.15 ⟵
-   `--deep-1` 8.18, ⛔ קבועים בשני המצבים: ⚠️ `--brand-ink` מתבהר בכהה,
-   ⭐ ולכן אינו קצה המעבר. */
+/* ⛔ קצוות המעבר — `--brand-fill` ⟵ `--deep-1`, ⭐ קבועים בשני המצבים:
+   ⚠️ `--brand-ink` מתבהר בכהה, ⛔ ולכן אינו קצה המעבר. */
 .btn-add{width:100%;background:linear-gradient(135deg,var(--brand-fill),var(--deep-1));color:var(--on-brand);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
