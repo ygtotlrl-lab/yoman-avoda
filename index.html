@@ -71,7 +71,7 @@
 import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          MSG_SYNC_BACK, appConfigure, dayNoon, errMsg, getDeviceId, kvParse,
          uniqHas, uniqList, withTimeout } from './core/util.js';
-import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idArg, idEq,
+import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idEq,
          mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
          pendReload, pendTag, plBoot, plForget, plNum, plTouch,
@@ -493,9 +493,8 @@ var PEND_CFG = {
    ⛔ **ו-`data-id` מחזיר תמיד מחרוזת** — ההשוואה חייבת לעבור ב-`idEq`,
    שממיר את שני הצדדים ל-`String`. ⛔ אין להשוות ב-`===` על מספר.
    ══════════════════════════════════════════════════════════════════════════ */
-/*  בורר CSS למזהה — ⛔ רשימת-היתר של תווים ולא בריחה — אותו
- *  נימוק כמו `idArg`: ערך שאינו עובר את הסינון אינו יכול לסגור את
- *  הבורר ולהריץ בורר אחר. */
+/*  בורר CSS למזהה — ⛔ רשימת-היתר של תווים ולא בריחה — ⚠️ ערך שאינו
+ *  עובר את הסינון אינו יכול לסגור את הבורר ולהריץ בורר אחר. */
 function cssQ(v) {
   return String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '');
 }
@@ -933,7 +932,7 @@ function mergeRecords(local, remote, getKey, mergePair, isPending) {
 /* ══════════════════════════════════════════════════════════════════════════
    סדר רשומות היומן
    ══════════════════════════════════════════════════════════════════════════
-   ⚠️ השוואה וציטוט של מזהה — `idEq` ו-`idArg` — יושבים ב**מודול
+   ⚠️ השוואת מזהה — `idEq` — יושבת ב**מודול
    מזהי הרשומות המשותף**, ולא כאן. מה שנשאר כאן הוא
    סדר הרשומות, שהוא פרטי ליומן.
    ══════════════════════════════════════════════════════════════════════════ */
