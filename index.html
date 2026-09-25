@@ -26,7 +26,9 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
-<div class="app">
+<!--  ⛔ שורש הקליפה — כותרת · לשוניות · מיכל תוכן: ⚠️ והיא מתחילה חשופה,
+      ⭐ והמסגרת נחשפת רק כשנבחרה ישיבה — ⛔ ולא בטעינה ובמסך הבחירה. -->
+<div class="app is-bare">
 
   <div class="hdr">
     <div class="hdr-top">
@@ -79,7 +81,8 @@ import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
          lsClearHorizons, lsGet, lsRemove, lsSet, lsSetArray } from './core/storage.js';
 import { bkBoot, logAction } from './core/backup.js';
 import { actRun, ask, closeAsk, closeModal, esc, ksKey, modalBackdrop,
-         modalEsc, openModal, pullRender, swApply, swHideUpdate, toast } from './core/ui.js';
+         modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         toast } from './core/ui.js';
 import './core/hebrew.js';
 
 /*  ⛔ התצורה נמסרת למודולים בשומרי קריאה — ⚠️ חלקה מוגדר בהמשך הדף,
@@ -3799,6 +3802,7 @@ function selectYeshiva(y) {
   try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
+  shellBare(false);
   // מסך הבחירה כבר נסגר — כישלון כאן חייב להשאיר אפליקציה שמישה ולא מסך ריק
   try {
     startApp();
