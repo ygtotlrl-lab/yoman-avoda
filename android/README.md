@@ -3,14 +3,14 @@
 A native Android **WebView** shell (not a TWA) that loads the **live site** over the
 network — כתובת האפליקציה, `android.url` שבתצורה.
 
-It replaces the PWABuilder TWA so that image sharing can attach the file via a
-native bridge.
+⭐ **WebView ולא TWA** — ⚠️ שיתוף תמונה מצרף את הקובץ דרך גשר מקורי, ⛔ ו-TWA
+אינו נושא גשר כזה.
 
 ## מה בפנים
 
 | | |
 |---|---|
-| **Package ID** | שם החבילה — `android.package` שבתצורה — זהה למעטפת שהוא מחליף (חובה, אחרת זו אפליקציה נפרדת) |
+| **Package ID** | שם החבילה — `android.package` שבתצורה — קבוע (חובה, אחרת זו אפליקציה נפרדת) |
 | **טוען** | כתובת האפליקציה — `android.url` שבתצורה — **מהרשת**, לא מנכסים מוטבעים |
 | **versionCode** | ⛔ עולה בכל שינוי ב-APK: ⚠️ מכשיר אינו מתקין מעל גרסה שאינה גבוהה ממנה |
 | **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ זהים בכולן |
@@ -44,11 +44,6 @@ native bridge.
 ⛔ **גם כאן «⏳ ממתין לסנכרון» נבדק לפני ההסרה ולא אחריה** — אחריה כבר אין מה
 לבדוק.
 <!-- SHARED:end -->
-
-⚠️ **כאן המעבר הוא מ-`file://`** — גרסה 1 הטמיעה את `index.html` ב-`assets/`,
-וגרסה 2 טוענת מהרשת. מי שמתקין את גרסה 2 מעל גרסה 1 מקבל localStorage **ריק**:
-בחירת המוסד תתבקש שוב, והנתונים ייטענו מחדש מהענן
-(`kv_rishon`/`kv_ramataviv`), שהוא ממילא מקור האמת.
 
 <!-- SHARED:start id="android-icons" -->
 ## אייקונים
@@ -95,10 +90,8 @@ native bridge.
 `.github/workflows/build-apk.yml`: Actions → **Build APK** → **Run workflow**.
 ה-APK **החתום** יורד כ-artifact בשם `yoman-avoda-apk`.
 
-**אין יותר שלב "copy web assets"** — ⛔ ואין להחזיר אותו (ר' הפרק שמעל).
-⭐ **וגם תיקיית `assets/` וסקריפט ההעתקה שלה נמחקו** — נמדד: אפס
-קוראים בכל הריפו (workflow · gradle · manifest · קוד), והאיסור עצמו
-כבר מגודר בחמישה מקומות. ⛔ שלד ששרד את תפקידו נקרא כהזמנה להחזירו.
+⛔ **אין שלב העתקת נכסים ואין תיקיית `assets/`** — ⚠️ המעטפת טוענת מהרשת,
+⭐ ועותק מקומי של הקוד הוא גרסה שנייה שאינה מתעדכנת.
 
 ### בנייה מקומית (דורשת Android SDK + Gradle)
 
@@ -128,40 +121,6 @@ gradle :app:assembleRelease        # או: ./gradlew :app:assembleRelease
 | **SHA256** | טביעת המפתח — `signSha256` שבתצורה |
 
 אחרי חתימה מאמתים שה-SHA256 תואם לטביעה שבתצורה.
-
-> ⚠️ **המפתח הוחלף ב-2026-09-15.** APK חדש ⛔ אינו מתקין על גבי
-> התקנה שנחתמה במפתח הישן — נדרשת הסרה והתקנה מחדש, פעם אחת.
-
-## Notes
-- בדיקת האוטו-אפדייט מול GitHub `raw` **נשארה כפי שהיא**, אבל משמעותה השתנתה:
-  מעכשיו `location.reload()` באמת מביא את הקוד החדש (הדף הוא https ולא
-  `file://`), ולכן שחרור web כבר לא דורש בניית APK.
-
-<!-- SHARED:start id="android-smali-scope" -->
-## תיקון URL ב-APK קיים ובנוי (בלי מקור) — smali בלבד
-
-⚠️ **הפרק הזה רלוונטי רק ל-APK ישן שנבנה לפני `android/`.** בנייה רגילה היום
-היא מ-`android/` דרך `.github/workflows/build-apk.yml`, והמעטפת טוענת מהרשת —
-ולכן אין בה URL שצריך לתקן.
-⛔ **smali בלבד — לא binary patch.** עריכה בינארית של ה-APK שוברת את החתימה
-ואינה ניתנת לאימות, ⛔ והחתימה מחדש היא במפתח הקבוע של הריפו בלבד — ר' הפרק
-«Sign with the PERMANENT key» שלמעלה.
-⭐ **שני הקבצים שנושאים את ה-URL הם `MainActivity.smali` ו-`MainActivity$2.smali`**
-— ⛔ וההוראה זהה בכל הריפו; הכתובת עצמה, שם תיקיית העבודה והמפתח הם
-פר-אפליקציה, ⛔ ויושבים בבלוק שמתחת.
-<!-- SHARED:end -->
-
-```bash
-apktool d <app>.apk -o /tmp/yw_work -f
-rm -rf /tmp/yw_work/build          # חובה לפני בנייה חוזרת
-apktool b /tmp/yw_work -o built.apk
-zipalign -f 4 built.apk aligned.apk
-SIGN_KEYSTORE=<עותק מקומי של המפתח> SIGN_PASS=<הערך שב-KEYSTORE_PASS> \
-  signing/sign-apk.sh aligned.apk output.apk
-```
-
-⭐ **וכל חתימה היא ב-`signing/yoman.keystore`** — ⛔ הקובץ אינו בריפו,
-⚠️ והוא נמשך מ-GitHub Secrets בזמן הבנייה.
 
 <!-- SHARED:start id="android-cache-apk" -->
 ### ⚠️ Cache APK — כלל זהב
