@@ -3398,7 +3398,7 @@ function _infAppTh(a) {
   var cellHtml = icoSvg
     ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + icoSvg + '</svg>'
     : '<span class="inf-ico-l" aria-hidden="true">' + esc(String(a).charAt(0)) + '</span>';
-  return '<th title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHtml + '</th>';
+  return '<th class="inf-app" title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHtml + '</th>';
 }
 function _infDot(cell) {
   if (cell === '✅') return '<span class="inf-dot ok" title="תקין"></span>';
@@ -3470,7 +3470,7 @@ function _infHtml(d) {
          '<th>הערה</th></tr></thead><tbody>';
     c.rows.forEach(function (r) {
       h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
-           r.apps.map(function (a) { return '<td>' + _infDot(a) + '</td>'; }).join('') +
+           r.apps.map(function (a) { return '<td class="inf-app">' + _infDot(a) + '</td>'; }).join('') +
            '<td>' + _infMd(r.note) + '</td></tr>';
     });
     h += '</tbody></table></div></details>';
