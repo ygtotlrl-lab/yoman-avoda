@@ -183,6 +183,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
   vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
 .inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text-2)}
+/*  ⛔ עמודת אפליקציה — הסמל והנקודה על ציר אחד: ⚠️ בלי ריווח אופקי, ⭐ ושניהם
+ *  ממורכזים ברוחב העמודה הקבוע, ולכן בכל רוחב מסך. */
+.inf-tbl .inf-app{padding-inline:0;text-align:center}
 .inf-tbl col.c-n{width:44px}
 .inf-tbl col.c-t{width:150px}
 .inf-tbl col.c-s{width:auto}
