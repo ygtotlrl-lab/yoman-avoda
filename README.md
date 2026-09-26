@@ -6,8 +6,9 @@
 
 ## הפעלה ראשונה
 
-1. הריצו את `migrations/000_initial_schema.sql` מול פרויקט ה-Supabase
-   (`supabase.url` שבתצורה) דרך ה-SQL Editor. הקובץ אידמפוטנטי.
+1. הריצו מול פרויקט ה-Supabase (`supabase.url` שבתצורה), דרך ה-SQL Editor,
+   את `hanhala-ruchanit/migrations/000_schema.sql` ואז את `migrations/000_schema.sql` —
+   הבעלים ראשון, והרצה חוזרת אינה משנה דבר.
 2. פתחו את האפליקציה ובחרו מוסד — **ראשון לציון** או **רמת אביב**.
    ⛔ אין כאן מסך כניסה, אין טבלת משתמשים ואין סיסמאות: בחירת המוסד היא
    מה שקובע לאיזו טבלה בענן (`ya_settings_rishon` / `ya_settings_ramataviv`) האפליקציה כותבת.
