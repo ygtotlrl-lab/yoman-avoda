@@ -11,7 +11,7 @@ android {
         applicationId "com.yoman.avoda"
         minSdk 21
         targetSdk 34
-        versionCode 27
+        versionCode 28
         versionName "20.0"
     }
 
@@ -30,6 +30,6 @@ android {
 dependencies {
     implementation 'androidx.core:core:1.13.1'
     // WebViewCompat.addWebMessageListener — the origin allow-list for the share bridge
-    // is enforced by WebView itself, per frame. See MainActivity#installShareBridge.
+    // is enforced by WebView itself, per frame.
     implementation 'androidx.webkit:webkit:1.11.0'
 }
