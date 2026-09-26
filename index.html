@@ -714,7 +714,7 @@ var PUSH_CFG = {
   chunk:  500,
   delay:  400,
   dirty:  function (t, ctx) {
-    if (!YA_ROWS || !yaTableOf(t) || !KV_TABLE || !YESHIVA) return null;
+    if (!yaTableOf(t) || !KV_TABLE || !YESHIVA) return null;
     _yaPushEp = ctxEpoch();
     return yaDirtyRows(t, ctx || (t === 'ya_archive' ? ARCHIVE : ENTRIES));
   },
@@ -756,7 +756,7 @@ var HW_CFG = {
  *  ⚠️ וההגירה המקומית מכסה מכשיר שעלה, ⛔ ואינה מכסה מכשיר שההגירה
  *  נפלה בו באמצע: ⭐ ולכן העידן קודם, ⛔ **ואחרי ההגירה
  *  ⛔ ולא לפניה** — ⚠️ סדר הפוך זורק תור שטרם הוגר. */
-var DATA_ERA = 2;
+var DATA_ERA = 3;
 var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return getSB(); },
@@ -1085,15 +1085,11 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
       קריאה: ⭐ `ya_archive` הוא **מפתח localStorage** בלבד, ⛔ ואינו שם של
       טבלה.
    ══════════════════════════════════════════════════════════════════════════ */
-var YA_ROWS = true;
-var YA_ARC_UNIFIED = true;
 /* ⭐ הרשומות והארכיון חיים בטבלת השורות בלבד — ⚠️ `cats`/`subs`/`subs_meta`
    נשארים ב-`kv`: ⛔ אין להם תחליף-שורות, והוא ביתם היחיד בענן. */
-var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_archive' };
+var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_entries' };
 // הטבלה שאליה פונה מפתח kv נתון, ודגל ה-`archived` שמפריד בין השניים בתוכה.
-function yaTableOf(kvKey) {
-  return (YA_ARC_UNIFIED && kvKey === 'ya_archive') ? 'ya_entries' : YA_ROW_TABLES[kvKey];
-}
+function yaTableOf(kvKey) { return YA_ROW_TABLES[kvKey]; }
 function yaArchivedFlag(kvKey) { return kvKey === 'ya_archive'; }
 // מפת חותמות הענן פר-מפתח, בזיכרון בלבד. ⛔ `null` פירושו «טרם נמשך», והוא
 // גורם לדחיפה של הכל — בספק דוחפים, כי רשומה שלא נדחפה נעלמת
@@ -1104,13 +1100,10 @@ function yaRecKey(kvKey, rec) {
   return (kvKey === 'ya_archive') ? archiveKey(rec) : entryKey(rec);
 }
 function yaPendPrefix(kvKey) { return (kvKey === 'ya_archive') ? PK_ARC : PK_ENTRY; }
-// `tbl` אופציונלי — הטבלה שאליה השורה נועדה. ⛔ `archived` נכתב רק כשהיעד
-// הוא `ya_entries` — ⚠️ שדה שאינו עמודה ב-`upsert` מפיל את הכתיבה כולה
-// ומחזיר `ok:false`.
-function yaRowOf(kvKey, rec, tbl) {
+// ⭐ היומן והארכיון שורות באותה טבלה, ⛔ ו-`archived` הוא מה שמפריד ביניהן.
+function yaRowOf(kvKey, rec) {
   var k = yaRecKey(kvKey, rec);
   if (k == null) return null;
-  var target = tbl || yaTableOf(kvKey);
   var row = {
     client_id: YESHIVA + ':' + k,
     yeshiva: YESHIVA,
@@ -1124,7 +1117,7 @@ function yaRowOf(kvKey, rec, tbl) {
   //    והשמטתו הייתה מחייבת לשחזר אותו מהנתונים בכל משיכה. הוא נשאר
   //    `null` לרשומות יומן.
   if (kvKey === 'ya_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
-  if (target === 'ya_entries') row.archived = yaArchivedFlag(kvKey);
+  row.archived = yaArchivedFlag(kvKey);
   return row;
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1176,7 +1169,7 @@ function yaSortRows(kvKey, arr) {
 // טבלה חסרה מחזירה שגיאה, ו-`ok` על מערך ריק היה נקרא כ«הענן ריק» ומוחק.
 async function yaRowsGet(kvKey) {
   var t = yaTableOf(kvKey);
-  if (!YA_ROWS || !t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
+  if (!t || !KV_TABLE || !YESHIVA) return { ok: false, data: null };
   /*  ⛔⛔ המוסד נלכד בכניסה ⛔ ואינו נקרא מהגלובלי בתוך הסגור — ⚠️ הנימוק
    *  המדוד: `_rowsPaged` קורא לסגור שהוא מקבל **פעם אחת לכל עמוד**, כלומר
    *  אחרי כל `await`, ⭐ והחלפת מוסד באמצע העימוד הייתה משרשרת את עמוד 1
@@ -1441,7 +1434,7 @@ function saveArchive() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   תיקון נתונים היסטוריים — שחזור תאריכים וניקוי סנאפשוטים פגומים
+   התאריך הלועזי — הצורה השמורה ופענוח הקלט
    ══════════════════════════════════════════════════════════════════════════ */
 // ⛔ **פורמט אחד ל-`gdate` שנשמר** — זה ש-`gregDateStr` מייצרת, «25 נובמבר
 //    2025»: ⚠️ הוא גם מפתח היום בארכיון, ⭐ ושתי צורות לאותו יום הן שני ימים.
@@ -1472,102 +1465,6 @@ function _gregValid(d, m, y) {
 function gregKeyFromParts(p) { return p ? (p.d + " " + GREG_MONTHS_HE[p.m-1] + " " + p.y) : ""; }
 // האם למחרוזת יש חודש עברי מזוהה (אחרת אי אפשר לנווט אליה בארכיון)
 function hasHebMonth(h) { return extractYM(h).year !== HUNKNOWN; }
-
-// ── ניקוי סנאפשוטים פגומים — סנאפשוט שמפתחו `day` במקום `gdate` ──
-window._arcCleanupDone = false;
-function arcCleanupCorrupted() {
-  if (window._arcCleanupDone) return;
-  window._arcCleanupDone = true;
-
-  var changed = false;
-  var misplaced = [];
-  var ts = Date.now();
-
-  ARCHIVE.forEach(function(snap) {
-    if (!snap || !Array.isArray(snap.entries)) return;
-    // א. סנאפשוט שה-hdate שלו שבור — נרפא מ-gdate.
-    // ⛔ הגזירה היא מ-gdate בלבד ולא מהשעון — שעון היה נותן את
-    //    היום שבו רץ הניקוי במקום את יומו של הסנאפשוט.
-    if (snap.gdate && !hasHebMonth(snap.hdate)) {
-      var pg = gdateParse(snap.gdate);
-      if (pg) {
-        var hg = hebrewDate(dayNoon(pg.y, pg.m - 1, pg.d));
-        if (hg) {
-          snap.hdate = hg;
-          if (!snap.name || gdateParse(snap.name)) snap.name = hg;
-          recTouch(snap, ts); changed = true;
-          console.log('[arcCleanup] שוחזר תאריך עברי לסנאפשוט', snap.gdate);
-        }
-      }
-    }
-    // ב. רשומות בלי gdate בתוך סנאפשוט מתוארך — יורשות את תאריך הסנאפשוט
-    if (snap.gdate) {
-      var fixed = 0;
-      snap.entries.forEach(function(e) {
-        if (!e || typeof e !== 'object' || e.gdate) return;
-        e.gdate = snap.gdate;
-        if (!e.hdate || !hasHebMonth(e.hdate)) e.hdate = snap.hdate || e.hdate || "";
-        if (!e.day && snap.day) e.day = snap.day;
-        recTouch(e, ts);
-        fixed++;
-      });
-      if (fixed) { recTouch(snap, ts); changed = true;
-        console.log('[arcCleanup] שוחזר תאריך ל-' + fixed + ' רשומות בסנאפשוט', snap.gdate); }
-    }
-  });
-
-  // שלב א: סמן כמחוקות (tombstone) רשומות שה-gdate שלהן לא מתאים לסנאפשוט.
-  // אסור להסיר אותן פיזית: הסרה פיזית = היעדרות, והמיזוג היה מחזיר אותן מהענן
-  // בסנכרון הבא. הן ממשיכות לחיות בסנאפשוט הנכון (שלב ב) תחת אותו id.
-  ARCHIVE.forEach(function(snap) {
-    if (!snap.gdate || !Array.isArray(snap.entries) || !snap.entries.length) return;
-    var wrong = snap.entries.filter(function(e){ return isLive(e) && e.gdate && e.gdate !== snap.gdate; });
-    if (!wrong.length) return;
-    changed = true;
-    misplaced = misplaced.concat(JSON.parse(JSON.stringify(wrong)));
-    wrong.forEach(function(e){ recDelete(e, ts); });
-    snap.count = liveOnly(snap.entries).length;
-    recTouch(snap, ts);
-    console.log('[arcCleanup] סנאפשוט', snap.gdate,
-      '— סומנו כמחוקות', wrong.length, 'רשומות שגויות:', wrong.map(function(e){return e.gdate;}).join(', '));
-  });
-
-  // שלב ב: שלח רשומות פגומות לסנאפשוט הנכון (לפי gdate שלהן)
-  misplaced.forEach(function(e) {
-    var tg = e.gdate || '';
-    if (!tg) return;
-    delete e.deleted;              // העותק שמועבר ליעד חי; רק המקור סומן כמחוק
-    recTouch(e, ts + 1);           // חותמת חדשה יותר מה-tombstone שנוצר בשלב א
-    var idx = ARCHIVE.findIndex(function(a){ return a.gdate === tg; });
-    if (idx >= 0) {
-      ARCHIVE[idx].entries = ARCHIVE[idx].entries || [];
-      if (!ARCHIVE[idx].entries.find(function(x){ return idEq(x.id, e.id); })) {
-        ARCHIVE[idx].entries.push(e);
-        ARCHIVE[idx].count = liveOnly(ARCHIVE[idx].entries).length;
-        recTouch(ARCHIVE[idx], ts + 1);
-        console.log('[arcCleanup] הועבר לסנאפשוט קיים:', tg);
-      }
-    } else {
-      // צור סנאפשוט חדש עבור תאריך זה
-      ARCHIVE.push({ id: e.id, name: e.hdate || tg, hdate: e.hdate || '',
-        gdate: tg, day: e.day || '', date: tg, entries: [e], count: 1, updatedAt: ts + 1 });
-      console.log('[arcCleanup] נוצר סנאפשוט חדש:', tg);
-      changed = true;
-    }
-  });
-
-  // שלב ג: סמן כמחוקים סנאפשוטים שנותרו ריקים (tombstone, לא הסרה)
-  var emptied = 0;
-  ARCHIVE.forEach(function(snap){
-    if (!isLive(snap) || !snap.gdate || !Array.isArray(snap.entries)) return;
-    if (snap.entries.length && !liveOnly(snap.entries).length) { recDelete(snap, ts); emptied++; }
-  });
-  if (emptied) console.log('[arcCleanup] סומנו כמחוקים', emptied, 'סנאפשוטים ריקים');
-
-  if (!changed) { console.log('[arcCleanup] ✅ הארכיון תקין — אין צורך בניקוי'); return; }
-  saveArchive();
-  console.log('[arcCleanup] ✅ ניקוי הושלם —', misplaced.length, 'רשומות תוקנו');
-}
 
 // טעינה מ-Supabase בעלייה — תמיד מושכים מהענן כדי לסנכרן בין המכשירים
 /* ⭐ יומן הפעולות של הסנכרון — דחיפה
@@ -1723,9 +1620,6 @@ async function syncFromCloud() {
       pushTable('ya_archive', ARCHIVE);
     }
     }
-
-    // ניקוי חד-פעמי של סנאפשוטים פגומים (אחרי שהארכיון מהענן כבר יושב ב-ARCHIVE)
-    arcCleanupCorrupted();
 
     // מיישב את selCat אחרי ש-CATS הוחלף — ההפניה הישנה אינה במערך החדש
     if (selCat) {
