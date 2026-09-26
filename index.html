@@ -463,11 +463,15 @@ function _yaVerify(kvKey) {
    עד `selectYeshiva`, וגיבוי שהיה רץ לפניו היה פונה לטבלה שאינה קיימת.
    ⚠️ אין כאן טבלת משתמשים ואין סוד — ולכן אין מקור שצריך להחריג
    מהגיבוי. */
+function yaBkPrefix(y) { return (y || 'unknown') + '_'; }
 var BK_CFG = {
   client: function () { return getSB(); },
   flagKey: function () { return 'ya_last_backup' + LS; },
   logQueueKey: function () { return 'ya_log_queue' + LS; },
-  prefix: function () { return (YESHIVA || 'unknown') + '_'; },
+  prefix: function () { return yaBkPrefix(YESHIVA); },
+  /*  ⭐ הקידומת נבדלת בין המוסדות — ⚠️ ולכן המרשם מצהיר על מפתחות הגיבוי
+   *  של כולם: ⛔ המוסד שאינו פתוח עכשיו הוא נתון שממתין לו, ⛔ ולא שארית. */
+  prefixes: function () { return YESHIVOT.map(function (y) { return yaBkPrefix(y.id); }); },
   device: function () { try { return getDeviceId(); } catch (e) { return null; } },
   user: function () { return null; },
   // ⚠️ אין כאן סוד להחריג — אין טבלת משתמשים; הרשימה ריקה ומנגנון הסינון
