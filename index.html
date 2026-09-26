@@ -858,14 +858,14 @@ async function sbGetResult(key) {
     var res = await withTimeout(sb.from(tbl).select("value").eq("key", key).single());
     if (res.error) {
       var missing = res.error.code === "PGRST116";
-      if (!missing) console.error("sbGet error [" + key + "]:", res.error.message, res.error);
+      if (!missing) console.error("[sync] sbGet error [" + key + "]:", res.error.message, res.error);
       return { ok: missing, data: null, error: missing ? null : (res.error.message || MSG_SERVER_ERR) };
     }
     if (!res.data) return { ok: true, data: null, error: null };
     var pr = kvParse(key, res.data.value);
     return { ok: pr.ok, data: pr.value, bad: pr.bad, error: pr.bad ? MSG_KV_BAD : null };
   } catch(e) {
-    console.error("sbGet exception [" + key + "]:", e);
+    console.error("[sync] sbGet exception [" + key + "]:", e);
     return { ok: false, data: null, error: (e && e.message) || String(e) };
   }
 }
@@ -1666,7 +1666,7 @@ async function syncFromCloud() {
       toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'bad');
     }
   } catch(e) {
-    console.error("[syncFromCloud] error:", e);
+    console.error("[sync] syncFromCloud:", e);
     _yaNetWarned = true;
     toast(MSG_OFFLINE_LOCAL, null, 'bad');
   }
@@ -2545,7 +2545,7 @@ function editTaskInline(ci, ti) {
       בקובץ הסכימה אינה הגנה.
 
    ⛔ **ואין לזרוע ערך ברירת מחדל לסיסמה או לתפקיד בשום מקום** — לא
-   בסכימה, לא במיגרציה, לא בקוד ולא בקובץ בדיקה. ברירת מחדל
+   בקובץ הסכימה, לא בקוד ולא בקובץ בדיקה. ברירת מחדל
    לסיסמה היא חשבון שסיסמתו ידועה לכל העולם;
    ברירת מחדל לתפקיד היא הרשאה שניתנת למי שאיש לא החליט
    להעניק לו אותה. תפקיד נכתב **במפורש** ביצירת המשתמש.
@@ -3570,7 +3570,7 @@ function selectYeshiva(y) {
    *  ⛔ **וכניסה חוזרת נגזרת ואינה נמסרת** — ⚠️ פרמטר שנמסר בקורא אחד ולא
    *  בשני מריץ את `pendBoot` פעם שנייה ⛔ ומוסיף מאזיני רשת כפולים. */
   var ent = yaYeshiva(y);
-  if (!ent) { console.error('[ya] ישיבה שאינה במפה:', y); toast(MSG_YESHIVA_UNKNOWN, null, 'bad'); return; }
+  if (!ent) { console.error('[switch] ישיבה שאינה במפה:', y); toast(MSG_YESHIVA_UNKNOWN, null, 'bad'); return; }
   var reentry = !!YESHIVA;
   if (reentry) yaResetTenantState();
   var again = reentry;
@@ -3632,7 +3632,7 @@ function selectYeshiva(y) {
   try {
     startApp();
   } catch(e) {
-    console.error('[startApp] נכשל', e);
+    console.error('[boot] startApp נכשל', e);
     toast(MSG_BOOT_FAIL, null, 'bad');
   }
 }
@@ -3762,7 +3762,7 @@ function arcSaveEntry(gdateKey, entryId) {
   });
   if (!hits) {
     // אין מה לשמור — לא לשקר למשתמש
-    console.warn('[arcSaveEntry] רשומה לא נמצאה:', entryId, gdateKey);
+    console.warn('[arc] arcSaveEntry — רשומה לא נמצאה:', entryId, gdateKey);
     renderArcDetail();
     toast(MSG_ROW_GONE, null, 'bad');
     return;
