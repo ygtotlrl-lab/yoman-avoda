@@ -9,7 +9,6 @@ create table if not exists public.ya_entries (
   updated_at bigint not null,
   deleted boolean not null default false,
   data jsonb not null,
-  synced_at timestamp with time zone not null default now(),
   archived boolean not null default false,
   gdate text,
   deleted_at timestamp with time zone,
