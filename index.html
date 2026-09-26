@@ -74,7 +74,7 @@ import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
 import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idEq,
          mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
-         pendReload, pendTag, plBoot, plForget, plNum, plTouch,
+         pendReload, pendTag, plBoot, plForget, plNum,
          prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave,
          sbWatch, schedulePush, tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
@@ -375,8 +375,8 @@ var LS_CFG = {
 // ── עֵד הסנכרון ──────────────────────────────────────────────────────────
 // `_lastKnownTimestamp` **אינו** עד סנכרון: הוא מתעדכן גם במשיכה (הוא אומר
 // "ראיתי את מצב הענן"), וגם ב-saveEntries/saveArchive בלי לבדוק את תוצאת
-// ה-sbSet. לכן פינוי שהיה נשען עליו היה יכול למחוק מהדיסק רשומה שמעולם לא
-// הגיעה לענן. `_yaPushedAt[key]` נכתב **רק** אחרי `sbSet` שהחזירה ok, ולכן
+// הדחיפה. לכן פינוי שהיה נשען עליו היה יכול למחוק מהדיסק רשומה שמעולם לא
+// הגיעה לענן. `_yaPushedAt[key]` נכתב **רק** אחרי `pushTable` שהחזירה ok, ולכן
 // כל רשומה שגילה קטן ממנו הייתה בתוך המערך שנדחף בהצלחה.
 var _yaPushedAt = {};
 function _yaMarkPushed(kvKey) { _yaPushedAt[kvKey] = Date.now(); }
@@ -703,23 +703,30 @@ var PL_CFG = {
 /* ⛔ ביומן אין טבלת משתמשים ואין כניסה — ⚠️ ולכן אין כאן מסלול דחיפה שני,
    ⭐ ושתי הטבלאות שברשימה הן כל מה שעולה מכאן.
    ⚠️ `ya_entries` לפני `ya_archive` — ⛔ שתיהן נכתבות לאותה טבלה מאוחדת
-   ובדגל שונה, ⭐ והסדר הוא מה שמשאיר את הצילום אחרי החי. */
-var PUSH_TABLES = ['ya_entries', 'ya_archive'];
+   ובדגל שונה, ⭐ והסדר הוא מה שמשאיר את הצילום אחרי החי.
+   ⚠️ `ya_settings` הוא שם לוגי ⛔ ואינו טבלה — ⭐ הכתיבה ל-`KV_TABLE` של
+   המוסד שנלכד, ⛔ שטבלת ההגדרות היא פר-מוסד. */
+var SET_PUSH = 'ya_settings';
+var PUSH_TABLES = ['ya_entries', 'ya_archive', SET_PUSH];
 /*  ⛔ ההקשר שנלכד לפני ההמתנה הראשונה — ⚠️ `send` ו-`mark` רצים אחרי
  *  `await`, ⭐ וקריאת הגלובלי בהם הייתה זוקפת את הצלחת הדחיפה של מוסד
  *  אחד לחשבון השני. */
-var _yaPushEp = 0;
+var _yaPushEp = 0, _yaPushTbl = null;
 var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
   delay:  400,
   dirty:  function (t, ctx) {
-    if (!yaTableOf(t) || !KV_TABLE || !YESHIVA) return null;
+    if (!KV_TABLE || !YESHIVA) return null;
+    if (t === SET_PUSH) { _yaPushEp = ctxEpoch(); _yaPushTbl = KV_TABLE; return yaSetDirtyRows(); }
+    if (!yaTableOf(t)) return null;
     _yaPushEp = ctxEpoch();
     return yaDirtyRows(t, ctx || (t === 'ya_archive' ? ARCHIVE : ENTRIES));
   },
-  key:    function (t, row) { return yaPendPrefix(t) + row.rec_key; },
-  send:   function (t, rows) { return yaSendRows(t, rows, _yaPushEp); },
+  key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.rec_key; },
+  send:   function (t, rows) {
+    return t === SET_PUSH ? yaSendSettings(_yaPushTbl, rows, _yaPushEp) : yaSendRows(t, rows, _yaPushEp);
+  },
   mark:   function (t) { if (!ctxStale(_yaPushEp)) _yaMarkPushed(t); },
   run:    function () { yaSyncPushNow(); },
 };
@@ -786,12 +793,11 @@ var ERA_CFG = {
 };
 
 /* ── חיבור yoman-avoda למודול ─────────────────────────────────────────────
-   דחיפת-מצב מלא: `saveEntries`/`saveArchive` שולחות את **כל** המערך בכל
-   שמירה, ולכן `sbSet` שהחזירה `ok` היא אישור לכל רשומה שסומנה לפני שהצילום
-   נלקח. זו אותה עדות שכבר מזינה את `_yaPushedAt` — ולא `_lastKnownTimestamp`,
+   דחיפה פר-שורה: `pushTable` שהחזירה `ok` היא אישור לכל רשומה שסומנה לפני
+   שהצילום נלקח. זו אותה עדות שכבר מזינה את `_yaPushedAt` — ולא `_lastKnownTimestamp`,
    שמתעדכן גם במשיכה ולכן אינו ראיה לדחיפה.
    ───────────────────────────────────────────────────────────────────────── */
-var PK_ENTRY = 'entry:', PK_ARC = 'arc:';
+var PK_ENTRY = 'entry:', PK_ARC = 'arc:', PK_SET = 'setting:';
 
 
 /* ── DEV_CFG — הדבר היחיד שנבדל בין האפליקציות ─────────────────────────── */
@@ -813,7 +819,7 @@ function getSB() {
   return _sb;
 }
 
-// שמירה כללית ל-Supabase (מאגר מפתח/ערך בטבלה "kv").
+// כתיבת אות הפולינג — ⛔ ולא הגדרה: ⚠️ ההגדרות עוברות בשכבת הדחיפה.
 // מחזירה {ok, error} — supabase-js **אינו זורק** בכשל רשת או הרשאה, אלא
 // נפתר עם res.error; ⛔ ולכן קורא שמסתפק ב-try/catch אינו מקבל כשל לעולם
 // ומודיע למשתמש שהכול נשמר.
@@ -1243,16 +1249,40 @@ async function yaSendRows(kvKey, rows, ep) {
 
 // פונקציות שמירה — כותבות גם ל-localStorage וגם ל-Supabase
 function saveCats() {
-  var _ep = ctxEpoch();   // ⛔ נלכד לפני ההמתנה — ⚠️ עֵד הפינוי הוא פר-מוסד
   lsSet("ya_cats"+LS, JSON.stringify(CATS));
-  sbSet("cats", CATS).then(function(r){
-    if (ctxStale(_ep)) return;
-    if (!(r && r.ok)) return;
-    _yaMarkPushed('cats');
-    /*  ⛔ כתיבה שהצליחה מקדמת את אות הפולינג — ⚠️ בלעדיה השינוי
-     *  נשאר בלתי-נראה לכל מכשיר אחר לנצח: ⭐ הם מושכים רק כשהיא מתקדמת. */
-    plTouch();
-  });
+  yaSetDirty(['cats']);
+}
+/* ══════════════════════════════════════════════════════════════════════════
+   ההגדרות — מקומיות-תחילה, ונדחפות בשכבת הדחיפה
+   ══════════════════════════════════════════════════════════════════════════
+   ⛔ הכתיבה אינה פונה לענן — ⚠️ המפתח מסומן ⏳ ונדחף ב-`schedulePush`:
+   ⭐ כשל רשת משאיר את הסימון, ⛔ והניסיון החוזר הוא זה של כל טבלה.
+   ⚠️ **מה נכנס**: מפתח ההגדרה ⟵ הערך שבזיכרון; ⛔ **ומה מפיל**: מפתח
+   שנכתב מקומית ואינו כאן — ⭐ הוא לא עולה לעולם.
+   ══════════════════════════════════════════════════════════════════════════ */
+var YA_SET_VALUES = {
+  cats:      function () { return CATS; },
+  subs:      function () { return SUBS; },
+  subs_meta: function () { return SUBS_META; }
+};
+function yaSetDirty(keys) {
+  keys.forEach(function (k) { pendMark(PK_SET + k); });
+  schedulePush();
+}
+/*  ⚠️ הערך הוא זה שבזיכרון ברגע הדחיפה — ⭐ כתיבה שנייה לפני הדחיפה היא
+ *  מחזור אחד, ⛔ והמיזוג מכריע לפי החותמות שבתוך הערך. */
+function yaSetDirtyRows() {
+  return Object.keys(YA_SET_VALUES).filter(function (k) { return pendHas(PK_SET + k); })
+    .map(function (k) {
+      return { key: k, value: JSON.stringify(YA_SET_VALUES[k]()), updated_at: Date.now() };
+    });
+}
+/*  ⛔ הטבלה נלכדה עם ההקשר — ⚠️ והחלפת מוסד באמצע מחזירה כשל רשת:
+ *  ⭐ הסימון נשאר, ⛔ והמוסד החדש אינו מקבל את הערך של הקודם. */
+async function yaSendSettings(tbl, rows, ep) {
+  var sb = getSB();
+  if (!sb || !tbl || ctxStale(ep)) throw new Error('failed to reach cloud');
+  return withTimeout(sb.from(tbl).upsert(rows, { onConflict: 'key' }));
 }
 // חותמות זמן פר-מפתח של SUBS — ⚠️ המיזוג מכריע לפיהן מפתח-מפתח. נטען ב-loadLocalData().
 var SUBS_META = {};
@@ -1342,13 +1372,8 @@ var _subsResetSeen = '';
 function saveSubs() {
   lsSet("ya_subs"+LS, JSON.stringify(SUBS));
   lsSet("ya_subs_meta"+LS, JSON.stringify(SUBS_META));
-  /*  ⛔ אין כאן שער הקשר ⛔ ואין בו צורך — ⚠️ `sbSet` לוכדת את הטבלה בכניסה,
-   *  ⭐ ולשתי הכתיבות האלה אין עֵד דחיפה שאפשר לזקוף למוסד הלא נכון. */
-  /*  ⛔ כתיבה שהצליחה מקדמת את אות הפולינג — ⚠️ בלעדיה שינוי
-   *  בתת-משימה נשאר בלתי-נראה לכל מכשיר אחר לנצח: ⭐ הם מושכים
-   *  רק כשהיא מתקדמת, ⛔ ושתי הכתיבות הן אירוע אחד. */
-  Promise.all([sbSet("subs", SUBS), sbSet("subs_meta", SUBS_META)])
-    .then(function (rs) { if (rs.every(function (r) { return r && r.ok; })) plTouch(); });
+  /*  ⛔ שני המפתחות הם אירוע אחד — ⚠️ והם מסומנים יחד. */
+  yaSetDirty(['subs', 'subs_meta']);
 }
 // יוצר מפתח ייחודי לכל (אינדקס קטגוריה, שם משימה) כדי למנוע התנגשות בין קטגוריות
 function subKey(ci, taskName) { return ci + "::" + taskName; }
@@ -1533,7 +1558,9 @@ async function syncFromCloud() {
       } else if (cloudCats.length) {
         CATS = mergeCats(CATS, cloudCats);
         lsSet('ya_cats'+LS, JSON.stringify(CATS));
-        sbSet('cats', CATS).then(function(r){ if (ctxStale(_ep)) return; if (r && r.ok) _yaMarkPushed('cats'); });
+        /*  ⚠️ רק מה שהמיזוג שינה עולה — ⭐ ענן שכבר מחזיק את התוצאה אינו
+         *  מסומן ⏳. */
+        if (JSON.stringify(CATS) !== JSON.stringify(cloudCats)) yaSetDirty(['cats']);
       }
     }
 
@@ -1564,8 +1591,10 @@ async function syncFromCloud() {
         SUBS = ms.subs; SUBS_META = ms.meta;
         lsSet('ya_subs'+LS, JSON.stringify(SUBS));
         lsSet('ya_subs_meta'+LS, JSON.stringify(SUBS_META));
-        sbSet('subs', SUBS);
-        sbSet('subs_meta', SUBS_META);
+        if (JSON.stringify(SUBS) !== JSON.stringify(cloudSubs) ||
+            JSON.stringify(SUBS_META) !== JSON.stringify(yaMetaMap(cloudSubsMetaR))) {
+          yaSetDirty(['subs', 'subs_meta']);
+        }
       }
     } else if (cloudSubs) {
       /*  ⛔ הדחייה נאמרת ⛔ ואינה שקטה — ⚠️ המשיכה כבר נרשמה כשנכשלה,
@@ -2033,7 +2062,7 @@ function addEntry() {
     updatedAt: now.getTime()   // חובה — בלעדיה הרשומה נחשבת "ותיקה" במיזוג
   };
   ENTRIES.unshift(entry);
-  // ⚠️ הרשומה נשמרה במכשיר בלבד — סימון ⏳ יורד רק כש-`sbSet` תחזיר `ok`.
+  // ⚠️ הרשומה נשמרה במכשיר בלבד — סימון ⏳ יורד רק כשהדחיפה תחזיר `ok`.
   pendMark(PK_ENTRY + entry.id);
   saveEntries();
   autoArchiveDay(entry.day, entry.hdate, entry.gdate);
@@ -2283,6 +2312,8 @@ async function yaSyncPushNow() {
     if (ctxStale(_ep)) return;
     var rArchive = await pushTable("ya_archive", ARCHIVE);
     if (ctxStale(_ep)) return;
+    var rSet = await pushTable(SET_PUSH);
+    if (ctxStale(_ep)) return;
     // ⛔ אישור ה-⏳ פר-קטגוריה, כאן ולא רק ב-saveEntries/saveArchive —
     //    זהו מסלול הריקון האוטומטי (מודול הניסיון החוזר, אירוע `online`,
     //    ו-`schedulePush`), ⚠️ ובלי האישור הסימון שורד דחיפה שהצליחה: המונה
@@ -2291,7 +2322,7 @@ async function yaSyncPushNow() {
     //    ⚠️ פר-קטגוריה ולא גורף: דחיפה שהצליחה באחת אינה ראיה לשנייה.
     if (rEntries.ok) pendConfirmPush(PK_ENTRY, _t0);
     if (rArchive.ok) pendConfirmPush(PK_ARC, _t0);
-    if (!rEntries.ok || !rArchive.ok) {
+    if (!rEntries.ok || !rArchive.ok || !rSet.ok) {
       // ⛔ אין לחתום את `last_changed` על נתון שלא הגיע —
       // מכשירים אחרים היו מושכים את העותק הענני הישן מעל רשומות חדשות שלהם.
       /*  ⚠️ בלי רשת השמירה הצליחה במכשיר ⛔ ואינה שגיאה — ⭐ הנתון בתור
