@@ -71,7 +71,7 @@
 import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
          MSG_SYNC_BACK, appConfigure, dayNoon, errMsg, getDeviceId, kvParse,
          uniqHas, uniqList, withTimeout } from './core/util.js';
-import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKick, idEq,
+import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq,
          mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
          pendReload, pendTag, plBoot, plForget, plNum,
@@ -272,6 +272,14 @@ const SB_KEY = self.APP.supabase.key;
 var YESHIVA = null;     // מפתח ב-`YESHIVOT` — נבחר בכל עלייה, ואינו נשמר לדיסק
 var KV_TABLE = null;    // טבלת הענן פר-מוסד — מ-`YESHIVOT`
 var LS = '';            // סיומת מפתח ה-localStorage פר-מוסד (בידוד אופליין)
+function yaSuffix(y) { return '_' + y; }
+/*  ⛔ כל בסיס שנכתב עם סיומת המוסד — ⚠️ **מה נכנס**: כל כותב שמוסיף `LS`
+ *  לשם; ⛔ **ומה מפיל**: בסיס שנכתב ואינו כאן — ⭐ המפתח שלו נמחק בעלייה. */
+function yaLsBases() {
+  return ['ya_entries', 'ya_archive', 'ya_cats', 'ya_subs', 'ya_subs_meta',
+          CATS_RESET_LS, SUBS_RESET_LS, 'ya_last_day',
+          'ya_pending', 'ya_last_backup', 'ya_log_queue'];
+}
 
 var _sb = null;
 
@@ -348,6 +356,18 @@ var LS_CFG = {
    *  המטמון שנדחה, ⛔ **ומה מפיל**: שם בלי תחילית האפליקציה —
    *  ⭐ ה-origin משותף לכולן, וסימן אחד היה נדרס בכל דחייה. */
   dismissKey: 'ya_sw_dismissed',
+  /*  ⛔ המרשם — כל מפתח שהאפליקציה כותבת תחת התחילית: ⚠️ מפתח שאינו כאן
+   *  נמחק בעלייה, ⭐ והשמות נגזרים מהתצורה ומהכותבים ⛔ ואינם מוקלדים שוב.
+   *  ⛔ **ומפתח פר-מוסד מוצהר לכל המוסדות** — ⚠️ ולא למוסד הפעיל בלבד:
+   *  ⭐ המוסד שאינו פתוח עכשיו הוא נתון שממתין לו, ⛔ ולא שארית. */
+  keys: function () {
+    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key].concat(eraKeys());
+    YESHIVOT.forEach(function (y) {
+      var sfx = yaSuffix(y.id);
+      yaLsBases().forEach(function (b) { out.push(b + sfx); });
+    });
+    return out;
+  },
 
   /*  ⭐ סוג האפליקציה — ⚠️ ממנו נגזר חלון הפינוי, ⛔ ואין מספר ימים באף
    *  רשומה: ⭐ והנימוק אומר על מה החישוב שלה נפרש. */
@@ -478,6 +498,9 @@ var BK_CFG = {
 var PEND_CFG = {
   app: 'yoman-avoda',
   key: function () { return 'ya_pending' + (typeof LS === 'string' ? LS : ''); },
+  /*  ⛔ קידומות הסימון — ⚠️ שלוש הקידומות שהכותבים מסמנים בהן, ⭐ ⏳ שקידומתו
+   *  אינה כאן יורד בעלייה: ⛔ אין לו כותב, ⚠️ ואין שורה שתידחף ותוריד אותו. */
+  marks: function () { return [PK_ENTRY, PK_ARC, PK_SET]; },
   // השהיית ציור: בתום ההחזקה, תגית ⏳ שנותרה צריכה להיכנס לשורות
   // שכבר רונדרו בלעדיה. renderLog הוא האתר היחיד שמצייר pendTag כאן.
   redraw: function () { try { renderLog(); } catch (e) { } }
@@ -779,7 +802,7 @@ var ERA_CFG = {
         var k = localStorage.key(i);
         if (!k) continue;
         for (var j = 0; j < bases.length; j++) {
-          if (k === bases[j] || k.indexOf(bases[j] + '_') === 0) { lsRemove(k); break; }
+          if (k.indexOf(bases[j] + '_') === 0) { lsRemove(k); break; }
         }
       }
     } catch (e) { console.error('[era] מחיקת העותק המקומי נכשלה', e); }
@@ -3576,7 +3599,7 @@ function selectYeshiva(y) {
   var again = reentry;
   YESHIVA  = y;
   KV_TABLE = ent.table;
-  LS       = '_' + y;
+  LS       = yaSuffix(y);
 
   // לוגו הכותרת — נתיב פר-מוסד לקובץ שב-`logos/`
   var logoEl = document.getElementById('appLogo');
