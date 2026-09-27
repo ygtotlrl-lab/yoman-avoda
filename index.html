@@ -3269,7 +3269,7 @@ async function yaPullFromCloud() {
    ⛔ וכשל משיכה מוצג גלוי — ⚠️ מסך ריק נקרא כ«אין נתונים», ⭐ והוא בדיוק
       הכשל השקט.
    ⚠️ ואין כאן בדיקת הרשאה — ⭐ ביומן משתמש אחד, ⛔ ואין שכבת כניסה. */
-var YA_INF_MD = RAW_BASE + 'CLAUDE.md';
+var YA_INF_MD = RAW_BASE + 'TABLE.md';
 
 /*  ⛔ פירוק שורת טבלה — ⚠️ הפרדה על `|` משאירה תא ריק בשני הקצוות,
  *  ⭐ ושניהם נגזרים ⛔ ואינם נחתכים בקבוע. */
@@ -3314,15 +3314,7 @@ function _infDot(cell) {
  *  נגזרים מאותו טקסט, ⛔ ואין ביניהם מקור שני.
  *  ⛔ **ואין כאן סיכום כללים** — ⚠️ אין כללים: ⭐ הטבלה היא ההוראה,
  *  ⛔ ופרק שני שמונה סעיפים מונה משהו שאינו קיים. */
-/*  ⛔ הפירוק רץ על הבלוק המשותף בלבד — ⚠️ לחלק הפרטי שאחריו יש כותרות `###`
- *  משלו, ⭐ והן אינן פרקי הטבלה: ⛔ בלי החיתוך הן היו מוצגות כפרקים ריקים. */
-var INF_BLOCK = ['<!-- SHARED:start id="table" -->', '<!-- SHARED:end -->'];
 function _infParse(md) {
-  var from = md.indexOf(INF_BLOCK[0]);
-  if (from >= 0) {
-    var to = md.indexOf(INF_BLOCK[1], from);
-    md = md.slice(from, to >= 0 ? to : md.length);
-  }
   var lines = md.split('\n');
   var chaps = [], chap = null, cats = [], cur = null, rows = [], apps = null, width = 0;
   for (var i = 0; i < lines.length; i++) {
