@@ -3,7 +3,7 @@
 הטבלה ב-`TABLE.md` — מקור האמת היחיד ליכולת; סשן קורא ממנה את הפרקים שהסבב נוגע בהם.
 
 ## מפת המסכים
-- מסך ⟵ מודול: בחירת ישיבה ומציג טבלת התשתית ⟵ `app/screens/pick.js` · `entry` (הזנה) ⟵ `app/screens/entry.js` · `log` (יומן, ייצוא הדוח ושיתופו) ⟵ `app/screens/log.js` · `settings` (עריכה) ⟵ `app/screens/settings.js` · `archive` (עם עריכה במקום) ⟵ `app/screens/archive.js`. הסנכרון, המיזוג והתאריכים — `app/domain.js`; העלייה, החלפת הישיבה ומפת הפעולות — `app/main.js`.
+- מסך ⟵ מודול: בחירת ישיבה ומציג טבלת התשתית ⟵ `app/screens/pick.js` · `entry` (הזנה) ⟵ `app/screens/entry.js` · `log` (יומן) ⟵ `app/screens/log.js` · `settings` (עריכה) ⟵ `app/screens/settings.js` · `archive` (עם עריכה במקום) ⟵ `app/screens/archive.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, המיזוג והתאריכים — `app/domain.js`, והדוח היומי — בנייתו, ייצואו ושיתופו — `app/domain.report.js`; החיווט, העלייה, החלפת הישיבה ומפת הפעולות — `app/main.js`.
 - בחירת ישיבה בעלייה הראשונה, ובלחיצה על הלוגו — בורר ב-`openModal` ואישור ב-`ask`.
 - ייצוא הדוח היומי כתמונה (JPEG, `_buildReportDiv`/`_renderReport`) ושיתופו.
 - מציג טבלת התשתית — נמשך בזמן אמת מ-`TABLE.md` שב-GitHub (`RAW_BASE`).

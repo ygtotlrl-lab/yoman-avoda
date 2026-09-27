@@ -1,41 +1,219 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
-import { ctxEpoch, ctxStale, ctxSwitch, eraKick, idEq, pendAlertDismiss, pendBoot,
-         pendForget, pendReload, plBoot, plForget, prunePastTombstones, pushTable,
-         rtyBoot, runSave, tombBoot, tombPruneMerged } from '../core/sync.js';
-import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsGet, lsSet,
-         lsSetArray } from '../core/storage.js';
+import { appConfigure, getDeviceId } from '../core/util.js';
+import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
+         pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
+         prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave, tombBoot,
+         tombPruneMerged } from '../core/sync.js';
+import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
+         lsRemove, lsSet, lsSetArray } from '../core/storage.js';
 import { bkBoot } from '../core/backup.js';
 import { actRun, closeAsk, closeModal, esc, ksKey, modalBackdrop, modalEsc, openModal,
          pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
-import { LS_CFG, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL,
-         MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL,
-         MSG_SYNC_PARTIAL, MSG_YESHIVA_UNKNOWN, YESHIVOT } from './config.js';
-import { S } from './state.js';
-import { CATS_RESET_KEY, CATS_RESET_LS, SUBS_RESET_KEY, SUBS_RESET_LS, _yaMarkSynced,
-         _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot, archiveKey, entryKey,
-         entryOrderTs, gregDateStr, hasHebMonth, isLive, liveOnly, lsRead, mergeArchive,
-         mergeCats, mergeEntries, mergeSubs, recDelete, recTouch, sbGetResult, yaMetaMap,
-         yaPullDraw, yaRowsGet, yaSetDirty, yaSuffix, yaSyncLog } from './domain.js';
+import { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, MSG_ALREADY_AT, MSG_BOOT_FAIL,
+         MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL, MSG_SWITCH_YESHIVA, MSG_SYNCED,
+         MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_YESHIVA_UNKNOWN,
+         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SET_PUSH, SUBS_RESET_KEY, SUBS_RESET_LS,
+         YESHIVOT } from './constants.js';
+import { S, shell } from './state.js';
+import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
+         arcPutSnapshot, archiveKey, entryKey, entryOrderTs, getSB, gregDateStr,
+         hasHebMonth, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
+         mergeSubs, recDelete, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
+         yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
+         yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
+         yaTableOf, yaYeshiva } from './domain.js';
+import { shareReport } from './domain.report.js';
 import { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail, arcGoMonths,
          arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
-import { DAY_VALUE_MAP, addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns,
-         onGregDateChange, pickCat, pickDay, pickSub, pickTask, screenEntryHTML,
-         showEl } from './screens/entry.js';
-import { clearAll, delEntry, editEntry, renderLog, saveEntry, screenLogHTML,
-         shareReport } from './screens/log.js';
+import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
+         onGregDateChange, pickCat, pickDay, pickSub, pickTask,
+         screenEntryHTML } from './screens/entry.js';
+import { clearAll, delEntry, editEntry, renderLog, saveEntry,
+         screenLogHTML } from './screens/log.js';
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
 import { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
          editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
          screenSettingsHTML } from './screens/settings.js';
 
-document.title = self.APP.name;
+// ── החיווט ──
+// החיווט נמסר בשומרי קריאה — ה-CFG מוגדרים בהמשך, והשומר קורא אותם בזמן הקריאה ולא בזמן המסירה.
+appConfigure({
+  get BK_CFG() { return BK_CFG; },
+  get DEV_CFG() { return DEV_CFG; },
+  get DOM_ACTIONS() { return DOM_ACTIONS; },
+  get ERA_CFG() { return ERA_CFG; },
+  get HW_CFG() { return HW_CFG; },
+  get LS_CFG() { return LS_CFG; },
+  get PEND_CFG() { return PEND_CFG; },
+  get PL_CFG() { return PL_CFG; },
+  get PUSH_CFG() { return PUSH_CFG; },
+  get RTY_CFG() { return RTY_CFG; },
+  get saveRefresh() { return saveRefresh; }
+});
 
-function yaYeshiva(y) {
-  for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i];
-  return null;
-}
+// עד שנבחר מוסד המדיניות ריקה — אין עֵד סנכרון למוסד שלא נטען.
+var LS_CFG = {
+  // cachePrefix נגזר משם האפליקציה שבתצורה ולא מקידומת האחסון — שם אחסון שישתנה היה מחזיר רשימה ריקה, והבאנר היה חוזר בכל טעינה.
+  cachePrefix: self.APP.id + '-',
+  logKey: 'ya_ls_log',
+  hzPrefix: 'ya_ls_hz_',
+  // הסימן נושא את תחילית האפליקציה — ה-origin משותף, וסימן אחד היה נדרס בכל דחייה.
+  dismissKey: 'ya_sw_dismissed',
+  // מפתח פר-מוסד מוצהר לכל המוסדות ולא לפעיל בלבד — המוסד שאינו פתוח הוא נתון שממתין, ולא שארית.
+  keys: function () {
+    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key].concat(eraKeys());
+    YESHIVOT.forEach(function (y) {
+      var sfx = yaSuffix(y.id);
+      yaLsBases().forEach(function (b) { out.push(b + sfx); });
+    });
+    return out;
+  },
+
+  // חלון הפינוי נגזר מסוג האפליקציה — אין מספר ימים באף רשומה.
+  appType: { type: 'annual', why: 'החישוב שלה נפרש על שנה — ⚠️ דוח יום נבנה מרשומות היומן ומתצלומי הארכיון, ⛔ והם נקראים לאורך שנת העבודה' },
+
+  // אין כאן מטמון-מהירות לזרוק — כל מפתח ya_ הוא העותק המקומי עצמו, ומחיקתו מרוקנת את המסך אופליין.
+  wholeKeys: [],
+  // oldRecords נבנית מחדש בכל בחירת מוסד — המפתחות נושאים סיומת מוסד.
+  oldRecords: [],
+  // מפתח שגדל ואינו בפינוי ממלא את האחסון המשותף וחונק את כל האפליקציות שעל ה-origin.
+  fixedSize: [
+    { t: 'ya_cats',      why: 'קטגוריות — אות לקטגוריה, ⛔ ואינן גדלות עם הזמן' },
+    { t: 'ya_subs',      why: 'תתי-קטגוריות — רשימה קבועה שנערכת בהגדרות' },
+    { t: 'ya_subs_meta', why: 'חותמת לכל תת-קטגוריה — כמספרן, ⛔ ולא כמספר הימים' }
+  ],
+
+  // אין כאן תור אופליין — העֵד לסנכרון הוא _yaPushedAt פר-מפתח.
+  pending: function () { return false; },
+  syncedThrough: function () { return 0; }
+};
+
+var BK_CFG = {
+  client: function () { return getSB(); },
+  flagKey: function () { return 'ya_last_backup' + S.LS; },
+  logQueueKey: function () { return 'ya_log_queue' + S.LS; },
+  prefix: function () { return yaBkPrefix(S.YESHIVA); },
+  // המרשם מצהיר על מפתחות הגיבוי של כל המוסדות — המוסד שאינו פתוח הוא נתון שממתין, ולא שארית.
+  prefixes: function () { return YESHIVOT.map(function (y) { return yaBkPrefix(y.id); }); },
+  device: function () { try { return getDeviceId(); } catch (e) { return null; } },
+  user: function () { return null; },
+  // ריק בכוונה — אין טבלת משתמשים ואין סוד, ומנגנון הסינון נשאר דרוך.
+  secrets: [],
+  sources: function () {
+    if (!S.KV_TABLE) return [];
+    // היומן והארכיון מגובים מטבלת השורות המאוחדת, כולל שורות archived; שאר המפתחות מקורות kv — זה ביתם היחיד בענן.
+    var out = [{ kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',
+                 eq: ['yeshiva', S.YESHIVA], order: 'rec_key', ts: 'updated_at' }];
+    // name הוא המפתח בטבלת ההגדרות, בלי תחילית; key הוא מפתח הגיבוי ב-sh_backup המשותפת לפרויקט — ושם בלי תחילית שם מתנגש.
+    return out.concat([
+      { kind: 'kv', table: S.KV_TABLE, name: 'cats',      key: 'ya_cats' },
+      { kind: 'kv', table: S.KV_TABLE, name: 'subs',      key: 'ya_subs' },
+      { kind: 'kv', table: S.KV_TABLE, name: 'subs_meta', key: 'ya_subs_meta' }
+    ]);
+  }
+};
+
+// המפתח הוא פונקציה — שני המוסדות חולקים localStorage, וסימון ממתין של אחד אינו תקף לשני.
+var PEND_CFG = {
+  app: 'yoman-avoda',
+  key: function () { return 'ya_pending' + (typeof S.LS === 'string' ? S.LS : ''); },
+  // סימון ממתין שקידומתו אינה כאן יורד בעלייה — אין לו כותב, ואין שורה שתידחף ותוריד אותו.
+  marks: function () { return [PK_ENTRY, PK_ARC, PK_SET]; },
+  // בתום ההחזקה, תגית ממתין שנותרה צריכה להיכנס לשורות שכבר רונדרו — renderLog הוא האתר היחיד שמצייר אותה כאן.
+  redraw: function () { try { renderLog(); } catch (e) { } }
+};
+
+// אין כאן תור אופליין: הריקון הוא yaSyncPushNow, אותה דחיפה של schedulePush בלי ההשהיה.
+var RTY_CFG = {
+  flush:   function () { return yaSyncPushNow(); },
+  pending: function () { try { return pendCount() > 0; } catch (e) { return false; } },
+};
+
+// table() נקרא בכל כתיבה ואינו נלכד — ערך שנלכד בעלייה חותם את המוסד הראשון גם אחרי ההחלפה.
+// ok() הוא חותמת תצוגה בלבד — אין להזין ממנו את עד הפינוי, שהוא _yaPushedAt פר-מפתח.
+var PL_CFG = {
+  every:  3000,
+  active: function () { return !!S.YESHIVA; },
+  seen:   function () { return S._lastKnownTimestamp; },
+  note:   function (ts) { S._lastKnownTimestamp = ts; },
+  ok:     function () { _yaMarkSynced(); },
+  pull:   function () { return yaPullFromCloud(); },
+  client: function () { return getSB(); },
+  table:  function () { return S.KV_TABLE; },
+};
+
+var PUSH_CFG = {
+  tables: PUSH_TABLES,
+  chunk:  500,
+  delay:  400,
+  dirty:  function (t, ctx) {
+    if (!S.KV_TABLE || !S.YESHIVA) return null;
+    if (t === SET_PUSH) { S._yaPushEp = ctxEpoch(); S._yaPushTbl = S.KV_TABLE; return yaSetDirtyRows(); }
+    if (!yaTableOf(t)) return null;
+    S._yaPushEp = ctxEpoch();
+    return yaDirtyRows(t, ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES));
+  },
+  key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.rec_key; },
+  send:   function (t, rows) {
+    return t === SET_PUSH ? yaSendSettings(S._yaPushTbl, rows, S._yaPushEp) : yaSendRows(t, rows, S._yaPushEp);
+  },
+  mark:   function (t) { if (!ctxStale(S._yaPushEp)) _yaMarkPushed(t); },
+  run:    function () { yaSyncPushNow(); },
+};
+
+// החלון החם הוא archived=false: סנאפשוט ארכיון שאינו ממתין ואומת בענן מתפנה מהמכשיר.
+// admin מחזירה תמיד אמת — אין כאן משתמשים, והמכשיר הוא של המנהל.
+var HW_CFG = {
+  enabled: true,
+  admin: function () { return true; },
+  specs: [{
+    key: function () { return 'ya_archive' + S.LS; },
+    label: 'ארכיון ימים',
+    inWindow: function () { return false; },
+    idOf: function (r) { return archiveKey(r); },
+    ts: function (r) { return _yaRecTs(r); },
+    isPending: function (r) { return pendHas(PK_ARC + archiveKey(r)); },
+    fetch: async function () {
+      var r = await yaRowsGet('ya_archive');
+      return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data }
+                                                  : { ok: false, rows: [] };
+    },
+    rows: function () { return S.ARCHIVE; },
+    apply: function (kept) { return lsSetArray('ya_archive' + S.LS, kept, _yaRecTs); }
+  }]
+};
+
+var ERA_CFG = {
+  prefix: self.APP.prefix,
+  client: function () { return getSB(); },
+  table:  function () { return S.KV_TABLE; },
+  // המוחק מנקה את כל סיומות המוסד — העידן ברמת האפליקציה, ומוסד שלא היה פתוח היה נשאר בצורה הישנה.
+  // ואופק הפינוי מתנקה איתם — אחרת הוא מסנן בכתיבה את מה שהמשיכה מחזירה.
+  wipe:   function () {
+    var bases = ['ya_entries', 'ya_archive', 'ya_cats', 'ya_subs', 'ya_subs_meta'];
+    try {
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (!k) continue;
+        for (var j = 0; j < bases.length; j++) {
+          if (k.indexOf(bases[j] + '_') === 0) { lsRemove(k); break; }
+        }
+      }
+    } catch (e) { console.error('[era] מחיקת העותק המקומי נכשלה', e); }
+    S.ENTRIES = []; S.ARCHIVE = []; S.CATS = []; S.SUBS = {}; S.SUBS_META = {};
+    lsClearHorizons();
+  },
+  // הדחיפה היא ראיה טרייה ולא זיכרון — מכשיר נקי מקבל ok עם still ריק.
+  push:   function () { return pushDirty(null); },
+  refresh: function () { return yaPullFromCloud(); }
+};
+
+// המזהה אינו נושא סיומת מוסד — שני המוסדות חולקים מכשיר, וזה מזהה המכשיר.
+var DEV_CFG = { key: 'ya_device_id' };
+
+document.title = self.APP.name;
 
 // mountView מציירת את המסכים לפני כל קוד שמחפש אלמנט בתוכם — אין להזיז את הקריאה אליה מטה.
 function mountView() {
@@ -47,9 +225,12 @@ function mountView() {
 
 mountView();
 
-try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
-
-var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
+// ── הרישום ב-shell ──
+// לפני כל אינטראקציה — מסך שמרנדר מסך אחר עובר דרכו.
+shell.renderLog = renderLog;
+shell.renderArcDetail = renderArcDetail;
+shell.buildCatGrid = buildCatGrid;
+shell.buildTaskBtns = buildTaskBtns;
 
 // המדיניות נבנית בבחירת מוסד ומפנה את המוסד הפעיל בלבד — לעֵד של מוסד אחד אין תוקף לגבי השני.
 // חותמת עריכה חדשה דוחה את הפינוי — רשומה שנערכה עכשיו אינה ישנה.
@@ -65,10 +246,6 @@ function lsRebuildPolicy() {
 }
 
 // ── העברת מזהה ל-DOM ──
-// בורר CSS למזהה ברשימת-היתר של תווים ולא בבריחה — ערך מסונן אינו יכול לסגור את הבורר ולהריץ בורר אחר.
-function cssQ(v) {
-  return String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '');
-}
 
 var DOM_ACTIONS = {
   'sw-apply':            function (el) { swApply(el); },
@@ -558,4 +735,7 @@ function selectYeshiva(y) {
 
 window.bootOk();
 
-export { DOM_ACTIONS, HE, cssQ, saveRefresh, yaYeshiva };
+// הגדרות ושורות יומן נבנים מחדש, ולכן הציור עובר ב-pullRender — שדה פתוח בהם היה נמחק.
+function yaPullDraw() {
+  buildCatGrid(); buildTaskBtns(); buildSubBtns(); renderLog(); renderSettings();
+}

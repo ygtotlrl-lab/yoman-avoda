@@ -3,11 +3,11 @@ import { dayNoon } from '../../core/util.js';
 import { newClientId, pendMark, schedulePush } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
-import { MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY } from '../config.js';
-import { S } from '../state.js';
-import { PK_ENTRY, autoArchiveDay, catCls, getCurrentDateKey, gregDateStr, liveOnly,
-         parseGregLike, saveEntries, subKey } from '../domain.js';
-import { renderLog } from './log.js';
+import { DAY_VALUE_MAP, MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY,
+         PK_ENTRY } from '../constants.js';
+import { S, shell } from '../state.js';
+import { autoArchiveDay, catCls, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
+         saveEntries, subKey } from '../domain.js';
 
 // תאריך עברי נשאר טקסט חופשי — אין לו פקד תאריך בדפדפן.
 function screenEntryHTML() {
@@ -66,13 +66,8 @@ function screenEntryHTML() {
 `;
 }
 
-// הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
-function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
-
 // getDay() מתחיל ב-0 = ראשון
 var DAY_LABEL_MAP = ["ראשון","שני","שלישי","רביעי","חמישי","ערב שבת","מוצ\"ש"];
-
-var DAY_VALUE_MAP = ["יום ראשון","יום שני","יום שלישי","יום רביעי","יום חמישי","ערב שבת","מוצאי שבת"];
 
 function autoSelectTodayChip() {
   var dow = new Date().getDay();
@@ -90,7 +85,7 @@ function pickDay(el, day) {
   document.querySelectorAll(".day-chip").forEach(function(b){ b.classList.remove("active"); });
   el.classList.add("active");
   syncDatesToDay(day);
-  renderLog();
+  shell.renderLog();
 }
 
 function syncDatesToDay(dayValue) {
@@ -121,7 +116,7 @@ function onGregDateChange() {
       if (b.textContent.trim() === label) b.classList.add("active");
     });
     document.getElementById("hebDateInput").value = hebrewDate(d) || document.getElementById("hebDateInput").value;
-    renderLog();
+    shell.renderLog();
   }
 }
 
@@ -245,6 +240,5 @@ function clearForm() {
   buildTaskBtns(); buildSubBtns();
 }
 
-export { DAY_VALUE_MAP, addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns,
-         buildTaskBtns, onGregDateChange, pickCat, pickDay, pickSub, pickTask,
-         screenEntryHTML, showEl };
+export { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
+         onGregDateChange, pickCat, pickDay, pickSub, pickTask, screenEntryHTML };

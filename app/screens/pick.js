@@ -1,8 +1,8 @@
 // app/screens/pick.js — בחירת הישיבה ומציג טבלת התשתית
 import { errMsg, withTimeout } from '../../core/util.js';
 import { esc, openModal } from '../../core/ui.js';
+import { MSG_INFRA_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
-import { MSG_INFRA_TABLE, YESHIVOT } from '../config.js';
 
 // מציג הטבלה במסך הבחירה ולא בתוך הישיבה — הטבלה של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
 function screenPickHTML() {
