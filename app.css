@@ -169,7 +169,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-hd span{font-size:var(--fs-2);opacity:var(--op-7)}
 .inf-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-5);
   box-shadow:0 2px 10px var(--shadow);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-6)}
-.inf-card>h4{font-size:var(--fs-3);font-weight:800;margin-bottom:var(--sp-5);color:var(--brand-ink)}
+.inf-chap{font-size:var(--fs-4);font-weight:800;margin:var(--sp-6) 0 var(--sp-4);color:var(--brand-ink)}
+.inf-chap:first-of-type{margin-top:0}
 .inf-bar{display:flex;flex-wrap:wrap;gap:var(--sp-4);align-items:center;margin-bottom:var(--sp-5)}
 .inf-bar button{font:inherit;font-size:var(--fs-2);font-weight:700;padding:var(--sp-3) var(--sp-5);border-radius:var(--r-3);
   border:1px solid var(--border);background:var(--card-2);color:var(--text);cursor:pointer}
