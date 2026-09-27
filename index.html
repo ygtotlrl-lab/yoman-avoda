@@ -74,7 +74,7 @@ import { MSG_DELETE, MSG_KV_BAD, MSG_SAVED, MSG_SAVED_LOCAL, MSG_SERVER_ERR,
 import { _rowsPaged, ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq,
          mergeCore, newClientId, pendAlertDismiss, pendBoot,
          pendConfirmPush, pendCount, pendForget, pendHas, pendMark,
-         pendReload, pendTag, plBoot, plForget, plNum,
+         pendReload, pendTag, plBoot, plForget, plStampWrite,
          prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave,
          sbWatch, schedulePush, tombAt, tombBoot, tombPruneMerged } from './core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot,
@@ -704,8 +704,10 @@ var RTY_CFG = {
   pending: function () { try { return pendCount() > 0; } catch (e) { return false; } },
 };
 /* ── PL_CFG — הדבר היחיד שנבדל בין האפליקציות ──────────────────────────── */
-/* ⚠️ ביומן החותמת היא שורת `last_changed` שבטבלת המוסד (`KV_TABLE`),
-   ⛔ ולכן `active()` נבדק מול `YESHIVA` — פולינג לפני בחירת מוסד
+/* ⚠️ ביומן החותמת יושבת בטבלת המוסד (`KV_TABLE`) — ⭐ ולכן `table()` נקרא
+   בכל כתיבה ובכל קריאה, ⛔ ואינו נלכד כאן: ⚠️ ערך שנלכד בעלייה היה חותם
+   את המוסד הראשון גם אחרי ההחלפה.
+   ⛔ `active()` נבדק מול `YESHIVA` — פולינג לפני בחירת מוסד
    היה נוגע בנתונים של דייר שאיש לא בחר.
    ⭐ ואין כאן כניסה כלל: ⛔ תנאי הפעילות הוא בחירת המוסד.
    ⚠️ `ok()` הוא `_yaMarkSynced()` — חותמת **תצוגה** בלבד. ⛔ אין להזין
@@ -716,15 +718,9 @@ var PL_CFG = {
   seen:   function () { return _lastKnownTimestamp; },
   note:   function (ts) { _lastKnownTimestamp = ts; },
   ok:     function () { _yaMarkSynced(); },
-  stamp:  function (ts) { return sbSet("last_changed", ts); },
   pull:   function () { return yaPullFromCloud(); },
-  remote: function () {
-    return Promise.resolve(getSB().from(KV_TABLE).select("value").eq("key", "last_changed").maybeSingle())
-      .then(function (r) {
-        if (!r || r.error) return { ok: false, ts: null };
-        return { ok: true, ts: r.data ? plNum(kvParse("last_changed", r.data.value).value) : null };
-      }, function () { return { ok: false, ts: null }; });
-  },
+  client: function () { return getSB(); },
+  table:  function () { return KV_TABLE; },
 };
 /* ── PUSH_CFG — הדבר היחיד שנבדל בין האפליקציות ────────────────────────── */
 /* ⛔ ביומן אין טבלת משתמשים ואין כניסה — ⚠️ ולכן אין כאן מסלול דחיפה שני,
@@ -2358,13 +2354,12 @@ async function yaSyncPushNow() {
       else toast(MSG_LOCAL_ONLY, null, 'bad');
       return;
     }
-    // Write timestamp AFTER data is saved — so other devices always get fresh data
-    // ⭐ דרך `PL_CFG.stamp` ולא ב-`sbSet` ישיר: זו אותה כתיבה
-    //    בדיוק, ⛔ ומסלול שני לחותמת היה יוצא מסנכרון מול
-    //    המודול ביום שבו מקום האחסון שלה ישתנה. כאן, בשונה מ-`plTouch()`,
-    //    הקורא זקוק לתוצאה עצמה כדי להזהיר את המשתמש.
+    // ⭐ החותמת נכתבת **אחרי** הנתונים — ⚠️ מכשיר שרואה אותה מושך נתון שכבר בענן.
+    // ⭐ דרך `plStampWrite` — הכותב האחד: ⛔ מסלול שני לחותמת היה יוצא
+    //    מסנכרון מול המודול. ⚠️ כאן, בשונה מ-`plTouch()`, הקורא זקוק
+    //    לתוצאה עצמה כדי להזהיר את המשתמש.
     var stampTs = Date.now();
-    var rTs = await PL_CFG.stamp(stampTs);
+    var rTs = await plStampWrite(stampTs);
     if (ctxStale(_ep)) return;
     if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
     PL_CFG.note(stampTs);
