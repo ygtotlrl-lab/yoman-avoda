@@ -1,6 +1,6 @@
--- ═══ 000_schema.sql — יומן עבודה: הסכימה החיה ══════════════════════════
+-- migrations/000_schema.sql — יומן עבודה: הסכימה החיה
 
--- ─── יומן עבודה ────────────────────────────────────────────────────────
+-- ── יומן עבודה ──
 
 create table if not exists public.ya_entries (
   client_id text not null,
@@ -45,8 +45,7 @@ create index if not exists ya_entries_yeshiva_archived_updated_idx ON public.ya_
 create UNIQUE index if not exists ya_entries_yeshiva_rec_key ON public.ya_entries USING btree (yeshiva, rec_key);
 create index if not exists ya_entries_yeshiva_updated_idx ON public.ya_entries USING btree (yeshiva, updated_at DESC);
 
--- ⛔ revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת
---    עם DELETE ו-TRUNCATE ל-anon: המחיקה היא deleted=true, ולא DELETE.
+-- revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת עם DELETE ו-TRUNCATE ל-anon.
 revoke all on table public.ya_entries from anon, authenticated;
 grant select, insert, update on table public.ya_entries to anon, authenticated;
 grant all on table public.ya_entries to service_role;

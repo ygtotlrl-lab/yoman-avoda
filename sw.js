@@ -1,10 +1,8 @@
-/*  ⛔ ה-service worker של האפליקציה — הגרסה והרשימות בלבד: ⚠️ הלוגיקה
- *  בליבה המשותפת, ⭐ וערכי האפליקציה בתצורה, שנטענת ראשונה. */
+// sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
-/*  ⛔ מכאן נגזרת גרסת האפליקציה — ⚠️ ואין לה ליטרל שני ב-`index.html`. */
-var CACHE_NAME = self.APP.id + '-v245';
+// מכאן נגזרת גרסת האפליקציה שבבאנר.
+var CACHE_NAME = self.APP.id + '-v248';
 
-// קליפת האפליקציה — חייבת להיות במטמון כדי שהאפליקציה תעבוד אופליין.
 var CORE = [
   './',
   './index.html',
@@ -19,18 +17,25 @@ var CORE = [
   './core/backup.js',
   './core/ui.js',
   './core/hebrew.js',
+  './app/state.js',
+  './app/config.js',
+  './app/domain.js',
+  './app/screens/archive.js',
+  './app/screens/entry.js',
+  './app/screens/log.js',
+  './app/screens/pick.js',
+  './app/screens/settings.js',
+  './app/main.js',
   './manifest.json',
   './icons/icon-192.49794220.png',
   './icons/icon-512.e53983fc.png',
-  /*  ⛔ לוגואי המוסדות מוטמנים מראש כמו האייקונים — ⚠️ נכס שאינו
-   *  במטמון אינו נטען אופליין, ⭐ והכותרת נשארת בלי לוגו. */
+  // לוגואי המוסדות מוטמנים מראש — בלעדיהם הכותרת נשארת בלי לוגו אופליין.
   './logos/rishon.png',
   './logos/ramataviv.png'
 ];
 
-// ⚠️ גרסאות נעוצות במדויק — ⛔ לעולם לא major צף ('@2'/'@4') — שחרור מצד
-// הספק שובר את האפליקציה בלי שום שינוי קוד כאן, ובלי שניתן לשחזר
-// מהריפו. ⛔ והרשימה זהה לתגיות ה-CDN של הדף: ⚠️ נכס שאינו כאן אינו במטמון.
+// גרסאות נעוצות במדויק ולא major צף — שחרור של הספק שובר את האפליקציה בלי שינוי כאן.
+// הרשימה זהה לתגיות ה-CDN של הדף: נכס שאינו כאן אינו במטמון.
 var CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.js',
   'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'

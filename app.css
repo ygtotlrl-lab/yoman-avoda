@@ -1,43 +1,20 @@
-/* ═══ גיליון הסגנון — בלוק גיליון סגנון ═════════════════════════════════════
-   ⛔ CSS של האפליקציה יושב בקובץ ⛔ ולא ב-`index.html` — ⚠️ בלוק שאינו
-   נושא את סוגו נקרא כסוג אחר: ⭐ מחרוזת CSS בתוך JS נראית כ-CSS של
-   האפליקציה, ⛔ ואינה.
-   ════════════════════════════════════════════════════════════ */
+/* app.css — עיצוב האפליקציה */
 
-/* ══ אסימוני העיצוב ════════════════════════════════════════════════════ */
-/*  ⛔ הערכה הבהירה חלה גם על `.rp` — ⚠️ שורש הדוח שנצרב לתמונה:
- *  ⭐ הכלל הכהה חל על `:root` בלבד, ⛔ ולכן הדוח יוצא בהיר בכל מצב
- *  מאותם ערכים בדיוק, ⚠️ ובלי עותק שני שלהם. */
+/* ── אסימוני העיצוב ──
+   .rp הוא שורש הדוח שנצרב לתמונה — הכלל הכהה חל על :root בלבד, ולכן הדוח יוצא בהיר בכל מצב. */
 :root, .rp {
-  /*  ⛔ מרחק הטוסט מתחתית המסך — ⚠️ הערך היחיד שנבדל בשכבת הטוסט:
-   *  אין סרגל תחתון קבוע. */
+  /* אין סרגל תחתון קבוע */
   --toast-bottom:26px;
-  /*  ⛔ רוחב עמודת התוכן — ⚠️ המיכל וכל פס קבוע קוראים אותו: ⭐ ערך
-   *  שכל צרכניו קוראים ממקום אחד משתנה פעם אחת, ⛔ ופס שרוחבו מוקלד
-   *  נפרד מהעמודה ביום שהיא משתנה. */
   --col:960px;
-  /*  ⛔ גוון האזהרה של אזור המצב — ⚠️ אסימון אחד בשם אחד,
-   *  ⭐ והגוון הוא של האפליקציה: ⛔ כלל משותף אינו יכול לנקוב בשם פרטי. */
-  /*  ⛔ צבע הזהות של האפליקציה — ⚠️ אסימון אחד בשם אחד,
-   *  ⭐ והגוון הוא של האפליקציה: ⛔ רכיב שמייצג אותה נגזר ממנו
-   *  ⛔ ולא מדיו הטקסט — ⚠️ באנר בדיו הטקסט נראה זהה בכל גוון.
-   *  ⛔ **והדיו שעליו צמד הפוך** — ⚠️ ומתחלף איתו יחד. */
-  /*  ⛔ `--brand` ממופה לצבע הזהות ⛔ ולא להדגשה — ⚠️ הזהות כאן היא
-   *  `--brand-fill`, ⭐ והיא מה שהמניפסט צובע בו את שורת המערכת ומה
-   *  שכותרת המסך נגזרת ממנו: ⛔ מיפוי להדגשה צובע את באנר העדכון כתום,
-   *  ⚠️ ובאנר שאינו בצבע הזהות נקרא כתקלה.
-   *  ⛔ **והדיו לבן בשני המצבים** — ⚠️ המשטח קבוע בשניהם. */
+  /* צבע הזהות הוא --brand-fill ולא ההדגשה — מיפוי להדגשה צובע את באנר העדכון כתום, ובאנר כזה נקרא כתקלה.
+     והדיו לבן בשני המצבים — המשטח קבוע בשניהם. */
   --brand:var(--brand-fill); --on-brand:#FFFFFF;
 
-  /*  ⛔ ארבעת אסימוני הזהות — ⭐ `--brand-ink` הוא גם
-   *  רקע הריחוף והלחיצה, ⛔ שהדיו עליו הוא `--bg` ומתחלף איתו. */
+  /* גם רקע הריחוף והלחיצה הוא --brand-ink, והדיו עליו הוא --bg ומתחלף איתו. */
   --brand-fill:#1E6FBF; --brand-ink:#1558A0; --brand-soft:#E4EEFA;
-  /*  ⛔ הדיו על מילוי הקטגוריה — ⚠️ אסימון שחי באפליקציה הזו בלבד, ⭐ שרק
-   *  בה יש מניפת קטגוריות: ⛔ אחד לכל התשע, ⚠️ וקבוע בשני המצבים —
-   *  ⭐ `--cat` אינו מתחלף עם הערכה, ⛔ ולכן הצמד אחד. */
+  /* הצבע --cat אינו מתחלף עם הערכה — ולכן --on-cat אחד לשני המצבים. */
   --on-cat:#FFFFFF;
-  /*  ⛔ השחור שהמסגרת העמוקה נמזגת בו — ⚠️ ולא `--on-cat`: ⭐ הדיו לבן,
-   *  ⛔ ומסגרת שנמזגת בו מתבהרת במקום להעמיק. */
+  /* שחור ולא --on-cat — מסגרת שנמזגת בדיו הלבן מתבהרת במקום להעמיק. */
   --cat-shade:#000000;
   --accent:#F0A500;
   --bg:#F0F4FA; --card-2:#E4EBF5; --card:#FFFFFF;
@@ -46,9 +23,7 @@
   --ok:#1A6A3A; --ok-soft:#E6F6EC;
   --warn:#B45309; --warn-soft:#FFFBE6;
   --bad:#B91C1C; --bad-soft:#FFE8E8;
-  /*  ⛔ הרמזור של מציג הטבלה — ⚠️ נפרד מאסימוני המצב: ⭐ בבהיר «חסר-מנומק»
-   *  ו«לא מטופל» באסימוני המצב הם כמעט אותו צבע, ⛔ ורמזור נקרא בגוון ולא
-   *  בבהירות. */
+  /* הרמזור נפרד מאסימוני המצב — בבהיר חסר-מנומק ולא מטופל כמעט באותו צבע, ורמזור נקרא בגוון. */
   --inf-go:#16A34A; --inf-wait:#EAB308; --inf-stop:#DC2626;
   --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
   --deep-1:#2A4E8C; --deep-2:#0E2145;
@@ -57,10 +32,7 @@
   --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
 }
 
-/* ══ הערכה הכהה ════════════════════════════════════════════════════════ */
-/*  ⛔ ערכת נושא כהה — ⚠️ אותם שמות משתנים בדיוק ואותם יחסים,
- *  ⭐ והגוון הוא של האפליקציה: ⛔ מסך שאינו קריא מתוקן בגוון
- *  ⛔ ולא במבנה — ⚠️ שני מבנים לאותה ערכה הם שתי ערכות. */
+/* ── הערכה הכהה ── */
 @media (prefers-color-scheme:dark){
     :root {
       --on-brand:#FFFFFF;
@@ -82,34 +54,25 @@
     }
 }
 
-/* ══ בסיס ══════════════════════════════════════════════════════════════ */
+/* ── בסיס ── */
 *{box-sizing:border-box;margin:0;padding:0;}
-/*  ⛔ המשוב בלחיצה נקבע ⛔ ולא נירש — ⚠️ ברירת המחדל של הדפדפן היא ריבוע
- *  כחול שאינו מערכת הצבעים שלנו, ⭐ והיא מופיעה במגע בלבד: ⛔ ומי שבודק
- *  בעכבר אינו רואה אותה. */
+/* ברירת המחדל של הדפדפן היא ריבוע כחול שמופיע במגע בלבד — ומי שבודק בעכבר אינו רואה אותו. */
 body{-webkit-tap-highlight-color:transparent}
 body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
 
-/* ══ קליפה ═════════════════════════════════════════════════════════════ */
+/* ── קליפה ── */
 .app{max-width:var(--col);margin:0 auto;padding:var(--sp-6);}
-/* כותרת עליונה */
-/* ⛔ גובה הכרטיס קבוע ⛔ ואינו נגזר מהתוכן — ⚠️ מעטפת אנדרואיד מגדילה
-   טקסט («font boosting»), ⭐ וכרטיס שגובהו נגזר מהתוכן יוצא שם בגובה אחר
-   מזה שנמדד בדפדפן: ⛔ הגובה הקבוע הוא מה שהופך את הכותרת לצפויה. */
+/* גובה הכרטיס קבוע — מעטפת אנדרואיד מגדילה טקסט (font boosting), וגובה שנגזר מהתוכן יוצא שם אחר מבדפדפן. */
 .hdr{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
   --hdr-inset:var(--sp-7);border:none;box-shadow:0 6px 28px var(--shadow-brand);display:flex;flex-direction:column;height:180px;overflow:hidden;}
-/* ⛔ הלוגו ממורכז לגוש הטקסט ⛔ ולא לגובה הכרטיס — ⚠️ הכיתוב «יחי» יושב
-   מתחת לגוש הזה, ⭐ ולוגו שממורכז לכרטיס כולו צף מעל הטקסט שלצידו. */
+/* הלוגו ממורכז לגוש הטקסט ולא לכרטיס — יחי יושב מתחת לגוש, ולוגו ממורכז לכרטיס צף מעל הטקסט. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
-/* ⛔ הלוגו, הקו ו«יחי» על קו אחד — ⚠️ שלושתם קוראים את `--hdr-inset`, ⭐ והמרווח
-   מהטקסט הוא של גוש הטקסט: ⛔ ערך שני ללוגו בנקודת שבירה שובר את הקו. */
+/* הלוגו, הקו ויחי קוראים את --hdr-inset — ערך שני ללוגו בנקודת שבירה שובר את הקו. */
 .hdr-logo-wrap{padding:0;padding-inline-start:var(--hdr-inset);display:flex;align-items:center;justify-content:center;}
-/* ⛔ הסטה של 2% כלפי מעלה ⛔ ואינה מספר פיקסלים — ⚠️ איזון אופטי: העין תופסת
-   מרכז מעט גבוה מהחישוב, ⭐ והאחוז נגזר מגובה הלוגו ונע איתו. */
+/* הסטה של 2% — איזון אופטי, והאחוז נע עם גובה הלוגו. */
 .hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-2);
   transform:translateY(-2%);}
-/* ⛔ הלוגו יושב בתוך כפתור אמיתי ⛔ ולא נושא `role="button"` — ⚠️ מסלול
-   הפעלה אחד לעכבר ולמקלדת, ⭐ ובלי מאזין `keydown` שני לצד הדלגציה. */
+/* כפתור אמיתי ולא role=button — מסלול הפעלה אחד לעכבר ולמקלדת, בלי מאזין keydown שני. */
 .hdr-logo-btn{background:none;border:none;padding:0;cursor:pointer;display:block;line-height:0;}
 .hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:var(--r-4);}
 @media (hover:hover){
@@ -120,34 +83,27 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
 .hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--on-brand);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 .hdr-title-wrap::after{content:none;}
-/* ⛔ הכתובית בשורה אחת ⛔ ואינה נשברת — ⚠️ שם המוסד שנשבר לשתיים מזיז
-   את גוש הטקסט שהלוגו ממורכז אליו, ⭐ ומקצר את הכרטיס במסך צר בלבד. */
+/* בשורה אחת — שם מוסד שנשבר לשתיים מזיז את גוש הטקסט שהלוגו ממורכז אליו. */
 .hdr-sub{font-size:var(--fs-1);color:var(--on-dark-3);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
-/* ⛔ הקו מפריד את «יחי» מגוש הכותרת ⛔ ואינו קישוט — ⚠️ בלעדיו הרווח
-   נראה כחלל שנשאר בטעות, ⭐ והקו הוא מה שהופך אותו לגבול. */
+/* בלי הקו הרווח שמעל יחי נראה כחלל שנשאר בטעות. */
 .hdr-div{height:1px;background:var(--fill-dark);margin:0 var(--hdr-inset);}
 .hdr-yechi{padding:var(--sp-4) var(--hdr-inset) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--on-dark-2);
   letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
-/* ⛔ במסך הצר ביותר הכתובית מתכווצת ⛔ ואינה נחתכת — ⚠️ נמדד שהיא אינה
-   נכנסת לרוחב, ⭐ ושם מוסד שנחתך בשלוש נקודות גרוע משם מוסד קטן
-   בפיקסל. ⛔ **וזו ברירת המחדל** ⛔ ולא שאילתה — ⚠️ ההרחבה היא שמחזירה
-   את הגודל המלא. */
+/* במסך הצר הכתובית מתכווצת ואינה נחתכת — נמדד שאינה נכנסת; זו ברירת המחדל, וההרחבה מחזירה את הגודל. */
 .hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
-/* לשוניות */
 .tabs{display:flex;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .tab-btn{flex:1;background:var(--card);color:var(--text-2);border:2px solid var(--border);
   border-radius:var(--r-4);padding:var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;cursor:pointer;transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);}
 .tab-btn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);box-shadow:0 4px 12px var(--shadow-brand);}
 
-/* ══ רכיבים ════════════════════════════════════════════════════════════ */
+/* ── רכיבים ── */
 @media (hover:hover){
   .btn-blue:hover{background:var(--brand-fill);color:var(--on-brand);}
 }
 @media (hover:hover){
   .btn-red:hover{background:var(--bad);color:var(--bad-soft);}
 }
-/* כרטיס */
 .card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
 .card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--brand-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
@@ -157,10 +113,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .btn-blue{background:var(--card-2);color:var(--brand-ink);border:1px solid var(--border);}
 .btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);}
 
-/*  ⛔ מציג טבלת התשתית — ⚠️ הוא אינו יכולת תשתיתית אלא מסך תצוגה
-   של האפליקציה הזו, ⭐ ולוגיקה עסקית אינה נכנסת לטבלה.
-   ⛔ והתוכן נמשך בזמן אמת ⛔ ואינו מוטבע — ⚠️ עותק בקוד היה מקור אמת שני,
-   ⭐ והוא מתיישן בכל שינוי בטבלה. */
+/* ── מציג טבלת התשתית ── */
 #modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
 .inf-hd{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);color:var(--on-brand);
@@ -185,8 +138,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
   vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
 .inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text-2)}
-/*  ⛔ עמודת אפליקציה — הסמל והנקודה על ציר אחד: ⚠️ בלי ריווח אופקי, ⭐ ושניהם
- *  ממורכזים ברוחב העמודה הקבוע, ולכן בכל רוחב מסך. */
+/* הסמל והנקודה ממורכזים ברוחב העמודה הקבוע, בלי ריווח אופקי — ולכן בכל רוחב מסך. */
 .inf-tbl .inf-app{padding-inline:0;text-align:center}
 .inf-tbl col.c-n{width:44px}
 .inf-tbl col.c-t{width:150px}
@@ -197,8 +149,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-dot.ok{background:var(--inf-go)}
 .inf-dot.gap{background:var(--inf-wait)}
 .inf-dot.bad{background:var(--inf-stop)}
-/*  ⛔ סמל לכל אפליקציה בכותרת העמודה — ⚠️ השם אינו נכנס בעמודה צרה,
- *  ⭐ והוא נשאר ב-`title` וב-`aria-label`; ⛔ ואות שמחליפה סמל חסר באותו גודל. */
+/* השם אינו נכנס בעמודה צרה — הוא נשאר ב-title וב-aria-label. */
 .inf-ico{display:block;width:20px;height:20px;margin:0 auto;fill:none;stroke:currentColor;stroke-width:1.6;
   stroke-linecap:round;stroke-linejoin:round}
 .inf-ico-l{display:block;width:20px;height:20px;margin:0 auto;line-height:20px;text-align:center;font-size:var(--fs-4)}
@@ -233,43 +184,28 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .cat-8{--cat:#7A7A7A}
 .is-hidden{display:none !important}
 
-/* ══ מסכים ═════════════════════════════════════════════════════════════ */
-/* ── בחירת הישיבה ── */
-/* מסך בחירת הישיבה — ⛔ צבעיו הם צבעי האייקון ⛔ ואינם ערכים שנבחרו כאן:
-   ⚠️ מקור האמת הוא `icon` שבתצורה — צבעי הרקע · הדיו · והזווית, ⭐ ומוטיב
-   הפסים הוא צורת הסמל אות באות. ⛔ מי שמשנה ערך כאן בלי לשנות שם מייצר
-   מקור שני לאותו צבע. ⚠️ ואין כאן `--brand`
-   ו-`--bg` של פנים האפליקציה: ⛔ הם הכחול הבהיר, ⭐ והם אינם גוון האייקון. */
-/* ⛔ מסך הבחירה הוא **מסך** ⛔ ואינו נעילה — ⚠️ הוא נושא כפתור שפותח
-   דיאלוג, ⭐ ודרגת «נעילה» היא התקרה: ⛔ מודאל שנפתח ממנה קיים ב-DOM
-   ⛔ ואינו נראה — ⚠️ `elementFromPoint` במרכז המודאל מחזיר את כרטיס
-   הבחירה. ⛔ ולכן הדרגה היא «תפריט» — ⚠️ מעל התוכן והסרגל,
-   ⭐ ומתחת למודאל · לטוסט · ולבאנר. */
+/* ── מסכים ──
+   מסך בחירת הישיבה: צבעיו הם צבעי icon שבתצורה, ולא --brand ו--bg של פנים האפליקציה.
+   דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, ומודאל שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
 #yeshivaSelect{position:fixed;inset:0;z-index:var(--z-3);
   background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
   color:var(--on-deep);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
-/* ⛔ הסגירה במחלקה ⛔ ולא ב-`.style.display` — ⚠️ וכלל ה-`id` שמעל גובר
-   על `.is-hidden` בסגוליות: ⭐ ולכן מצב הסגירה נכתב כאן, בסגוליות שלו. */
+/* כלל ה-id שמעל גובר על .is-hidden בסגוליות — ולכן מצב הסגירה נכתב כאן. */
 #yeshivaSelect.is-hidden{display:none;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
-/* ⛔ ה-`padding` קובע את מקום הכותרת בכרטיס — ⛔ ואין להחליפו ב-`margin`:
-   ⚠️ הוא נבלע במרווח של «בחר ישיבה» שמתחתיו */
+/* padding ולא margin — margin נבלע במרווח של בחר ישיבה שמתחתיו */
 .ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;
   letter-spacing:var(--ls-2);line-height:var(--lh-1);margin:0;padding:var(--sp-6) 0 var(--sp-7);}
 .ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:var(--op-5);margin:var(--sp-7) 0 var(--sp-5);}
 .ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
-/* ⚠️ הכפתור שקוף על הגרדיאנט ⛔ ואינו לבן מלא — ⭐ מסגרת בדיו היא אותו
-   מוטיב של הפסים, ⛔ ומשטח לבן היה מכניס גוון שלישי למסך. */
+/* שקוף ולא לבן — משטח לבן היה מכניס גוון שלישי למסך. */
 .ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
   color:var(--on-deep);background:var(--fill-deep);border:2px solid var(--edge-deep);
   border-radius:var(--r-5);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
-/*  ⛔ `:hover` חל רק במכשיר שיש לו ריחוף — ⚠️ במגע הוא נשאר על הרכיב
- *  אחרי הלחיצה, ⭐ והלחצן נראה לחוץ עד שנוגעים במקום אחר: ⛔ המשוב במגע
- *  הוא `:active` בלבד, ⚠️ ולכן הוא נשאר מחוץ לבלוק.
- *  ⚠️ **וכל כלל ריחוף יושב ליד רכיבו ולא בסוף הגיליון** — ⛔ כלל ריחוף שיורד אל אחרי
- *  `.active` או `:active` באותה סגוליות גובר עליהם. */
+/* :hover רק במכשיר עם ריחוף — במגע הוא נשאר על הרכיב אחרי הלחיצה.
+   וכלל ריחוף יושב ליד רכיבו — אחרי .active באותה סגוליות הוא היה גובר עליו. */
 @media (hover:hover){
   .ys-pick-btn:hover{background:var(--fill-deep-2);border-color:var(--on-deep);}
 }
@@ -277,11 +213,9 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   .ys-pick-alt:hover{background:var(--fill-deep);border-color:var(--edge-deep-2);}
 }
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
-/* ⛔ המרווח הוא מה שמפריד בין בחירה לקריאה — ⚠️ כפתור שלישי צמוד נקרא
-   כישיבה שלישית, ⭐ והקו מעליו הוא הגבול. */
+/* המרווח והקו מפרידים — כפתור שלישי צמוד היה נקרא כישיבה שלישית. */
 .ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);}
-/* ⚠️ מובחן משני הכפתורים שמעליו בגודל ובעובי המסגרת ⛔ ולא בצבע — ⭐ גוון
-   שלישי על הגרדיאנט היה שובר את המוטיב. */
+/* מובחן בגודל ובעובי המסגרת ולא בצבע — גוון שלישי על הגרדיאנט שובר את המוטיב. */
 .ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
   color:var(--on-deep);background:transparent;border:1px dashed var(--edge-deep);
   border-radius:var(--r-4);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
@@ -302,7 +236,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .btn-add:hover{background:linear-gradient(135deg,var(--deep-1),var(--deep-2));transform:translateY(-1px);box-shadow:0 6px 20px var(--shadow-brand);}
 }
-/* תאריך */
 .date-row{display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap;}
 .date-lbl{font-size:var(--fs-1);font-weight:700;color:var(--text-2);white-space:nowrap;}
 .day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
@@ -312,24 +245,18 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
   font-weight:700;background:var(--card);direction:rtl;min-width:155px;flex:1;color:var(--text);}
 .heb-inp:focus{outline:none;border-color:var(--brand-ink);}
-/* רשת הקטגוריות */
-/* ⛔ שתי עמודות בברירת המחדל — ⚠️ שלוש נכנסות בנקודה שמעל, וארבע בזו
-   שאחריה: ⭐ קפיצה משתיים לארבע הייתה מצמצמת את הכפתור לרוחב שבו השם
-   נחתך, ⛔ והנקודה האמצעית היא מה שמונע אותה. */
+/* שתיים, שלוש ואז ארבע עמודות — קפיצה משתיים לארבע הייתה מצמצמת את הכפתור לרוחב שבו השם נחתך. */
 .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* ⛔ שם הקטגוריה בצבע שלה — ⚠️ `--cat` הוא המסגרת והדיו כאחד, ⭐ בבהיר
-   ובכהה: ⛔ הצבע אינו מתחלף עם הערכה, ⚠️ ולכן אין לו כלל כהה. */
+/* המשתנה --cat הוא המסגרת והדיו כאחד ואינו מתחלף עם הערכה, ולכן אין לו כלל כהה. */
 .cat-btn{color:var(--cat);}
-/*  ⛔ הנבחר — מילוי בצבע הקטגוריה, ⚠️ ועליו הטקסט לבן.
- *  ⭐ המסגרת בגוון עמוק של אותו צבע — ⛔ מסגרת בצבע המילוי נבלעת בו,
- *  ⚠️ והגוון נמזג ב-`--cat-shade` ⛔ ולא בדיו. ⭐ העובי הנוסף בפנים,
- *  ב-`box-shadow` — ⛔ ולא ב-`border-width`: הכפתור אינו גדל ואינו זז. */
+/* המסגרת בגוון עמוק של צבע הקטגוריה — מסגרת בצבע המילוי נבלעת בו.
+   העובי הנוסף ב-box-shadow ולא ב-border-width, כדי שהכפתור לא יגדל ולא יזוז. */
 .cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--cat-shade));
   background:var(--cat);color:var(--on-cat);border-color:var(--cat-deep);box-shadow:inset 0 0 0 1px var(--cat-deep);}
-/* כפתורים מהירים */
+/* ── כפתורים מהירים ── */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
 .qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text-3);margin-bottom:var(--sp-2);letter-spacing:var(--ls-2);text-transform:uppercase;}
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
@@ -338,7 +265,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qbtn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);font-weight:700;}
 .qbtn.tapped{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
 .hint{color:var(--text-3);font-size:var(--fs-1);}
-/* שדות קלט */
+/* ── שדות קלט ── */
 .inp-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-4);margin-bottom:var(--sp-5);}
 .hide-mobile{display:none !important;}
 .fld{display:flex;flex-direction:column;gap:var(--sp-2);}
@@ -346,14 +273,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
   color:var(--text);background:var(--card);direction:rtl;transition:border-color var(--dur-3);}
 .fld input:focus{outline:none;border-color:var(--brand-ink);box-shadow:0 0 0 3px var(--shadow-brand-soft);}
-/* כפתור ההוספה הגדול */
-/* ⛔ קצוות המעבר — `--brand-fill` ⟵ `--deep-1`, ⭐ קבועים בשני המצבים:
-   ⚠️ `--brand-ink` מתבהר בכהה, ⛔ ולכן אינו קצה המעבר. */
+/* ── כפתור ההוספה ──
+   קצות המעבר קבועים בשני המצבים: --brand-ink מתבהר בכהה ולכן אינו קצה המעבר. */
 .btn-add{width:100%;background:linear-gradient(135deg,var(--brand-fill),var(--deep-1));color:var(--on-brand);border:none;
   border-radius:var(--radius);padding:var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);letter-spacing:var(--ls-2);box-shadow:0 4px 14px var(--shadow-brand);}
-/* ⛔ הלחיצה במשפחת צבע הזהות ⛔ ולא בירוק — ⚠️ וגוונה עמוק מהריחוף:
-   ⭐ `:active` בא אחרי בלוק הריחוף באותה סגוליות, ⛔ ולכן אין `!important`. */
+/* :active בא אחרי בלוק הריחוף באותה סגוליות, ולכן אין צורך ב-!important. */
 .btn-add:active{background:linear-gradient(135deg,var(--deep-2),var(--deep-1));transform:scale(0.97);}
 .greg-inp{min-width:130px}
 .cat-btn-name{font-size:var(--fs-2);font-weight:700}
@@ -361,7 +286,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .del-btn:hover{background:var(--bad-soft);color:var(--bad);}
 }
-/* יומן */
 .log-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-5);}
 .log-cnt{background:var(--brand-fill);color:var(--on-brand);border-radius:var(--r-6);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-2);font-weight:700;}
 .entry-row{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-5);display:grid;grid-template-columns:auto 1fr auto;
@@ -401,16 +325,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .btn-save:hover{background:linear-gradient(135deg,var(--deep-1),var(--deep-2));}
 }
-/* הגדרות */
+/* ── הגדרות ── */
 .set-card{background:var(--card);border-radius:var(--r-4);padding:var(--sp-5);border:1.5px solid var(--border);margin-bottom:var(--sp-5);cursor:grab;transition:box-shadow var(--dur-3);}
 .set-card.dragging{opacity:var(--op-3);box-shadow:0 8px 24px var(--shadow);}
 .set-card:active{cursor:grabbing;}
 .drag-handle{font-size:var(--fs-5);margin-left:var(--sp-4);flex-shrink:0;}
-/*  ⛔ הידית היא מה שאומר שהשורה נגררת — ⚠️ שורה שאין בה סימן נראית
- *  קבועה, ⭐ ואיש אינו מנסה להזיז אותה.
- *  ⛔ **ו-`touch-action` עליה בלבד** — ⚠️ באצבע, אלמנט שאינו מבטל את
- *  פעולת המגע גולל את הדף במקום לגרור; ⭐ וביטולו על כל השורה היה נועל
- *  את גלילת המסך בכל הרשימה. */
+/* touch-action:none על הידית בלבד — במגע אלמנט שאינו מבטל אותו גולל במקום לגרור,
+   וביטולו על כל השורה היה נועל את גלילת הרשימה. */
 .grip{color:var(--text-3);touch-action:none;cursor:grab}
 .grip:active{cursor:grabbing;color:var(--brand-ink)}
 .set-hdr{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4);}
@@ -455,7 +376,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .arc-entry-del:hover{color:var(--bad);}
 }
-/* ניווט לעומק בארכיון */
 .arc-btn{background:var(--card);border:2px solid var(--border);border-radius:var(--radius);padding:var(--sp-5) var(--sp-6);
   font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;color:var(--text);cursor:pointer;
   transition:all var(--dur-3);box-shadow:0 2px 6px var(--shadow);text-align:center;min-width:70px;}
@@ -468,8 +388,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-day-card.editing{border-color:var(--accent);background:var(--warn-soft);}
 .arc-entry-row{display:flex;align-items:center;gap:var(--sp-4);padding:var(--sp-3) 0;border-top:1px solid var(--border);font-size:var(--fs-2);}
 .arc-entry-del{background:none;border:none;color:var(--text-3);cursor:pointer;font-size:var(--fs-3);padding:0 var(--sp-2);line-height:var(--lh-1);flex-shrink:0;}
-/* ⛔ שדה העריכה במקום של משימה ותת-משימה — ⚠️ מחלקה ולא `style.cssText`:
-   ⭐ מצב קבוע יושב בגיליון. */
 .inl-inp{border:1px solid var(--brand-ink);border-radius:var(--r-2);padding:var(--sp-1) var(--sp-3);font-family:Heebo;font-size:var(--fs-2);width:90px;}
 .inl-inp-task{padding:var(--sp-1) var(--sp-4);font-size:var(--fs-3);width:120px;font-weight:600;}
 .arc-pick-label{color:var(--text-2);font-size:var(--fs-1);margin-bottom:var(--sp-4)}
@@ -501,17 +419,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-task{font-weight:700;color:var(--text)}
 .day-count{font-size:var(--fs-1);font-weight:400;opacity:var(--op-6)}
 
-/* ══ נקודות שבירה ══════════════════════════════════════════════════════ */
+/* ── נקודות שבירה ── */
 @media (min-width:360px){
   .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
 }
-/* ⛔ במסך רחב יש **מרכז אחד** לכרטיס ⛔ ולא שניים — ⚠️ מתחת לסף הכותרת
-   מרוכזת לחלל שנשאר אחרי הלוגו והכיתוב «יחי», ומעליו לכרטיס כולו, ⭐ ושני מרכזים במרחק
-   של עשרות פיקסלים נקראים כטעות. ⛔ הלוגו יוצא מהזרימה ונצמד לפינה, ⛔ ולא
-   מוקטן: ⚠️ הוא נשאר ממורכז לגוש הטקסט ולא לכרטיס.
-   ⛔ **ובמובייל אין לגעת** — ⚠️ שם הלוגו תופס אחוז גדול מהרוחב, ⭐ ומרכוז
-   לכרטיס היה מציב את הכותרת מתחתיו. ⛔ והסף נמדד: מעליו רוחב הטקסט
-   ורוחב הלוגו אינם נוגעים. */
+/* במסך רחב הכותרת מתמרכזת לכרטיס כולו והלוגו יוצא מהזרימה לפינה — שני מרכזים סמוכים נקראים כטעות.
+   במובייל אין לגעת: הלוגו תופס חלק גדול מהרוחב, ומרכוז לכרטיס היה מציב את הכותרת מתחתיו.
+   הסף נמדד: מעליו הטקסט והלוגו אינם נוגעים. */
 @media (min-width:900px){
   .hdr-top{position:relative;}
 }
@@ -528,4 +442,3 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (min-width:640px){.veil{align-items:center}}
 @media (min-width:640px){.sheet{border-radius:var(--r-6)}}
 
-/* ═══ סוף גיליון הסגנון — בלוק גיליון סגנון ══════════════════════════════ */

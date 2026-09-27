@@ -1,4 +1,4 @@
-// ⛔ נוצר מהתצורה — `app.config.js`, ב-`node tools/gen-app.mjs`: אין לערוך ביד
+// נוצר מהתצורה — app.config.js, ב-node tools/gen-app.mjs: אין לערוך ביד
 plugins {
     id 'com.android.application'
 }
@@ -11,7 +11,7 @@ android {
         applicationId "com.yoman.avoda"
         minSdk 21
         targetSdk 34
-        versionCode 28
+        versionCode 29
         versionName "20.0"
     }
 
@@ -29,7 +29,6 @@ android {
 
 dependencies {
     implementation 'androidx.core:core:1.13.1'
-    // WebViewCompat.addWebMessageListener — the origin allow-list for the share bridge
-    // is enforced by WebView itself, per frame.
+    // WebViewCompat.addWebMessageListener — רשימת המקורות של גשר השיתוף נאכפת ב-WebView עצמו, לכל frame
     implementation 'androidx.webkit:webkit:1.11.0'
 }
