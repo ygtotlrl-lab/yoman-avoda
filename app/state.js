@@ -1,7 +1,7 @@
 // app/state.js — המצב המשותף בין המודולים
 
 // מצב שמודולים שונים כותבים — אובייקט אחד, כי קישור מיובא אינו ניתן להשמה.
-export const S = {
+const S = {
   // ── משתני רב-הדיירות (מוסד) ──
   YESHIVA: null,
   // נבחר בכל עלייה ואינו נשמר לדיסק
@@ -50,3 +50,9 @@ export const S = {
   _infData: undefined,
   _infOpen: undefined
 };
+
+// ── מה שמסך צריך מ-main ──
+// main רושם כאן בעלייה — מודול שמייבא מ-main סוגר מעגל, והרישום הוא הכיוון האחד.
+const shell = { renderLog: null, renderArcDetail: null, buildCatGrid: null, buildTaskBtns: null };
+
+export { S, shell };

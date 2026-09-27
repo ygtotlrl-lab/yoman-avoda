@@ -2,13 +2,14 @@
 import { MSG_SAVED } from '../../core/util.js';
 import { idEq, newClientId, pendMark } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
-import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE } from '../config.js';
-import { HMO, HUNKNOWN, PK_ARC, PK_ENTRY, archiveKey, catCls, catNameOf, extractYM,
-         getTodayKey, isLive, liveOnly, normHDate, recDelete, recTouch, saveArchive,
-         saveEntries, snapHDate, yaSortEntries } from '../domain.js';
-import { showEl } from './entry.js';
-import { exportPDF, renderLog } from './log.js';
+import { hebrewDate } from '../../core/hebrew.js';
+import { HMO, HUNKNOWN, MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC,
+         PK_ENTRY } from '../constants.js';
+import { S, shell } from '../state.js';
+import { archiveKey, catCls, catNameOf, extractYM, getTodayKey, isLive, liveOnly,
+         normHDate, recDelete, recTouch, saveArchive, saveEntries, showEl, snapHDate,
+         yaSortEntries } from '../domain.js';
+import { exportPDF } from '../domain.report.js';
 
 function screenArchiveHTML() {
   return `
@@ -456,10 +457,10 @@ function arcSaveEntry(gdateKey, entryId) {
   saveEntries();
   saveArchive();
   renderArcDetail();
-  renderLog();
+  shell.renderLog();
   toast(MSG_SAVED, null, 'good');
 }
 
-export { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
-         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF,
-         renderArcDetail, renderArchive, screenArchiveHTML };
+export { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail, arcGoMonths,
+         arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+         renderArchive, screenArchiveHTML };

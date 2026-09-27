@@ -1,19 +1,22 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, dayNoon, kvParse,
-         uniqList, withTimeout } from '../core/util.js';
-import { _rowsPaged, ctxEpoch, ctxStale, mergeCore, pendConfirmPush, pendHas, pendMark,
-         plStampWrite, pushTable, sbWatch, schedulePush, tombAt } from '../core/sync.js';
+import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayNoon,
+         kvParse, uniqList, withTimeout } from '../core/util.js';
+import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, pendConfirmPush, pendHas,
+         pendMark, plStampWrite, pushTable, sbWatch, schedulePush,
+         tombAt } from '../core/sync.js';
 import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
-import { S } from './state.js';
-import { MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY, MSG_SAVED_CLOUD, PL_CFG, SB_KEY, SB_URL,
-         SET_PUSH, YA_ROW_TABLES } from './config.js';
-import { renderArcDetail } from './screens/archive.js';
-import { buildCatGrid, buildSubBtns, buildTaskBtns } from './screens/entry.js';
-import { renderLog } from './screens/log.js';
-import { renderSettings } from './screens/settings.js';
-import { HE } from './main.js';
+import { hebrewDate } from '../core/hebrew.js';
+import { CATS_RESET_LS, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
+         MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, SET_PUSH,
+         SUBS_RESET_LS, YA_ROW_TABLES, YESHIVOT } from './constants.js';
+import { S, shell } from './state.js';
+
+// ── מיון עברי ──
+try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
+
+var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 
 // סיומת מפתח האחסון פר-מוסד — בידוד אופליין
 function yaSuffix(y) { return '_' + y; }
@@ -60,10 +63,6 @@ function _yaVerify(kvKey) {
 // שלוש שכבות שאין לערבב: KV_TABLE בענן, סיומת LS בדגל המקומי, וקידומת <מוסד>_ במפתח הגיבוי — אחרת שני המוסדות כותבים ל-sh_backup תחת אותו מפתח.
 // sources ריק לפני בחירת מוסד — KV_TABLE הוא null עד selectYeshiva.
 function yaBkPrefix(y) { return (y || 'unknown') + '_'; }
-
-// ── חיבור לשכבת הדחיפה ──
-// pushTable שהחזירה ok מאשרת כל רשומה שסומנה לפני הצילום — ולא _lastKnownTimestamp, שמתעדכן גם במשיכה.
-var PK_ENTRY = 'entry:', PK_ARC = 'arc:', PK_SET = 'setting:';
 
 // ── קריאה וכתיבה של kv ──
 // KV_TABLE מפריד בין המוסדות בענן והסיומת מפרידה במכשיר — סיומת שנשכחה כותבת נתוני מוסד אחד למפתח של השני.
@@ -433,17 +432,6 @@ function yaMetaTs(res, key) {
 
 function metaDel(ts) { return { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() }; }
 
-// חותמת ניקוי שנקבעת בענן ביד אחרי ניקוי: מכשיר שראה חותמת חדשה משלו זורק את העותק המקומי ומושך מלא, פעם אחת.
-// חותמת ISO ולא מונה — השוואת מחרוזות ISO היא כרונולוגית; subs_meta חולק את חותמת subs כדי שלא ייזרקו בנפרד.
-// _KEY הוא המפתח בענן בלי תחילית ו-_LS המפתח במכשיר עם תחילית — האחסון המקומי משותף לכל ה-origin.
-var CATS_RESET_KEY = 'cats_reset';
-
-var CATS_RESET_LS = 'ya_cats_reset';
-
-var SUBS_RESET_KEY = 'subs_reset';
-
-var SUBS_RESET_LS = 'ya_subs_reset';
-
 function subKey(ci, taskName) { return ci + "::" + taskName; }
 
 // ── המיון היחיד לרשומות היומן ──
@@ -550,11 +538,6 @@ function hasHebMonth(h) { return extractYM(h).year !== HUNKNOWN; }
 // הרישום fire-and-forget ולעולם אינו חוסם.
 function yaSyncLog(action, key, recordCount, details) {
   try { logAction(action, key, recordCount, details); } catch (e) { }
-}
-
-// הגדרות ושורות יומן נבנים מחדש, ולכן הציור עובר ב-pullRender — שדה פתוח בהם היה נמחק.
-function yaPullDraw() {
-  buildCatGrid(); buildTaskBtns(); buildSubBtns(); renderLog(); renderSettings();
 }
 
 // ── שם החודש העברי ──
@@ -671,16 +654,9 @@ async function yaSyncPushNow() {
     var rTs = await plStampWrite(stampTs);
     if (ctxStale(_ep)) return;
     if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
-    PL_CFG.note(stampTs);
+    app.PL_CFG.note(stampTs);
     toast(MSG_SAVED_CLOUD, null, 'good');
 }
-
-// אין בו מרחשון — monthKeyOf ממפה אותו לחשון, אחרת לאותה שנה שני כפתורי חשוון.
-// אדר ואדר א׳/ב׳ חיים זה לצד זה — בכל שנה מופיע רק אחד מהם.
-var HMO = ["תשרי","חשון","כסלו","טבת","שבט","אדר","אדר א׳","אדר ב׳","ניסן","אייר","סיון","תמוז","מנחם אב","אלול"];
-
-// הדלי לא ידוע אינו נשמט מרשימת השנים — אחרת הרשומות שבו בלתי נגישות.
-var HUNKNOWN = "לא ידוע";
 
 function extractYM(hdate) {
   function unknown() { return {year: HUNKNOWN, month: HUNKNOWN, order: 99}; }
@@ -756,7 +732,7 @@ async function yaPullFromCloud() {
         S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
         S.ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
         lsSetArray("ya_entries"+_ls, S.ENTRIES, _yaRecTs);
-        pullRender(renderLog);
+        pullRender(shell.renderLog);
         console.log("[sync] merged, entries=" + liveOnly(S.ENTRIES).length +
                     " (+" + (S.ENTRIES.length - liveOnly(S.ENTRIES).length) + " tombstones)");
       }
@@ -770,7 +746,7 @@ async function yaPullFromCloud() {
         S.ARCHIVE = mergeArchive(S.ARCHIVE, cloudArchive);
         lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, S.ARCHIVE), _yaRecTs);
         var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && !arcPanel.classList.contains("is-hidden") && S.arcSelDayKey) pullRender(renderArcDetail);
+        if (arcPanel && !arcPanel.classList.contains("is-hidden") && S.arcSelDayKey) pullRender(shell.renderArcDetail);
       }
     }
   } catch(e) { S._yaNetWarned = true; console.error("[sync] error:", e); }
@@ -794,13 +770,26 @@ function lsRead(key, fallback, kind) {
   return val;
 }
 
-export { CATS_RESET_KEY, CATS_RESET_LS, HMO, HUNKNOWN, PK_ARC, PK_ENTRY, PK_SET,
-         SUBS_RESET_KEY, SUBS_RESET_LS, _yaMarkPushed, _yaMarkSynced, _yaPushedThrough,
-         _yaRecTs, _yaVerify, arcPutSnapshot, archiveKey, autoArchiveDay, catCls,
-         catNameOf, entryKey, entryOrderTs, extractYM, getCurrentDateKey, getSB,
-         getTodayKey, gregDateStr, hasHebMonth, isLive, liveOnly, lsRead, mergeArchive,
-         mergeCats, mergeEntries, mergeSubs, metaDel, normHDate, parseGregLike,
-         recDelete, recTouch, saveArchive, saveEntries, sbGetResult, snapHDate, subKey,
-         yaBkPrefix, yaDirtyRows, yaLsBases, yaMetaMap, yaPendPrefix, yaPullDraw,
-         yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
-         yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf };
+// ── משותף למסכים ──
+function yaYeshiva(y) {
+  for (var i = 0; i < YESHIVOT.length; i++) if (idEq(YESHIVOT[i].id, y)) return YESHIVOT[i];
+  return null;
+}
+
+// בורר CSS למזהה ברשימת-היתר של תווים ולא בבריחה — ערך מסונן אינו יכול לסגור את הבורר ולהריץ בורר אחר.
+function cssQ(v) {
+  return String(v == null ? '' : v).replace(/[^A-Za-z0-9_-]/g, '');
+}
+
+// הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
+function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
+
+export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
+         arcPutSnapshot, archiveKey, autoArchiveDay, catCls, catNameOf, cssQ, entryKey,
+         entryOrderTs, extractYM, getCurrentDateKey, getSB, getTodayKey, gregDateStr,
+         hasHebMonth, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
+         mergeSubs, metaDel, normHDate, parseGregLike, recDelete, recTouch, saveArchive,
+         saveEntries, sbGetResult, showEl, snapHDate, subKey, yaBkPrefix, yaDirtyRows,
+         yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
+         yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog,
+         yaSyncPushNow, yaTableOf, yaYeshiva };

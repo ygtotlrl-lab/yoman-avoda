@@ -2,10 +2,9 @@
 import { uniqHas } from '../../core/util.js';
 import { lsSet } from '../../core/storage.js';
 import { esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
-import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../config.js';
+import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
+import { S, shell } from '../state.js';
 import { catCls, isLive, metaDel, recTouch, subKey, yaSetDirty } from '../domain.js';
-import { buildCatGrid, buildTaskBtns } from './entry.js';
 
 function screenSettingsHTML() {
   return `
@@ -79,7 +78,7 @@ function applyCatOrder(list, kind) {
   S.CATS = reorderKeep(S.CATS, domOrder(list, kind, 'idx'));
   saveCats();
   renderSettings();
-  buildCatGrid();
+  shell.buildCatGrid();
 }
 
 function applyTaskOrder(list, kind) {
@@ -179,7 +178,7 @@ function editTaskInline(ci, ti) {
       recTouch(S.CATS[ci]); touchSubKey(newSk);
       saveCats(); saveSubs();
     }
-    renderSettings(); buildCatGrid(); buildTaskBtns();
+    renderSettings(); shell.buildCatGrid(); shell.buildTaskBtns();
   }
   inp.onblur = save;
   inp.onkeydown = function(e){ if(e.key==="Enter") inp.blur(); if(e.key==="Escape"){ inp.value=oldVal; inp.blur(); } };
@@ -291,10 +290,10 @@ function saveSettings() {
       }
     }
   });
-  saveCats(); saveSubs(); buildCatGrid();
+  saveCats(); saveSubs(); shell.buildCatGrid();
   return true;
 }
 
 export { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
-         editTaskInline, removeSub, removeTask, renderSettings, saveCatName,
-         saveSettings, screenSettingsHTML };
+         editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
+         screenSettingsHTML };
