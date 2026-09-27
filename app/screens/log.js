@@ -2,12 +2,13 @@
 import { MSG_DELETE } from '../../core/util.js';
 import { idEq, pendMark, pendTag, schedulePush } from '../../core/sync.js';
 import { ask, esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
+import { hebrewDate } from '../../core/hebrew.js';
 import { MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, MSG_IMG_FAIL, MSG_IMG_OFFLINE,
          MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS, MSG_PDF_PREP,
          MSG_POPUP_BLOCKED } from '../config.js';
-import { PK_ENTRY, autoArchiveDay, catCls, catNameOf, getCurrentDateKey, isLive,
-         liveOnly, recDelete, recTouch, saveEntries, yaSortEntries } from '../domain.js';
+import { S } from '../state.js';
+import { PK_ENTRY, autoArchiveDay, catCls, catNameOf, getCurrentDateKey, isLive, liveOnly,
+         recDelete, recTouch, saveEntries, yaSortEntries } from '../domain.js';
 import { showEl } from './entry.js';
 import { cssQ, yaYeshiva } from '../main.js';
 

@@ -2,30 +2,33 @@
 import { ctxEpoch, ctxStale, ctxSwitch, eraKick, idEq, pendAlertDismiss, pendBoot,
          pendForget, pendReload, plBoot, plForget, prunePastTombstones, pushTable,
          rtyBoot, runSave, tombBoot, tombPruneMerged } from '../core/sync.js';
-import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsGet, lsSet, lsSetArray } from '../core/storage.js';
+import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsGet, lsSet,
+         lsSetArray } from '../core/storage.js';
 import { bkBoot } from '../core/backup.js';
 import { actRun, closeAsk, closeModal, esc, ksKey, modalBackdrop, modalEsc, openModal,
          pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
-import '../core/hebrew.js';
-import { S } from './state.js';
+import { hebrewDate } from '../core/hebrew.js';
 import { LS_CFG, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL,
          MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL,
          MSG_SYNC_PARTIAL, MSG_YESHIVA_UNKNOWN, YESHIVOT } from './config.js';
+import { S } from './state.js';
 import { CATS_RESET_KEY, CATS_RESET_LS, SUBS_RESET_KEY, SUBS_RESET_LS, _yaMarkSynced,
          _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot, archiveKey, entryKey,
-         entryOrderTs, gregDateStr, hasHebMonth, isLive, liveOnly, lsRead,
-         mergeArchive, mergeCats, mergeEntries, mergeSubs, recDelete, recTouch,
-         sbGetResult, yaMetaMap, yaPullDraw, yaRowsGet, yaSetDirty, yaSuffix, yaSyncLog } from './domain.js';
-import { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
-         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF,
-         renderArcDetail, renderArchive, screenArchiveHTML } from './screens/archive.js';
+         entryOrderTs, gregDateStr, hasHebMonth, isLive, liveOnly, lsRead, mergeArchive,
+         mergeCats, mergeEntries, mergeSubs, recDelete, recTouch, sbGetResult, yaMetaMap,
+         yaPullDraw, yaRowsGet, yaSetDirty, yaSuffix, yaSyncLog } from './domain.js';
+import { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail, arcGoMonths,
+         arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+         renderArchive, screenArchiveHTML } from './screens/archive.js';
 import { DAY_VALUE_MAP, addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns,
-         onGregDateChange, pickCat, pickDay, pickSub, pickTask, screenEntryHTML, showEl } from './screens/entry.js';
-import { clearAll, delEntry, editEntry, renderLog, saveEntry, screenLogHTML, shareReport } from './screens/log.js';
+         onGregDateChange, pickCat, pickDay, pickSub, pickTask, screenEntryHTML,
+         showEl } from './screens/entry.js';
+import { clearAll, delEntry, editEntry, renderLog, saveEntry, screenLogHTML,
+         shareReport } from './screens/log.js';
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
 import { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
-         editTaskInline, removeSub, removeTask, renderSettings, saveCatName,
-         saveSettings, screenSettingsHTML } from './screens/settings.js';
+         editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
+         screenSettingsHTML } from './screens/settings.js';
 
 document.title = self.APP.name;
 
@@ -553,6 +556,6 @@ function selectYeshiva(y) {
   }
 }
 
-bootOk();
+window.bootOk();
 
 export { DOM_ACTIONS, HE, cssQ, saveRefresh, yaYeshiva };

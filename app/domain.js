@@ -6,9 +6,10 @@ import { _rowsPaged, ctxEpoch, ctxStale, mergeCore, pendConfirmPush, pendHas, pe
 import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
-import { S } from './state.js';
+import { hebrewDate } from '../core/hebrew.js';
 import { MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY, MSG_SAVED_CLOUD, PL_CFG, SB_KEY, SB_URL,
          SET_PUSH, YA_ROW_TABLES } from './config.js';
+import { S } from './state.js';
 import { renderArcDetail } from './screens/archive.js';
 import { buildCatGrid, buildSubBtns, buildTaskBtns } from './screens/entry.js';
 import { renderLog } from './screens/log.js';

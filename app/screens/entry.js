@@ -2,8 +2,9 @@
 import { dayNoon } from '../../core/util.js';
 import { newClientId, pendMark, schedulePush } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
+import { hebrewDate } from '../../core/hebrew.js';
 import { MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY } from '../config.js';
+import { S } from '../state.js';
 import { PK_ENTRY, autoArchiveDay, catCls, getCurrentDateKey, gregDateStr, liveOnly,
          parseGregLike, saveEntries, subKey } from '../domain.js';
 import { renderLog } from './log.js';

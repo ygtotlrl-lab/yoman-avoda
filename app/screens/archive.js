@@ -2,8 +2,9 @@
 import { MSG_SAVED } from '../../core/util.js';
 import { idEq, newClientId, pendMark } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
-import { S } from '../state.js';
+import { hebrewDate } from '../../core/hebrew.js';
 import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE } from '../config.js';
+import { S } from '../state.js';
 import { HMO, HUNKNOWN, PK_ARC, PK_ENTRY, archiveKey, catCls, catNameOf, extractYM,
          getTodayKey, isLive, liveOnly, normHDate, recDelete, recTouch, saveArchive,
          saveEntries, snapHDate, yaSortEntries } from '../domain.js';
