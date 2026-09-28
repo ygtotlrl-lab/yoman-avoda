@@ -1,9 +1,8 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
-import { appConfigure, getDeviceId } from '../core/util.js';
+import { appConfigure, dayIso, dayNoon, getDeviceId } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
          pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
-         prunePastTombstones, pushDirty, pushTable, rtyBoot, runSave, tombBoot,
-         tombPruneMerged } from '../core/sync.js';
+         pushDirty, pushTable, rtyBoot, runSave, tombBoot } from '../core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
 import { bkBoot, logAwait } from '../core/backup.js';
@@ -11,19 +10,18 @@ import { actRun, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, e
          modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
          toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
-import { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, MSG_ALREADY_AT, MSG_BOOT_FAIL,
+import { CATS_RESET_KEY, CATS_RESET_LS, MSG_ALREADY_AT, MSG_BOOT_FAIL,
          MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL, MSG_SWITCH_YESHIVA, MSG_SYNCED,
          MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_YESHIVA_UNKNOWN,
          PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SET_PUSH, SUBS_RESET_KEY, SUBS_RESET_LS,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
 import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
-         arcPutSnapshot, archiveKey, entryKey, entryOrderTs, getSB, gregDateStr,
-         hasHebMonth, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
+         arcPutSnapshot, entryOrderTs, getSB, gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
          mergeSubs, recDelete, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
          yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
          yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
-         yaTableOf, yaYeshiva } from './domain.js';
+         yaRecId, yaTableOf, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
@@ -106,7 +104,7 @@ var BK_CFG = {
     if (!S.KV_TABLE) return [];
     // היומן והארכיון מגובים מטבלת השורות המאוחדת, כולל שורות archived; שאר המפתחות מקורות kv — זה ביתם היחיד בענן.
     var out = [{ kind: 'table', name: 'ya_entries', key: 'ya_entries_rows',
-                 eq: ['yeshiva', S.YESHIVA], order: 'rec_key', ts: 'updated_at' }];
+                 eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' }];
     // name הוא המפתח בטבלת ההגדרות, בלי תחילית; key הוא מפתח הגיבוי ב-sh_backup המשותפת לפרויקט — ושם בלי תחילית שם מתנגש.
     return out.concat([
       { kind: 'kv', table: S.KV_TABLE, name: 'cats',      key: 'ya_cats' },
@@ -119,6 +117,8 @@ var BK_CFG = {
 // המפתח הוא פונקציה — שני המוסדות חולקים localStorage, וסימון ממתין של אחד אינו תקף לשני.
 var PEND_CFG = {
   key: function () { return 'ya_pending' + (typeof S.LS === 'string' ? S.LS : ''); },
+  // מפה לכל ישיבה — עותק שנזרק בעידן נזרק לשתיהן, והממתינים של שתיהן נרשמים.
+  keys: function () { return YESHIVOT.map(function (y) { return 'ya_pending' + yaSuffix(y.id); }); },
   // סימון ממתין שקידומתו אינה כאן יורד בעלייה — אין לו כותב, ואין שורה שתידחף ותוריד אותו.
   marks: function () { return [PK_ENTRY, PK_ARC, PK_SET]; },
   // בתום ההחזקה, תגית ממתין שנותרה צריכה להיכנס לשורות שכבר רונדרו — renderLog הוא האתר היחיד שמצייר אותה כאן.
@@ -155,7 +155,7 @@ var PUSH_CFG = {
     S._yaPushEp = ctxEpoch();
     return yaDirtyRows(t, ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES));
   },
-  key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.rec_key; },
+  key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.client_id; },
   send:   function (t, rows) {
     return t === SET_PUSH ? yaSendSettings(S._yaPushTbl, rows, S._yaPushEp) : yaSendRows(t, rows, S._yaPushEp);
   },
@@ -172,9 +172,9 @@ var HW_CFG = {
     key: function () { return 'ya_archive' + S.LS; },
     label: 'ארכיון ימים',
     inWindow: function () { return false; },
-    idOf: function (r) { return archiveKey(r); },
+    idOf: yaRecId,
     ts: function (r) { return _yaRecTs(r); },
-    isPending: function (r) { return pendHas(PK_ARC + archiveKey(r)); },
+    isPending: function (r) { return pendHas(PK_ARC + yaRecId(r)); },
     fetch: async function () {
       var r = await yaRowsGet('ya_archive');
       return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data }
@@ -239,10 +239,10 @@ function lsRebuildPolicy() {
   LS_CFG.oldRecords = [
     { key: 'ya_archive' + S.LS, label: 'ארכיון ימים', ts: _yaRecTs,
       syncedThrough: function () { return _yaPushedThrough('ya_archive'); },
-      idOf: archiveKey, verify: _yaVerify('ya_archive') },
+      idOf: yaRecId, verify: _yaVerify('ya_archive') },
     { key: 'ya_entries' + S.LS, label: 'רשומות היומן', ts: _yaRecTs,
       syncedThrough: function () { return _yaPushedThrough('ya_entries'); },
-      idOf: entryKey, verify: _yaVerify('ya_entries') }
+      idOf: yaRecId, verify: _yaVerify('ya_entries') }
   ];
 }
 
@@ -427,8 +427,6 @@ async function syncFromCloud() {
     var cloudEntries = _rowsE.data;
     if (cloudEntries && cloudEntries.length) {
       S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
-      // הגריעה על התוצאה הממוזגת — כדי שגם העותק הענני שנדחף מיד אחר כך יצטמצם.
-      S.ENTRIES = tombPruneMerged(S.ENTRIES);
       S.ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
       lsSetArray('ya_entries'+S.LS, S.ENTRIES, _yaRecTs);
       pushTable('ya_entries', S.ENTRIES);
@@ -437,7 +435,7 @@ async function syncFromCloud() {
     }
     }
 
-    // מיזוג לפי gdate ובתוכו פר-רשומה, ולא «למי שיש יותר רשומות» — אחרת הצד הקטן של אותו יום אובד.
+    // מיזוג לפי יום ובתוכו פר-רשומה, ולא «למי שיש יותר רשומות» — אחרת הצד הקטן של אותו יום אובד.
     var _rowsA = await yaRowsGet('ya_archive');
     // ההקשר התחלף באמצע — הנתונים בזיכרון של המוסד הקודם, וכתיבה עכשיו הייתה כותבת אותם תחת החדש.
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
@@ -504,22 +502,19 @@ function checkDayChange() {
   var today = new Date().toDateString();
   if (lastDay && lastDay !== today && liveOnly(S.ENTRIES).length > 0) {
     // ארכוב מקומי בלבד — syncFromCloud רץ מיד אחרי, ודחיפת ENTRIES ריק הייתה מוחקת רשומות שמכשיר אחר הוסיף להיום.
-    var prev = new Date(lastDay);
     var live = liveOnly(S.ENTRIES);
-    // שדות היום נגזרים מהרשומות קודם — הן נכתבו עם התאריך שבו עבדו בפועל; השעון הוא נפילה-חזרה.
-    var withG = live.find(function(e){ return e && e.gdate; });
-    var withH = live.find(function(e){ return e && hasHebMonth(e.hdate); });
-    var withD = live.find(function(e){ return e && e.day; });
-    var gdate = (withG && withG.gdate) || gregDateStr(prev);
-    // hebrewDate מחזירה מחרוזת ריקה כשהלוח אינו זמין — hdate ריק שולח את הסנאפשוט לדלי «לא ידוע».
-    var hdate = (withH && withH.hdate) || hebrewDate(prev) || "";
-    var dayKey = (withD && withD.day) || DAY_VALUE_MAP[prev.getDay()] || "";
     // אותה חותמת לעותקים שבארכיון ול-tombstones — בשוויון הסנאפשוט מנצח, ולכן ארכוב אינו מחיקה מהארכיון.
     var ts = Date.now();
-    var carried = JSON.parse(JSON.stringify(live));
-    carried.forEach(function(e){ recTouch(e, ts); });
-    // אותו בונה כמו המסלול הידני — auto הוא סימון מקור בלבד; שני בונים הם שני סנאפשוטים שונים לאותו יום.
-    arcPutSnapshot(dayKey, hdate, gdate, carried, ts, { auto: true });
+    // סנאפשוט לכל יום לפי entry_date שעל הרשומה — סנאפשוט אחד לכל החיות היה גורר רשומות של יום אחד ליום אחר.
+    var byDay = {};
+    live.forEach(function(e){
+      var c = JSON.parse(JSON.stringify(e));
+      recTouch(c, ts);
+      if (!c.entry_date) c.entry_date = dayIso(dayNoon(new Date(lastDay)));
+      (byDay[c.entry_date] = byDay[c.entry_date] || []).push(c);
+    });
+    // אותו בונה כמו המסלול הידני — שני בונים הם שני סנאפשוטים שונים לאותו יום.
+    Object.keys(byDay).forEach(function(d){ arcPutSnapshot(d, byDay[d], ts); });
     lsSetArray("ya_archive"+S.LS, hwDiskFilter('ya_archive'+S.LS, S.ARCHIVE), _yaRecTs);
     // tombstones ולא ENTRIES = [] — אחרת הענן מחזיר את הרשומות לחיים
     S.ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
@@ -572,12 +567,6 @@ function loadLocalData() {
     S.ENTRIES = lsRead("ya_entries"+S.LS, null, 'array') || [];
     // רשומות זבל (null או לא-אובייקט) אינן מפילות את הרינדור
     S.ENTRIES = S.ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
-    // הגריעה רצה שוב על תוצאת המיזוג — גריעה מקומית בלבד מוחזרת מהענן תוך שניות.
-    var _beforePrune = S.ENTRIES.length;
-    S.ENTRIES = prunePastTombstones(S.ENTRIES);
-    if (S.ENTRIES.length !== _beforePrune) {
-      console.log('[load] נגרעו ' + (_beforePrune - S.ENTRIES.length) + ' tombstones מעבר ל-TOMBSTONE_TTL_MS');
-    }
     // אין זרע מוטבע לארכיון — זרע שמוזרק בכל טעינה ומיזוג מנצח tombstone ומחזיר יום שנמחק.
     var arr = lsRead("ya_archive"+S.LS, null, 'array');
     S.ARCHIVE = arr ? arr.filter(function(s){ return s && typeof s === 'object'; }) : [];

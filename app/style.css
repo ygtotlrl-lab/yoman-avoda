@@ -404,8 +404,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-cat{color:var(--text-2);font-size:var(--fs-1)}
 .arc-count{font-weight:700;color:var(--brand-ink);font-size:var(--fs-1)}
 .arc-crumbs{align-items:center;display:flex;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-5);min-height:28px}
-.arc-day-gdate{color:var(--text-2);font-size:var(--fs-1)}
-.arc-day-hdate{color:var(--brand-ink);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900}
+.arc-day-greg{color:var(--text-2);font-size:var(--fs-1)}
+.arc-day-heb{color:var(--brand-ink);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:900}
 .arc-day-head{align-items:center;display:flex;gap:var(--sp-4);margin-bottom:var(--sp-5)}
 .arc-day-id{flex:1}
 .arc-dot{flex-shrink:0;height:12px;border-radius:var(--r-1);width:12px}

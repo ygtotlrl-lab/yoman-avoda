@@ -4,8 +4,9 @@ import { idEq, pendMark, pendTag, schedulePush } from '../../core/sync.js';
 import { ask, esc } from '../../core/ui.js';
 import { MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, PK_ENTRY } from '../constants.js';
 import { S } from '../state.js';
-import { autoArchiveDay, catCls, catNameOf, cssQ, getCurrentDateKey, isLive, liveOnly,
-         recDelete, recTouch, saveEntries, yaSortEntries } from '../domain.js';
+import { autoArchiveDay, catCls, catLabelOf, cssQ, getCurrentDateKey, isLive, liveOnly,
+         recDelete, recTouch, saveEntries, yaDayName, yaGreg, yaHeb,
+         yaSortEntries } from '../domain.js';
 
 function screenLogHTML() {
   return `
@@ -29,7 +30,7 @@ function renderLog() {
   var list = document.getElementById("logList");
   var cnt  = document.getElementById("logCount");
   var curKey = getCurrentDateKey();
-  var filtered = liveOnly(S.ENTRIES).filter(function(e){ return e.gdate === curKey; });
+  var filtered = liveOnly(S.ENTRIES).filter(function(e){ return e.entry_date === curKey; });
   cnt.textContent = filtered.length;
   if (!filtered.length) {
     list.innerHTML = '<div class="empty">📋<br>אין רשומות לתאריך זה</div>';
@@ -37,28 +38,28 @@ function renderLog() {
   }
   filtered = yaSortEntries(filtered);
   list.innerHTML = filtered.map(function(e) {
-    var dateStr = [e.day, e.hdate, e.gdate ? "("+e.gdate+")" : ""].filter(Boolean).join("  ");
+    var dateStr = [yaDayName(e.entry_date), yaHeb(e.entry_date), e.entry_date ? "("+yaGreg(e.entry_date)+")" : ""].filter(Boolean).join("  ");
     return '<div class="entry-row cat-edge ' + catCls(e.cat) + '">'
       + '<div class="entry-badge cat-fill"></div>'
       + '<div class="entry-body">'
-      + '<div class="e-main">' + esc(catNameOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.id) + '</div>'
+      + '<div class="e-main">' + esc(catLabelOf(e)) + ' &larr; ' + esc(e.task) + (e.sub ? " &rarr; " + esc(e.sub) : "") + pendTag(PK_ENTRY + e.client_id) + '</div>'
       + (e.notes ? '<div class="e-sub">' + esc(e.notes) + '</div>' : '')
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
-      + '<button data-act="entry-edit" data-id="' + esc(e.id) + '" class="entry-edit">✏️</button>'
-      + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.id) + '">✕</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.client_id) + '" class="entry-edit">✏️</button>'
+      + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.client_id) + '">✕</button>'
       + '</div>';
   }).join("");
 }
 
 function delEntry(id) {
   // tombstone ולא הסרה — מכשיר אחר רואה הסרה כ«רשומה שאינני מכיר» ומחזיר אותה לחיים.
-  var deleted = S.ENTRIES.find(function(e){ return idEq(e.id, id) && isLive(e); });
+  var deleted = S.ENTRIES.find(function(e){ return idEq(e.client_id, id) && isLive(e); });
   if (!deleted) return;
   recDelete(deleted);
-  pendMark(PK_ENTRY + deleted.id);
+  pendMark(PK_ENTRY + deleted.client_id);
   saveEntries();
-  autoArchiveDay(deleted.day, deleted.hdate, deleted.gdate);
+  autoArchiveDay(deleted.entry_date);
   renderLog();
   schedulePush();
 }
@@ -68,17 +69,17 @@ function clearAll() {
     if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();
-    var sample = S.ENTRIES.find(function(e){ return e.gdate === curKey; });
-    S.ENTRIES.forEach(function(e){ if (e.gdate === curKey && isLive(e)) recDelete(e, ts); });
+    var sample = S.ENTRIES.find(function(e){ return e.entry_date === curKey; });
+    S.ENTRIES.forEach(function(e){ if (e.entry_date === curKey && isLive(e)) { recDelete(e, ts); pendMark(PK_ENTRY + e.client_id); } });
     saveEntries(); renderLog();
     // ה-tombstones עוברים גם לסנאפשוט של אותו יום — אחרת הארכיון ממשיך להציג אותן
-    if (sample) autoArchiveDay(sample.day, sample.hdate, curKey);
+    if (sample) autoArchiveDay(curKey);
     schedulePush();
   });
 }
 
 function editEntry(id) {
-  var e = S.ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
+  var e = S.ENTRIES.find(function(x){ return idEq(x.client_id, id) && isLive(x); });
   if(!e) return;
   // המזהה עובר ב-cssQ — מזהה טקסט לא מצוטט שובר את הבורר, והעריכה מתה בשקט.
   var sel = '[data-id="' + cssQ(id) + '"]';
@@ -107,16 +108,16 @@ function editEntry(id) {
 }
 
 function saveEntry(id) {
-  var e = S.ENTRIES.find(function(x){ return idEq(x.id, id) && isLive(x); });
+  var e = S.ENTRIES.find(function(x){ return idEq(x.client_id, id) && isLive(x); });
   if(!e) return;
   e.task = document.getElementById('ei_task').value.trim() || e.task;
   e.sub = document.getElementById('ei_sub').value.trim();
   e.count = document.getElementById('ei_count').value.trim();
   e.notes = document.getElementById('ei_notes').value.trim();
   recTouch(e); // בלי זה העדכון מפסיד במיזוג מול העותק הישן שבענן
-  pendMark(PK_ENTRY + e.id);
+  pendMark(PK_ENTRY + e.client_id);
   saveEntries();
-  autoArchiveDay(e.day, e.hdate, e.gdate); // שהעריכה תגיע גם לסנאפשוט של אותו יום
+  autoArchiveDay(e.entry_date); // שהעריכה תגיע גם לסנאפשוט של אותו יום
   return true;
 }
 

@@ -1,13 +1,13 @@
 // app/screens/archive.js — מסך הארכיון
-import { MSG_SAVED } from '../../core/util.js';
+import { MSG_SAVED, dayToday } from '../../core/util.js';
 import { idEq, newClientId, pendMark } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
 import { HMO, HUNKNOWN, MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC,
          PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { archiveKey, catCls, catNameOf, extractYM, getTodayKey, isLive, liveOnly,
-         normHDate, recDelete, recTouch, saveArchive, saveEntries, showEl, snapHDate,
+import { catCls, catLabelOf, extractYM, isLive, liveOnly, recDelete, recTouch, saveArchive,
+         saveEntries, showEl, snapClientId, yaDayName, yaGreg, yaHeb,
          yaSortEntries } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
 
@@ -31,37 +31,31 @@ function arcShowLevel(level) {
   });
 }
 
+// מפתח היום הוא entry_date — התאריך העברי והיום בשבוע נגזרים ממנו בתצוגה.
 function getAllArchiveDays() {
   var days = {};
-
+  function day(k) {
+    if (!days[k]) days[k] = { key: k, heb: yaHeb(k), entries: [], seen: {} };
+    return days[k];
+  }
+  // בדיקת seen נדרשת — סנאפשוט ורשומה חיה של אותו יום היו סופרים רשומה משותפת פעמיים.
   liveOnly(S.ARCHIVE).forEach(function(snap) {
-    var k = String(snap.gdate || snap.id);
-    // סנאפשוט ישן בלי gdate ממופתח לפי id — בלי key הכפתור היה שולח מחרוזת ריקה ופותח יום שגוי.
-    if (!days[k]) days[k] = {key:k, gdate:snap.gdate||"", hdate:snapHDate(snap), day:snap.day||"",
-      name:normHDate(snap.name||""), entries:[], seen:{}, snapId:snap.id};
-    // בדיקת seen נדרשת גם כאן — שני סנאפשוטים לאותו יום היו סופרים רשומה משותפת פעמיים.
+    if (!snap.entry_date) return;
+    var d = day(snap.entry_date);
     (snap.entries||[]).forEach(function(e){
-      if (e && e.id != null) {
-        if (days[k].seen[String(e.id)]) return;
-        days[k].seen[String(e.id)] = true; // כולל tombstones
-      }
-      if (isLive(e)) days[k].entries.push(e);
+      if (!e || e.client_id == null || d.seen[e.client_id]) return;
+      d.seen[e.client_id] = true; // כולל tombstones
+      if (isLive(e)) d.entries.push(e);
     });
   });
-
   // הסנאפשוט קובע לרשומה שכבר נכנסה אליו — אחרי סיום יום העותק החי הוא tombstone, והרשומה עדיין בארכיון.
   S.ENTRIES.forEach(function(e) {
-    var k = String(e.gdate || "");
-    if (!days[k]) {
-      if (!isLive(e)) return;
-      days[k] = {key:k, gdate:e.gdate||"", hdate:snapHDate(e), day:e.day||"",
-        name:normHDate([e.day,e.hdate,e.gdate?"| "+e.gdate:""].filter(Boolean).join(" ")), entries:[], seen:{}, snapId:null};
-    }
-    if (days[k].seen[String(e.id)]) return;
-    days[k].seen[String(e.id)] = true;
-    if (isLive(e)) days[k].entries.push(e);
+    if (!e.entry_date || (!days[e.entry_date] && !isLive(e))) return;
+    var d = day(e.entry_date);
+    if (d.seen[e.client_id]) return;
+    d.seen[e.client_id] = true;
+    if (isLive(e)) d.entries.push(e);
   });
-
   return days;
 }
 
@@ -69,7 +63,7 @@ function getYearsWithData() {
   var days = getAllArchiveDays();
   var years = {};
   Object.values(days).forEach(function(d) {
-    var ym = extractYM(d.hdate);
+    var ym = extractYM(d.heb);
     if (ym.year) years[ym.year] = true;
   });
   return years;
@@ -79,7 +73,7 @@ function monthsWithData(year) {
   var days = getAllArchiveDays();
   var months = {};
   Object.values(days).forEach(function(d) {
-    var ym = extractYM(d.hdate);
+    var ym = extractYM(d.heb);
     if (ym.year === year) months[ym.month] = true;
   });
   return months;
@@ -90,15 +84,10 @@ function getDaysInMonth(year, month) {
   var result = [];
   Object.values(days).forEach(function(d) {
     if (!d.entries.length) return;
-    var ym = extractYM(d.hdate);
+    var ym = extractYM(d.heb);
     if (ym.year === year && ym.month === month) result.push(d);
   });
-  var HEB_ORD = {"א":1,"ב":2,"ג":3,"ד":4,"ה":5,"ו":6,"ז":7,"ח":8,"ט":9,"י":10,"יא":11,"יב":12,"יג":13,"יד":14,"טו":15,"טז":16,"יז":17,"יח":18,"יט":19,"כ":20,"כא":21,"כב":22,"כג":23,"כד":24,"כה":25,"כו":26,"כז":27,"כח":28,"כט":29,"ל":30};
-  function hdayNum(hdate) {
-    var d = (hdate||"").split(" ")[0].replace(/[׳״]/g,"");
-    return HEB_ORD[d] || 999;
-  }
-  result.sort(function(a,b){ return hdayNum(a.hdate) - hdayNum(b.hdate); });
+  result.sort(function(a,b){ return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
   return result;
 }
 
@@ -124,7 +113,7 @@ function renderArcBreadcrumb() {
   if (S.arcSelDayKey) {
     var days = getAllArchiveDays();
     var d = days[S.arcSelDayKey];
-    var label = d ? (d.hdate||d.gdate||S.arcSelDayKey) : S.arcSelDayKey;
+    var label = d ? (d.heb||yaGreg(d.key)) : yaGreg(S.arcSelDayKey);
     var dayParts = label.split(" ");
     var shortLabel = dayParts.slice(0,2).join(" ");
     parts.push('<span class="arc-crumb-sep">›</span>');
@@ -212,7 +201,7 @@ function arcGoDays(year, month) {
 function renderArcDays(year, month) {
   var el = document.getElementById("arc-days");
   var days = getDaysInMonth(year, month);
-  var nowKey = getTodayKey();
+  var nowKey = dayToday();
 
   if (!days.length) {
     el.innerHTML = '<div class="arc-empty-month">אין רשומות לחודש זה</div>';
@@ -221,12 +210,11 @@ function renderArcDays(year, month) {
 
   var html = '<div class="arc-pick-label">בחר יום ב<b>' + esc(month) + ' ' + esc(year) + '</b>:</div><div class="arc-grid">';
   days.forEach(function(d) {
-    var parts = (d.hdate||"").split(" ");
-    var dayNum = parts[0] || d.gdate || d.key || "?";
-    var isNow = (d.gdate === nowKey);
-    // הניווט לפי d.key ולא לפי d.gdate — סנאפשוט ישן בלי gdate ממופתח לפי id.
+    var parts = (d.heb||"").split(" ");
+    var dayNum = parts[0] || yaGreg(d.key) || "?";
+    var isNow = (d.key === nowKey);
     html += '<button class="arc-btn'+(isNow?" active":"")
-          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+esc(d.hdate||d.name||"")+'">'
+          + '" data-act="arc-nav-detail" data-key="'+esc(d.key)+'" title="'+esc(d.heb)+'">'
           + esc(dayNum) + '<br><small class="day-count">' + (d.entries.length) + ' רש׳</small></button>';
   });
   html += '</div>';
@@ -234,8 +222,8 @@ function renderArcDays(year, month) {
 }
 
 // ── רמה 4: פירוט יום ועריכה ──
-function arcGoDetail(gdateKey) {
-  S.arcSelDayKey = gdateKey;
+function arcGoDetail(dayKey) {
+  S.arcSelDayKey = dayKey;
   arcShowLevel("detail");
   S.arcEditMode = false;
   renderArcDetail();
@@ -254,11 +242,11 @@ function renderArcDetail() {
   var html = '<div class="arc-day-card'+(S.arcEditMode?" editing":"")+'">'+
     '<div class="arc-day-head">'+
     '<div class="arc-day-id">'+
-      '<div class="arc-day-hdate">' + esc(d.hdate||d.gdate||S.arcSelDayKey) + '</div>'+
-      '<div class="arc-day-gdate">' + esc((d.day||"") + (d.gdate ? " | " + d.gdate : "")) + '</div>'+
+      '<div class="arc-day-heb">' + esc(d.heb||yaGreg(d.key)) + '</div>'+
+      '<div class="arc-day-greg">' + esc(yaDayName(d.key) + " | " + yaGreg(d.key)) + '</div>'+
     '</div>'+
     '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.snapId ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-id="'+esc(d.snapId)+'">📄 PDF</button>' : '')+
+    (d.entries.length ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-key="'+esc(d.key)+'">📄 PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
@@ -266,10 +254,10 @@ function renderArcDetail() {
   } else {
     sortedE.forEach(function(e, ei) {
       html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
-        (S.arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.id)+'" class="entry-edit" title="ערוך">✏️</button>' +
-        '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.id)+'">×</button>' : '')+
+        (S.arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'" class="entry-edit" title="ערוך">✏️</button>' +
+        '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'">×</button>' : '')+
         '<div class="arc-dot cat-fill"></div>'+
-        '<span class="arc-cat">'+esc(catNameOf(e))+'</span>'+
+        '<span class="arc-cat">'+esc(catLabelOf(e))+'</span>'+
         '<span class="arc-muted">←</span>'+
         '<span class="arc-task">'+esc(e.task)+'</span>'+
         (e.sub ? '<span class="arc-muted">→</span><span class="arc-muted">'+esc(e.sub)+'</span>' : '')+
@@ -309,22 +297,22 @@ function arcToggleEdit() {
   renderArcDetail();
 }
 
-function arcDeleteEntry(gdateKey, entryId) {
+function arcDeleteEntry(dayKey, entryId) {
   // tombstone בכל מקום שבו הרשומה מופיעה — בסנאפשוטים ובחי — באותה חותמת
   var ts = Date.now();
   S.ARCHIVE.forEach(function(snap) {
     var hit = false;
-    (snap.entries||[]).forEach(function(e){ if (idEq(e.id, entryId) && isLive(e)) { recDelete(e, ts); hit = true; } });
-    if (hit) { snap.count = liveOnly(snap.entries).length; recTouch(snap, ts); }
+    (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { recDelete(e, ts); hit = true; } });
+    if (hit) { recTouch(snap, ts); pendMark(PK_ARC + snap.client_id); }
   });
   saveArchive();
-  S.ENTRIES.forEach(function(e){ if (idEq(e.id, entryId) && isLive(e)) recDelete(e, ts); });
+  S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { recDelete(e, ts); pendMark(PK_ENTRY + e.client_id); } });
   saveEntries();
   renderArcDetail();
   renderArcBreadcrumb();
 }
 
-function arcAddEntry(gdateKey) {
+function arcAddEntry() {
   var days = getAllArchiveDays();
   var d = days[S.arcSelDayKey];
   if (!d) return;
@@ -334,28 +322,26 @@ function arcAddEntry(gdateKey) {
   if (!catSel || !taskSel) return;
   var letter = catSel.value;
   if (!S.CATS.some(function(c){ return c.letter === letter; })) return;
-  // createdAt נפרד לסדר — uuid אינו ניתן להשוואה מספרית.
+  // created_at נפרד לסדר — uuid אינו ניתן להשוואה מספרית.
   var _now = Date.now();
   var newEntry = {
-    id: newClientId(),
-    createdAt: _now,
-    day: d.day, hdate: d.hdate, gdate: d.gdate,
+    client_id: newClientId(),
+    created_at: _now,
+    entry_date: d.key,
     cat: letter,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
-    updatedAt: _now
+    updated_at: _now
   };
-  // יום בלי gdate מותאם לפי snapId — התאמה לפי gdate ריק הייתה בוחרת סנאפשוט שגוי.
-  var snap = S.ARCHIVE.find(function(s){
-    return isLive(s) && (d.gdate ? s.gdate === d.gdate : (d.snapId != null && idEq(s.id, d.snapId)));
-  });
+  var snap = S.ARCHIVE.find(function(s){ return isLive(s) && s.client_id === snapClientId(d.key); });
   if (snap) {
     snap.entries = snap.entries || [];
     snap.entries.unshift(newEntry);
-    snap.count = liveOnly(snap.entries).length;
-    recTouch(snap);
+    recTouch(snap, _now);
+    pendMark(PK_ARC + snap.client_id);
     saveArchive();
   } else {
     S.ENTRIES.unshift(newEntry);
+    pendMark(PK_ENTRY + newEntry.client_id);
     saveEntries();
   }
   renderArcDetail();
@@ -381,31 +367,23 @@ function renderArchive() {
   }
 }
 
-function exportArchivePDF(id) {
-  var snap = S.ARCHIVE.find(function(s){ return idEq(s.id, id); });
-  if (!snap) return;
-  var savedEntries = S.ENTRIES;
-  S.ENTRIES = liveOnly(snap.entries);
-  var savedDay = S.selDay;
-  S.selDay = snap.name;
-  var origHeb = document.getElementById("hebDateInput").value;
-  document.getElementById("hebDateInput").value = snap.name;
-  exportPDF();
-  S.ENTRIES = savedEntries;
-  S.selDay = savedDay;
-  document.getElementById("hebDateInput").value = origHeb;
+// היום מזוהה במפתחו — הרשומות והכותרת נגזרים ממנו.
+function exportArchivePDF(dayKey) {
+  var d = getAllArchiveDays()[dayKey];
+  if (!d) return;
+  exportPDF(dayKey, d.entries);
 }
 
-function arcEditEntry(gdateKey, entryId) {
+function arcEditEntry(dayKey, entryId) {
   var days = getAllArchiveDays();
-  var d = days[gdateKey];
+  var d = days[dayKey];
   if(!d) return;
-  var e = d.entries.find(function(x){ return idEq(x.id, entryId); });
+  var e = d.entries.find(function(x){ return idEq(x.client_id, entryId); });
   if(!e) return;
-  // ההשוואה בערך ולא בבורר — מפתח היום עברי, ו-cssQ מסנן אותו לספרות בלבד.
+  // ההשוואה בערך ולא בבורר — cssQ מסנן את המפתח לרשימת-היתר של תווים.
   var target = null;
   document.querySelectorAll('[data-act="arc-entry-edit"]').forEach(function (b) {
-    if (b.getAttribute('data-key') === gdateKey && idEq(b.getAttribute('data-id'), entryId)) target = b.closest('.arc-entry-row');
+    if (b.getAttribute('data-key') === dayKey && idEq(b.getAttribute('data-id'), entryId)) target = b.closest('.arc-entry-row');
   });
   if(!target) return;
   target.innerHTML =
@@ -414,12 +392,12 @@ function arcEditEntry(gdateKey, entryId) {
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="aei-inp">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + esc(e.count||'') + '" placeholder="כמות" class="aei-count">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="aei-notes">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(gdateKey) + '" data-id="' + esc(entryId) + '" class="ei-save">שמור</button>' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(dayKey) + '" data-id="' + esc(entryId) + '" class="ei-save">שמור</button>' +
     '<button data-act="arc-entry-edit-cancel" data-kesc class="ei-cancel">בטל</button>' +
     '</div>';
 }
 
-function arcSaveEntry(gdateKey, entryId) {
+function arcSaveEntry(dayKey, entryId) {
   // גם ENTRIES — רשומה של יום שטרם אורכב הייתה no-op שמציג נשמר.
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
@@ -433,21 +411,21 @@ function arcSaveEntry(gdateKey, entryId) {
   S.ARCHIVE.forEach(function(snap) {
     var hit = false;
     (snap.entries||[]).forEach(function(e) {
-      if (e && idEq(e.id, entryId)) { apply(e); hit = true; hits++; }
+      if (e && idEq(e.client_id, entryId)) { apply(e); hit = true; hits++; }
     });
-    if (hit) { recTouch(snap, ts); touchedArc.push(archiveKey(snap)); }
+    if (hit) { recTouch(snap, ts); touchedArc.push(snap.client_id); }
   });
   S.ENTRIES.forEach(function(e) {
-    if (e && idEq(e.id, entryId)) { apply(e); hits++; }
+    if (e && idEq(e.client_id, entryId)) { apply(e); hits++; }
   });
   if (!hits) {
-    console.warn('[arc] arcSaveEntry — רשומה לא נמצאה:', entryId, gdateKey);
+    console.warn('[arc] arcSaveEntry — רשומה לא נמצאה:', entryId, dayKey);
     renderArcDetail();
     toast(MSG_ROW_GONE, null, 'bad');
     return;
   }
   pendMark(PK_ENTRY + entryId);
-  // הסימון במפתח PK_ARC + archiveKey ולא במפתח המפה (gdate גולמי) — זה המפתח שהמיזוג, הדחיפה ושער הפינוי קוראים;
+  // הסימון במפתח PK_ARC + client_id — זה המפתח שהמיזוג, הדחיפה ושער הפינוי קוראים;
   // סימון במפתח אחר אינו נראה להם, והסנאפשוט הערוך עלול להתפנות לפני שעלה.
   touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
   saveEntries();
