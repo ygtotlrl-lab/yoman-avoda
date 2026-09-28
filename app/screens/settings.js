@@ -106,24 +106,29 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
   var lbl = document.getElementById("sub-lbl-"+ci+"-"+ti+"-"+si);
   if (!lbl) return;
   var inp = document.createElement("input");
-  inp.value = oldVal;
+  inp.defaultValue = oldVal;
   inp.className = "inl-inp";
+  inp.setAttribute("aria-label", "תת-משימה");
+  inp.setAttribute("data-kent", "");
+  inp.dataset.blr = "sub-edit";
+  inp.dataset.ci = ci; inp.dataset.si = si; inp.dataset.task = taskName;
   lbl.replaceWith(inp);
   inp.focus();
   inp.select();
-  function save() {
-    var newVal = inp.value.trim();
-    if (newVal && newVal !== oldVal) {
-      var sk = subKey(ci, taskName);
-      if (!S.SUBS[sk]) S.SUBS[sk] = S.SUBS[taskName] || [];
-      S.SUBS[sk][si] = newVal;
-      touchSubKey(sk);
-      saveSubs();
-    }
-    renderSettings();
+}
+
+// נקרא ביציאה מהשדה — Enter ו-Escape משחררים אותו, והשמירה אחת לשלושתם.
+function saveSubInline(inp) {
+  var ci = +inp.dataset.ci, si = +inp.dataset.si, taskName = inp.dataset.task;
+  var newVal = inp.value.trim();
+  if (newVal && newVal !== inp.defaultValue) {
+    var sk = subKey(ci, taskName);
+    if (!S.SUBS[sk]) S.SUBS[sk] = S.SUBS[taskName] || [];
+    S.SUBS[sk][si] = newVal;
+    touchSubKey(sk);
+    saveSubs();
   }
-  inp.onblur = save;
-  inp.onkeydown = function(e){ if(e.key==="Enter") { inp.blur(); } if(e.key==="Escape") { inp.value=oldVal; inp.blur(); } };
+  renderSettings();
 }
 
 function removeSub(ci, taskName, si) {
@@ -154,34 +159,37 @@ function addSub(ci, ti) {
 function editTaskInline(ci, ti) {
   var lbl = document.getElementById("task-lbl-"+ci+"-"+ti);
   if (!lbl) return;
-  var oldVal = S.CATS[ci].tasks[ti];
   var inp = document.createElement("input");
-  inp.value = oldVal;
+  inp.defaultValue = S.CATS[ci].tasks[ti];
   inp.className = "inl-inp inl-inp-task";
+  inp.setAttribute("aria-label", "שם משימה");
+  inp.setAttribute("data-kent", "");
+  inp.dataset.blr = "task-edit";
+  inp.dataset.ci = ci; inp.dataset.ti = ti;
   lbl.replaceWith(inp);
   inp.focus(); inp.select();
-  function save() {
-    var newVal = inp.value.trim();
-    if (newVal && newVal !== oldVal) {
-      // המפתח הוא ci::שם, ומפתח ישן בשם המשימה בלבד נקרא גם הוא
-      var oldSk = subKey(ci, oldVal);
-      var newSk = subKey(ci, newVal);
-      if (S.SUBS[oldSk]) {
-        S.SUBS[newSk] = S.SUBS[oldSk];
-        delSubKey(oldSk);
-      } else if (S.SUBS[oldVal]) {
-        S.SUBS[newSk] = S.SUBS[oldVal];
-        delSubKey(oldVal);
-      }
-      S.CATS[ci].tasks[ti] = newVal;
-      delTaskMeta(S.CATS[ci], oldVal); touchTask(S.CATS[ci], newVal);
-      recTouch(S.CATS[ci]); touchSubKey(newSk);
-      saveCats(); saveSubs();
+}
+
+function saveTaskInline(inp) {
+  var ci = +inp.dataset.ci, ti = +inp.dataset.ti, oldVal = inp.defaultValue;
+  var newVal = inp.value.trim();
+  if (newVal && newVal !== oldVal) {
+    // המפתח הוא ci::שם, ומפתח ישן בשם המשימה בלבד נקרא גם הוא
+    var oldSk = subKey(ci, oldVal);
+    var newSk = subKey(ci, newVal);
+    if (S.SUBS[oldSk]) {
+      S.SUBS[newSk] = S.SUBS[oldSk];
+      delSubKey(oldSk);
+    } else if (S.SUBS[oldVal]) {
+      S.SUBS[newSk] = S.SUBS[oldVal];
+      delSubKey(oldVal);
     }
-    renderSettings(); shell.buildCatGrid(); shell.buildTaskBtns();
+    S.CATS[ci].tasks[ti] = newVal;
+    delTaskMeta(S.CATS[ci], oldVal); touchTask(S.CATS[ci], newVal);
+    recTouch(S.CATS[ci]); touchSubKey(newSk);
+    saveCats(); saveSubs();
   }
-  inp.onblur = save;
-  inp.onkeydown = function(e){ if(e.key==="Enter") inp.blur(); if(e.key==="Escape"){ inp.value=oldVal; inp.blur(); } };
+  renderSettings(); shell.buildCatGrid(); shell.buildTaskBtns();
 }
 
 // אין להוסיף שער סיסמה מעל מסך ההגדרות, ואין לזרוע ברירת מחדל לסיסמה או לתפקיד —
@@ -198,7 +206,7 @@ function renderSettings() {
     var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
       + '<span class="drag-handle grip">⠿</span>'
       + '<div class="set-badge cat-fill"></div>'
-      + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-blr="cat-name" data-ci="'+ ci +'" />'
+      + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-kent data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
@@ -271,8 +279,11 @@ function addTask(ci) {
 
 function saveCatName(ci) {
   var inp = document.getElementById("sname-" + ci);
-  if (inp && inp.value.trim()) {
-    S.CATS[ci].name = inp.value.trim();
+  var v = inp ? inp.value.trim() : '';
+  if (v && v !== S.CATS[ci].name) {
+    S.CATS[ci].name = v;
+    // השדה נשאר על המסך אחרי השמירה — Escape הבא מחזיר לשם השמור ולא לשם שנבנה איתו.
+    inp.defaultValue = S.CATS[ci].name;
     recTouch(S.CATS[ci]);
     saveCats();
   }
@@ -296,4 +307,4 @@ function saveSettings() {
 
 export { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
          editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
-         screenSettingsHTML };
+         saveSubInline, saveTaskInline, screenSettingsHTML };
