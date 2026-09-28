@@ -7,8 +7,9 @@ import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
 import { bkBoot } from '../core/backup.js';
-import { actRun, closeAsk, closeModal, esc, ksKey, modalBackdrop, modalEsc, openModal,
-         pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+import { actRun, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, ksKey,
+         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
+         toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, MSG_ALREADY_AT, MSG_BOOT_FAIL,
          MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL, MSG_SWITCH_YESHIVA, MSG_SYNCED,
@@ -33,9 +34,9 @@ import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtn
 import { clearAll, delEntry, editEntry, renderLog, saveEntry,
          screenLogHTML } from './screens/log.js';
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
-import { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
-         editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
-         saveSubInline, saveTaskInline, screenSettingsHTML } from './screens/settings.js';
+import { addSub, addTask, editSubInline, editTaskInline, removeSub, removeTask,
+         renderSettings, saveCatName, saveSettings, saveSubInline, saveTaskInline,
+         screenSettingsHTML } from './screens/settings.js';
 
 // ── החיווט ──
 // החיווט נמסר בשומרי קריאה — ה-CFG מוגדרים בהמשך, והשומר קורא אותם בזמן הקריאה ולא בזמן המסירה.
@@ -344,51 +345,11 @@ document.addEventListener('change', function (e) {
   if (el && el.dataset && el.dataset.chg === 'arc-add-cat') arcAddCatChange(el);
 });
 
-// הגרירה על אירועי מצביע — במגע dragstart, dragover ו-drop אינם נורים כלל.
-// הגרירה מתחילה מהידית בלבד — שורה שכולה נגררת חוטפת את גלילת המסך.
-// data-drag בוחר איזה מערך מקבל את הסדר מה-DOM; סוג בלי מחיל מסתיים בלי כתיבה.
-var DRAG_APPLY = { cat: applyCatOrder, task: applyTaskOrder, sub: applySubOrder };
-
-var DRAG = { el: null, list: null, kind: null, moved: false };
-
-document.addEventListener('pointerdown', function (e) {
-  var g = e.target && e.target.closest ? e.target.closest('[data-grip]') : null;
-  if (!g) return;
-  var el = g.closest('[data-drag]');
-  if (!el) return;
-  DRAG.el = el; DRAG.list = el.parentNode;
-  DRAG.kind = el.dataset.drag; DRAG.moved = false;
-  el.classList.add('dragging');
-  // בלי לכידת המצביע אצבע שיוצאת מגבול האלמנט מפסיקה לשדר, והגרירה נתקעת.
-  try { g.setPointerCapture(e.pointerId); } catch (e1) {}
-  e.preventDefault();
-});
-
-document.addEventListener('pointermove', function (e) {
-  if (!DRAG.el) return;
-  e.preventDefault();
-  var over = document.elementFromPoint(e.clientX, e.clientY);
-  var el = over && over.closest ? over.closest('[data-drag="' + DRAG.kind + '"]') : null;
-  if (!el || el === DRAG.el || el.parentNode !== DRAG.list) return;
-  DRAG.moved = true;
-  // הציר נקרא מ-data-drag-axis של המיכל — השוואה בציר הלא נכון מחזירה תמיד אותו צד.
-  // הדף מימין לשמאל: nextSibling יושב משמאל, ולכן מצביע שמאלה מהמרכז מכניס אחרי היעד.
-  var r = el.getBoundingClientRect();
-  var after = DRAG.list.dataset.dragAxis === 'x'
-    ? e.clientX < r.left + r.width / 2
-    : e.clientY > r.top + r.height / 2;
-  DRAG.list.insertBefore(DRAG.el, after ? el.nextSibling : el);
-});
-
-document.addEventListener('pointerup', function () {
-  if (!DRAG.el) return;
-  var el = DRAG.el, list = DRAG.list, kind = DRAG.kind, moved = DRAG.moved;
-  DRAG.el = null; DRAG.list = null; DRAG.kind = null; DRAG.moved = false;
-  el.classList.remove('dragging');
-  if (!moved) return;
-  var fn = DRAG_APPLY[kind];
-  if (fn) fn(list, kind);
-});
+// הגרירה לסידור במנגנון שבליבה; המחילים לכל סוג — במסך ההגדרות.
+document.addEventListener('pointerdown', dragDown);
+document.addEventListener('pointermove', dragMove);
+document.addEventListener('pointerup', dragUp);
+document.addEventListener('pointercancel', dragCancel);
 
 async function syncFromCloud() {
   var failed = [];
