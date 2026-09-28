@@ -6,7 +6,7 @@ import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss
          tombPruneMerged } from '../core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
-import { bkBoot } from '../core/backup.js';
+import { bkBoot, logAwait } from '../core/backup.js';
 import { actRun, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, ksKey,
          modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
          toast } from '../core/ui.js';
@@ -118,7 +118,6 @@ var BK_CFG = {
 
 // המפתח הוא פונקציה — שני המוסדות חולקים localStorage, וסימון ממתין של אחד אינו תקף לשני.
 var PEND_CFG = {
-  app: 'yoman-avoda',
   key: function () { return 'ya_pending' + (typeof S.LS === 'string' ? S.LS : ''); },
   // סימון ממתין שקידומתו אינה כאן יורד בעלייה — אין לו כותב, ואין שורה שתידחף ותוריד אותו.
   marks: function () { return [PK_ENTRY, PK_ARC, PK_SET]; },
@@ -208,7 +207,8 @@ var ERA_CFG = {
   },
   // הדחיפה היא ראיה טרייה ולא זיכרון — מכשיר נקי מקבל ok עם still ריק.
   push:   function () { return pushDirty(null); },
-  refresh: function () { return yaPullFromCloud(); }
+  refresh: function () { return yaPullFromCloud(); },
+  log:    function (action, entries) { return logAwait(action, entries); }
 };
 
 // המזהה אינו נושא סיומת מוסד — שני המוסדות חולקים מכשיר, וזה מזהה המכשיר.

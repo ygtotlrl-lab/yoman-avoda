@@ -140,13 +140,8 @@ function isLive(r) { return !!r && !r.deleted; }
 function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); }
 
 // isPending נדרש — בענן החותמת היא של המכשיר שדחף, ובלעדיו עריכה מקומית שטרם עלתה נמחקת בשקט.
-// dedupe: true נדרש — שתי קריאות autoArchiveDay על אותו יום מייצרות שני סנאפשוטים לאותו gdate.
-// remoteDupe: 'ts' — בכפילות בתוך המערך המרוחק מנצחת החותמת הגבוהה, ובשוויון המאוחרת.
 function mergeRecords(local, remote, getKey, mergePair, isPending) {
-  return mergeCore(local, remote, {
-    getKey: getKey, ts: recTs, mergePair: mergePair, isPending: isPending,
-    keepUnversionedLocal: true, dedupe: true, remoteDupe: 'ts'
-  });
+  return mergeCore(local, remote, { getKey: getKey, mergePair: mergePair, isPending: isPending });
 }
 
 // ── סדר רשומות היומן ──
