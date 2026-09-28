@@ -210,8 +210,8 @@ function addEntry() {
   var entry = {
     // newClientId ולא השעון — שני מכשירים באותה מילישנייה היו מקבלים אותו מזהה.
     client_id: newClientId(),
-    // created_at נפרד מהמזהה — הסדר נגזר ממנו, ו-uuid אינו ניתן להשוואה מספרית.
-    created_at: now.getTime(),
+    // created_at נפרד מהמזהה — הסדר נגזר ממנו, ו-uuid אינו ניתן להשוואה.
+    created_at: now.toISOString(),
     entry_date: getCurrentDateKey(),
     cat: S.selCat.id,
     task: task, sub: sub, notes: notes, count: count,

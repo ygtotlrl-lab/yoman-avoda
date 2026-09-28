@@ -54,7 +54,7 @@ function _yaVerify(kvKey) {
 function yaBkPrefix(y) { return (y || 'unknown') + '_'; }
 
 // עמודות ya_entries — שדה ברשומה שיש לו עמודה נקרא בשמה, ו-data נושא רק את השאר.
-var YA_ROW_COLS = ['client_id', 'yeshiva', 'archived', 'entry_date', 'updated_at', 'deleted', 'deleted_at', 'deleted_by'];
+var YA_ROW_COLS = ['client_id', 'yeshiva', 'archived', 'entry_date', 'created_at', 'updated_at', 'deleted', 'deleted_at', 'deleted_by'];
 
 // ── קריאה וכתיבה של kv ──
 // KV_TABLE מפריד בין המוסדות בענן והסיומת מפרידה במכשיר — סיומת שנשכחה כותבת נתוני מוסד אחד למפתח של השני.
@@ -125,12 +125,10 @@ function isLive(r) { return !!r && !r.deleted; }
 function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); }
 
 // ── סדר רשומות היומן ──
-// מפתח הסדר הוא created_at ולא client_id — המזהה הוא uuid ואינו ניתן להשוואה מספרית; updated_at הוא הנפילה-חזרה.
+// מפתח הסדר הוא created_at — רגע ב-ISO — ולא client_id: המזהה הוא uuid ואינו ניתן להשוואה.
 function entryOrderTs(e) {
-  if (!e) return 0;
-  var c = Number(e.created_at);
-  if (isFinite(c) && c > 0) return c;
-  return _yaRecTs(e);
+  var t = e ? Date.parse(e.created_at) : NaN;
+  return isFinite(t) ? t : 0;
 }
 
 // אותם מפתחות משמשים את PUSH_CFG.key ואת HW_CFG.specs[].isPending — שלוש הנקודות חייבות לקרוא אותו מפתח.
@@ -210,6 +208,8 @@ function yaRowOf(kvKey, rec) {
     yeshiva: S.YESHIVA,
     archived: yaArchivedFlag(kvKey),
     entry_date: rec.entry_date || null,
+    // שורת סנאפשוט אינה רשומה — הרגע יושב בפריטים שבתוכה.
+    created_at: (yaArchivedFlag(kvKey) || !rec.created_at) ? null : rec.created_at,
     updated_at: Math.round(recTs(rec)),
     deleted: !!rec.deleted,
     deleted_at: rec.deleted_at == null ? null : rec.deleted_at,
@@ -225,6 +225,7 @@ function yaRecOf(r) {
   Object.keys(r.data).forEach(function (k) { if (YA_ROW_COLS.indexOf(k) < 0) rec[k] = r.data[k]; });
   rec.client_id = String(r.client_id);
   if (r.entry_date) rec.entry_date = String(r.entry_date);
+  if (r.created_at) rec.created_at = String(r.created_at);
   rec.updated_at = Number(r.updated_at) || 0;
   if (r.deleted) rec.deleted = true;
   if (r.deleted_at != null) rec.deleted_at = r.deleted_at;
@@ -264,7 +265,7 @@ async function yaRowsGet(kvKey) {
     if (!sb) return { ok: false, data: null };
     // החלון הוא דגל archived — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה.
     var rows = await _rowsPaged(function () {
-      var q = sb.from(t).select('client_id,entry_date,updated_at,deleted,deleted_at,deleted_by,data').eq('yeshiva', yesh);
+      var q = sb.from(t).select('client_id,entry_date,created_at,updated_at,deleted,deleted_at,deleted_by,data').eq('yeshiva', yesh);
       if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
       return q;
     }, 'client_id', null);
@@ -437,11 +438,10 @@ function catCls(id) {
   return 'cat-' + (i < 0 ? 0 : i + 1);
 }
 
-// השם נגזר מ-CATS הנוכחי — שם ששמור ברשומה מתיישן ונושא את שם המוסד שבו נוצרה.
-// נפילה-חזרה לשם השמור כשהאות נמחקה — בארכיון יושבות רשומות תחת אות שאינה קיימת.
+// השם נגזר מ-CATS הנוכחי — שם ששמור ברשומה מתיישן ונושא את שם המוסד שבו נוצרה; קטגוריה שאינה ברשימה מוצגת במזהה שלה.
 function catLabelOf(e) {
   var c = S.CATS.find(function (x) { return x.id === e.cat; });
-  return c ? c.name : (e.cat_name || e.cat);
+  return c ? c.name : e.cat;
 }
 
 function getCurrentDateKey() {

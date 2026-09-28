@@ -322,11 +322,11 @@ function arcAddEntry() {
   if (!catSel || !taskSel) return;
   var catId = catSel.value;
   if (!S.CATS.some(function(c){ return c.id === catId; })) return;
-  // created_at נפרד לסדר — uuid אינו ניתן להשוואה מספרית.
+  // created_at נפרד לסדר — uuid אינו ניתן להשוואה.
   var _now = Date.now();
   var newEntry = {
     client_id: newClientId(),
-    created_at: _now,
+    created_at: new Date(_now).toISOString(),
     entry_date: d.key,
     cat: catId,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
