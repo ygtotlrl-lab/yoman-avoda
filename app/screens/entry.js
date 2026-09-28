@@ -49,7 +49,7 @@ function screenEntryHTML() {
       <div class="qlbl">תת-משימה</div>
       <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
     </div>
-    <div class="ksave">
+    <div data-ks>
     <div class="inp-grid">
       <div class="fld"><label for="taskInput">משימה (ידנית)</label><input id="taskInput" type="text" placeholder="הקלד..." /></div>
       <div class="fld"><label for="subInput">תת-משימה / פרטים</label><input id="subInput" type="text" placeholder="פרטים..." /></div>

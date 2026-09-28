@@ -282,7 +282,7 @@ function renderArcDetail() {
   if (S.arcEditMode) {
     html += '<div class="arc-add">'+
       '<div class="arc-add-ttl">+ הוסף רשומה</div>'+
-      '<div class="arc-add-row ksave">'+
+      '<div class="arc-add-row" data-ks>'+
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel" data-chg="arc-add-cat">'+
       liveOnly(S.CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
@@ -409,7 +409,7 @@ function arcEditEntry(gdateKey, entryId) {
   });
   if(!target) return;
   target.innerHTML =
-    '<div data-editing class="aei-row ksave">' +
+    '<div data-editing class="aei-row" data-ks>' +
     '<input aria-label="משימה" id="aei_task" value="' + esc(e.task||'') + '" placeholder="משימה" class="aei-inp">' +
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="aei-inp">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + esc(e.count||'') + '" placeholder="כמות" class="aei-count">' +
