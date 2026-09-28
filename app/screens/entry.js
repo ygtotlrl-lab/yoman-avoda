@@ -6,8 +6,8 @@ import { hebrewDate } from '../../core/hebrew.js';
 import { DAY_VALUE_MAP, MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY,
          PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { autoArchiveDay, catCls, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
-         saveEntries, subKey } from '../domain.js';
+import { autoArchiveDay, catCls, catTasks, getCurrentDateKey, gregDateStr, liveOnly,
+         parseGregLike, saveEntries, taskSubs } from '../domain.js';
 
 function screenEntryHTML() {
   return `
@@ -128,20 +128,20 @@ function buildCatGrid() {
   }
   live.forEach(function(cat) {
     var btn = document.createElement("button");
-    btn.className = "cat-btn " + catCls(cat.letter) +
-      ((S.selCat && S.selCat.letter === cat.letter) ? " sel" : "");
+    btn.className = "cat-btn " + catCls(cat.id) +
+      ((S.selCat && S.selCat.id === cat.id) ? " sel" : "");
     btn.innerHTML = "<span class=\"cat-btn-name\">" + esc(cat.name) + "</span>";
     btn.dataset.act = 'pick-cat';
-    btn.dataset.letter = cat.letter;
+    btn.dataset.cat = cat.id;
     g.appendChild(btn);
   });
 }
 
-// הקטגוריה נמצאת לפי האות שב-DOM — סגור פר-כפתור הוא מאזין ישיר, בדיוק מה שההאצלה מונעת.
-function pickCat(letter) {
+// הקטגוריה נמצאת לפי המזהה שב-DOM — סגור פר-כפתור הוא מאזין ישיר, בדיוק מה שההאצלה מונעת.
+function pickCat(id) {
   var hit = null;
-  S.CATS.forEach(function (c) { if (c && String(c.letter) === String(letter)) hit = c; });
-  if (!hit) { console.error('[cat] אין קטגוריה לאות: ' + letter); return; }
+  S.CATS.forEach(function (c) { if (c && String(c.id) === String(id)) hit = c; });
+  if (!hit) { console.error('[cat] אין קטגוריה למזהה: ' + id); return; }
   S.selCat = hit; S.selTask = null; S.selSub = null;
   buildCatGrid(); buildTaskBtns(); buildSubBtns();
 }
@@ -150,7 +150,7 @@ function buildTaskBtns() {
   var el = document.getElementById("taskBtns");
   el.innerHTML = "";
   if (!S.selCat) { el.innerHTML = '<span class="hint">בחר קטגוריה...</span>'; return; }
-  S.selCat.tasks.forEach(function(t) {
+  catTasks(S.selCat).map(function (x) { return x.id; }).forEach(function(t) {
     var b = document.createElement("button");
     b.className = "qbtn" + (S.selTask === t ? " active" : "");
     b.textContent = t;
@@ -171,8 +171,7 @@ function pickTask(t, btn) {
 function buildSubBtns() {
   var el = document.getElementById("subBtns");
   el.innerHTML = "";
-  var ci = S.selCat ? S.CATS.indexOf(S.selCat) : -1;
-  var subs = (S.selTask && ci >= 0) ? (S.SUBS[subKey(ci, S.selTask)] || []) : [];
+  var subs = (S.selTask && S.selCat) ? taskSubs(S.selCat, S.selTask) : [];
   if (!subs.length) {
     el.innerHTML = '<span class="hint">' + (S.selTask ? "אין תת-משימות" : "בחר משימה...") + '</span>';
     return;
@@ -214,7 +213,7 @@ function addEntry() {
     // created_at נפרד מהמזהה — הסדר נגזר ממנו, ו-uuid אינו ניתן להשוואה מספרית.
     created_at: now.getTime(),
     entry_date: getCurrentDateKey(),
-    cat: S.selCat.letter,
+    cat: S.selCat.id,
     task: task, sub: sub, notes: notes, count: count,
     updated_at: now.getTime() // בלעדיה הרשומה נחשבת ותיקה במיזוג
   };

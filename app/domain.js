@@ -1,7 +1,7 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
 import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso, dayNoon,
-         dayToday, kvParse, uniqList, withTimeout } from '../core/util.js';
-import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, pendConfirmPush, pendHas,
+         dayToday, kvParse, withTimeout } from '../core/util.js';
+import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
 import { logAction } from '../core/backup.js';
@@ -9,7 +9,7 @@ import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
          MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, SET_PUSH,
-         SUBS_RESET_LS, YA_ROW_TABLES, YESHIVOT } from './constants.js';
+         YA_ROW_TABLES, YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
 
 // ── מיון עברי ──
@@ -22,8 +22,8 @@ function yaSuffix(y) { return '_' + y; }
 
 // בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה.
 function yaLsBases() {
-  return ['ya_entries', 'ya_archive', 'ya_cats', 'ya_subs', 'ya_subs_meta',
-          CATS_RESET_LS, SUBS_RESET_LS, 'ya_last_day',
+  return ['ya_entries', 'ya_archive', 'ya_cats',
+          CATS_RESET_LS, 'ya_last_day',
           'ya_pending', 'ya_last_backup', 'ya_log_queue'];
 }
 
@@ -153,7 +153,7 @@ function snapOwnEntries(date, arr) {
 // הרשומות שבתוך הסנאפשוט ממוזגות אחת-אחת — אחרת שני מכשירים שהוסיפו לאותו יום דורסים זה את זה.
 function mergeArchive(local, remote) {
   return mergeCore(local, remote, { isPending: pendArc, mergePair: function(loc, rem, k, pend) {
-    var base = (pend || recTs(loc) > recTs(rem)) ? loc : rem; // שוויון — הענן; ממתין — המקומי
+    var base = mergeWinner(loc, rem, pend);
     var out = {};
     Object.keys(base).forEach(function(kk){ out[kk] = base[kk]; });
     out.entries = snapOwnEntries(base.entry_date, mergeCore(loc.entries, rem.entries, { isPending: pendEntry }));
@@ -161,75 +161,38 @@ function mergeArchive(local, remote) {
   } });
 }
 
-// tasks ממוזג פר-פריט לפי tasks_meta — מיזוג ברמת רשומה היה מחליף את המערך כולו.
-// tasks_meta: { updated_at } לפריט חי ו-{ updated_at, deleted: true } למחיקה — היעדר נקרא «אין לי» ולא «נמחק».
-// הסדר נוסע עם הקטגוריה ומוכרע ב-updated_at שלה, והמפתח הטבעי הוא letter.
-function catMeta(c) { return (c && c.tasks_meta && typeof c.tasks_meta === 'object') ? c.tasks_meta : {}; }
+// ── הקטגוריות והמשימות ──
+// קטגוריה ממוזגת במפתח id, והמשימות שבתוכה פריט-פריט במפתח id — שם המשימה, ובה updated_at ומפתחות-המשנה שלה.
+// מיזוג ברמת רשומה היה מחליף את מערך המשימות כולו; והסדר נוסע עם הבסיס שהוכרע.
+function catTasks(cat) { return liveOnly(cat && cat.tasks); }
 
-// צד שאינו מכיר את המשימה אינו מכריע עליה — אחרת משימה שנוספה אופליין יורדת במשיכה הראשונה.
-function mergeTasks(locList, locMeta, remList, remMeta) {
-  var L = Array.isArray(locList) ? locList : [], R = Array.isArray(remList) ? remList : [];
-  var Lm = locMeta || {}, Rm = remMeta || {};
-  var lHas = {}, rHas = {}, meta = {};
-  L.forEach(function (t) { lHas[t] = 1; });
-  R.forEach(function (t) { rHas[t] = 1; });
-  var order = uniqList(R.concat(L));
-  var out = [];
-  order.forEach(function (t) {
-    var lKnows = !!lHas[t] || (t in Lm), rKnows = !!rHas[t] || (t in Rm);
-    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[t]) > metaTs(Rm[t]);
-    var mv = useLocal ? Lm[t] : Rm[t];
-    if (metaDeleted(mv)) { meta[t] = mv; return; }
-    if (!(useLocal ? lHas[t] : rHas[t])) return;
-    out.push(t);
-    if (mv !== undefined) meta[t] = mv;
-  });
-  // סימוני מחיקה בלי פריט נשארים — כך המחיקה מתפשטת הלאה
-  Object.keys(Lm).forEach(function (t) { if (!(t in meta) && metaDeleted(Lm[t])) meta[t] = Lm[t]; });
-  Object.keys(Rm).forEach(function (t) {
-    if (metaDeleted(Rm[t]) && (!(t in meta) || metaTs(Rm[t]) > metaTs(meta[t]))) meta[t] = Rm[t];
-  });
-  return { tasks: out, meta: meta };
+function taskOf(cat, name) {
+  var l = catTasks(cat);
+  for (var i = 0; i < l.length; i++) if (l[i].id === name) return l[i];
+  return null;
+}
+
+function taskSubs(cat, name) {
+  var t = taskOf(cat, name);
+  return (t && Array.isArray(t.subs)) ? t.subs : [];
+}
+
+function _yaByBaseOrder(items, base) {
+  var pos = {};
+  (Array.isArray(base) ? base : []).forEach(function (t, i) { if (t && !(t.id in pos)) pos[t.id] = i; });
+  return items.map(function (t, i) { return { t: t, i: (t && t.id in pos) ? pos[t.id] : 1e6 + i }; })
+    .sort(function (a, b) { return a.i - b.i; }).map(function (x) { return x.t; });
 }
 
 function mergeCats(local, remote) {
-  return mergeCore(local, remote, { key: 'letter', mergePair: function (loc, rem, k, pend) {
-    var base = (pend || recTs(loc) > recTs(rem)) ? loc : rem; // שוויון — הענן
-    var out = {};
-    Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
-    var m = mergeTasks(loc.tasks, catMeta(loc), rem.tasks, catMeta(rem));
-    out.tasks = m.tasks;
-    out.tasks_meta = m.meta;
-    return out;
-  } });
-}
-
-// מחיקת פריט מורידה אותו מהמערך ומקדמת את חותמת המפתח; מחיקת מפתח שלם היא סימון ב-SUBS_META ולא היעדר.
-// המפתחות מקודדים לפי מספר הקטגוריה — מפתח שדולף באיחוד עיוור נוחת תחת קטגוריה אחרת.
-// צד שאינו מכיר את המפתח אינו מכריע עליו — אחרת מפתח שנוצר אופליין יורד במשיכה הראשונה.
-function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
-  var Ls = (localSubs && typeof localSubs === 'object') ? localSubs : {};
-  var Rs = (remoteSubs && typeof remoteSubs === 'object') ? remoteSubs : {};
-  var Lm = (localMeta && typeof localMeta === 'object') ? localMeta : {};
-  var Rm = yaMetaMap(remoteMetaRes) || {};
-  var subs = {}, meta = {}, keys = {};
-  [Ls, Rs, Lm, Rm].forEach(function(m){
-    Object.keys(m).forEach(function(k){ keys[k] = 1; });
-  });
-  Object.keys(keys).forEach(function(k){
-    var lKnows = (k in Ls) || (k in Lm);
-    var rKnows = (k in Rs) || (k in Rm);
-    // «אין לי» אינו «נמחק»; ובשוויון חותמות מנצח הענן
-    var useLocal = !rKnows ? true : !lKnows ? false : metaTs(Lm[k]) > yaMetaTs(remoteMetaRes, k);
-    var mv = useLocal ? Lm[k] : Rm[k];
-    // הסימון נשאר במפת החותמות והמפתח יורד — כך המחיקה מתפשטת הלאה
-    if (metaDeleted(mv)) { meta[k] = mv; return; }
-    var list = useLocal ? Ls[k] : Rs[k];
-    if (list === undefined) return;
-    subs[k] = uniqList(list);
-    meta[k] = (mv === undefined) ? { updated_at: 0 } : mv;
-  });
-  return { subs: subs, meta: meta };
+  return mergeCore(local, remote, { key: 'id', isPending: function () { return pendHas(PK_SET + 'cats'); },
+    mergePair: function (loc, rem, k, pend) {
+      var base = mergeWinner(loc, rem, pend);
+      var out = {};
+      Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
+      out.tasks = _yaByBaseOrder(mergeCore(loc.tasks, rem.tasks, { key: 'id', isPending: function () { return pend; } }), base.tasks);
+      return out;
+    } });
 }
 
 function yaTableOf(kvKey) { return YA_ROW_TABLES[kvKey]; }
@@ -334,9 +297,7 @@ async function yaSendRows(kvKey, recs, ep) {
 // הכתיבה אינה פונה לענן — המפתח מסומן ממתין ונדחף ב-schedulePush.
 // מפתח שנכתב מקומית ואינו ב-YA_SET_VALUES לא עולה לעולם.
 var YA_SET_VALUES = {
-  cats:      function () { return S.CATS; },
-  subs:      function () { return S.SUBS; },
-  subs_meta: function () { return S.SUBS_META; }
+  cats:      function () { return S.CATS; }
 };
 
 function yaSetDirty(keys) {
@@ -358,54 +319,19 @@ async function yaSendSettings(tbl, rows, ep) {
   return withTimeout(sb.from(tbl).upsert(rows, { onConflict: 'key' }));
 }
 
-// ערך במפת החותמות בצורה אחת: { updated_at }, ו-deleted: true במחיקה —
-// קידוד אחד לשתי מפות החותמות, כי שני קידודים לאותו מושג הם שני מסלולי הכרעה.
-function metaTs(v) {
-  var t = v && typeof v === 'object' ? Number(v.updated_at) : NaN;
-  return (isFinite(t) && t > 0) ? t : 0;
-}
-
-function metaDeleted(v) { return !!(v && typeof v === 'object' && v.deleted); }
-
-// משיכה שנכשלה או ערך שאינו מפה מחזירים null — «אין ראיה»; מפתח שאינו בענן מחזיר מפה ריקה — «נמדד ואין».
-// אין לקרוס את השניים — משיכה שנכשלה כמפה ריקה דורסת עריכה מקומית ומחזירה לענן מפתח שנמחק.
-function yaMetaMap(res) {
-  if (!res || res.ok !== true) return null;
-  var m = res.data;
-  if (m === null || m === undefined) return {};
-  return (typeof m === 'object') ? m : null;
-}
-
-// כשל מחזיר 0 — «אין ראיה שהענן חדש יותר»: אפס מפסיד לכל עריכה מתוארכת, והזריקה אינה עוצרת את המיזוג.
-function yaMetaTs(res, key) {
-  try {
-    var m = yaMetaMap(res);
-    return m ? metaTs(m[key]) : 0;
-  } catch (e) { return 0; }
-}
-
-function metaDel(ts) { return { updated_at: (typeof ts === 'number') ? ts : Date.now(), deleted: true }; }
-
-function metaLive(ts) { return { updated_at: (typeof ts === 'number') ? ts : Date.now() }; }
-
-function subKey(ci, taskName) { return ci + "::" + taskName; }
-
 // ── המיון היחיד לרשומות היומן ──
 // שש רמות — משווה שעוצר אחרי תת-המשימה משאיר רשומות זהות בסדר ההכנסה.
 // המזהה הוא הרמה האחרונה — בלעדיו רשומות זהות מתחלפות בין רינדור לרינדור.
 function yaSortEntries(list) {
   var arr = Array.isArray(list) ? list.slice() : [];
   var catOrder = {};
-  S.CATS.forEach(function (cat, ci) { catOrder[cat.letter] = ci; });
+  S.CATS.forEach(function (cat, ci) { catOrder[cat.id] = ci; });
   // קטגוריה שאינה ברשימה נופלת לסוף — קטגוריה שנמחקה משאירה רשומות היסטוריות.
   var rank = function (e) {
     var ca = catOrder[e.cat] !== undefined ? catOrder[e.cat] : 99;
-    var cat = S.CATS.find(function (c) { return c.letter === e.cat; });
-    var ta = cat ? cat.tasks.indexOf(e.task) : -1;
-    var ci2 = cat ? S.CATS.indexOf(cat) : -1;
-    var sk = ci2 >= 0 ? subKey(ci2, e.task) : e.task;
-    var subs = S.SUBS[sk] || [];
-    var sa = subs.indexOf(e.sub);
+    var cat = S.CATS.find(function (c) { return c.id === e.cat; });
+    var ta = cat ? catTasks(cat).map(function (t) { return t.id; }).indexOf(e.task) : -1;
+    var sa = cat ? taskSubs(cat, e.task).indexOf(e.sub) : -1;
     return [ca, ta === -1 ? 999 : ta, sa === -1 ? 999 : sa];
   };
   // המספר מושווה כמספר ולא כמחרוזת — «10» קטן מ-«9» בהשוואת מחרוזות; רשומה בלי מספר יורדת לסוף.
@@ -506,15 +432,15 @@ function monthKeyOf(m) {
 // הפלטה יושבת ב-CSS — כאן רק סדר האותיות, והמחלקה שנגזרת ממנו מציבה את --cat.
 const CAT_LETTERS = 'אבגדהוזח';
 
-function catCls(letter) {
-  var i = CAT_LETTERS.indexOf(letter);
+function catCls(id) {
+  var i = CAT_LETTERS.indexOf(id);
   return 'cat-' + (i < 0 ? 0 : i + 1);
 }
 
 // השם נגזר מ-CATS הנוכחי — שם ששמור ברשומה מתיישן ונושא את שם המוסד שבו נוצרה.
 // נפילה-חזרה לשם השמור כשהאות נמחקה — בארכיון יושבות רשומות תחת אות שאינה קיימת.
 function catLabelOf(e) {
-  var c = S.CATS.find(function (x) { return x.letter === e.cat; });
+  var c = S.CATS.find(function (x) { return x.id === e.cat; });
   return c ? c.name : (e.cat_name || e.cat);
 }
 
@@ -689,9 +615,9 @@ function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          arcPutSnapshot, autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
-         mergeArchive, mergeCats, mergeEntries, mergeSubs, metaDel, metaLive, parseGregLike,
+         mergeArchive, mergeCats, mergeEntries, parseGregLike,
          recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
-         subKey, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb, yaLsBases, yaMetaMap,
+         catTasks, taskOf, taskSubs, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb, yaLsBases,
          yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
          yaSetRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
          yaYeshiva };

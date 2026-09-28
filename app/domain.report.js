@@ -97,11 +97,11 @@ function _buildReportDiv(cb, entries, date){
   var logoUrl=logoEl?logoEl.src:'';
   var sortedPDF = yaSortEntries(entries);
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catLabelOf(e),list:[]};byCAT[e.cat].list.push(e);});
-  var catLetters=S.CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
+  var catIds=S.CATS.map(function(c){return c.id;}).filter(function(l){return !!byCAT[l];});
   var rowsHtml='';
   var globalTaskIdx = 0;
-  catLetters.forEach(function(letter){
-    var data=byCAT[letter];
+  catIds.forEach(function(cid){
+    var data=byCAT[cid];
     var tgs=[];data.list.forEach(function(e){var last=tgs[tgs.length-1];if(last&&last.task===(e.task||''))last.items.push(e);else tgs.push({task:e.task||'',items:[e]});});
     var cri=0;
     tgs.forEach(function(tg,ti){

@@ -6,7 +6,7 @@ import { hebrewDate } from '../../core/hebrew.js';
 import { HMO, HUNKNOWN, MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC,
          PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, catLabelOf, extractYM, isLive, liveOnly, recTouch, saveArchive,
+import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveArchive,
          saveEntries, showEl, snapClientId, yaDayName, yaGreg, yaHeb,
          yaSortEntries } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
@@ -272,10 +272,10 @@ function renderArcDetail() {
       '<div class="arc-add-ttl">+ הוסף רשומה</div>'+
       '<div class="arc-add-row" data-ks>'+
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel" data-chg="arc-add-cat">'+
-      liveOnly(S.CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
+      liveOnly(S.CATS).map(function(cat){ return '<option value="'+esc(cat.id)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
       '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel">'+
-      (liveOnly(S.CATS)[0]?liveOnly(S.CATS)[0].tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join(""):"")+
+      (liveOnly(S.CATS)[0]?catTasks(liveOnly(S.CATS)[0]).map(function(t){ return '<option>'+esc(t.id)+'</option>'; }).join(""):"")+
       '</select>'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes" />'+
       '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
@@ -287,9 +287,9 @@ function renderArcDetail() {
 }
 
 function arcAddCatChange(sel) {
-  var cat = S.CATS.find(function(c){ return c.letter === sel.value; });
+  var cat = S.CATS.find(function(c){ return c.id === sel.value; });
   var taskSel = document.getElementById("arc-add-task");
-  if (cat && taskSel) taskSel.innerHTML = cat.tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join("");
+  if (cat && taskSel) taskSel.innerHTML = catTasks(cat).map(function(t){ return '<option>'+esc(t.id)+'</option>'; }).join("");
 }
 
 function arcToggleEdit() {
@@ -320,15 +320,15 @@ function arcAddEntry() {
   var taskSel = document.getElementById("arc-add-task");
   var notesSel = document.getElementById("arc-add-notes");
   if (!catSel || !taskSel) return;
-  var letter = catSel.value;
-  if (!S.CATS.some(function(c){ return c.letter === letter; })) return;
+  var catId = catSel.value;
+  if (!S.CATS.some(function(c){ return c.id === catId; })) return;
   // created_at נפרד לסדר — uuid אינו ניתן להשוואה מספרית.
   var _now = Date.now();
   var newEntry = {
     client_id: newClientId(),
     created_at: _now,
     entry_date: d.key,
-    cat: letter,
+    cat: catId,
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
     updated_at: _now
   };

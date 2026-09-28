@@ -4,7 +4,8 @@ import { lsSet } from '../../core/storage.js';
 import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, isLive, metaDel, metaLive, recTouch, subKey, yaSetDirty } from '../domain.js';
+import { tombKill } from '../../core/sync.js';
+import { catCls, catTasks, isLive, recTouch, taskOf, yaSetDirty } from '../domain.js';
 
 function screenSettingsHTML() {
   return `
@@ -23,35 +24,14 @@ function saveCats() {
   yaSetDirty(['cats']);
 }
 
-// חותמת פר-משימה — בלעדיה מיזוג ברמת רשומה מחליף את מערך המשימות כולו.
-function touchTask(cat, name) {
-  if (!cat || name == null) return;
-  if (!cat.tasks_meta || typeof cat.tasks_meta !== 'object') cat.tasks_meta = {};
-  cat.tasks_meta[String(name)] = metaLive();
-}
+// משימה היא פריט בקטגוריה — id הוא שמה, ו-subs מפתחות-המשנה שלה; כל שינוי בה נחתם בחותמתה.
+function taskAt(ci, ti) { var c = S.CATS[ci]; return (c && Array.isArray(c.tasks)) ? c.tasks[ti] : null; }
 
-// מחיקת משימה היא סימון ולא היעדר — מכשיר שלא קיבל את המחיקה מחזיר את המשימה.
-function delTaskMeta(cat, name, ts) {
-  if (!cat || name == null) return;
-  if (!cat.tasks_meta || typeof cat.tasks_meta !== 'object') cat.tasks_meta = {};
-  cat.tasks_meta[String(name)] = metaDel(ts);
-}
-
-function touchSubKey(sk) { if (sk != null) S.SUBS_META[String(sk)] = metaLive(); }
-
-// מחיקת מפתח היא סימון ב-SUBS_META ולא היעדר — מכשיר שלא קיבל אותה קורא היעדר כ«אין לי» ומחזיר את המפתח.
-function delSubKey(sk, ts) {
-  if (sk == null) return;
-  var k = String(sk);
-  S.SUBS_META[k] = metaDel(ts);
-  delete S.SUBS[k];
-}
-
-function saveSubs() {
-  lsSet("ya_subs"+S.LS, JSON.stringify(S.SUBS));
-  lsSet("ya_subs_meta"+S.LS, JSON.stringify(S.SUBS_META));
-  // שני המפתחות הם אירוע אחד ומסומנים יחד.
-  yaSetDirty(['subs', 'subs_meta']);
+// פריט שנמחק באותו שם מוחלף — שני פריטים באותו מפתח הם כפילות בתוך צד אחד.
+function taskPut(cat, item, at) {
+  cat.tasks = (cat.tasks || []).filter(function (t) { return !(t && t.id === item.id && !isLive(t)); });
+  if (typeof at === 'number' && at >= 0 && at <= cat.tasks.length) cat.tasks.splice(at, 0, item);
+  else cat.tasks.push(item);
 }
 
 // ── מסך ההגדרות ──
@@ -66,25 +46,8 @@ function reorderKeep(arr, order) {
   return out;
 }
 
-// מפתח תתי-המשימות נושא את מקום הקטגוריה — סידור שאינו מעביר את המפתחות היה משאיר אותם תחת קטגוריה אחרת.
-function moveSubKeys(before, after) {
-  var subs = {}, ts = Date.now();
-  Object.keys(S.SUBS).forEach(function (k) {
-    var i = k.indexOf('::'), ci = +k.slice(0, i), to = after.indexOf(before[ci]);
-    if (i < 0 || to < 0) return;
-    var nk = subKey(to, k.slice(i + 2));
-    subs[nk] = S.SUBS[k];
-    if (nk !== k) S.SUBS_META[nk] = metaLive(ts);
-  });
-  Object.keys(S.SUBS).forEach(function (k) { if (!(k in subs)) S.SUBS_META[k] = metaDel(ts); });
-  S.SUBS = subs;
-}
-
 function applyCatOrder(list, kind) {
-  var before = S.CATS.slice();
   S.CATS = reorderKeep(S.CATS, domOrder(list, kind, 'data-idx'));
-  moveSubKeys(before, S.CATS);
-  saveSubs();
   saveCats();
   renderSettings();
   shell.buildCatGrid();
@@ -101,13 +64,11 @@ function applyTaskOrder(list, kind) {
 
 function applySubOrder(list, kind) {
   var one = list.querySelector('[data-drag="' + kind + '"]');
-  var ci = +one.dataset.ci, ti = +one.dataset.ti;
-  var taskName = S.CATS[ci].tasks[ti];
-  var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) return;
-  S.SUBS[sk] = reorderKeep(S.SUBS[sk], domOrder(list, kind, 'data-si'));
-  touchSubKey(sk);
-  saveSubs();
+  var t = taskAt(+one.dataset.ci, +one.dataset.ti);
+  if (!t || !Array.isArray(t.subs)) return;
+  t.subs = reorderKeep(t.subs, domOrder(list, kind, 'data-si'));
+  recTouch(t);
+  saveCats();
   renderSettings();
 }
 
@@ -134,38 +95,37 @@ function editSubInline(ci, ti, si, oldVal, taskName) {
 function saveSubInline(inp) {
   var ci = +inp.dataset.ci, si = +inp.dataset.si, taskName = inp.dataset.task;
   var newVal = inp.value.trim();
-  if (newVal && newVal !== inp.defaultValue) {
-    var sk = subKey(ci, taskName);
-    if (!S.SUBS[sk]) S.SUBS[sk] = [];
-    S.SUBS[sk][si] = newVal;
-    touchSubKey(sk);
-    saveSubs();
+  var t = taskOf(S.CATS[ci], taskName);
+  if (t && newVal && newVal !== inp.defaultValue) {
+    if (!Array.isArray(t.subs)) t.subs = [];
+    t.subs[si] = newVal;
+    recTouch(t);
+    saveCats();
   }
   renderSettings();
 }
 
 function removeSub(ci, taskName, si) {
-  var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) return;
-  S.SUBS[sk].splice(si, 1);
-  touchSubKey(sk); // המחיקה נרשמת בחותמת הרשימה — אחרת היא נעלמת במיזוג
-  saveSubs();
+  var t = taskOf(S.CATS[ci], taskName);
+  if (!t || !Array.isArray(t.subs)) return;
+  t.subs.splice(si, 1);
+  recTouch(t); // המחיקה נרשמת בחותמת המשימה — אחרת היא נעלמת במיזוג
+  saveCats();
   renderSettings();
 }
 
 function addSub(ci, ti) {
-  var taskName = S.CATS[ci].tasks[ti];
+  var t = taskAt(ci, ti);
   var inp = document.getElementById("snewsub-" + ci + "-" + ti);
-  if (!inp) return;
+  if (!inp || !t) return;
   var val = inp.value.trim();
   if (!val) return;
-  var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) S.SUBS[sk] = [];
-  if (uniqHas(S.SUBS[sk], val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
-  S.SUBS[sk].push(val);
-  touchSubKey(sk);
+  if (!Array.isArray(t.subs)) t.subs = [];
+  if (uniqHas(t.subs, val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
+  t.subs.push(val);
+  recTouch(t);
   inp.value = "";
-  saveSubs();
+  saveCats();
   renderSettings();
 }
 
@@ -173,7 +133,7 @@ function editTaskInline(ci, ti) {
   var lbl = document.getElementById("task-lbl-"+ci+"-"+ti);
   if (!lbl) return;
   var inp = document.createElement("input");
-  inp.defaultValue = S.CATS[ci].tasks[ti];
+  inp.defaultValue = taskAt(ci, ti).id;
   inp.className = "inl-inp inl-inp-task";
   inp.setAttribute("aria-label", "שם משימה");
   inp.setAttribute("data-kent", "");
@@ -185,17 +145,14 @@ function editTaskInline(ci, ti) {
 
 function saveTaskInline(inp) {
   var ci = +inp.dataset.ci, ti = +inp.dataset.ti, oldVal = inp.defaultValue;
-  var newVal = inp.value.trim();
-  if (newVal && newVal !== oldVal) {
-    // המפתח הוא ci::שם — שינוי השם מעביר את תתי-המשימות, והמפתח הישן נמחק בסימון.
-    var oldSk = subKey(ci, oldVal);
-    var newSk = subKey(ci, newVal);
-    if (S.SUBS[oldSk]) S.SUBS[newSk] = S.SUBS[oldSk];
-    delSubKey(oldSk);
-    S.CATS[ci].tasks[ti] = newVal;
-    delTaskMeta(S.CATS[ci], oldVal); touchTask(S.CATS[ci], newVal);
-    recTouch(S.CATS[ci]); touchSubKey(newSk);
-    saveCats(); saveSubs();
+  var newVal = inp.value.trim(), cat = S.CATS[ci], old = taskAt(ci, ti);
+  if (old && newVal && newVal !== oldVal) {
+    if (taskOf(cat, newVal)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); renderSettings(); return; }
+    // השם הוא המזהה — הפריט הישן נמחק, והחדש נושא את מפתחות-המשנה במקומו.
+    var subs = Array.isArray(old.subs) ? old.subs.slice() : [];
+    tombKill(old);
+    taskPut(cat, { id: newVal, updated_at: old.updated_at, subs: subs }, cat.tasks.indexOf(old) + 1);
+    saveCats();
   }
   renderSettings(); shell.buildCatGrid(); shell.buildTaskBtns();
 }
@@ -206,19 +163,20 @@ function renderSettings() {
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   S.CATS.forEach(function(cat, ci) {
-    if (!isLive(cat)) return; // ci חייב להישאר האינדקס הגולמי — עליו בנויים מפתחות SUBS
+    if (!isLive(cat)) return; // ci ו-ti הם האינדקס הגולמי — הסידור שומר את מקום הפריט שנמחק
     var div = document.createElement("div");
     div.className = "set-card";
     div.dataset.idx = ci;
     div.dataset.drag = "cat";
-    var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
+    var hdr = '<div class="set-hdr ' + catCls(cat.id) + '">'
       + '<span class="drag-handle grip" data-grip>⠿</span>'
       + '<div class="set-badge cat-fill"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-kent data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
-      + cat.tasks.map(function(t, ti){
-          var subs = S.SUBS[subKey(ci, t)] || [];
+      + (cat.tasks || []).map(function(item, ti){
+          if (!isLive(item)) return '';
+          var t = item.id, subs = Array.isArray(item.subs) ? item.subs : [];
           var subsHtml = '';
           if(subs.length > 0) {
             subsHtml = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
@@ -259,15 +217,12 @@ function renderSettings() {
   });
 }
 
+// מחיקה היא סימון על הפריט ולא הסרה — מכשיר שלא קיבל את המחיקה היה מחזיר את המשימה.
 function removeTask(ci, ti) {
-  // משימה היא מחרוזת בלי מזהה — ההסרה נרשמת כעדכון הקטגוריה, ולכן מנצחת במיזוג ואינה נעלמת.
-  var gone = S.CATS[ci].tasks[ti];
-  S.CATS[ci].tasks.splice(ti, 1);
-  delTaskMeta(S.CATS[ci], gone);
-  recTouch(S.CATS[ci]);
-  // מפתח שנשאר בלי משימתו חוזר תחת משימה חדשה באותה קטגוריה ובאותו שם.
-  delSubKey(subKey(ci, gone));
-  saveCats(); saveSubs();
+  var t = taskAt(ci, ti);
+  if (!t) return;
+  tombKill(t);
+  saveCats();
   renderSettings();
 }
 
@@ -275,11 +230,9 @@ function addTask(ci) {
   var inp = document.getElementById("snewtask-" + ci);
   var val = inp.value.trim();
   if (!val) return;
-  // ההשוואה על הערך ולא על מזהה — השם הוא מפתח החותמת ומפתח תתי-המשימות, ושתי שורות באותו שם חולקות אותם.
-  if (uniqHas(S.CATS[ci].tasks, val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
-  S.CATS[ci].tasks.push(val);
-  touchTask(S.CATS[ci], val);
-  recTouch(S.CATS[ci]);
+  // השם הוא מזהה הפריט — שתי משימות באותו שם הן פריט אחד.
+  if (uniqHas(catTasks(S.CATS[ci]).map(function (t) { return t.id; }), val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
+  taskPut(S.CATS[ci], { id: val, updated_at: Date.now(), subs: [] });
   inp.value = "";
   saveCats();
   renderSettings();
@@ -308,7 +261,7 @@ function saveSettings() {
       }
     }
   });
-  saveCats(); saveSubs(); shell.buildCatGrid();
+  saveCats(); shell.buildCatGrid();
   return true;
 }
 
