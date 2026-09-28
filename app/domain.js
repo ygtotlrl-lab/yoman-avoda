@@ -133,7 +133,7 @@ function entryOrderTs(e) {
   return _yaRecTs(e);
 }
 
-// אותם מפתחות משמשים את yaDirtyRows ואת HW_CFG.specs[].isPending — שלוש הנקודות חייבות לקרוא אותו מפתח.
+// אותם מפתחות משמשים את PUSH_CFG.key ואת HW_CFG.specs[].isPending — שלוש הנקודות חייבות לקרוא אותו מפתח.
 function pendEntry(k) { return pendHas(PK_ENTRY + k); }
 
 function pendArc(k) { return pendHas(PK_ARC + k); }
@@ -306,48 +306,27 @@ async function yaRowsGet(kvKey) {
       return q;
     }, 'client_id', null);
     if (!rows) return { ok: false, data: null };
-    var map = {}, out = [];
+    var out = [];
     rows.forEach(function (r) {
       var rec = yaRecOf(r);
-      if (!rec) return;
-      map[rec.client_id] = rec.updated_at;
-      out.push(rec);
+      if (rec) out.push(rec);
     });
-    // מפת החותמות היא מצב פר-מוסד — כתיבה אחרי החלפה הייתה ממלאת אותה בחותמות המוסד הקודם.
     if (ctxStale(_ep)) return { ok: false, data: null };
-    S._yaRemote[kvKey] = map;
     return { ok: true, data: yaSortRows(kvKey, out) };
   } catch (e) { return { ok: false, data: null }; }
 }
 
-// רשומה ממתינה נחשבת תמיד לדחיפה — בלי בדיקת הממתין היא נשארת מסומנת לנצח ואינה נדחפת.
-function yaDirtyRows(kvKey, arr) {
-  var map = S._yaRemote[kvKey], pre = yaPendPrefix(kvKey), out = [];
-  (Array.isArray(arr) ? arr : []).forEach(function (rec) {
-    var k = rec ? rec.client_id : null;
-    if (k == null) return;
-    var ts = Math.round(recTs(rec));
-    var known = map ? map[String(k)] : undefined;
-    if (map === null || known === undefined || ts > known || pendHas(pre + k)) {
-      var row = yaRowOf(kvKey, rec);
-      if (row) out.push(row);
-    }
-  });
-  return out;
-}
-
 // upsert עם onConflict: 'client_id' ולא insert — ניסיון חוזר אחרי תשובה שאבדה ברשת חייב להיות אידמפוטנטי.
-async function yaSendRows(kvKey, rows, ep) {
+// rows הן הרשומות המקומיות, וצורת השורה נגזרת כאן — מפתח הסימון נקרא מהן ולא מהשורה שנשלחה.
+async function yaSendRows(kvKey, recs, ep) {
   var t = yaTableOf(kvKey);
   var sb = getSB();
   // היעדר לקוח נרשם ככשל רשת ולא ככשל סמכותי — השורה כלל לא נשלחה, והסימון חייב להישאר.
   if (!sb) throw new Error('failed to reach cloud');
+  if (ctxStale(ep)) throw new Error('failed to reach cloud');
+  var rows = recs.map(function (rec) { return yaRowOf(kvKey, rec); }).filter(function (r) { return !!r; });
   var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
   if (!res || res.error) return res || { error: { message: 'upsert failed' } };
-  // ההקשר התחלף: מילוי מפת החותמות כאן היה משווה את המוסד החדש מול חותמות הקודם.
-  if (ctxStale(ep)) return {};
-  var map = S._yaRemote[kvKey] || (S._yaRemote[kvKey] = {});
-  rows.forEach(function (r) { map[r.client_id] = r.updated_at; });
   return {};
 }
 
@@ -365,12 +344,11 @@ function yaSetDirty(keys) {
   schedulePush();
 }
 
-// הערך נלקח מהזיכרון ברגע הדחיפה — שתי כתיבות לפני הדחיפה הן מחזור אחד.
-function yaSetDirtyRows() {
-  return Object.keys(YA_SET_VALUES).filter(function (k) { return pendHas(PK_SET + k); })
-    .map(function (k) {
-      return { key: k, value: JSON.stringify(YA_SET_VALUES[k]()), updated_at: Date.now() };
-    });
+// הערך נלקח מהזיכרון ברגע הדחיפה — שתי כתיבות לפני הדחיפה הן מחזור אחד; הסינון לממתין בשכבת הדחיפה.
+function yaSetRows() {
+  return Object.keys(YA_SET_VALUES).map(function (k) {
+    return { key: k, value: JSON.stringify(YA_SET_VALUES[k]()), updated_at: Date.now() };
+  });
 }
 
 // הטבלה נלכדה עם ההקשר — החלפת מוסד באמצע מחזירה כשל רשת, והסימון נשאר.
@@ -570,6 +548,7 @@ function arcPutSnapshot(date, dayEntries, ts) {
     updated_at: ts
   };
   if (exist) S.ARCHIVE[existIdx] = snapshot; else S.ARCHIVE.unshift(snapshot);
+  pendMark(PK_ARC + cid);
   return snapshot;
 }
 
@@ -712,7 +691,7 @@ export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
          mergeArchive, mergeCats, mergeEntries, mergeSubs, metaDel, metaLive, parseGregLike,
          recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
-         subKey, yaRecId, yaBkPrefix, yaDayName, yaDirtyRows, yaGreg, yaHeb, yaLsBases, yaMetaMap,
+         subKey, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb, yaLsBases, yaMetaMap,
          yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
-         yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
+         yaSetRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
          yaYeshiva };

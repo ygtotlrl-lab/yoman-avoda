@@ -19,8 +19,6 @@ const S = {
   // send ו-mark רצים אחרי await — קריאת הגלובלי בהם הייתה זוקפת דחיפה של מוסד אחד לחשבון השני.
   _yaPushEp: 0,
   _yaPushTbl: null,
-  // null פירושו «טרם נמשך» וגורם לדחיפת הכול — דחיפה מיותרת עולה בתעבורה, רשומה שלא נדחפה נעלמת.
-  _yaRemote: { ya_entries: null, ya_archive: null },
   SUBS_META: {},
   _catsResetSeen: '',
   _subsResetSeen: '',

@@ -1,7 +1,7 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
 import { appConfigure, dayIso, dayNoon, getDeviceId } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
-         pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
+         pendBoot, pendCount, pendForget, pendHas, pendMark, pendReload, plBoot, plForget,
          pushDirty, pushTable, rtyBoot, runSave, tombBoot, tombKill } from '../core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
@@ -18,9 +18,9 @@ import { CATS_RESET_KEY, CATS_RESET_LS, MSG_ALREADY_AT, MSG_BOOT_FAIL,
 import { S, shell } from './state.js';
 import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          arcPutSnapshot, entryOrderTs, getSB, gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
-         mergeSubs, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
+         mergeSubs, recTouch, sbGetResult, showEl, yaBkPrefix,
          yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
-         yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
+         yaSendSettings, yaSetDirty, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow,
          yaRecId, yaTableOf, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
@@ -148,12 +148,12 @@ var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
   delay:  400,
-  dirty:  function (t, ctx) {
+  rows:   function (t, ctx) {
     if (!S.KV_TABLE || !S.YESHIVA) return null;
-    if (t === SET_PUSH) { S._yaPushEp = ctxEpoch(); S._yaPushTbl = S.KV_TABLE; return yaSetDirtyRows(); }
+    if (t === SET_PUSH) { S._yaPushEp = ctxEpoch(); S._yaPushTbl = S.KV_TABLE; return yaSetRows(); }
     if (!yaTableOf(t)) return null;
     S._yaPushEp = ctxEpoch();
-    return yaDirtyRows(t, ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES));
+    return ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES);
   },
   key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.client_id; },
   send:   function (t, rows) {
@@ -517,7 +517,7 @@ function checkDayChange() {
     Object.keys(byDay).forEach(function(d){ arcPutSnapshot(d, byDay[d], ts); });
     lsSetArray("ya_archive"+S.LS, hwDiskFilter('ya_archive'+S.LS, S.ARCHIVE), _yaRecTs);
     // tombstones ולא ENTRIES = [] — אחרת הענן מחזיר את הרשומות לחיים
-    S.ENTRIES.forEach(function(e){ if (isLive(e)) tombKill(e, ts); });
+    S.ENTRIES.forEach(function(e){ if (isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
     lsSetArray("ya_entries"+S.LS, S.ENTRIES, _yaRecTs);
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }
@@ -598,7 +598,6 @@ function yaResetTenantState() {
   S._lastKnownTimestamp = 0;
   plForget();
   pendForget();
-  S._yaRemote = { ya_entries: null, ya_archive: null };
   hwForget();
   S._yaLastSyncAt = 0;
   S._yaNetWarned = false;
