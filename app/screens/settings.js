@@ -204,7 +204,7 @@ function renderSettings() {
     div.dataset.idx = ci;
     div.dataset.drag = "cat";
     var hdr = '<div class="set-hdr ' + catCls(cat.letter) + '">'
-      + '<span class="drag-handle grip">⠿</span>'
+      + '<span class="drag-handle grip" data-grip>⠿</span>'
       + '<div class="set-badge cat-fill"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-kent data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
@@ -218,7 +218,7 @@ function renderSettings() {
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" '
                     + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
-                    + '<span class="grip sub-grip">⠿</span>'
+                    + '<span class="grip sub-grip" data-grip>⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
                     + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="set-edit">✏️</button>'
                     + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
@@ -226,14 +226,14 @@ function renderSettings() {
                 }).join('')
               + '</div>';
           }
-          var addSubRow = '<div class="sub-add-row ksave">'
+          var addSubRow = '<div class="sub-add-row" data-ks>'
             + '<input aria-label="תת-משימה חדשה" class="sub-add-inp set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
             + '<button class="sub-add-btn btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
             + '</div>';
           return '<div class="task-block" '
             + 'data-drag="task" data-ci="'+ci+'" data-ti="'+ti+'">'
             + '<div class="task-block-hdr">'
-            + '<span class="task-drag-icon grip">⠿</span>'
+            + '<span class="task-drag-icon grip" data-grip>⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
             + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
@@ -242,7 +242,7 @@ function renderSettings() {
             + addSubRow
             + '</div>';
         }).join('')
-      + '<div class="task-add-row set-add-row ksave">'
+      + '<div class="task-add-row set-add-row" data-ks>'
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
       + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';

@@ -89,7 +89,7 @@ function editEntry(id) {
   if(!container) return;
   var div = document.createElement('div');
   div.innerHTML =
-    '<div data-editing class="ei-row ksave">' +
+    '<div data-editing class="ei-row" data-ks>' +
     '<input aria-label="משימה" id="ei_task" placeholder="משימה" class="ei-inp">' +
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="ei-inp">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="ei-count">' +

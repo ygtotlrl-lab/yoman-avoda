@@ -352,7 +352,7 @@ var DRAG_APPLY = { cat: applyCatOrder, task: applyTaskOrder, sub: applySubOrder 
 var DRAG = { el: null, list: null, kind: null, moved: false };
 
 document.addEventListener('pointerdown', function (e) {
-  var g = e.target && e.target.closest ? e.target.closest('.grip') : null;
+  var g = e.target && e.target.closest ? e.target.closest('[data-grip]') : null;
   if (!g) return;
   var el = g.closest('[data-drag]');
   if (!el) return;
