@@ -1,7 +1,7 @@
 // app/screens/settings.js — מסך העריכה
 import { uniqHas } from '../../core/util.js';
 import { lsSet } from '../../core/storage.js';
-import { esc, toast } from '../../core/ui.js';
+import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { catCls, isLive, metaDel, recTouch, subKey, yaSetDirty } from '../domain.js';
@@ -56,15 +56,7 @@ function saveSubs() {
 
 // ── מסך ההגדרות ──
 // הסדר נקרא מהעץ אחרי הגרירה ולא מצמד מאיפה-לאן — גרירה על פני כמה שורות אינה קפיצה אחת.
-// מדד שאינו מספר אינו נכנס לסדר.
-function domOrder(list, kind, attr) {
-  var out = [];
-  for (var i = 0; i < list.children.length; i++) {
-    var x = list.children[i];
-    if (x.dataset && x.dataset.drag === kind) out.push(+x.dataset[attr]);
-  }
-  return out;
-}
+function domOrder(list, kind, attr) { return dragOrder(list, kind, attr).map(Number); }
 
 // קטגוריה מחוקה אינה ברשימה אך שומרת את מקומה במערך — סידור שמתעלם ממנה היה מזיז אותה.
 function reorderKeep(arr, order) {
@@ -75,14 +67,14 @@ function reorderKeep(arr, order) {
 }
 
 function applyCatOrder(list, kind) {
-  S.CATS = reorderKeep(S.CATS, domOrder(list, kind, 'idx'));
+  S.CATS = reorderKeep(S.CATS, domOrder(list, kind, 'data-idx'));
   saveCats();
   renderSettings();
   shell.buildCatGrid();
 }
 
 function applyTaskOrder(list, kind) {
-  var order = domOrder(list, kind, 'ti');
+  var order = domOrder(list, kind, 'data-ti');
   var ci = +list.querySelector('[data-drag="' + kind + '"]').dataset.ci;
   S.CATS[ci].tasks = reorderKeep(S.CATS[ci].tasks, order);
   recTouch(S.CATS[ci]); // סדר המשימות הוא חלק מרשומת הקטגוריה
@@ -96,11 +88,15 @@ function applySubOrder(list, kind) {
   var taskName = S.CATS[ci].tasks[ti];
   var sk = subKey(ci, taskName);
   if (!S.SUBS[sk]) { S.SUBS[sk] = S.SUBS[taskName] || []; }
-  S.SUBS[sk] = reorderKeep(S.SUBS[sk], domOrder(list, kind, 'si'));
+  S.SUBS[sk] = reorderKeep(S.SUBS[sk], domOrder(list, kind, 'data-si'));
   touchSubKey(sk);
   saveSubs();
   renderSettings();
 }
+
+dragDef('cat', applyCatOrder);
+dragDef('task', applyTaskOrder);
+dragDef('sub', applySubOrder);
 
 function editSubInline(ci, ti, si, oldVal, taskName) {
   var lbl = document.getElementById("sub-lbl-"+ci+"-"+ti+"-"+si);
@@ -305,6 +301,6 @@ function saveSettings() {
   return true;
 }
 
-export { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
-         editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
-         saveSubInline, saveTaskInline, screenSettingsHTML };
+export { addSub, addTask, editSubInline, editTaskInline, removeSub, removeTask,
+         renderSettings, saveCatName, saveSettings, saveSubInline, saveTaskInline,
+         screenSettingsHTML };
