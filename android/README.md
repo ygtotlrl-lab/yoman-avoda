@@ -16,7 +16,7 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 | **minSdk / targetSdk** | נוצרים ב-`tools/gen-app.mjs` — ⛔ ואינם נערכים ביד |
 | **WebView** | JavaScript, DOM storage (localStorage — שם יושבים ENTRIES/ARCHIVE), DB. **בלי** גישת `file://` ובלי mixed content פתוח — האתר הוא https בלבד |
 | **ניווט** | כל `http`/`https` **נשאר בתוך המעטפת**. שאר הסכימות (`tel:`, `whatsapp:`, …) נמסרות למערכת |
-| **גשר שיתוף** | מוגבל לדומיין שלנו — ר' הפרק הבא |
+| **גשר שיתוף** | מוגבל ל-origin של האפליקציה — ר' «המעטפת — ליבה משותפת ומעטפת פר-אפליקציה» |
 | **בורר קבצים** | `WebChromeClient.onShowFileChooser` מחובר ל-`<input type=file>` |
 | **אופליין** | ה-service worker של האתר. המעטפת מציגה דף שגיאה בעברית **רק** בהפעלה ראשונה בלי רשת |
 
@@ -59,7 +59,7 @@ network — כתובת האפליקציה, `android.url` שבתצורה.
 <!-- SHARED:end -->
 
 ⚠️ **המאסטר הוא `design/icon-master.svg`** — ⛔ המחולל קורא אותו וגוזר ממנו את 16 הנכסים,
-⚠️ ואין נכס שנערך ביד: ⭐ והצורה מוצהרת ב-`APP.art` שבמחולל.
+⚠️ ואין נכס שנערך ביד: ⭐ והצורה מוצהרת ב-`icon.art` שבתצורה.
 
 <!-- SHARED:start id="android-shell-split" -->
 ## המעטפת — ליבה משותפת ומעטפת פר-אפליקציה
