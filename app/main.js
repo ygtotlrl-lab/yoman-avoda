@@ -24,8 +24,8 @@ import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
          yaTableOf, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
-import { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail, arcGoMonths,
-         arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
+         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
 import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
          onGregDateChange, pickCat, pickDay, pickSub, pickTask,
@@ -35,7 +35,7 @@ import { clearAll, delEntry, editEntry, renderLog, saveEntry,
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
 import { addSub, addTask, applyCatOrder, applySubOrder, applyTaskOrder, editSubInline,
          editTaskInline, removeSub, removeTask, renderSettings, saveCatName, saveSettings,
-         screenSettingsHTML } from './screens/settings.js';
+         saveSubInline, saveTaskInline, screenSettingsHTML } from './screens/settings.js';
 
 // ── החיווט ──
 // החיווט נמסר בשומרי קריאה — ה-CFG מוגדרים בהמשך, והשומר קורא אותם בזמן הקריאה ולא בזמן המסירה.
@@ -332,7 +332,16 @@ document.addEventListener('input', function (e) {
 // blur אינו מתפשט — לכן focusout, שעולה בעץ.
 document.addEventListener('focusout', function (e) {
   var el = e.target;
-  if (el && el.dataset && el.dataset.blr === 'cat-name') saveCatName(+el.dataset.ci);
+  if (!el || !el.dataset) return;
+  var k = el.dataset.blr;
+  if (k === 'cat-name') saveCatName(+el.dataset.ci);
+  else if (k === 'sub-edit') saveSubInline(el);
+  else if (k === 'task-edit') saveTaskInline(el);
+});
+
+document.addEventListener('change', function (e) {
+  var el = e.target;
+  if (el && el.dataset && el.dataset.chg === 'arc-add-cat') arcAddCatChange(el);
 });
 
 // הגרירה על אירועי מצביע — במגע dragstart, dragover ו-drop אינם נורים כלל.

@@ -283,7 +283,7 @@ function renderArcDetail() {
     html += '<div class="arc-add">'+
       '<div class="arc-add-ttl">+ הוסף רשומה</div>'+
       '<div class="arc-add-row ksave">'+
-      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel">'+
+      '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel" data-chg="arc-add-cat">'+
       liveOnly(S.CATS).map(function(cat){ return '<option value="'+esc(cat.letter)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
       '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel">'+
@@ -296,16 +296,12 @@ function renderArcDetail() {
 
   html += '</div>';
   el.innerHTML = html;
+}
 
-  if (S.arcEditMode) {
-    var catSel = document.getElementById("arc-add-cat");
-    if (catSel) catSel.addEventListener("change", function() {
-      var letter = catSel.value;
-      var cat = S.CATS.find(function(c){ return c.letter === letter; });
-      var taskSel = document.getElementById("arc-add-task");
-      if (cat && taskSel) taskSel.innerHTML = cat.tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join("");
-    });
-  }
+function arcAddCatChange(sel) {
+  var cat = S.CATS.find(function(c){ return c.letter === sel.value; });
+  var taskSel = document.getElementById("arc-add-task");
+  if (cat && taskSel) taskSel.innerHTML = cat.tasks.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join("");
 }
 
 function arcToggleEdit() {
@@ -461,6 +457,6 @@ function arcSaveEntry(gdateKey, entryId) {
   toast(MSG_SAVED, null, 'good');
 }
 
-export { arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail, arcGoMonths,
-         arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+export { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
+         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
          renderArchive, screenArchiveHTML };
