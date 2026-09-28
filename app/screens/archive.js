@@ -1,12 +1,12 @@
 // app/screens/archive.js — מסך הארכיון
 import { MSG_SAVED, dayToday } from '../../core/util.js';
-import { idEq, newClientId, pendMark } from '../../core/sync.js';
+import { idEq, newClientId, pendMark, tombKill } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
 import { HMO, HUNKNOWN, MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC,
          PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, catLabelOf, extractYM, isLive, liveOnly, recDelete, recTouch, saveArchive,
+import { catCls, catLabelOf, extractYM, isLive, liveOnly, recTouch, saveArchive,
          saveEntries, showEl, snapClientId, yaDayName, yaGreg, yaHeb,
          yaSortEntries } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
@@ -302,11 +302,11 @@ function arcDeleteEntry(dayKey, entryId) {
   var ts = Date.now();
   S.ARCHIVE.forEach(function(snap) {
     var hit = false;
-    (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { recDelete(e, ts); hit = true; } });
+    (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); hit = true; } });
     if (hit) { recTouch(snap, ts); pendMark(PK_ARC + snap.client_id); }
   });
   saveArchive();
-  S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { recDelete(e, ts); pendMark(PK_ENTRY + e.client_id); } });
+  S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
   saveEntries();
   renderArcDetail();
   renderArcBreadcrumb();

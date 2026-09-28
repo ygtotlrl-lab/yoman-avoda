@@ -1,11 +1,11 @@
 // app/screens/log.js — מסך היומן, הדוח והשיתוף
 import { MSG_DELETE } from '../../core/util.js';
-import { idEq, pendMark, pendTag, schedulePush } from '../../core/sync.js';
+import { idEq, pendMark, pendTag, schedulePush, tombKill } from '../../core/sync.js';
 import { ask, esc } from '../../core/ui.js';
 import { MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, PK_ENTRY } from '../constants.js';
 import { S } from '../state.js';
 import { autoArchiveDay, catCls, catLabelOf, cssQ, getCurrentDateKey, isLive, liveOnly,
-         recDelete, recTouch, saveEntries, yaDayName, yaGreg, yaHeb,
+         recTouch, saveEntries, yaDayName, yaGreg, yaHeb,
          yaSortEntries } from '../domain.js';
 
 function screenLogHTML() {
@@ -56,7 +56,7 @@ function delEntry(id) {
   // tombstone ולא הסרה — מכשיר אחר רואה הסרה כ«רשומה שאינני מכיר» ומחזיר אותה לחיים.
   var deleted = S.ENTRIES.find(function(e){ return idEq(e.client_id, id) && isLive(e); });
   if (!deleted) return;
-  recDelete(deleted);
+  tombKill(deleted);
   pendMark(PK_ENTRY + deleted.client_id);
   saveEntries();
   autoArchiveDay(deleted.entry_date);
@@ -70,7 +70,7 @@ function clearAll() {
     var curKey = getCurrentDateKey();
     var ts = Date.now();
     var sample = S.ENTRIES.find(function(e){ return e.entry_date === curKey; });
-    S.ENTRIES.forEach(function(e){ if (e.entry_date === curKey && isLive(e)) { recDelete(e, ts); pendMark(PK_ENTRY + e.client_id); } });
+    S.ENTRIES.forEach(function(e){ if (e.entry_date === curKey && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
     saveEntries(); renderLog();
     // ה-tombstones עוברים גם לסנאפשוט של אותו יום — אחרת הארכיון ממשיך להציג אותן
     if (sample) autoArchiveDay(curKey);

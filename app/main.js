@@ -2,7 +2,7 @@
 import { appConfigure, dayIso, dayNoon, getDeviceId } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
          pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
-         pushDirty, pushTable, rtyBoot, runSave, tombBoot } from '../core/sync.js';
+         pushDirty, pushTable, rtyBoot, runSave, tombBoot, tombKill } from '../core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
 import { bkBoot, logAwait } from '../core/backup.js';
@@ -18,7 +18,7 @@ import { CATS_RESET_KEY, CATS_RESET_LS, MSG_ALREADY_AT, MSG_BOOT_FAIL,
 import { S, shell } from './state.js';
 import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          arcPutSnapshot, entryOrderTs, getSB, gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
-         mergeSubs, recDelete, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
+         mergeSubs, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
          yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
          yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
          yaRecId, yaTableOf, yaYeshiva } from './domain.js';
@@ -517,7 +517,7 @@ function checkDayChange() {
     Object.keys(byDay).forEach(function(d){ arcPutSnapshot(d, byDay[d], ts); });
     lsSetArray("ya_archive"+S.LS, hwDiskFilter('ya_archive'+S.LS, S.ARCHIVE), _yaRecTs);
     // tombstones ולא ENTRIES = [] — אחרת הענן מחזיר את הרשומות לחיים
-    S.ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
+    S.ENTRIES.forEach(function(e){ if (isLive(e)) tombKill(e, ts); });
     lsSetArray("ya_entries"+S.LS, S.ENTRIES, _yaRecTs);
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }

@@ -2,8 +2,7 @@
 import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso, dayNoon,
          dayToday, kvParse, uniqList, withTimeout } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, pendConfirmPush, pendHas,
-         pendMark, plStampWrite, pushTable, sbWatch, schedulePush,
-         tombAt } from '../core/sync.js';
+         pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
@@ -118,11 +117,6 @@ function recTs(r) { return _yaRecTs(r); }
 
 function recTouch(r, ts) {
   if (r && typeof r === 'object') r.updated_at = (typeof ts === 'number') ? ts : Date.now();
-  return r;
-}
-
-function recDelete(r, ts) {
-  if (r && typeof r === 'object') { r.deleted = true; r.updated_at = (typeof ts === 'number') ? ts : Date.now(); }
   return r;
 }
 
@@ -255,7 +249,7 @@ function yaRowOf(kvKey, rec) {
     entry_date: rec.entry_date || null,
     updated_at: Math.round(recTs(rec)),
     deleted: !!rec.deleted,
-    deleted_at: rec.deleted ? tombAt(recTs(rec)) : null,
+    deleted_at: rec.deleted_at == null ? null : rec.deleted_at,
     deleted_by: rec.deleted_by == null ? null : String(rec.deleted_by),
     data: data
   };
@@ -270,6 +264,7 @@ function yaRecOf(r) {
   if (r.entry_date) rec.entry_date = String(r.entry_date);
   rec.updated_at = Number(r.updated_at) || 0;
   if (r.deleted) rec.deleted = true;
+  if (r.deleted_at != null) rec.deleted_at = r.deleted_at;
   if (r.deleted_by != null) rec.deleted_by = r.deleted_by;
   return rec;
 }
@@ -306,7 +301,7 @@ async function yaRowsGet(kvKey) {
     if (!sb) return { ok: false, data: null };
     // החלון הוא דגל archived — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה.
     var rows = await _rowsPaged(function () {
-      var q = sb.from(t).select('client_id,entry_date,updated_at,deleted,deleted_by,data').eq('yeshiva', yesh);
+      var q = sb.from(t).select('client_id,entry_date,updated_at,deleted,deleted_at,deleted_by,data').eq('yeshiva', yesh);
       if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
       return q;
     }, 'client_id', null);
@@ -716,7 +711,7 @@ export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          arcPutSnapshot, autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
          mergeArchive, mergeCats, mergeEntries, mergeSubs, metaDel, metaLive, parseGregLike,
-         recDelete, recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
+         recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
          subKey, yaRecId, yaBkPrefix, yaDayName, yaDirtyRows, yaGreg, yaHeb, yaLsBases, yaMetaMap,
          yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
          yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
