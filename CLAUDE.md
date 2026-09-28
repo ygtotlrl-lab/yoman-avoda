@@ -12,12 +12,12 @@
 - ישיבה — המוסד: ראשון לציון ורמת אביב. במכשיר — סיומת למפתח (`_rishon` / `_ramataviv`); בענן — עמודת `yeshiva`. מוסד שלישי דורש אפס DDL.
 - רשומה — שורה ביומן היום; «סיום יום» מעביר את רשומות היום לארכיון.
 - סנאפשוט — יחידת הארכיון, יום אחד (`entry_date`), ובתוכו רשומות שממוזגות פר-רשומה.
-- קטגוריות (`cats`, מפתח `letter`) ותת-נושאים (`subs`, `subs_meta`) — מפתחות בטבלת ההגדרות.
+- קטגוריות (`cats`, מפתח `id`) — מפתח בטבלת ההגדרות; בכל קטגוריה משימות — פריטים במפתח `id` (שם המשימה), ובכל משימה מפתחות-המשנה שלה (`subs`).
 
 ## הכרעות מוצר
 - החלפת ישיבה בלי טעינה מחדש: `selectYeshiva(y)` מריצה את `yaResetTenantState` בכניסה חוזרת, כי עֵד הדחיפה ואות הפולינג הם זיכרון בלי סיומת; והכניסה החוזרת מדלגת על `pendBoot` בלבד.
 - פולינג כל 3 שניות, ומיזוג ברמת רשומה.
-- מנוע המיזוג: `mergeCore(local, remote, opts)` — הענן בסיס הסדר ומנצח בשוויון. נגזרות: `mergeEntries` (`client_id`) · `mergeArchive` (`client_id`, והרשומות שבתוכו פר-רשומה) · `mergeCats` (`letter`) · `mergeSubs` (פר-מפתח לפי `SUBS_META`).
+- מנוע המיזוג: `mergeCore(local, remote, opts)` — הענן בסיס הסדר ומנצח בשוויון, והבסיס בזוג מוכרע ב-`mergeWinner`. נגזרות: `mergeEntries` (`client_id`) · `mergeArchive` (`client_id`, והרשומות שבתוכו פר-רשומה) · `mergeCats` (`id`, והמשימות שבתוכה פר-פריט).
 - רשומה בלי `updated_at` נחשבת ts=0, ואינה מוחתמת ב-`Date.now()` בטעינה — מכשיר ישן היה מנצח נתונים חדשים.
 - «סיום יום»: העותקים לארכיון וה-tombstones של החיים באותה חותמת, והסנאפשוט מנצח בשוויון — ארכוב אינו מחיקה.
 - גריעת tombstones — רק `deleted:true` עם `updated_at` מספרי, ועל התוצאה הממוזגת.
@@ -25,7 +25,7 @@
 - מזהה הסנאפשוט נגזר מיומו — `snapClientId` (`<ישיבה>:<entry_date>`), ושני מכשירים שארכבו אותו יום מגיעים לאותה שורה; רשומה חיה — `newClientId()`.
 - פירוק הסנאפשוט לרשומות הוא מנוע מיזוג אחר — החלטת מנהל, לא תופעת לוואי.
 - בונה סנאפשוט אחד — `arcPutSnapshot` — ל-`autoArchiveDay` ול-`checkDayChange`.
-- ההגדרות — טבלה לכל ישיבה: `ya_settings_rishon` / `ya_settings_ramataviv`, והן הבית של `cats` · `subs` · `subs_meta` ושל `last_changed`.
+- ההגדרות — טבלה לכל ישיבה: `ya_settings_rishon` / `ya_settings_ramataviv`, והן הבית של `cats` ושל `last_changed`.
 - עֵד הפינוי הוא `_yaPushedAt[key]` (אחרי `pushTable` שהחזירה `ok`) — ולא `_lastKnownTimestamp`, שמתעדכן גם במשיכה.
 - `LS_CFG.oldRecords` נבנית ב-`lsRebuildPolicy()` מ-`selectYeshiva`, וחלה על הישיבה הפעילה בלבד; החלון שנתי.
 - `entry_date` נשמר ב-ISO (`YYYY-MM-DD`), וזו הצורה היחידה; `gregDateStr` — לתצוגה בלבד, דרך `yaGreg`.

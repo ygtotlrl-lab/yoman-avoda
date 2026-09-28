@@ -1,8 +1,8 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
 import { appConfigure, dayIso, dayNoon, getDeviceId } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
-         pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
-         pushDirty, pushTable, rtyBoot, runSave, tombBoot } from '../core/sync.js';
+         pendBoot, pendCount, pendForget, pendHas, pendMark, pendReload, plBoot, plForget,
+         pushDirty, pushTable, rtyBoot, runSave, tombBoot, tombKill } from '../core/sync.js';
 import { hwBoot, hwDiskFilter, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet,
          lsRemove, lsSet, lsSetArray } from '../core/storage.js';
 import { bkBoot, logAwait } from '../core/backup.js';
@@ -13,14 +13,14 @@ import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_KEY, CATS_RESET_LS, MSG_ALREADY_AT, MSG_BOOT_FAIL,
          MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL, MSG_SWITCH_YESHIVA, MSG_SYNCED,
          MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_YESHIVA_UNKNOWN,
-         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SET_PUSH, SUBS_RESET_KEY, SUBS_RESET_LS,
+         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SET_PUSH,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
 import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
          arcPutSnapshot, entryOrderTs, getSB, gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
-         mergeSubs, recDelete, recTouch, sbGetResult, showEl, yaBkPrefix, yaDirtyRows,
-         yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
-         yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSuffix, yaSyncLog, yaSyncPushNow,
+         recTouch, sbGetResult, showEl, yaBkPrefix,
+         yaLsBases, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
+         yaSendSettings, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow,
          yaRecId, yaTableOf, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
@@ -79,9 +79,7 @@ var LS_CFG = {
   oldRecords: [],
   // מפתח שגדל ואינו בפינוי ממלא את האחסון המשותף וחונק את כל האפליקציות שעל ה-origin.
   fixedSize: [
-    { t: 'ya_cats',      why: 'קטגוריות — אות לקטגוריה, ⛔ ואינן גדלות עם הזמן' },
-    { t: 'ya_subs',      why: 'תתי-קטגוריות — רשימה קבועה שנערכת בהגדרות' },
-    { t: 'ya_subs_meta', why: 'חותמת לכל תת-קטגוריה — כמספרן, ⛔ ולא כמספר הימים' }
+    { t: 'ya_cats',      why: 'קטגוריות ומשימותיהן — רשימה שנערכת בהגדרות, ⛔ ואינה גדלה עם הזמן' }
   ],
 
   // אין כאן תור אופליין — העֵד לסנכרון הוא _yaPushedAt פר-מפתח.
@@ -107,9 +105,7 @@ var BK_CFG = {
                  eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' }];
     // name הוא המפתח בטבלת ההגדרות, בלי תחילית; key הוא מפתח הגיבוי ב-sh_backup המשותפת לפרויקט — ושם בלי תחילית שם מתנגש.
     return out.concat([
-      { kind: 'kv', table: S.KV_TABLE, name: 'cats',      key: 'ya_cats' },
-      { kind: 'kv', table: S.KV_TABLE, name: 'subs',      key: 'ya_subs' },
-      { kind: 'kv', table: S.KV_TABLE, name: 'subs_meta', key: 'ya_subs_meta' }
+      { kind: 'kv', table: S.KV_TABLE, name: 'cats',      key: 'ya_cats' }
     ]);
   }
 };
@@ -148,12 +144,12 @@ var PUSH_CFG = {
   tables: PUSH_TABLES,
   chunk:  500,
   delay:  400,
-  dirty:  function (t, ctx) {
+  rows:   function (t, ctx) {
     if (!S.KV_TABLE || !S.YESHIVA) return null;
-    if (t === SET_PUSH) { S._yaPushEp = ctxEpoch(); S._yaPushTbl = S.KV_TABLE; return yaSetDirtyRows(); }
+    if (t === SET_PUSH) { S._yaPushEp = ctxEpoch(); S._yaPushTbl = S.KV_TABLE; return yaSetRows(); }
     if (!yaTableOf(t)) return null;
     S._yaPushEp = ctxEpoch();
-    return yaDirtyRows(t, ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES));
+    return ctx || (t === 'ya_archive' ? S.ARCHIVE : S.ENTRIES);
   },
   key:    function (t, row) { return t === SET_PUSH ? PK_SET + row.key : yaPendPrefix(t) + row.client_id; },
   send:   function (t, rows) {
@@ -192,7 +188,7 @@ var ERA_CFG = {
   // המוחק מנקה את כל סיומות המוסד — העידן ברמת האפליקציה, ומוסד שלא היה פתוח היה נשאר בצורה הישנה.
   // ואופק הפינוי מתנקה איתם — אחרת הוא מסנן בכתיבה את מה שהמשיכה מחזירה.
   wipe:   function () {
-    var bases = ['ya_entries', 'ya_archive', 'ya_cats', 'ya_subs', 'ya_subs_meta'];
+    var bases = ['ya_entries', 'ya_archive', 'ya_cats'];
     try {
       for (var i = localStorage.length - 1; i >= 0; i--) {
         var k = localStorage.key(i);
@@ -202,7 +198,7 @@ var ERA_CFG = {
         }
       }
     } catch (e) { console.error('[era] מחיקת העותק המקומי נכשלה', e); }
-    S.ENTRIES = []; S.ARCHIVE = []; S.CATS = []; S.SUBS = {}; S.SUBS_META = {};
+    S.ENTRIES = []; S.ARCHIVE = []; S.CATS = [];
     lsClearHorizons();
   },
   // הדחיפה היא ראיה טרייה ולא זיכרון — מכשיר נקי מקבל ok עם still ריק.
@@ -251,7 +247,7 @@ function lsRebuildPolicy() {
 var DOM_ACTIONS = {
   'sw-apply':            function (el) { swApply(el); },
   'sw-dismiss':          function () { swHideUpdate(); },
-  'pick-cat':            function (el) { pickCat(el.dataset.letter); },
+  'pick-cat':            function (el) { pickCat(el.dataset.cat); },
   'pick-task':           function (el) { pickTask(el.dataset.task, el); },
   'pick-sub':            function (el) { pickSub(el.dataset.sub, el); },
   // התראות התשתית נבנות ב-JS — לכן הן מנותבות במפה ולא במאזין ישיר על הכפתור.
@@ -379,42 +375,10 @@ async function syncFromCloud() {
         lsSet('ya_cats'+S.LS, JSON.stringify(S.CATS));
         console.log('[sync] ניקוי קטגוריות ' + cloudCatsReset + ' — העותק המקומי נזרק ונמשך מלא');
       } else if (cloudCats.length) {
+        // כתיבה שמקורה במיזוג אינה מסומנת — עריכה מקומית שטרם עלתה כבר נושאת ⏳ מהפונקציה שכתבה אותה.
         S.CATS = mergeCats(S.CATS, cloudCats);
         lsSet('ya_cats'+S.LS, JSON.stringify(S.CATS));
-        // רק מה שהמיזוג שינה עולה — ענן שכבר מחזיק את התוצאה אינו מסומן.
-        if (JSON.stringify(S.CATS) !== JSON.stringify(cloudCats)) yaSetDirty(['cats']);
       }
-    }
-
-    var cloudSubs = await pull('subs', 'תתי-משימות');
-    var cloudSubsMetaR = await pullRes('subs_meta', 'חותמות תתי-משימות');
-    var cloudSubsReset = String(await pull(SUBS_RESET_KEY, 'חותמת ניקוי תתי-משימות') || '');
-    // ההקשר התחלף באמצע — הנתונים בזיכרון של המוסד הקודם, וכתיבה עכשיו הייתה כותבת אותם תחת החדש.
-    if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
-    // המיזוג רץ רק כשמפת החותמות הגיעה — מפה שמשיכתה נכשלה אינה «הענן אינו מכיר», והדחיפה הייתה מקבעת את ההסקה.
-    if (cloudSubs && yaMetaMap(cloudSubsMetaR)) {
-      // חותמת ניקוי חדשה זורקת את המפה המקומית ואינה דוחפת — הדחיפה הייתה מחזירה לענן את מה שנוקה.
-      if (cloudSubsReset > S._subsResetSeen) {
-        S.SUBS = (cloudSubs && typeof cloudSubs === 'object') ? cloudSubs : {};
-        S.SUBS_META = yaMetaMap(cloudSubsMetaR) || {};
-        S._subsResetSeen = cloudSubsReset;
-        lsSet(SUBS_RESET_LS+S.LS, JSON.stringify(cloudSubsReset));
-        lsSet('ya_subs'+S.LS, JSON.stringify(S.SUBS));
-        lsSet('ya_subs_meta'+S.LS, JSON.stringify(S.SUBS_META));
-        console.log('[sync] ניקוי תתי-משימות ' + cloudSubsReset + ' — העותק המקומי נזרק ונמשך מלא');
-      } else {
-        var ms = mergeSubs(S.SUBS, S.SUBS_META, cloudSubs, cloudSubsMetaR);
-        S.SUBS = ms.subs; S.SUBS_META = ms.meta;
-        lsSet('ya_subs'+S.LS, JSON.stringify(S.SUBS));
-        lsSet('ya_subs_meta'+S.LS, JSON.stringify(S.SUBS_META));
-        if (JSON.stringify(S.SUBS) !== JSON.stringify(cloudSubs) ||
-            JSON.stringify(S.SUBS_META) !== JSON.stringify(yaMetaMap(cloudSubsMetaR))) {
-          yaSetDirty(['subs', 'subs_meta']);
-        }
-      }
-    } else if (cloudSubs) {
-      // המשיכה כבר נרשמה כשנכשלה — השורה הזו אומרת למה המיזוג לא רץ.
-      console.warn('[sync] מפת חותמות תתי-המשימות לא הגיעה — המיזוג נדחה, ואין ראיה שהענן חדש יותר');
     }
 
     // מיזוג ברמת רשומה ולא איחוד לפי id — אחרת עדכון במכשיר אחד אינו גובר על הגרסה הישנה של השני.
@@ -454,7 +418,7 @@ async function syncFromCloud() {
 
     // CATS הוחלף, וההפניה הישנה של selCat אינה במערך החדש
     if (S.selCat) {
-      S.selCat = S.CATS.find(function(c){ return c.letter === S.selCat.letter && isLive(c); }) || null;
+      S.selCat = S.CATS.find(function(c){ return c.id === S.selCat.id && isLive(c); }) || null;
     }
     // הסימון לפני הרינדור — שורת המצב נבנית בתוך renderSettings.
     if (failed.length === 0) _yaMarkSynced();
@@ -517,7 +481,7 @@ function checkDayChange() {
     Object.keys(byDay).forEach(function(d){ arcPutSnapshot(d, byDay[d], ts); });
     lsSetArray("ya_archive"+S.LS, hwDiskFilter('ya_archive'+S.LS, S.ARCHIVE), _yaRecTs);
     // tombstones ולא ENTRIES = [] — אחרת הענן מחזיר את הרשומות לחיים
-    S.ENTRIES.forEach(function(e){ if (isLive(e)) recDelete(e, ts); });
+    S.ENTRIES.forEach(function(e){ if (isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
     lsSetArray("ya_entries"+S.LS, S.ENTRIES, _yaRecTs);
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }
@@ -559,11 +523,7 @@ function startApp() {
 function loadLocalData() {
   try {
     S.CATS = lsRead("ya_cats"+S.LS, null, 'array') || [];
-    S.SUBS = lsRead("ya_subs"+S.LS, null, 'object') || {};
-    // מפתח בלי חותמת הוא 0 — אינו נופל, אך מפסיד לכל עדכון מתוארך.
-    S.SUBS_META = lsRead("ya_subs_meta"+S.LS, null, 'object') || {};
     S._catsResetSeen = String(lsRead(CATS_RESET_LS+S.LS, '') || '');
-    S._subsResetSeen = String(lsRead(SUBS_RESET_LS+S.LS, '') || '');
     S.ENTRIES = lsRead("ya_entries"+S.LS, null, 'array') || [];
     // רשומות זבל (null או לא-אובייקט) אינן מפילות את הרינדור
     S.ENTRIES = S.ENTRIES.filter(function(e){ return e && typeof e === 'object'; });
@@ -573,10 +533,7 @@ function loadLocalData() {
   } catch(e) {
     console.error('[load] טעינת נתונים מקומיים נכשלה — עולים ריקים ומחכים לענן', e);
     if (!Array.isArray(S.CATS)) S.CATS = [];
-    if (!S.SUBS || typeof S.SUBS !== 'object') S.SUBS = {};
-    if (!S.SUBS_META || typeof S.SUBS_META !== 'object') S.SUBS_META = {};
     if (typeof S._catsResetSeen !== 'string') S._catsResetSeen = '';
-    if (typeof S._subsResetSeen !== 'string') S._subsResetSeen = '';
     if (!Array.isArray(S.ENTRIES)) S.ENTRIES = [];
     if (!Array.isArray(S.ARCHIVE)) S.ARCHIVE = [];
   }
@@ -598,7 +555,6 @@ function yaResetTenantState() {
   S._lastKnownTimestamp = 0;
   plForget();
   pendForget();
-  S._yaRemote = { ya_entries: null, ya_archive: null };
   hwForget();
   S._yaLastSyncAt = 0;
   S._yaNetWarned = false;
@@ -606,10 +562,7 @@ function yaResetTenantState() {
   S.ENTRIES = [];
   S.ARCHIVE = [];
   S.CATS = [];
-  S.SUBS = {};
-  S.SUBS_META = {};
   S._catsResetSeen = '';
-  S._subsResetSeen = '';
   S.arcSelYear = null;
   S.arcSelMonth = null;
   S.arcSelDayKey = null;

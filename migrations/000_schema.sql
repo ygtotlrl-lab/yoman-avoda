@@ -12,6 +12,7 @@ create table if not exists public.ya_entries (
   deleted_at timestamp with time zone,
   deleted_by text,
   entry_date date,
+  created_at timestamp with time zone,
   constraint ya_entries_pkey PRIMARY KEY (client_id)
 );
 

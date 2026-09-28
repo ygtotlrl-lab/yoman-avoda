@@ -5,7 +5,7 @@ import { appConfigure } from '../core/util.js';
 // כאן הנתונים שהליבה קוראת, והחיווט — ב-main.js; הקובץ הזה נטען ראשון, לפני כל קריאה לליבה.
 // העידן עולה בשינוי צורת רשומה או מפתחה, ושינוי שם טבלה הוא שינוי כזה — המראה ממופתחת בשם.
 // עותק בעידן ישן אינו נדחף — הממתין בו נרשם ביומן, והוא נזרק ונמשך מלא.
-var DATA_ERA = 4;
+var DATA_ERA = 5;
 
 appConfigure({ DATA_ERA: DATA_ERA });
 
@@ -95,7 +95,7 @@ var PUSH_TABLES = ['ya_entries', 'ya_archive', SET_PUSH];
 
 // ── שכבת השורות בענן ──
 // היומן והארכיון בטבלה אחת ומופרדים בעמודת archived; הסנאפשוט הוא יחידת הארכיון — שורה ליום.
-// ya_archive הוא מפתח localStorage ולא טבלה; cats, subs ו-subs_meta נשארים ב-kv, ביתם היחיד בענן.
+// ya_archive הוא מפתח localStorage ולא טבלה; cats נשאר ב-kv, ביתו היחיד בענן.
 var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_entries' };
 
 // ── קבועים משותפים ──
@@ -103,15 +103,11 @@ var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_entries' };
 var PK_ENTRY = 'entry:', PK_ARC = 'arc:', PK_SET = 'setting:';
 
 // חותמת ניקוי שנקבעת בענן ביד אחרי ניקוי: מכשיר שראה חותמת חדשה משלו זורק את העותק המקומי ומושך מלא, פעם אחת.
-// חותמת ISO ולא מונה — השוואת מחרוזות ISO היא כרונולוגית; subs_meta חולק את חותמת subs כדי שלא ייזרקו בנפרד.
+// חותמת ISO ולא מונה — השוואת מחרוזות ISO היא כרונולוגית.
 // _KEY הוא המפתח בענן בלי תחילית ו-_LS המפתח במכשיר עם תחילית — האחסון המקומי משותף לכל ה-origin.
 var CATS_RESET_KEY = 'cats_reset';
 
 var CATS_RESET_LS = 'ya_cats_reset';
-
-var SUBS_RESET_KEY = 'subs_reset';
-
-var SUBS_RESET_LS = 'ya_subs_reset';
 
 // אין בו מרחשון — monthKeyOf ממפה אותו לחשון, אחרת לאותה שנה שני כפתורי חשוון.
 // אדר ואדר א׳/ב׳ חיים זה לצד זה — בכל שנה מופיע רק אחד מהם.
@@ -130,5 +126,5 @@ export { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREAD
          MSG_PICK_CATEGORY, MSG_POPUP_BLOCKED, MSG_ROW_GONE, MSG_SAVED_CLOUD,
          MSG_SUBTASK_EXISTS, MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL,
          MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_TASK_EXISTS, MSG_YESHIVA_UNKNOWN,
-         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SB_KEY, SB_URL, SET_PUSH, SUBS_RESET_KEY,
-         SUBS_RESET_LS, YA_ROW_TABLES, YESHIVOT };
+         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SB_KEY, SB_URL, SET_PUSH,
+         YA_ROW_TABLES, YESHIVOT };
