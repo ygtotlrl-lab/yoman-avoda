@@ -1,10 +1,9 @@
 // app/domain.report.js — הדוח היומי: בנייה, רינדור, הדפסה ושיתוף
 import { esc, toast } from '../core/ui.js';
-import { hebrewDate } from '../core/hebrew.js';
 import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS,
          MSG_PDF_PREP, MSG_POPUP_BLOCKED } from './constants.js';
 import { S } from './state.js';
-import { catCls, catNameOf, getCurrentDateKey, liveOnly, showEl, yaSortEntries,
+import { catCls, catLabelOf, getCurrentDateKey, liveOnly, showEl, yaDayName, yaGreg, yaHeb, yaSortEntries,
          yaYeshiva } from './domain.js';
 
 // שם המוסד נקרא מההגדרות לכל הפלטים — שם קשיח מוציא דוחות של מוסד אחד בשם השני.
@@ -18,20 +17,18 @@ function instName() {
 
 // ── פלטים — PDF ותמונת הדוח ──
 // הייצוא מצלם את הדוח ואינו בונה HTML חדש — מסמך שני מאבד את צבעי הקטגוריות שהמסך מראה.
-function exportPDF() {
-  var live = liveOnly(S.ENTRIES);
+// היום והרשומות נמסרים — הכותרת נגזרת מהיום, ואין מצב גלובלי שמוחלף בזמן הרינדור.
+function exportPDF(date, entries) {
+  var live = liveOnly(entries);
   if (!live.length) { toast(MSG_NO_ROWS); return; }
-  // הכותרת נגזרת לפני הרינדור הא-סינכרוני — מסלול הארכיון משחזר את ENTRIES ואת שדה התאריך לפני שהרינדור מסתיים.
-  var today = document.getElementById("hebDateInput").value || hebrewDate(new Date());
-  var todayGreg = getCurrentDateKey();
-  var fileTitle = "יומן עבודה " + today + " " + todayGreg;
+  var fileTitle = "יומן עבודה " + yaHeb(date) + " " + yaGreg(date);
   toast(MSG_PDF_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
       _hideReportDiv(div);
       _printCanvas(canvas, fileTitle);
     }).catch(function (e) { _reportError(div, e); });
-  }, live);
+  }, live, date);
 }
 
 // מעטפת הדפסה לצילום בלבד — אין בה טבלה, כותרת או צבע, רק הפיקסלים שנמדדו.
@@ -87,22 +84,19 @@ function _renderReport(div){
 // entries אופציונלי — הייצוא מוסר את רשומות הארכיון, וסינון קשיח ליום הנוכחי היה מוציא דוח ריק.
 // הדוח נצרב לתמונה ונושא את סגנונו מוטבע; שורשו .rp מחיל את הערכה הבהירה גם במצב כהה,
 // וכל צבע הוא var(--…) — html2canvas קורא את הסגנון המחושב, והמשתנה נפתר לפני הצריבה.
-function _buildReportDiv(cb, entries){
+function _buildReportDiv(cb, entries, date){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
   // שורש הפלט שנצרב לתמונה נושא את סגנונו מוטבע, וכך כל ילדיו — מחלקה כאן הייתה מפצלת את הדוח בין הגיליון לבונה.
   div.className='rp';div.style.cssText='position:fixed;top:0;left:0;background:var(--card);padding:20px;width:900px;direction:rtl;font-family:Heebo,Arial,sans-serif;z-index:9999;';
-  var today=document.getElementById("hebDateInput")?document.getElementById("hebDateInput").value:hebrewDate(new Date());
-  var todayGreg=getCurrentDateKey();
-  var dayLabel=document.getElementById("dayNameEl")?document.getElementById("dayNameEl").textContent:'';
+  var today=yaHeb(date);
+  var todayGreg=yaGreg(date);
+  var dayLabel=yaDayName(date);
   var instTitle=instName();
   var logoEl=document.getElementById('appLogo')||document.querySelector('.hdr-logo');
   var logoUrl=logoEl?logoEl.src:'';
-  var curKey = getCurrentDateKey();
-  var src = Array.isArray(entries) ? entries
-          : liveOnly(S.ENTRIES).filter(function(e){ return e.gdate === curKey; });
-  var sortedPDF = yaSortEntries(src);
-  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catNameOf(e),list:[]};byCAT[e.cat].list.push(e);});
+  var sortedPDF = yaSortEntries(entries);
+  var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catLabelOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catLetters=S.CATS.map(function(c){return c.letter;}).filter(function(l){return !!byCAT[l];});
   var rowsHtml='';
   var globalTaskIdx = 0;
@@ -179,7 +173,7 @@ function _shareDownloadFallback(canvas){
 // html2canvas לקובץ, ומשם לגיליון השיתוף של המערכת; בדסקטופ — הורדת התמונה.
 function shareReport(){
   var curKey = getCurrentDateKey();
-  var todayEntries = liveOnly(S.ENTRIES).filter(function(e){ return e.gdate === curKey; });
+  var todayEntries = liveOnly(S.ENTRIES).filter(function(e){ return e.entry_date === curKey; });
   if(!todayEntries.length){ toast(MSG_NOTHING_TO_SHARE); return; }
   toast(MSG_IMG_PREP);
   _buildReportDiv(function(div){
@@ -197,7 +191,7 @@ function shareReport(){
         _shareDownloadFallback(canvas);
       },'image/jpeg',0.95);
     }).catch(function(e){ _reportError(div, e); });
-  });
+  }, todayEntries, curKey);
 }
 
 export { exportPDF, shareReport };

@@ -9,7 +9,6 @@ import { S, shell } from '../state.js';
 import { autoArchiveDay, catCls, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
          saveEntries, subKey } from '../domain.js';
 
-// תאריך עברי נשאר טקסט חופשי — אין לו פקד תאריך בדפדפן.
 function screenEntryHTML() {
   return `
 <div class="panel" id="panel-entry">
@@ -26,10 +25,8 @@ function screenEntryHTML() {
         <button class="day-chip" data-act="pick-day" data-day="ערב שבת">ערב שבת</button>
         <button class="day-chip" data-act="pick-day" data-day="מוצאי שבת">מוצ"ש</button>
       </div>
-      <!-- ⛔ תאריך עברי נשאר טקסט חופשי — אין בורר תאריך עברי
-           מקורי בדפדפן, ואין לו inputmode או pattern שמתארים אותו;
-           ⚠️ הערך נגזר ממילא מ-gregDateInput דרך hebrewDate(). -->
-      <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" autocomplete="off" placeholder="תאריך עברי..." />
+      <!-- התאריך העברי של היום שנבחר — נגזר מהתאריך הלועזי ואינו נערך -->
+      <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" readonly tabindex="-1" placeholder="תאריך עברי..." />
       <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy,
            yyyy-mm-dd או הפורמט השמור, ומקלדת המספרים של iOS אינה מציעה
            «/» ולא «-»; ⚠️ ה-pattern הוא רמז הצורה, וההכרעה ב-parseGregLike,
@@ -175,7 +172,7 @@ function buildSubBtns() {
   var el = document.getElementById("subBtns");
   el.innerHTML = "";
   var ci = S.selCat ? S.CATS.indexOf(S.selCat) : -1;
-  var subs = (S.selTask && ci >= 0) ? (S.SUBS[subKey(ci, S.selTask)] || S.SUBS[S.selTask] || []) : [];
+  var subs = (S.selTask && ci >= 0) ? (S.SUBS[subKey(ci, S.selTask)] || []) : [];
   if (!subs.length) {
     el.innerHTML = '<span class="hint">' + (S.selTask ? "אין תת-משימות" : "בחר משימה...") + '</span>';
     return;
@@ -208,24 +205,23 @@ function addEntry() {
   var sub  = document.getElementById("subInput").value.trim() || S.selSub || "";
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
-  var hdate = document.getElementById("hebDateInput").value.trim();
   if (!S.selCat) { toast(MSG_PICK_CATEGORY, null, 'bad'); return; }
   if (!task)   { toast(MSG_NEED_TASK, null, 'bad'); return; }
   var now = new Date();
   var entry = {
     // newClientId ולא השעון — שני מכשירים באותה מילישנייה היו מקבלים אותו מזהה.
-    id: newClientId(),
-    // createdAt נפרד מהמזהה — הסדר נגזר ממנו, ו-uuid אינו ניתן להשוואה מספרית.
-    createdAt: now.getTime(),
-    day: S.selDay, hdate: hdate, gdate: getCurrentDateKey(),
+    client_id: newClientId(),
+    // created_at נפרד מהמזהה — הסדר נגזר ממנו, ו-uuid אינו ניתן להשוואה מספרית.
+    created_at: now.getTime(),
+    entry_date: getCurrentDateKey(),
     cat: S.selCat.letter,
     task: task, sub: sub, notes: notes, count: count,
-    updatedAt: now.getTime() // בלעדיה הרשומה נחשבת ותיקה במיזוג
+    updated_at: now.getTime() // בלעדיה הרשומה נחשבת ותיקה במיזוג
   };
   S.ENTRIES.unshift(entry);
-  pendMark(PK_ENTRY + entry.id);
+  pendMark(PK_ENTRY + entry.client_id);
   saveEntries();
-  autoArchiveDay(entry.day, entry.hdate, entry.gdate);
+  autoArchiveDay(entry.entry_date);
   clearForm();
   // אין טוסט כאן — הדחיפה שאחרי מודיעה את התוצאה.
   schedulePush();

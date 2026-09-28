@@ -5,14 +5,13 @@
 create table if not exists public.ya_entries (
   client_id text not null,
   yeshiva text not null,
-  rec_key text not null,
   updated_at bigint not null,
   deleted boolean not null default false,
   data jsonb not null,
   archived boolean not null default false,
-  gdate text,
   deleted_at timestamp with time zone,
   deleted_by text,
+  entry_date date,
   constraint ya_entries_pkey PRIMARY KEY (client_id)
 );
 
@@ -40,9 +39,8 @@ create table if not exists public.ya_settings_rishon (
   constraint ya_settings_rishon_value_json CHECK (((value IS NULL) OR ((value)::jsonb IS NOT NULL)))
 );
 
-create index if not exists ya_entries_yeshiva_archived_key ON public.ya_entries USING btree (yeshiva, archived, rec_key);
+create index if not exists ya_entries_yeshiva_archived_client_idx ON public.ya_entries USING btree (yeshiva, archived, client_id);
 create index if not exists ya_entries_yeshiva_archived_updated_idx ON public.ya_entries USING btree (yeshiva, archived, updated_at DESC);
-create UNIQUE index if not exists ya_entries_yeshiva_rec_key ON public.ya_entries USING btree (yeshiva, rec_key);
 create index if not exists ya_entries_yeshiva_updated_idx ON public.ya_entries USING btree (yeshiva, updated_at DESC);
 
 -- revoke לפני grant — GRANT מוסיף ואינו מחליף, וטבלה חדשה ב-Supabase נולדת עם DELETE ו-TRUNCATE ל-anon.

@@ -1,6 +1,6 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayNoon,
-         kvParse, uniqList, withTimeout } from '../core/util.js';
+import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso, dayNoon,
+         dayToday, kvParse, uniqList, withTimeout } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush,
          tombAt } from '../core/sync.js';
@@ -8,7 +8,7 @@ import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
-import { CATS_RESET_LS, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
+import { CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
          MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, SET_PUSH,
          SUBS_RESET_LS, YA_ROW_TABLES, YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
@@ -33,17 +33,7 @@ function _yaMarkPushed(kvKey) { S._yaPushedAt[kvKey] = Date.now(); }
 function _yaPushedThrough(kvKey) { return S._yaPushedAt[kvKey] || 0; }
 
 function _yaRecTs(r) {
-  if (!r || typeof r !== 'object') return 0;
-  if (r.updatedAt) return Number(r.updatedAt) || 0;
-  return _yaGdateTs(r.gdate);
-}
-
-// gdate בצורת gregDateStr («25 נובמבר 2025») ולא ISO, ומעוגן בצהריים מקומיים — חצות ועוד כפולות של 24 שעות נופל ליום הקודם.
-function _yaGdateTs(g) {
-  var p = gdateParse(g);
-  if (!p) return 0;
-  var d = dayNoon(p.y, p.m - 1, p.d);
-  var t = d.getTime();
+  var t = r && typeof r === 'object' ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
 }
 
@@ -63,6 +53,9 @@ function _yaVerify(kvKey) {
 // שלוש שכבות שאין לערבב: KV_TABLE בענן, סיומת LS בדגל המקומי, וקידומת <מוסד>_ במפתח הגיבוי — אחרת שני המוסדות כותבים ל-sh_backup תחת אותו מפתח.
 // sources ריק לפני בחירת מוסד — KV_TABLE הוא null עד selectYeshiva.
 function yaBkPrefix(y) { return (y || 'unknown') + '_'; }
+
+// עמודות ya_entries — שדה ברשומה שיש לו עמודה נקרא בשמה, ו-data נושא רק את השאר.
+var YA_ROW_COLS = ['client_id', 'yeshiva', 'archived', 'entry_date', 'updated_at', 'deleted', 'deleted_at', 'deleted_by'];
 
 // ── קריאה וכתיבה של kv ──
 // KV_TABLE מפריד בין המוסדות בענן והסיומת מפרידה במכשיר — סיומת שנשכחה כותבת נתוני מוסד אחד למפתח של השני.
@@ -119,19 +112,17 @@ async function sbGet(key) {
 }
 
 // ── מנוע המיזוג ברמת רשומה ──
-// היעדר רשומה אצל צד אחד אינו מחיקה — מחיקה היא deleted:true עם updatedAt.
-// רשומה בלי updatedAt מקבלת 0 ומפסידה לכל רשומה מתוארכת, אך אינה נופלת מהמיזוג.
-function recTs(r) {
-  return (r && typeof r === 'object' && typeof r.updatedAt === 'number') ? r.updatedAt : 0;
-}
+// היעדר רשומה אצל צד אחד אינו מחיקה — מחיקה היא deleted:true עם updated_at.
+// רשומה בלי updated_at מקבלת 0 ומפסידה לכל רשומה מתוארכת, אך אינה נופלת מהמיזוג.
+function recTs(r) { return _yaRecTs(r); }
 
 function recTouch(r, ts) {
-  if (r && typeof r === 'object') r.updatedAt = (typeof ts === 'number') ? ts : Date.now();
+  if (r && typeof r === 'object') r.updated_at = (typeof ts === 'number') ? ts : Date.now();
   return r;
 }
 
 function recDelete(r, ts) {
-  if (r && typeof r === 'object') { r.deleted = true; r.updatedAt = (typeof ts === 'number') ? ts : Date.now(); }
+  if (r && typeof r === 'object') { r.deleted = true; r.updated_at = (typeof ts === 'number') ? ts : Date.now(); }
   return r;
 }
 
@@ -139,58 +130,47 @@ function isLive(r) { return !!r && !r.deleted; }
 
 function liveOnly(arr) { return (Array.isArray(arr) ? arr : []).filter(isLive); }
 
-// isPending נדרש — בענן החותמת היא של המכשיר שדחף, ובלעדיו עריכה מקומית שטרם עלתה נמחקת בשקט.
-// dedupe: true נדרש — שתי קריאות autoArchiveDay על אותו יום מייצרות שני סנאפשוטים לאותו gdate.
-// remoteDupe: 'ts' — בכפילות בתוך המערך המרוחק מנצחת החותמת הגבוהה, ובשוויון המאוחרת.
-function mergeRecords(local, remote, getKey, mergePair, isPending) {
-  return mergeCore(local, remote, {
-    getKey: getKey, ts: recTs, mergePair: mergePair, isPending: isPending,
-    keepUnversionedLocal: true, dedupe: true, remoteDupe: 'ts'
-  });
-}
-
 // ── סדר רשומות היומן ──
-// מפתח הסדר הוא createdAt ולא id — id הוא uuid ואינו ניתן להשוואה מספרית; updatedAt הוא הנפילה-חזרה.
+// מפתח הסדר הוא created_at ולא client_id — המזהה הוא uuid ואינו ניתן להשוואה מספרית; updated_at הוא הנפילה-חזרה.
 function entryOrderTs(e) {
   if (!e) return 0;
-  var c = Number(e.createdAt);
+  var c = Number(e.created_at);
   if (isFinite(c) && c > 0) return c;
-  var u = Number(e.updatedAt);
-  return (isFinite(u) && u > 0) ? u : 0;
+  return _yaRecTs(e);
 }
-
-function entryKey(e) { return (e && e.id != null) ? e.id : null; }
 
 // אותם מפתחות משמשים את yaDirtyRows ואת HW_CFG.specs[].isPending — שלוש הנקודות חייבות לקרוא אותו מפתח.
 function pendEntry(k) { return pendHas(PK_ENTRY + k); }
 
 function pendArc(k) { return pendHas(PK_ARC + k); }
 
-function mergeEntries(local, remote) { return mergeRecords(local, remote, entryKey, null, pendEntry); }
+function yaRecId(r) { return r ? r.client_id : null; }
 
-// סנאפשוט מזוהה ב-gdate בלבד — שני מכשירים שארכבו אותו יום מייצרים id שונה.
-function archiveKey(s) {
-  return (s && s.gdate) ? 'g:' + s.gdate : null;
+function mergeEntries(local, remote) { return mergeCore(local, remote, { isPending: pendEntry }); }
+
+// סנאפשוט מזוהה ביומו — שני מכשירים שארכבו אותו יום מגיעים לאותה שורה.
+function snapClientId(date) { return S.YESHIVA + ':' + date; }
+
+// סנאפשוט נושא רק רשומות של יומו — רשומה או מצבה של יום אחר אינה נגררת אליו.
+function snapOwnEntries(date, arr) {
+  return (Array.isArray(arr) ? arr : []).filter(function (e) { return e && e.entry_date === date; });
 }
 
 // הרשומות שבתוך הסנאפשוט ממוזגות אחת-אחת — אחרת שני מכשירים שהוסיפו לאותו יום דורסים זה את זה.
 function mergeArchive(local, remote) {
-  return mergeRecords(local, remote, archiveKey, function(loc, rem, k, pend) {
+  return mergeCore(local, remote, { isPending: pendArc, mergePair: function(loc, rem, k, pend) {
     var base = (pend || recTs(loc) > recTs(rem)) ? loc : rem; // שוויון — הענן; ממתין — המקומי
     var out = {};
     Object.keys(base).forEach(function(kk){ out[kk] = base[kk]; });
-    out.entries = mergeRecords(loc.entries, rem.entries, entryKey, null, pendEntry);
-    out.count = liveOnly(out.entries).length;
+    out.entries = snapOwnEntries(base.entry_date, mergeCore(loc.entries, rem.entries, { isPending: pendEntry }));
     return out;
-  }, pendArc);
+  } });
 }
 
-// tasks ממוזג פר-פריט לפי tasksMeta — מיזוג ברמת רשומה היה מחליף את המערך כולו.
-// tasksMeta: מספר לפריט חי ו-{deleted, updatedAt} למחיקה — היעדר נקרא «אין לי» ולא «נמחק».
-// הסדר נוסע עם הקטגוריה ומוכרע ב-updatedAt שלה.
-function catKey(c) { return (c && c.letter != null) ? c.letter : null; }
-
-function catMeta(c) { return (c && c.tasksMeta && typeof c.tasksMeta === 'object') ? c.tasksMeta : {}; }
+// tasks ממוזג פר-פריט לפי tasks_meta — מיזוג ברמת רשומה היה מחליף את המערך כולו.
+// tasks_meta: { updated_at } לפריט חי ו-{ updated_at, deleted: true } למחיקה — היעדר נקרא «אין לי» ולא «נמחק».
+// הסדר נוסע עם הקטגוריה ומוכרע ב-updated_at שלה, והמפתח הטבעי הוא letter.
+function catMeta(c) { return (c && c.tasks_meta && typeof c.tasks_meta === 'object') ? c.tasks_meta : {}; }
 
 // צד שאינו מכיר את המשימה אינו מכריע עליה — אחרת משימה שנוספה אופליין יורדת במשיכה הראשונה.
 function mergeTasks(locList, locMeta, remList, remMeta) {
@@ -219,15 +199,15 @@ function mergeTasks(locList, locMeta, remList, remMeta) {
 }
 
 function mergeCats(local, remote) {
-  return mergeRecords(local, remote, catKey, function (loc, rem, k, pend) {
+  return mergeCore(local, remote, { key: 'letter', mergePair: function (loc, rem, k, pend) {
     var base = (pend || recTs(loc) > recTs(rem)) ? loc : rem; // שוויון — הענן
     var out = {};
     Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
     var m = mergeTasks(loc.tasks, catMeta(loc), rem.tasks, catMeta(rem));
     out.tasks = m.tasks;
-    out.tasksMeta = m.meta;
+    out.tasks_meta = m.meta;
     return out;
-  });
+  } });
 }
 
 // מחיקת פריט מורידה אותו מהמערך ומקדמת את חותמת המפתח; מחיקת מפתח שלם היא סימון ב-SUBS_META ולא היעדר.
@@ -253,7 +233,7 @@ function mergeSubs(localSubs, localMeta, remoteSubs, remoteMetaRes) {
     var list = useLocal ? Ls[k] : Rs[k];
     if (list === undefined) return;
     subs[k] = uniqList(list);
-    meta[k] = (mv === undefined) ? 0 : mv;
+    meta[k] = (mv === undefined) ? { updated_at: 0 } : mv;
   });
   return { subs: subs, meta: meta };
 }
@@ -262,53 +242,54 @@ function yaTableOf(kvKey) { return YA_ROW_TABLES[kvKey]; }
 
 function yaArchivedFlag(kvKey) { return kvKey === 'ya_archive'; }
 
-function yaRecKey(kvKey, rec) {
-  return (kvKey === 'ya_archive') ? archiveKey(rec) : entryKey(rec);
-}
-
 function yaPendPrefix(kvKey) { return (kvKey === 'ya_archive') ? PK_ARC : PK_ENTRY; }
 
 function yaRowOf(kvKey, rec) {
-  var k = yaRecKey(kvKey, rec);
-  if (k == null) return null;
-  var row = {
-    client_id: S.YESHIVA + ':' + k,
+  if (!rec || rec.client_id == null) return null;
+  var data = {};
+  Object.keys(rec).forEach(function (k) { if (YA_ROW_COLS.indexOf(k) < 0) data[k] = rec[k]; });
+  return {
+    client_id: String(rec.client_id),
     yeshiva: S.YESHIVA,
-    rec_key: String(k),
-    updated_at: Math.round(Number(recTs(rec)) || 0),
-    deleted: !!(rec && rec.deleted),
-    deleted_at: (rec && rec.deleted) ? tombAt(recTs(rec)) : null,
-    data: rec
+    archived: yaArchivedFlag(kvKey),
+    entry_date: rec.entry_date || null,
+    updated_at: Math.round(recTs(rec)),
+    deleted: !!rec.deleted,
+    deleted_at: rec.deleted ? tombAt(recTs(rec)) : null,
+    deleted_by: rec.deleted_by == null ? null : String(rec.deleted_by),
+    data: data
   };
-  // gdate נשמר לסנאפשוט כעמודת הסינון של הארכיון בענן; ברשומות יומן הוא null.
-  if (kvKey === 'ya_archive') row.gdate = (rec && rec.gdate) ? String(rec.gdate) : null;
-  row.archived = yaArchivedFlag(kvKey);
-  return row;
+}
+
+// הרשומה בזיכרון היא העמודות ו-data יחד — שדה שיש לו עמודה נקרא בשמה, ו-data נושא רק את השאר.
+function yaRecOf(r) {
+  if (!r || r.client_id == null || !r.data || typeof r.data !== 'object') return null;
+  var rec = {};
+  Object.keys(r.data).forEach(function (k) { if (YA_ROW_COLS.indexOf(k) < 0) rec[k] = r.data[k]; });
+  rec.client_id = String(r.client_id);
+  if (r.entry_date) rec.entry_date = String(r.entry_date);
+  rec.updated_at = Number(r.updated_at) || 0;
+  if (r.deleted) rec.deleted = true;
+  if (r.deleted_by != null) rec.deleted_by = r.deleted_by;
+  return rec;
 }
 
 // ── סדר טעינה יציב ──
-// Postgres אינו מבטיח סדר בלי ORDER BY, ו-getAllArchiveDays לוקחת מטא-דאטה מהסנאפשוט הראשון ליום.
-// order() לבדו אינו מספיק — rec_key הוא מחרוזת, ומיונה הלקסיקוגרפי אינו סדר תאריכים.
-function gdateOrderTs(g) {
-  var p = gdateParse(g);
-  if (!p) return -1;
-  return Date.UTC(p.y, p.m - 1, p.d);
-}
-
+// Postgres אינו מבטיח סדר בלי ORDER BY — והמיון בקוד, כי client_id אינו סדר תאריכים.
 function yaSortRows(kvKey, arr) {
   var a = (Array.isArray(arr) ? arr : []).slice();
   if (kvKey === 'ya_archive') {
     a.sort(function (x, y) {
-      var tx = gdateOrderTs(x && x.gdate), ty = gdateOrderTs(y && y.gdate);
-      if (tx !== ty) return ty - tx;
-      return String(archiveKey(x)) < String(archiveKey(y)) ? -1 : 1;
+      var tx = String((x && x.entry_date) || ''), ty = String((y && y.entry_date) || '');
+      if (tx !== ty) return tx < ty ? 1 : -1;
+      return String(x.client_id) < String(y.client_id) ? -1 : 1;
     });
   } else {
     a.sort(function (x, y) {
-      // entryOrderTs ולא Number(id) — id הוא uuid, ו-Number עליו הוא NaN
+      // entryOrderTs ולא Number(client_id) — המזהה הוא uuid, ו-Number עליו הוא NaN
       var ix = entryOrderTs(x), iy = entryOrderTs(y);
       if (ix !== iy) return iy - ix;
-      return String(entryKey(x)) < String(entryKey(y)) ? -1 : 1;
+      return String(x.client_id) < String(y.client_id) ? -1 : 1;
     });
   }
   return a;
@@ -323,18 +304,19 @@ async function yaRowsGet(kvKey) {
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    // החלון הוא דגל archived ולא טווח תאריכים — gdate חלקית ובשני כתיבים, ו-.gte עליה מחזיר תמונה חלקית שנראית שלמה.
+    // החלון הוא דגל archived — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה.
     var rows = await _rowsPaged(function () {
-      var q = sb.from(t).select('rec_key,updated_at,data').eq('yeshiva', yesh);
+      var q = sb.from(t).select('client_id,entry_date,updated_at,deleted,deleted_by,data').eq('yeshiva', yesh);
       if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
       return q;
-    }, 'rec_key', null);
+    }, 'client_id', null);
     if (!rows) return { ok: false, data: null };
     var map = {}, out = [];
     rows.forEach(function (r) {
-      if (!r || !r.data) return;
-      map[String(r.rec_key)] = Number(r.updated_at) || 0;
-      out.push(r.data);
+      var rec = yaRecOf(r);
+      if (!rec) return;
+      map[rec.client_id] = rec.updated_at;
+      out.push(rec);
     });
     // מפת החותמות היא מצב פר-מוסד — כתיבה אחרי החלפה הייתה ממלאת אותה בחותמות המוסד הקודם.
     if (ctxStale(_ep)) return { ok: false, data: null };
@@ -347,9 +329,9 @@ async function yaRowsGet(kvKey) {
 function yaDirtyRows(kvKey, arr) {
   var map = S._yaRemote[kvKey], pre = yaPendPrefix(kvKey), out = [];
   (Array.isArray(arr) ? arr : []).forEach(function (rec) {
-    var k = yaRecKey(kvKey, rec);
+    var k = rec ? rec.client_id : null;
     if (k == null) return;
-    var ts = Math.round(Number(recTs(rec)) || 0);
+    var ts = Math.round(recTs(rec));
     var known = map ? map[String(k)] : undefined;
     if (map === null || known === undefined || ts > known || pendHas(pre + k)) {
       var row = yaRowOf(kvKey, rec);
@@ -370,7 +352,7 @@ async function yaSendRows(kvKey, rows, ep) {
   // ההקשר התחלף: מילוי מפת החותמות כאן היה משווה את המוסד החדש מול חותמות הקודם.
   if (ctxStale(ep)) return {};
   var map = S._yaRemote[kvKey] || (S._yaRemote[kvKey] = {});
-  rows.forEach(function (r) { map[r.rec_key] = r.updated_at; });
+  rows.forEach(function (r) { map[r.client_id] = r.updated_at; });
   return {};
 }
 
@@ -403,11 +385,10 @@ async function yaSendSettings(tbl, rows, ep) {
   return withTimeout(sb.from(tbl).upsert(rows, { onConflict: 'key' }));
 }
 
-// ערך חי הוא מספר ופריט שנמחק הוא {deleted, updatedAt} — החי נשאר מספר כדי שגרסה קודמת תקרא אותו כפי שקראה.
-// קידוד אחד לשתי מפות החותמות — שני קידודים לאותו מושג הם שני מסלולי הכרעה.
+// ערך במפת החותמות בצורה אחת: { updated_at }, ו-deleted: true במחיקה —
+// קידוד אחד לשתי מפות החותמות, כי שני קידודים לאותו מושג הם שני מסלולי הכרעה.
 function metaTs(v) {
-  if (typeof v === 'number') return isFinite(v) ? v : 0;
-  var t = v && Number(v.updatedAt);
+  var t = v && typeof v === 'object' ? Number(v.updated_at) : NaN;
   return (isFinite(t) && t > 0) ? t : 0;
 }
 
@@ -430,7 +411,9 @@ function yaMetaTs(res, key) {
   } catch (e) { return 0; }
 }
 
-function metaDel(ts) { return { deleted: true, updatedAt: (typeof ts === 'number') ? ts : Date.now() }; }
+function metaDel(ts) { return { updated_at: (typeof ts === 'number') ? ts : Date.now(), deleted: true }; }
+
+function metaLive(ts) { return { updated_at: (typeof ts === 'number') ? ts : Date.now() }; }
 
 function subKey(ci, taskName) { return ci + "::" + taskName; }
 
@@ -448,7 +431,7 @@ function yaSortEntries(list) {
     var ta = cat ? cat.tasks.indexOf(e.task) : -1;
     var ci2 = cat ? S.CATS.indexOf(cat) : -1;
     var sk = ci2 >= 0 ? subKey(ci2, e.task) : e.task;
-    var subs = S.SUBS[sk] || S.SUBS[e.task] || [];
+    var subs = S.SUBS[sk] || [];
     var sa = subs.indexOf(e.sub);
     return [ca, ta === -1 ? 999 : ta, sa === -1 ? 999 : sa];
   };
@@ -464,7 +447,7 @@ function yaSortEntries(list) {
     if (na !== nb) return HE.compare(na, nb);
     var qa = num(a), qb = num(b);
     if (qa !== qb) return qa - qb;
-    var ia = String((a && a.id) != null ? a.id : ''), ib = String((b && b.id) != null ? b.id : '');
+    var ia = String((a && a.client_id) || ''), ib = String((b && b.client_id) || '');
     return ia < ib ? -1 : ia > ib ? 1 : 0;
   });
 }
@@ -501,25 +484,20 @@ function saveArchive() {
   })();
 }
 
-// ── התאריך הלועזי ──
-// gdate נשמר בצורה אחת, זו של gregDateStr («25 נובמבר 2025») — הוא מפתח היום בארכיון, ושתי צורות הן שני ימים.
+// ── התאריך ──
+// היום נשמר ב-entry_date בצורת ISO — צורה אחת; התאריך העברי, היום בשבוע והתאריך הלועזי לתצוגה נגזרים ממנו.
 var GREG_MONTHS_HE = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
-// בפורמט השמור בלבד — כל צורה אחרת מחזירה null.
-function gdateParse(s) {
-  var m = String(s == null ? "" : s).trim().match(/^(\d{1,2}) (\S+) (\d{4})$/);
-  var i = m ? GREG_MONTHS_HE.indexOf(m[2]) : -1;
-  return (i >= 0) ? _gregValid(+m[1], i + 1, +m[3]) : null;
-}
-
-// פענוח הקלט בשדה התאריך בלבד: dd/mm/yyyy, yyyy-mm-dd והפורמט השמור — והקלט מתורגם לפורמט השמור לפני השמירה.
+// פענוח הקלט בשדה התאריך בלבד: dd/mm/yyyy, yyyy-mm-dd וצורת התצוגה («25 נובמבר 2025»).
 function parseGregLike(s) {
   s = String(s == null ? "" : s).trim();
   var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) return _gregValid(+m[1], +m[2], +m[3]);
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return _gregValid(+m[3], +m[2], +m[1]);
-  return gdateParse(s);
+  m = s.match(/^(\d{1,2}) (\S+) (\d{4})$/);
+  var i = m ? GREG_MONTHS_HE.indexOf(m[2]) : -1;
+  return (i >= 0) ? _gregValid(+m[1], i + 1, +m[3]) : null;
 }
 
 // «31/02» אינו יום — Date היה מגלגל אותו ל-3 במרץ בשקט.
@@ -528,11 +506,12 @@ function _gregValid(d, m, y) {
   return (t.getDate() === d && t.getMonth() === m - 1) ? {d:d, m:m, y:y} : null;
 }
 
-// בדיוק הצורה של gregDateStr — כדי שמפתח משוחזר יתלכד עם מפתחות חדשים.
-function gregKeyFromParts(p) { return p ? (p.d + " " + GREG_MONTHS_HE[p.m-1] + " " + p.y) : ""; }
+function isoFromParts(p) { return p ? dayIso(dayNoon(p.y, p.m - 1, p.d)) : ""; }
 
-// בלי חודש עברי מזוהה אי אפשר לנווט אל הרשומה בארכיון.
-function hasHebMonth(h) { return extractYM(h).year !== HUNKNOWN; }
+// הנגזרות — עוגן צהריים לפני כל חשבון יום.
+function yaGreg(iso) { return iso ? gregDateStr(dayNoon(iso)) : ""; }
+function yaHeb(iso) { return iso ? (hebrewDate(dayNoon(iso)) || "") : ""; }
+function yaDayName(iso) { return iso ? (DAY_VALUE_MAP[dayNoon(iso).getDay()] || "") : ""; }
 
 // תקתוק המשיכה אינו נרשם — הוא רץ כל 3 שניות, ו-sh_sync_log היא insert בלבד ואי-אפשר לדלל אותה.
 // הרישום fire-and-forget ולעולם אינו חוסם.
@@ -541,16 +520,12 @@ function yaSyncLog(action, key, recordCount, details) {
 }
 
 // ── שם החודש העברי ──
-// שם החודש הוא מפתח הקיבוץ של הארכיון ונכתב בצורה אחת — שינוי בו הוא המרה במסד ולא מיפוי בקוד.
-
-// בנתונים מופיע «מרחשון» והקוד מייצר «חשון» — בלי איחוד נוצרים שני כפתורי חודש באותה שנה.
-// הנרמול לקריאה ולתצוגה בלבד: הרשומות נשארות כפי שהן.
+// הקיבוץ בארכיון לפי החודש העברי הנגזר — «מרחשון» ו«חשון» הם חודש אחד.
 function normHDate(h) {
   if (!h) return h || "";
   return String(h).replace(/מרחשוו?ן/g, "חשון").replace(/חשוון/g, "חשון");
 }
 
-// גרש עברי ׳ בלבד, לא אפוסטרוף ולא מרכאה — שתי צורות הן שני דליים בארכיון.
 function monthKeyOf(m) {
   return normHDate(m).trim().replace(/\s+/g, " ");
 }
@@ -565,20 +540,16 @@ function catCls(letter) {
 
 // השם נגזר מ-CATS הנוכחי — שם ששמור ברשומה מתיישן ונושא את שם המוסד שבו נוצרה.
 // נפילה-חזרה לשם השמור כשהאות נמחקה — בארכיון יושבות רשומות תחת אות שאינה קיימת.
-function catNameOf(e) {
+function catLabelOf(e) {
   var c = S.CATS.find(function (x) { return x.letter === e.cat; });
-  return c ? c.name : (e.catName || e.cat);
+  return c ? c.name : (e.cat_name || e.cat);
 }
 
 function getCurrentDateKey() {
   var g = document.getElementById("gregDateInput");
   var p = parseGregLike(g ? g.value : "");
-  // הקלט נשמר בפורמט השמור בלבד, ובהיעדרו מפתח היום — gdate ריק שובר את הארכוב ואת סינון היומן.
-  return p ? gregKeyFromParts(p) : getTodayKey();
-}
-
-function getTodayKey() {
-  return gregDateStr(new Date());
+  // היום שנבחר בצורת ISO, ובהיעדרו היום — יום ריק שובר את הארכוב ואת סינון היומן.
+  return p ? isoFromParts(p) : dayToday();
 }
 
 function gregDateStr(jsDate) {
@@ -587,42 +558,32 @@ function gregDateStr(jsDate) {
 }
 
 // ── בניית סנאפשוט ארכיון ──
-// מסלול יצירה אחד ל-autoArchiveDay ול-checkDayChange — סנאפשוט בלי gdate, hdate ו-day נופל לדלי «לא ידוע».
+// מסלול יצירה אחד ל-autoArchiveDay ול-checkDayChange, וסנאפשוט ליום אחד — המפתח נגזר מהיום, כך ששני מכשירים מגיעים לאותה שורה.
 // אינה כותבת לענן — checkDayChange חייבת להישאר מקומית עד המיזוג שאחריה.
-function arcPutSnapshot(dayKey, hdate, gdate, dayEntries, ts, extra) {
-  if (!gdate) return null; // סנאפשוט עם gdate ריק הוא זבל בלי מפתח מיזוג
-  var existIdx = S.ARCHIVE.findIndex(function(a){ return a.gdate === gdate && isLive(a); });
+function arcPutSnapshot(date, dayEntries, ts) {
+  if (!date) return null;
+  var cid = snapClientId(date);
+  var existIdx = S.ARCHIVE.findIndex(function(a){ return a && a.client_id === cid; });
   var exist = existIdx >= 0 ? S.ARCHIVE[existIdx] : null;
   // מיזוג ולא החלפה: הסנאפשוט הקיים הוא הצד המרוחק — רשומה שאורכבה לא נמחקת כשעותקה החי הפך ל-tombstone,
-  // אבל מחיקה אמיתית עם updatedAt חדש יותר עוברת.
-  var mergedEntries = mergeRecords(
-    JSON.parse(JSON.stringify(dayEntries)),
-    exist ? (exist.entries || []) : [],
-    entryKey
-  );
+  // אבל מחיקה אמיתית עם updated_at חדש יותר עוברת.
+  var mine = snapOwnEntries(date, JSON.parse(JSON.stringify(dayEntries)));
   var snapshot = {
-    id: exist ? exist.id : ts,
-    name: hdate || (exist ? exist.name : "") || "",
-    hdate: hdate || (exist ? exist.hdate : "") || "",
-    gdate: gdate,
-    day: dayKey || (exist ? exist.day : "") || "",
-    date: gdate,
-    entries: mergedEntries,
-    count: liveOnly(mergedEntries).length,
-    updatedAt: ts
+    client_id: cid,
+    entry_date: date,
+    entries: snapOwnEntries(date, mergeCore(mine, exist && isLive(exist) ? (exist.entries || []) : [])),
+    updated_at: ts
   };
-  if (extra) Object.keys(extra).forEach(function(k){ snapshot[k] = extra[k]; });
   if (exist) S.ARCHIVE[existIdx] = snapshot; else S.ARCHIVE.unshift(snapshot);
   return snapshot;
 }
 
-function autoArchiveDay(dayKey, hdate, gdate) {
-  // סינון לפי gdate ולא לפי שם היום — שמות ימים חוזרים בכל שבוע.
-  if (!gdate) return;
+function autoArchiveDay(date) {
+  if (!date) return;
   // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
-  var dayEntries = S.ENTRIES.filter(function(e){ return e.gdate === gdate; });
+  var dayEntries = S.ENTRIES.filter(function(e){ return e.entry_date === date; });
   if (!dayEntries.length) return;
-  if (arcPutSnapshot(dayKey, hdate, gdate, dayEntries, Date.now(), null)) saveArchive();
+  if (arcPutSnapshot(date, dayEntries, Date.now())) saveArchive();
 }
 
 // גוף הדחיפה בלי ההשהיה, בפונקציה משלו — כדי שמודול הניסיון החוזר יקרא לאותה דחיפה בדיוק.
@@ -658,11 +619,12 @@ async function yaSyncPushNow() {
     toast(MSG_SAVED_CLOUD, null, 'good');
 }
 
-function extractYM(hdate) {
+// החודש והשנה העבריים מתוך התאריך העברי הנגזר.
+function extractYM(heb) {
   function unknown() { return {year: HUNKNOWN, month: HUNKNOWN, order: 99}; }
-  if (!hdate) return unknown();
-  if (!/ה׳תש/.test(hdate)) return unknown();
-  var parts = normHDate(hdate).trim().split(" ");
+  if (!heb) return unknown();
+  if (!/ה׳תש/.test(heb)) return unknown();
+  var parts = normHDate(heb).trim().split(" ");
   var year = "", month = "";
   for (var i = parts.length-1; i >= 0; i--) {
     if (parts[i].indexOf("׳") >= 0 && /ה׳תש/.test(parts[i])) { year = parts[i]; parts.splice(i,1); break; }
@@ -671,40 +633,6 @@ function extractYM(hdate) {
   month = monthKeyOf(hebrewParts.slice(1).join(" "));
   if (!year || HMO.indexOf(month) < 0) return unknown();
   return {year: year, month: month, order: HMO.indexOf(month)};
-}
-
-// ── שחזור התאריך העברי ──
-// סדר הנפילה-חזרה: hdate תקין, חילוץ מתוך name, ורק אז לא ידוע; זו גזירת תצוגה ואינה כותבת לסנאפשוט.
-// החיתוך אחרי אסימון השנה והשלה משמאל — extractYM קורא את החודש כ-slice(1), וכל תחילית מזיזה אותו.
-function hebFromText(txt) {
-  var t = normHDate(String(txt == null ? "" : txt))
-            .replace(/\([^)]*\)/g, " ").replace(/\|/g, " ")
-            .replace(/\s+/g, " ").trim();
-  if (!t) return "";
-  var p = t.split(" ");
-  for (var j = 0; j < p.length; j++) {
-    if (/ה׳תש/.test(p[j])) { p = p.slice(0, j + 1); break; } // hdate תקין נגמר בשנה
-  }
-  for (var i = 0; i < p.length; i++) {
-    var cand = p.slice(i).join(" ");
-    if (extractYM(cand).year !== HUNKNOWN) return cand;
-  }
-  return "";
-}
-
-function snapHDate(rec) {
-  var h = normHDate((rec && rec.hdate) || "");
-  if (extractYM(h).year !== HUNKNOWN) return h;
-  var t = hebFromText(rec && rec.name);
-  if (t) return t;
-  // נפילה-חזרה שלישית מ-gdate — תצוגה בלבד; כתיבה לסנאפשוט הייתה משנה נתוני מסד בלי שהמנהל ביקש.
-  var g = gdateParse(rec && rec.gdate);
-  if (g) {
-    // עוגן בצהריים מקומיים — מעבר לשעון חורף מפיל חצות ליום הקודם
-    var hd = hebrewDate(dayNoon(g.y, g.m - 1, g.d));
-    if (hd && extractYM(hd).year !== HUNKNOWN) return hd;
-  }
-  return h;
 }
 
 function _yaMarkSynced() {
@@ -785,11 +713,11 @@ function cssQ(v) {
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
 export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
-         arcPutSnapshot, archiveKey, autoArchiveDay, catCls, catNameOf, cssQ, entryKey,
-         entryOrderTs, extractYM, getCurrentDateKey, getSB, getTodayKey, gregDateStr,
-         hasHebMonth, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
-         mergeSubs, metaDel, normHDate, parseGregLike, recDelete, recTouch, saveArchive,
-         saveEntries, sbGetResult, showEl, snapHDate, subKey, yaBkPrefix, yaDirtyRows,
-         yaLsBases, yaMetaMap, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
-         yaSendSettings, yaSetDirty, yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog,
-         yaSyncPushNow, yaTableOf, yaYeshiva };
+         arcPutSnapshot, autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM,
+         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
+         mergeArchive, mergeCats, mergeEntries, mergeSubs, metaDel, metaLive, parseGregLike,
+         recDelete, recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
+         subKey, yaRecId, yaBkPrefix, yaDayName, yaDirtyRows, yaGreg, yaHeb, yaLsBases, yaMetaMap,
+         yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
+         yaSetDirtyRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
+         yaYeshiva };

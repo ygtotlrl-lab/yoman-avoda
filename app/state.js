@@ -40,8 +40,8 @@ const S = {
   // ── הארכיון ──
   arcSelYear: null,
   arcSelMonth: null,
+  // entry_date של היום שנבחר
   arcSelDayKey: null,
-  // מחרוזת gdate
   arcEditMode: false,
   _lastKnownTimestamp: 0,
   // נכתב על כל שיחה מוצלחת עם הענן, גם במשיכה — ולכן אינו עד דחיפה ואינו משמש לפינוי; העד הוא _yaPushedAt פר-מפתח.

@@ -4,7 +4,7 @@ import { lsSet } from '../../core/storage.js';
 import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, isLive, metaDel, recTouch, subKey, yaSetDirty } from '../domain.js';
+import { catCls, isLive, metaDel, metaLive, recTouch, subKey, yaSetDirty } from '../domain.js';
 
 function screenSettingsHTML() {
   return `
@@ -26,18 +26,18 @@ function saveCats() {
 // חותמת פר-משימה — בלעדיה מיזוג ברמת רשומה מחליף את מערך המשימות כולו.
 function touchTask(cat, name) {
   if (!cat || name == null) return;
-  if (!cat.tasksMeta || typeof cat.tasksMeta !== 'object') cat.tasksMeta = {};
-  cat.tasksMeta[String(name)] = Date.now();
+  if (!cat.tasks_meta || typeof cat.tasks_meta !== 'object') cat.tasks_meta = {};
+  cat.tasks_meta[String(name)] = metaLive();
 }
 
 // מחיקת משימה היא סימון ולא היעדר — מכשיר שלא קיבל את המחיקה מחזיר את המשימה.
 function delTaskMeta(cat, name, ts) {
   if (!cat || name == null) return;
-  if (!cat.tasksMeta || typeof cat.tasksMeta !== 'object') cat.tasksMeta = {};
-  cat.tasksMeta[String(name)] = metaDel(ts);
+  if (!cat.tasks_meta || typeof cat.tasks_meta !== 'object') cat.tasks_meta = {};
+  cat.tasks_meta[String(name)] = metaDel(ts);
 }
 
-function touchSubKey(sk) { if (sk != null) S.SUBS_META[String(sk)] = Date.now(); }
+function touchSubKey(sk) { if (sk != null) S.SUBS_META[String(sk)] = metaLive(); }
 
 // מחיקת מפתח היא סימון ב-SUBS_META ולא היעדר — מכשיר שלא קיבל אותה קורא היעדר כ«אין לי» ומחזיר את המפתח.
 function delSubKey(sk, ts) {
@@ -66,8 +66,25 @@ function reorderKeep(arr, order) {
   return out;
 }
 
+// מפתח תתי-המשימות נושא את מקום הקטגוריה — סידור שאינו מעביר את המפתחות היה משאיר אותם תחת קטגוריה אחרת.
+function moveSubKeys(before, after) {
+  var subs = {}, ts = Date.now();
+  Object.keys(S.SUBS).forEach(function (k) {
+    var i = k.indexOf('::'), ci = +k.slice(0, i), to = after.indexOf(before[ci]);
+    if (i < 0 || to < 0) return;
+    var nk = subKey(to, k.slice(i + 2));
+    subs[nk] = S.SUBS[k];
+    if (nk !== k) S.SUBS_META[nk] = metaLive(ts);
+  });
+  Object.keys(S.SUBS).forEach(function (k) { if (!(k in subs)) S.SUBS_META[k] = metaDel(ts); });
+  S.SUBS = subs;
+}
+
 function applyCatOrder(list, kind) {
+  var before = S.CATS.slice();
   S.CATS = reorderKeep(S.CATS, domOrder(list, kind, 'data-idx'));
+  moveSubKeys(before, S.CATS);
+  saveSubs();
   saveCats();
   renderSettings();
   shell.buildCatGrid();
@@ -87,7 +104,7 @@ function applySubOrder(list, kind) {
   var ci = +one.dataset.ci, ti = +one.dataset.ti;
   var taskName = S.CATS[ci].tasks[ti];
   var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) { S.SUBS[sk] = S.SUBS[taskName] || []; }
+  if (!S.SUBS[sk]) return;
   S.SUBS[sk] = reorderKeep(S.SUBS[sk], domOrder(list, kind, 'data-si'));
   touchSubKey(sk);
   saveSubs();
@@ -119,7 +136,7 @@ function saveSubInline(inp) {
   var newVal = inp.value.trim();
   if (newVal && newVal !== inp.defaultValue) {
     var sk = subKey(ci, taskName);
-    if (!S.SUBS[sk]) S.SUBS[sk] = S.SUBS[taskName] || [];
+    if (!S.SUBS[sk]) S.SUBS[sk] = [];
     S.SUBS[sk][si] = newVal;
     touchSubKey(sk);
     saveSubs();
@@ -129,7 +146,7 @@ function saveSubInline(inp) {
 
 function removeSub(ci, taskName, si) {
   var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) { if (!S.SUBS[taskName]) return; S.SUBS[sk] = S.SUBS[taskName]; }
+  if (!S.SUBS[sk]) return;
   S.SUBS[sk].splice(si, 1);
   touchSubKey(sk); // המחיקה נרשמת בחותמת הרשימה — אחרת היא נעלמת במיזוג
   saveSubs();
@@ -143,7 +160,7 @@ function addSub(ci, ti) {
   var val = inp.value.trim();
   if (!val) return;
   var sk = subKey(ci, taskName);
-  if (!S.SUBS[sk]) S.SUBS[sk] = S.SUBS[taskName] ? [...S.SUBS[taskName]] : [];
+  if (!S.SUBS[sk]) S.SUBS[sk] = [];
   if (uniqHas(S.SUBS[sk], val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
   S.SUBS[sk].push(val);
   touchSubKey(sk);
@@ -170,16 +187,11 @@ function saveTaskInline(inp) {
   var ci = +inp.dataset.ci, ti = +inp.dataset.ti, oldVal = inp.defaultValue;
   var newVal = inp.value.trim();
   if (newVal && newVal !== oldVal) {
-    // המפתח הוא ci::שם, ומפתח ישן בשם המשימה בלבד נקרא גם הוא
+    // המפתח הוא ci::שם — שינוי השם מעביר את תתי-המשימות, והמפתח הישן נמחק בסימון.
     var oldSk = subKey(ci, oldVal);
     var newSk = subKey(ci, newVal);
-    if (S.SUBS[oldSk]) {
-      S.SUBS[newSk] = S.SUBS[oldSk];
-      delSubKey(oldSk);
-    } else if (S.SUBS[oldVal]) {
-      S.SUBS[newSk] = S.SUBS[oldVal];
-      delSubKey(oldVal);
-    }
+    if (S.SUBS[oldSk]) S.SUBS[newSk] = S.SUBS[oldSk];
+    delSubKey(oldSk);
     S.CATS[ci].tasks[ti] = newVal;
     delTaskMeta(S.CATS[ci], oldVal); touchTask(S.CATS[ci], newVal);
     recTouch(S.CATS[ci]); touchSubKey(newSk);
@@ -206,7 +218,7 @@ function renderSettings() {
       + '</div>';
     var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + cat.tasks.map(function(t, ti){
-          var subs = S.SUBS[subKey(ci, t)] || S.SUBS[t] || [];
+          var subs = S.SUBS[subKey(ci, t)] || [];
           var subsHtml = '';
           if(subs.length > 0) {
             subsHtml = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
@@ -291,7 +303,6 @@ function saveSettings() {
     if (inp) {
       var newName = inp.value.trim();
       if (newName && newName !== cat.name) {
-        if (S.SUBS[cat.name]) { S.SUBS[newName] = S.SUBS[cat.name]; delSubKey(cat.name); touchSubKey(newName); }
         S.CATS[ci].name = newName;
         recTouch(S.CATS[ci]);
       }
