@@ -5,9 +5,9 @@ import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
 import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC, PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveArchive,
-         saveEntries, showEl, snapClientId, yaDayName, yaGreg, yaHeb, yaSortDays, yaSortEntries,
-         yaSortMonths, yaSortYears } from '../domain.js';
+import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
+         snapClientId, yaDayName, yaGreg, yaHeb, yaSortDays, yaSortEntries, yaSortMonths,
+         yaSortYears } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
 
 function screenArchiveHTML() {
@@ -295,9 +295,8 @@ function arcDeleteEntry(dayKey, entryId) {
     (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); hit = true; } });
     if (hit) { recTouch(snap, ts); pendMark(PK_ARC + snap.client_id); }
   });
-  saveArchive();
   S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
-  saveEntries();
+  saveRows();
   renderArcDetail();
   renderArcBreadcrumb();
 }
@@ -328,11 +327,11 @@ function arcAddEntry() {
     snap.entries.unshift(newEntry);
     recTouch(snap, _now);
     pendMark(PK_ARC + snap.client_id);
-    saveArchive();
+    saveRows();
   } else {
     S.ENTRIES.unshift(newEntry);
     pendMark(PK_ENTRY + newEntry.client_id);
-    saveEntries();
+    saveRows();
   }
   renderArcDetail();
 }
@@ -418,8 +417,7 @@ function arcSaveEntry(dayKey, entryId) {
   // הסימון במפתח PK_ARC + client_id — זה המפתח שהמיזוג, הדחיפה ושער הפינוי קוראים;
   // סימון במפתח אחר אינו נראה להם, והסנאפשוט הערוך עלול להתפנות לפני שעלה.
   touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
-  saveEntries();
-  saveArchive();
+  saveRows();
   renderArcDetail();
   shell.renderLog();
   toast(MSG_SAVED, null, 'good');

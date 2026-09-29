@@ -1,11 +1,10 @@
 // app/screens/settings.js — מסך העריכה
 import { uniqHas } from '../../core/util.js';
-import { lsSet } from '../../core/storage.js';
 import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { tombKill } from '../../core/sync.js';
-import { catCls, catTasks, isLive, recTouch, taskOf, yaSetDirty } from '../domain.js';
+import { catCls, catTasks, isLive, recTouch, taskOf, yaCatsPut, yaSetDirty } from '../domain.js';
 
 function screenSettingsHTML() {
   return `
@@ -20,7 +19,7 @@ function screenSettingsHTML() {
 }
 
 function saveCats() {
-  lsSet("ya_cats"+S.LS, JSON.stringify(S.CATS));
+  yaCatsPut();
   yaSetDirty(['cats']);
 }
 
