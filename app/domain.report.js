@@ -108,7 +108,7 @@ function _buildReportDiv(cb, entries, date){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
         rowsHTML+='<tr>';
-        if(cri===0)rowsHTML+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+esc(data.name)+'</td>';
+        if(cri===0)rowsHTML+='<td rowspan="'+data.list.length+'" class="'+catCls(cid)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+esc(data.name)+'</td>';
         if(ii===0)rowsHTML+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+esc(tg.task)+'</td>';
         rowsHTML+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
         rowsHTML+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';

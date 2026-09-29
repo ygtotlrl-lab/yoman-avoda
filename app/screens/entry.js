@@ -6,7 +6,7 @@ import { hebrewDate } from '../../core/hebrew.js';
 import { DAY_VALUE_MAP, MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY,
          PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { autoArchiveDay, catCls, catTasks, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
+import { catCls, catTasks, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
          saveRows, taskSubs } from '../domain.js';
 
 function screenEntryHTML() {
@@ -220,7 +220,6 @@ function addEntry() {
   S.ENTRIES.unshift(entry);
   pendMark(PK_ENTRY + entry.client_id);
   saveRows();
-  autoArchiveDay(entry.entry_date);
   clearForm();
   // אין טוסט כאן — הדחיפה שאחרי מודיעה את התוצאה.
   schedulePush();

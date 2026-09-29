@@ -3,10 +3,10 @@ import { MSG_SAVED, dayToday } from '../../core/util.js';
 import { idEq, newClientId, pendMark, tombKill } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
-import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC, PK_ENTRY } from '../constants.js';
+import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE } from '../constants.js';
 import { S, shell } from '../state.js';
 import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
-         snapClientId, yaDayName, yaGreg, yaHeb, yaSortDays, yaSortEntries, yaSortMonths,
+         yaDayName, yaGreg, yaHeb, yaPendKeyOf, yaSortDays, yaSortEntries, yaSortMonths,
          yaSortYears } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
 
@@ -37,23 +37,14 @@ function getAllArchiveDays() {
     if (!days[k]) days[k] = { key: k, heb: yaHeb(k), entries: [], seen: {} };
     return days[k];
   }
-  // בדיקת seen נדרשת — סנאפשוט ורשומה חיה של אותו יום היו סופרים רשומה משותפת פעמיים.
-  liveOnly(S.ARCHIVE).forEach(function(snap) {
-    if (!snap.entry_date) return;
-    var d = day(snap.entry_date);
-    (snap.entries||[]).forEach(function(e){
-      if (!e || e.client_id == null || d.seen[e.client_id]) return;
-      d.seen[e.client_id] = true; // כולל tombstones
-      if (isLive(e)) d.entries.push(e);
-    });
-  });
-  // הסנאפשוט קובע לרשומה שכבר נכנסה אליו — אחרי סיום יום העותק החי הוא tombstone, והרשומה עדיין בארכיון.
-  S.ENTRIES.forEach(function(e) {
-    if (!e.entry_date || (!days[e.entry_date] && !isLive(e))) return;
+  // הארכיון מקובץ לפי entry_date שעל הרשומה — שורה אחת לרשומה, והיום שלה נגזר ממנה; היום שטרם אורכב מוצג מהחי.
+  // seen שומר על רשומה אחת גם בחלון שבו המיזוג טרם הכריע בין שני הדגלים.
+  liveOnly(S.ARCHIVE).concat(liveOnly(S.ENTRIES)).forEach(function(e) {
+    if (!e.entry_date || e.client_id == null) return;
     var d = day(e.entry_date);
     if (d.seen[e.client_id]) return;
     d.seen[e.client_id] = true;
-    if (isLive(e)) d.entries.push(e);
+    d.entries.push(e);
   });
   return days;
 }
@@ -288,14 +279,11 @@ function arcToggleEdit() {
 }
 
 function arcDeleteEntry(dayKey, entryId) {
-  // tombstone בכל מקום שבו הרשומה מופיעה — בסנאפשוטים ובחי — באותה חותמת
+  // מצבה על השורה עצמה — בארכיון או בחי, והסימון בקידומת של הדגל שעליה.
   var ts = Date.now();
-  S.ARCHIVE.forEach(function(snap) {
-    var hit = false;
-    (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); hit = true; } });
-    if (hit) { recTouch(snap, ts); pendMark(PK_ARC + snap.client_id); }
+  S.ARCHIVE.concat(S.ENTRIES).forEach(function(e) {
+    if (e && idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); pendMark(yaPendKeyOf(e)); }
   });
-  S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
   saveRows();
   renderArcDetail();
   renderArcBreadcrumb();
@@ -321,18 +309,15 @@ function arcAddEntry() {
     task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
     updated_at: _now
   };
-  var snap = S.ARCHIVE.find(function(s){ return isLive(s) && s.client_id === snapClientId(d.key); });
-  if (snap) {
-    snap.entries = snap.entries || [];
-    snap.entries.unshift(newEntry);
-    recTouch(snap, _now);
-    pendMark(PK_ARC + snap.client_id);
-    saveRows();
+  // יום שעבר, או יום שכבר יש בו רשומה בארכיון — הרשומה נכנסת לארכיון; היום הפתוח — ליומן החי.
+  if (d.key < dayToday() || liveOnly(S.ARCHIVE).some(function(e){ return e.entry_date === d.key; })) {
+    newEntry.archived = true;
+    S.ARCHIVE.unshift(newEntry);
   } else {
     S.ENTRIES.unshift(newEntry);
-    pendMark(PK_ENTRY + newEntry.client_id);
-    saveRows();
   }
+  pendMark(yaPendKeyOf(newEntry));
+  saveRows();
   renderArcDetail();
 }
 
@@ -396,16 +381,9 @@ function arcSaveEntry(dayKey, entryId) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
   }
-  var hits = 0, touchedArc = [];
-  S.ARCHIVE.forEach(function(snap) {
-    var hit = false;
-    (snap.entries||[]).forEach(function(e) {
-      if (e && idEq(e.client_id, entryId)) { apply(e); hit = true; hits++; }
-    });
-    if (hit) { recTouch(snap, ts); touchedArc.push(snap.client_id); }
-  });
-  S.ENTRIES.forEach(function(e) {
-    if (e && idEq(e.client_id, entryId)) { apply(e); hits++; }
+  var hits = 0;
+  S.ARCHIVE.concat(S.ENTRIES).forEach(function(e) {
+    if (e && idEq(e.client_id, entryId)) { apply(e); pendMark(yaPendKeyOf(e)); hits++; }
   });
   if (!hits) {
     console.warn('[arc] arcSaveEntry — רשומה לא נמצאה:', entryId, dayKey);
@@ -413,10 +391,6 @@ function arcSaveEntry(dayKey, entryId) {
     toast(MSG_ROW_GONE, null, 'bad');
     return;
   }
-  pendMark(PK_ENTRY + entryId);
-  // הסימון במפתח PK_ARC + client_id — זה המפתח שהמיזוג, הדחיפה ושער הפינוי קוראים;
-  // סימון במפתח אחר אינו נראה להם, והסנאפשוט הערוך עלול להתפנות לפני שעלה.
-  touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
   saveRows();
   renderArcDetail();
   shell.renderLog();
