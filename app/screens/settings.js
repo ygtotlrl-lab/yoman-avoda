@@ -40,7 +40,9 @@ function domOrder(list, kind, attr) { return dragOrder(list, kind, attr).map(Num
 
 // קטגוריה מחוקה אינה ברשימה אך שומרת את מקומה במערך — סידור שמתעלם ממנה היה מזיז אותה.
 function reorderKeep(arr, order) {
-  var slots = order.slice().sort(function (a, b) { return a - b; });
+  var taken = {};
+  order.forEach(function (i) { taken[i] = true; });
+  var slots = arr.map(function (x, i) { return i; }).filter(function (i) { return taken[i]; });
   var out = arr.slice();
   for (var i = 0; i < order.length; i++) out[slots[i]] = arr[order[i]];
   return out;

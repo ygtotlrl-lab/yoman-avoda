@@ -170,7 +170,8 @@ function taskSubs(cat, name) {
   return (t && Array.isArray(t.subs)) ? t.subs : [];
 }
 
-function _yaByBaseOrder(items, base) {
+// משימות הקטגוריה אחרי מיזוג — בסדר הבסיס, ומשימה שאינה בו נוספת בסופו.
+function yaSortTasks(items, base) {
   var pos = {};
   (Array.isArray(base) ? base : []).forEach(function (t, i) { if (t && !(t.id in pos)) pos[t.id] = i; });
   return items.map(function (t, i) { return { t: t, i: (t && t.id in pos) ? pos[t.id] : 1e6 + i }; })
@@ -183,7 +184,7 @@ function mergeCats(local, remote) {
       var base = mergeWinner(loc, rem, pend);
       var out = {};
       Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
-      out.tasks = _yaByBaseOrder(mergeCore(loc.tasks, rem.tasks, { key: 'id', isPending: function () { return pend; } }), base.tasks);
+      out.tasks = yaSortTasks(mergeCore(loc.tasks, rem.tasks, { key: 'id', isPending: function () { return pend; } }), base.tasks);
       return out;
     } });
 }
@@ -226,6 +227,27 @@ function yaRecOf(r) {
   if (r.deleted_at != null) rec.deleted_at = r.deleted_at;
   if (r.deleted_by != null) rec.deleted_by = r.deleted_by;
   return rec;
+}
+
+// ── הארכיון: ימים, שנים וחודשים ──
+// ימי החודש — הראשון ראשון, לפי מפתח היום.
+function yaSortDays(list) {
+  return list.slice().sort(function (a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+}
+
+// שנים — הראשונה ראשונה, ושנה שאינה ידועה בסוף.
+function yaSortYears(list) {
+  return list.slice().sort(function (a, b) {
+    if (a === HUNKNOWN) return 1;
+    if (b === HUNKNOWN) return -1;
+    return a > b ? 1 : -1;
+  });
+}
+
+// חודשים — בסדר השנה העברית, וחודש שאינו ברשימה בסוף.
+function yaSortMonths(list) {
+  var at = function (m) { var i = HMO.indexOf(m); return i < 0 ? 999 : i; };
+  return list.slice().sort(function (a, b) { return at(a) - at(b); });
 }
 
 // ── סדר טעינה יציב ──
@@ -553,7 +575,7 @@ async function yaPullFromCloud() {
       var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
         S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
-        S.ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
+        S.ENTRIES = yaSortRows('ya_entries', S.ENTRIES);
         lsSetArray("ya_entries"+_ls, S.ENTRIES, _yaRecTs);
         pullRender(shell.renderLog);
         console.log("[sync] merged, entries=" + liveOnly(S.ENTRIES).length +
@@ -607,12 +629,11 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
-         arcPutSnapshot, autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM,
-         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
-         mergeArchive, mergeCats, mergeEntries, parseGregLike,
-         recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
-         catTasks, taskOf, taskSubs, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb, yaLsBases,
-         yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
-         yaSetRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
-         yaYeshiva };
+export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot,
+         autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM, getCurrentDateKey,
+         getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead, mergeArchive, mergeCats,
+         mergeEntries, parseGregLike, recTouch, saveArchive, saveEntries, sbGetResult, showEl,
+         snapClientId, catTasks, taskOf, taskSubs, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb,
+         yaLsBases, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings,
+         yaSetDirty, yaSetRows, yaSortDays, yaSortEntries, yaSortMonths, yaSortRows, yaSortYears,
+         yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf, yaYeshiva };

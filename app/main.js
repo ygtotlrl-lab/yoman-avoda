@@ -16,12 +16,11 @@ import { CATS_RESET_KEY, CATS_RESET_LS, MSG_ALREADY_AT, MSG_BOOT_FAIL,
          PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SET_PUSH,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
-import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
-         arcPutSnapshot, entryOrderTs, getSB, gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries,
-         recTouch, sbGetResult, showEl, yaBkPrefix,
-         yaLsBases, yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows,
-         yaSendSettings, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow,
-         yaRecId, yaTableOf, yaYeshiva } from './domain.js';
+import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot, getSB,
+         gregDateStr, isLive, liveOnly, lsRead, mergeArchive, mergeCats, mergeEntries, recTouch,
+         sbGetResult, showEl, yaBkPrefix, yaLsBases, yaPendPrefix, yaPullFromCloud, yaRecId,
+         yaRowsGet, yaSendRows, yaSendSettings, yaSetRows, yaSortRows, yaSuffix, yaSyncLog,
+         yaSyncPushNow, yaTableOf, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
@@ -391,7 +390,7 @@ async function syncFromCloud() {
     var cloudEntries = _rowsE.data;
     if (cloudEntries && cloudEntries.length) {
       S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
-      S.ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
+      S.ENTRIES = yaSortRows('ya_entries', S.ENTRIES);
       lsSetArray('ya_entries'+S.LS, S.ENTRIES, _yaRecTs);
       pushTable('ya_entries', S.ENTRIES);
     } else if (S.ENTRIES.length) {
