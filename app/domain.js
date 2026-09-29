@@ -39,17 +39,13 @@ function yaMirrorKeys(y) {
   return yaTablesOf(y).map(function (t) { return yaMirrorPrefix(y) + t.slice(pre.length); });
 }
 
-function _yaMarkPushed(t) { S._yaPushedAt[t] = Date.now(); }
-
-function _yaPushedThrough(t) { return S._yaPushedAt[t] || 0; }
-
 function _yaRecTs(r) {
   var t = r && typeof r === 'object' ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
 }
 
 // ── עדות סנכרון חלופית ──
-// בדפדפן שרק קורא _yaPushedAt נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
+// בדפדפן שרק קורא עֵד הדחיפה נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
 // נכשל סגור: נדרש מערך ולא רק ok — כשל רשת או timeout אינו מפנה דבר.
 function _yaVerify() {
   return function () {
@@ -591,7 +587,7 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcMove,
+export { _yaMarkSynced, _yaRecTs, _yaVerify, arcMove,
          catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly,
          mergeCats, parseGregLike, recTouch, saveRows, showEl, taskOf,

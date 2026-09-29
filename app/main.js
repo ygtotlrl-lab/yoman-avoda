@@ -2,7 +2,7 @@
 import { appConfigure, dayIso, dayNoon, getDeviceId, kvParse } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
          pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
-         pushDirty, pushTable, rtyBoot, runSave, tombBoot } from '../core/sync.js';
+         pushDirty, pushTable, pushedFor, rtyBoot, runSave, tombBoot } from '../core/sync.js';
 import { hwBoot, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet, lsRemove,
          lsSet, lsWindowFrom } from '../core/storage.js';
 import { bkBoot, logAwait } from '../core/backup.js';
@@ -15,7 +15,7 @@ import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OF
          MSG_YESHIVA_UNKNOWN, PK_ARC, PK_ENTRY, PK_SET, YA_ROWS_TABLE,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
-import { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcMove, getSB,
+import { _yaMarkSynced, _yaRecTs, _yaVerify, arcMove, getSB,
          gregDateStr, isLive, liveOnly, mergeCats, showEl, yaAdoptRows, yaBkPrefix, yaCatsPut,
          yaEntryRows, yaLsBases, yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows,
          yaPendKeyOf, yaPullFromCloud, yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetPull,
@@ -89,14 +89,12 @@ var LS_CFG = {
   wholeKeys: [],
   // oldRecords נבנית מחדש בכל בחירת מוסד — המפתחות נושאים סיומת מוסד.
   oldRecords: [],
+  // ריק ומוצהר — היומן והארכיון בפינוי, ואין טבלה שנדרשת במלואה לחישוב.
+  fullHistory: [],
   // מפתח שגדל ואינו בפינוי ממלא את האחסון המשותף וחונק את כל האפליקציות שעל ה-origin.
   fixedSize: YESHIVOT.map(function (y) {
     return { t: y.table, why: 'הגדרות המוסד — הקטגוריות וחותמת הניקוי, ⛔ ואינן גדלות עם הזמן' };
-  }),
-
-  // אין כאן תור אופליין — העֵד לסנכרון הוא _yaPushedAt פר-מפתח.
-  pending: function () { return false; },
-  syncedThrough: function () { return 0; }
+  })
 };
 
 var BK_CFG = {
@@ -140,7 +138,7 @@ var RTY_CFG = {
 };
 
 // table() נקרא בכל כתיבה ואינו נלכד — ערך שנלכד בעלייה חותם את המוסד הראשון גם אחרי ההחלפה.
-// ok() הוא חותמת תצוגה בלבד — אין להזין ממנו את עד הפינוי, שהוא _yaPushedAt פר-מפתח.
+// ok() הוא חותמת תצוגה בלבד — אין להזין ממנו את עד הפינוי, שנרשם בליבה בדחיפה עצמה.
 var PL_CFG = {
   every:  3000,
   active: function () { return !!S.YESHIVA; },
@@ -152,7 +150,7 @@ var PL_CFG = {
   table:  function () { return S.KV_TABLE; },
 };
 
-// הטבלאות הן טבלאות המראה — היומן לפני ההגדרות; הטבלה נלכדת עם ההקשר ב-rows, ו-send ו-mark קוראים את מה שנלכד.
+// הטבלאות הן טבלאות המראה — היומן לפני ההגדרות; הטבלה נלכדת עם ההקשר ב-rows, ו-send קורא את מה שנלכד.
 var PUSH_CFG = {
   get tables() { return yaTables(); },
   chunk:  500,
@@ -168,7 +166,6 @@ var PUSH_CFG = {
   send:   function (t, rows) {
     return t === YA_ROWS_TABLE ? yaSendRows(rows, S._yaPushEp) : yaSendSettings(S._yaPushTbl, rows, S._yaPushEp);
   },
-  mark:   function (t) { if (!ctxStale(S._yaPushEp)) _yaMarkPushed(t); },
   run:    function () { yaSyncPushNow(); },
 };
 
@@ -240,7 +237,7 @@ shell.buildTaskBtns = buildTaskBtns;
 function lsRebuildPolicy() {
   LS_CFG.oldRecords = [
     { key: mirrorKey(YA_ROWS_TABLE), label: 'רשומות היומן והארכיון', ts: _yaRecTs,
-      syncedThrough: function () { return _yaPushedThrough(YA_ROWS_TABLE); },
+      syncedThrough: pushedFor(YA_ROWS_TABLE),
       idOf: yaRecId, verify: _yaVerify() }
   ];
 }
@@ -510,8 +507,7 @@ function yaNameOf(y) {
 // ואיפוס למערך ריק אינו מחיקה בענן — הדחיפה מעלה רק שורות מלוכלכות.
 function yaResetTenantState() {
   ctxSwitch();
-  // הדחיפה המושהית אינה מבוטלת כאן — שער ההקשר בשכבת הדחיפה עוצר אותה בהתעוררות.
-  S._yaPushedAt = {};
+  // הדחיפה המושהית אינה מבוטלת כאן — שער ההקשר בשכבת הדחיפה עוצר אותה בהתעוררות; ועֵדי הדחיפה מתאפסים איתו.
   S._lastKnownTimestamp = 0;
   plForget();
   pendForget();

@@ -8,11 +8,8 @@ const S = {
   KV_TABLE: null,
   LS: '',
   _sb: null,
-  // ── עֵד הסנכרון ──
-  // _lastKnownTimestamp אינו עֵד — הוא מתעדכן גם במשיכה ובשמירה בלי לבדוק את תוצאת הדחיפה.
-  // _yaPushedAt נכתב רק אחרי pushTable שהחזירה ok.
-  _yaPushedAt: {},
-  // send ו-mark רצים אחרי await — קריאת הגלובלי בהם הייתה זוקפת דחיפה של מוסד אחד לחשבון השני.
+  // _lastKnownTimestamp אינו עֵד פינוי — הוא מתעדכן גם במשיכה ובשמירה; העֵד נרשם בליבה, בדחיפה עצמה.
+  // send רץ אחרי await — קריאת הגלובלי בהם הייתה זוקפת דחיפה של מוסד אחד לחשבון השני.
   _yaPushEp: 0,
   _yaPushTbl: null,
   _catsResetSeen: '',
@@ -35,7 +32,7 @@ const S = {
   arcSelDayKey: null,
   arcEditMode: false,
   _lastKnownTimestamp: 0,
-  // נכתב על כל שיחה מוצלחת עם הענן, גם במשיכה — ולכן אינו עד דחיפה ואינו משמש לפינוי; העד הוא _yaPushedAt פר-מפתח.
+  // נכתב על כל שיחה מוצלחת עם הענן, גם במשיכה — ולכן אינו עד דחיפה ואינו משמש לפינוי; העד נרשם בליבה, בדחיפה עצמה.
   _yaLastSyncAt: 0,
   _yaNetWarned: false,
   _infData: undefined,

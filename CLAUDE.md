@@ -25,7 +25,7 @@
 - מזהה רשומה — `newClientId()`, בחי ובארכיון כאחד.
 - ההגדרות — טבלה לכל ישיבה: `ya_settings_rishon` / `ya_settings_ramataviv`, והן הבית של `cats` ושל `last_changed`.
 - המראה — שתי טבלאות: `ya_entries` (החי והארכיון, בדגל) וטבלת ההגדרות של הישיבה (`cats` · `cats_reset` בלבד); הזיכרון (`ENTRIES` · `ARCHIVE` · `CATS`) נבנה ב-`yaMirrorLoad`, והכתיבה לדיסק — `yaMirrorRows` / `yaCatsPut`. שמירה אחת — `saveRows`.
-- עֵד הפינוי הוא `_yaPushedAt[key]` (אחרי `pushTable` שהחזירה `ok`) — ולא `_lastKnownTimestamp`, שמתעדכן גם במשיכה.
+- עֵד הפינוי נרשם בליבה, ב-`pushTable` (`pushedFor(YA_ROWS_TABLE)`), ומתאפס ב-`ctxSwitch` — ולא `_lastKnownTimestamp`, שמתעדכן גם במשיכה.
 - `LS_CFG.oldRecords` נבנית ב-`lsRebuildPolicy()` מ-`selectYeshiva`, וחלה על הישיבה הפעילה בלבד; החלון שנתי.
 - `entry_date` נשמר ב-ISO (`YYYY-MM-DD`), וזו הצורה היחידה; `gregDateStr` — לתצוגה בלבד, דרך `yaGreg`.
 - `CACHE_NAME` ב-`sw.js` הוא מזהה הגרסה היחיד; `RAW_BASE` משמש את מציג הטבלה בלבד.
