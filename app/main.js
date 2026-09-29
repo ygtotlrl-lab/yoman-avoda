@@ -111,11 +111,10 @@ var BK_CFG = {
   sources: function () {
     if (!S.KV_TABLE) return [];
     // שתי טבלאות, בשכבות — היומן המאוחד, כולל שורות archived, וטבלת ההגדרות של המוסד.
-    // key הוא מפתח הגיבוי ב-sh_backup המשותפת לפרויקט, והמוסד בתחילית שלו — שם הטבלה לבדו מתנגש בין המוסדות.
+    // מפתח הגיבוי הוא שם הטבלה, והמוסד בתחילית שלו — ya_entries משותפת לשני המוסדות, ושמה לבדו מתנגש ב-sh_backup.
     return [
-      { name: YA_ROWS_TABLE, key: 'ya_entries_rows',
-        eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' },
-      { name: S.KV_TABLE, key: 'ya_settings', order: 'key', ts: 'updated_at' }
+      { name: YA_ROWS_TABLE, eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' },
+      { name: S.KV_TABLE,    order: 'key',       ts: 'updated_at' }
     ];
   }
 };
