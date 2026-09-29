@@ -102,25 +102,17 @@ function pendArc(k) { return pendHas(PK_ARC + k); }
 
 function yaRecId(r) { return r ? r.client_id : null; }
 
-function mergeEntries(local, remote) { return mergeCore(local, remote, { isPending: pendEntry }); }
-
-// סנאפשוט מזוהה ביומו — שני מכשירים שארכבו אותו יום מגיעים לאותה שורה.
-function snapClientId(date) { return S.YESHIVA + ':' + date; }
-
-// סנאפשוט נושא רק רשומות של יומו — רשומה או מצבה של יום אחר אינה נגררת אליו.
-function snapOwnEntries(date, arr) {
-  return (Array.isArray(arr) ? arr : []).filter(function (e) { return e && e.entry_date === date; });
+// החי והארכיון ממוזגים יחד — רשומה שעוברת לארכיון היא אותה שורה בדגל אחר, ומיזוג פר-דגל היה מחזיר את עותקה החי לצד הארכיוני.
+// הסימון בשני המפתחות — רשומה שעברה לארכיון נושאת ⏳ בקידומת הארכיון, ועריכה שקדמה לה — בקידומת החי.
+function mergeEntries(local, remote) {
+  return mergeCore(local, remote, { isPending: function (k) { return pendEntry(k) || pendArc(k); } });
 }
 
-// הרשומות שבתוך הסנאפשוט ממוזגות אחת-אחת — אחרת שני מכשירים שהוסיפו לאותו יום דורסים זה את זה.
-function mergeArchive(local, remote) {
-  return mergeCore(local, remote, { isPending: pendArc, mergePair: function(loc, rem, k, pend) {
-    var base = mergeWinner(loc, rem, pend);
-    var out = {};
-    Object.keys(base).forEach(function(kk){ out[kk] = base[kk]; });
-    out.entries = snapOwnEntries(base.entry_date, mergeCore(loc.entries, rem.entries, { isPending: pendEntry }));
-    return out;
-  } });
+// הזיכרון מתפצל בדגל שעל הרשומה שניצחה — archived נוסע עם הרשומה, ולא עם הרשימה שבה ישבה.
+function yaAdoptRows(remote) {
+  var all = mergeEntries(S.ENTRIES.concat(S.ARCHIVE), remote);
+  S.ENTRIES = yaSortRows(false, all.filter(function (r) { return r && !r.archived; }));
+  S.ARCHIVE = yaSortRows(true, all.filter(function (r) { return r && r.archived; }));
 }
 
 // ── הקטגוריות והמשימות ──
@@ -158,20 +150,19 @@ function mergeCats(local, remote) {
     } });
 }
 
-// מפתח הסימון נגזר מהשורה — הדגל archived מבחין בין רשומה חיה לסנאפשוט.
+// מפתח הסימון נגזר מהשורה — הדגל archived מבחין בין רשומה חיה לרשומה בארכיון.
 function yaPendKeyOf(row) { return (row && row.archived ? PK_ARC : PK_ENTRY) + (row ? row.client_id : ''); }
 
-function yaRowOf(archived, rec) {
+function yaRowOf(rec) {
   if (!rec || rec.client_id == null) return null;
   var data = {};
   Object.keys(rec).forEach(function (k) { if (YA_ROW_COLS.indexOf(k) < 0) data[k] = rec[k]; });
   return {
     client_id: String(rec.client_id),
     yeshiva: S.YESHIVA,
-    archived: !!archived,
+    archived: !!rec.archived,
     entry_date: rec.entry_date || null,
-    // שורת סנאפשוט אינה רשומה — הרגע יושב בפריטים שבתוכה.
-    created_at: (archived || !rec.created_at) ? null : rec.created_at,
+    created_at: rec.created_at || null,
     updated_at: Math.round(recTs(rec)),
     deleted: !!rec.deleted,
     deleted_at: rec.deleted_at == null ? null : rec.deleted_at,
@@ -189,6 +180,7 @@ function yaRecOf(r) {
   if (r.entry_date) rec.entry_date = String(r.entry_date);
   if (r.created_at) rec.created_at = String(r.created_at);
   rec.updated_at = Number(r.updated_at) || 0;
+  if (r.archived) rec.archived = true;
   if (r.deleted) rec.deleted = true;
   if (r.deleted_at != null) rec.deleted_at = r.deleted_at;
   if (r.deleted_by != null) rec.deleted_by = r.deleted_by;
@@ -275,11 +267,9 @@ async function yaSendRows(rows, ep) {
 }
 
 // ── המראה של השורות ──
-// השורות נגזרות מהזיכרון — היומן החי והסנאפשוטים, כל אחד בדגל שלו.
+// השורות נגזרות מהזיכרון — היומן החי והארכיון, והדגל מהרשומה עצמה.
 function yaEntryRows() {
-  return S.ENTRIES.map(function (r) { return yaRowOf(false, r); })
-    .concat(S.ARCHIVE.map(function (r) { return yaRowOf(true, r); }))
-    .filter(function (r) { return !!r; });
+  return S.ENTRIES.concat(S.ARCHIVE).map(yaRowOf).filter(function (r) { return !!r; });
 }
 
 // הכתיבה האחת לדיסק — mirrorSave מעבירה בשער החלון החם.
@@ -288,7 +278,7 @@ function yaMirrorRows() {
   return mirrorSave(YA_ROWS_TABLE);
 }
 
-// הזיכרון נבנה מהמראה — החי מהשורות בלי הדגל, והארכיון מהשורות שבו.
+// הזיכרון נבנה מהמראה — החי מהשורות בלי הדגל, והארכיון מהשורות שבו; הרשומה נושאת את הדגל.
 function yaMirrorLoad() {
   mirrorBoot();
   var rows = MIRROR[YA_ROWS_TABLE] || [];
@@ -493,34 +483,19 @@ function gregDateStr(jsDate) {
   return d + " " + GREG_MONTHS_HE[m-1] + " " + y;
 }
 
-// ── בניית סנאפשוט ארכיון ──
-// מסלול יצירה אחד ל-autoArchiveDay ול-checkDayChange, וסנאפשוט ליום אחד — המפתח נגזר מהיום, כך ששני מכשירים מגיעים לאותה שורה.
+// ── הארכוב ──
+// רשומה שעוברת לארכיון נשארת אותה שורה — הדגל עולה והחותמת מתחדשת, בלי העתק ובלי מצבה: ארכוב אינו מחיקה.
 // אינה כותבת לענן — checkDayChange חייבת להישאר מקומית עד המיזוג שאחריה.
-function arcPutSnapshot(date, dayEntries, ts) {
-  if (!date) return null;
-  var cid = snapClientId(date);
-  var existIdx = S.ARCHIVE.findIndex(function(a){ return a && a.client_id === cid; });
-  var exist = existIdx >= 0 ? S.ARCHIVE[existIdx] : null;
-  // מיזוג ולא החלפה: הסנאפשוט הקיים הוא הצד המרוחק — רשומה שאורכבה לא נמחקת כשעותקה החי הפך ל-tombstone,
-  // אבל מחיקה אמיתית עם updated_at חדש יותר עוברת.
-  var mine = snapOwnEntries(date, JSON.parse(JSON.stringify(dayEntries)));
-  var snapshot = {
-    client_id: cid,
-    entry_date: date,
-    entries: snapOwnEntries(date, mergeCore(mine, exist && isLive(exist) ? (exist.entries || []) : [])),
-    updated_at: ts
-  };
-  if (exist) S.ARCHIVE[existIdx] = snapshot; else S.ARCHIVE.unshift(snapshot);
-  pendMark(PK_ARC + cid);
-  return snapshot;
-}
-
-function autoArchiveDay(date) {
-  if (!date) return;
-  // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
-  var dayEntries = S.ENTRIES.filter(function(e){ return e.entry_date === date; });
-  if (!dayEntries.length) return;
-  if (arcPutSnapshot(date, dayEntries, Date.now())) saveRows();
+function arcMove(list, ts, dayOf) {
+  (Array.isArray(list) ? list : []).forEach(function (e) {
+    if (!isLive(e) || e.archived) return;
+    e.archived = true;
+    if (!e.entry_date && dayOf) e.entry_date = dayOf;
+    recTouch(e, ts);
+    pendMark(PK_ARC + e.client_id);
+  });
+  S.ARCHIVE = yaSortRows(true, S.ARCHIVE.concat(S.ENTRIES.filter(function (e) { return e && e.archived; })));
+  S.ENTRIES = S.ENTRIES.filter(function (e) { return e && !e.archived; });
 }
 
 // גוף הדחיפה בלי ההשהיה, בפונקציה משלו — כדי שמודול הניסיון החוזר יקרא לאותה דחיפה בדיוק.
@@ -588,28 +563,16 @@ async function yaPullFromCloud() {
     // כשל מחזיר אין ראיה ולא ענן ריק — מיזוג מול מערך ריק מוחק את מה שטרם עלה.
     var _rowsE = await yaRowsGet(false);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
-    if (_rowsE.ok) {
-      var cloudEntries = _rowsE.data;
-      if (Array.isArray(cloudEntries)) {
-        S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
-        S.ENTRIES = yaSortRows(false, S.ENTRIES);
-        yaMirrorRows();
-        pullRender(shell.renderLog);
-        console.log("[sync] merged, entries=" + liveOnly(S.ENTRIES).length +
-                    " (+" + (S.ENTRIES.length - liveOnly(S.ENTRIES).length) + " tombstones)");
-      }
-    }
     var _rowsA = await yaRowsGet(true);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
-    if (_rowsA.ok) {
-      hwNoteCloud(mirrorKey(YA_ROWS_TABLE), _rowsA.data); // ראיה עננית לשער הדיסק
-      var cloudArchive = _rowsA.data;
-      if (Array.isArray(cloudArchive)) {
-        S.ARCHIVE = mergeArchive(S.ARCHIVE, cloudArchive);
-        yaMirrorRows();
-        var arcPanel = document.getElementById("panel-archive");
-        if (arcPanel && !arcPanel.classList.contains("is-hidden") && S.arcSelDayKey) pullRender(shell.renderArcDetail);
-      }
+    if (_rowsA.ok) hwNoteCloud(mirrorKey(YA_ROWS_TABLE), _rowsA.data); // ראיה עננית לשער הדיסק
+    if (_rowsE.ok || _rowsA.ok) {
+      yaAdoptRows([].concat(_rowsE.ok ? _rowsE.data : [], _rowsA.ok ? _rowsA.data : []));
+      yaMirrorRows();
+      pullRender(shell.renderLog);
+      console.log("[sync] merged, entries=" + liveOnly(S.ENTRIES).length + ", archived=" + liveOnly(S.ARCHIVE).length);
+      var arcPanel = document.getElementById("panel-archive");
+      if (arcPanel && !arcPanel.classList.contains("is-hidden") && S.arcSelDayKey) pullRender(shell.renderArcDetail);
     }
   } catch(e) { S._yaNetWarned = true; console.error("[sync] error:", e); }
 }
@@ -628,12 +591,12 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot,
-         autoArchiveDay, catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
-         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, mergeArchive,
-         mergeCats, mergeEntries, parseGregLike, recTouch, saveRows, showEl, snapClientId, taskOf,
+export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcMove,
+         catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
+         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly,
+         mergeCats, parseGregLike, recTouch, saveRows, showEl, taskOf,
          taskSubs, yaBkPrefix, yaCatsPut, yaDayName, yaEntryRows, yaGreg, yaHeb, yaLsBases,
          yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows, yaPendKeyOf, yaPullFromCloud,
-         yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty, yaSetPull, yaSetPut,
+         yaAdoptRows, yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty, yaSetPull, yaSetPut,
          yaSetRowOf, yaSetRows, yaSortDays, yaSortEntries, yaSortMonths, yaSortRows, yaSortYears,
          yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva };
