@@ -1,10 +1,10 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { HE_COLLATOR, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayToday, kvParse,
+import { GREG_MONTHS, HE_COLLATOR, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayToday, kvParse,
          withTimeout } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
-import { MIRROR, mirrorBoot, mirrorKey, mirrorSave } from '../core/mirror.js';
+import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -39,17 +39,13 @@ function yaMirrorKeys(y) {
   return yaTablesOf(y).map(function (t) { return yaMirrorPrefix(y) + t.slice(pre.length); });
 }
 
-function _yaMarkPushed(t) { S._yaPushedAt[t] = Date.now(); }
-
-function _yaPushedThrough(t) { return S._yaPushedAt[t] || 0; }
-
 function _yaRecTs(r) {
   var t = r && typeof r === 'object' ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
 }
 
 // ── עדות סנכרון חלופית ──
-// בדפדפן שרק קורא _yaPushedAt נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
+// בדפדפן שרק קורא עֵד הדחיפה נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
 // נכשל סגור: נדרש מערך ולא רק ok — כשל רשת או timeout אינו מפנה דבר.
 function _yaVerify() {
   return function () {
@@ -280,7 +276,6 @@ function yaMirrorRows() {
 
 // הזיכרון נבנה מהמראה — החי מהשורות בלי הדגל, והארכיון מהשורות שבו; הרשומה נושאת את הדגל.
 function yaMirrorLoad() {
-  mirrorBoot();
   var rows = MIRROR[YA_ROWS_TABLE] || [];
   S.ENTRIES = []; S.ARCHIVE = [];
   rows.forEach(function (r) {
@@ -413,7 +408,6 @@ function saveRows() {
 
 // ── התאריך ──
 // היום נשמר ב-entry_date בצורת ISO — צורה אחת; התאריך העברי, היום בשבוע והתאריך הלועזי לתצוגה נגזרים ממנו.
-var GREG_MONTHS_HE = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
 // פענוח הקלט בשדה התאריך בלבד: dd/mm/yyyy, yyyy-mm-dd וצורת התצוגה («25 נובמבר 2025»).
 function parseGregLike(s) {
@@ -423,7 +417,7 @@ function parseGregLike(s) {
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return _gregValid(+m[3], +m[2], +m[1]);
   m = s.match(/^(\d{1,2}) (\S+) (\d{4})$/);
-  var i = m ? GREG_MONTHS_HE.indexOf(m[2]) : -1;
+  var i = m ? GREG_MONTHS.indexOf(m[2]) : -1;
   return (i >= 0) ? _gregValid(+m[1], i + 1, +m[3]) : null;
 }
 
@@ -480,7 +474,7 @@ function getCurrentDateKey() {
 
 function gregDateStr(jsDate) {
   var d = jsDate.getDate(), m = jsDate.getMonth()+1, y = jsDate.getFullYear();
-  return d + " " + GREG_MONTHS_HE[m-1] + " " + y;
+  return d + " " + GREG_MONTHS[m-1] + " " + y;
 }
 
 // ── הארכוב ──
@@ -591,7 +585,7 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcMove,
+export { _yaMarkSynced, _yaRecTs, _yaVerify, arcMove,
          catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly,
          mergeCats, parseGregLike, recTouch, saveRows, showEl, taskOf,
