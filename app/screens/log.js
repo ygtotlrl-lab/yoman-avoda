@@ -4,9 +4,8 @@ import { idEq, pendMark, pendTag, schedulePush, tombKill } from '../../core/sync
 import { ask, esc } from '../../core/ui.js';
 import { MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, PK_ENTRY } from '../constants.js';
 import { S } from '../state.js';
-import { autoArchiveDay, catCls, catLabelOf, cssQ, getCurrentDateKey, isLive, liveOnly,
-         recTouch, saveEntries, yaDayName, yaGreg, yaHeb,
-         yaSortEntries } from '../domain.js';
+import { autoArchiveDay, catCls, catLabelOf, cssQ, getCurrentDateKey, isLive, liveOnly, recTouch,
+         saveRows, yaDayName, yaGreg, yaHeb, yaSortEntries } from '../domain.js';
 
 function screenLogHTML() {
   return `
@@ -58,7 +57,7 @@ function delEntry(id) {
   if (!deleted) return;
   tombKill(deleted);
   pendMark(PK_ENTRY + deleted.client_id);
-  saveEntries();
+  saveRows();
   autoArchiveDay(deleted.entry_date);
   renderLog();
   schedulePush();
@@ -71,7 +70,7 @@ function clearAll() {
     var ts = Date.now();
     var sample = S.ENTRIES.find(function(e){ return e.entry_date === curKey; });
     S.ENTRIES.forEach(function(e){ if (e.entry_date === curKey && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
-    saveEntries(); renderLog();
+    saveRows(); renderLog();
     // ה-tombstones עוברים גם לסנאפשוט של אותו יום — אחרת הארכיון ממשיך להציג אותן
     if (sample) autoArchiveDay(curKey);
     schedulePush();
@@ -116,7 +115,7 @@ function saveEntry(id) {
   e.notes = document.getElementById('ei_notes').value.trim();
   recTouch(e); // בלי זה העדכון מפסיד במיזוג מול העותק הישן שבענן
   pendMark(PK_ENTRY + e.client_id);
-  saveEntries();
+  saveRows();
   autoArchiveDay(e.entry_date); // שהעריכה תגיע גם לסנאפשוט של אותו יום
   return true;
 }

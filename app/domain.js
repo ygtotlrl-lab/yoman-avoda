@@ -1,35 +1,47 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso, dayNoon,
-         dayToday, kvParse, withTimeout } from '../core/util.js';
+import { HE_COLLATOR, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayToday, kvParse,
+         withTimeout } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
-import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
+import { hwNoteCloud } from '../core/storage.js';
+import { MIRROR, mirrorBoot, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
-import { CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
-         MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, SET_PUSH,
-         YA_ROW_TABLES, YESHIVOT } from './constants.js';
+import { CATS_RESET_KEY, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_LOCAL_ONLY,
+         MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, YA_ROWS_TABLE, YA_SET_KEYS,
+         YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
-
-// ── מיון עברי ──
-try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
-
-var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 
 // סיומת מפתח האחסון פר-מוסד — בידוד אופליין
 function yaSuffix(y) { return '_' + y; }
 
-// בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה.
+// בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה; הנתונים עצמם — במראה.
 function yaLsBases() {
-  return ['ya_entries', 'ya_archive', 'ya_cats',
-          CATS_RESET_LS, 'ya_last_day',
-          'ya_pending', 'ya_last_backup', 'ya_log_queue'];
+  return ['ya_last_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
 }
 
-function _yaMarkPushed(kvKey) { S._yaPushedAt[kvKey] = Date.now(); }
+// ── שכבת המראה ──
+// המוסד בתחילית המראה — שני המוסדות חולקים localStorage, ושורות היומן של שניהם יושבות באותה טבלה בענן.
+function yaMirrorPrefix(y) { return self.APP.prefix + 'mirror_' + y + '_'; }
 
-function _yaPushedThrough(kvKey) { return S._yaPushedAt[kvKey] || 0; }
+// הטבלאות של מוסד — היומן המאוחד וטבלת ההגדרות שלו; המראה והדחיפה קוראים מכאן.
+function yaTablesOf(y) {
+  var ent = yaYeshiva(y);
+  return ent ? [YA_ROWS_TABLE, ent.table] : [];
+}
+
+function yaTables() { return S.YESHIVA ? yaTablesOf(S.YESHIVA) : []; }
+
+// מפתחות המראה של מוסד שאינו פתוח — אותה גזירה של mirrorKey, בתחילית שלו; המרשם מצהיר על כל המוסדות.
+function yaMirrorKeys(y) {
+  var pre = self.APP.prefix;
+  return yaTablesOf(y).map(function (t) { return yaMirrorPrefix(y) + t.slice(pre.length); });
+}
+
+function _yaMarkPushed(t) { S._yaPushedAt[t] = Date.now(); }
+
+function _yaPushedThrough(t) { return S._yaPushedAt[t] || 0; }
 
 function _yaRecTs(r) {
   var t = r && typeof r === 'object' ? Number(r.updated_at) : NaN;
@@ -39,10 +51,10 @@ function _yaRecTs(r) {
 // ── עדות סנכרון חלופית ──
 // בדפדפן שרק קורא _yaPushedAt נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
 // נכשל סגור: נדרש מערך ולא רק ok — כשל רשת או timeout אינו מפנה דבר.
-function _yaVerify(kvKey) {
+function _yaVerify() {
   return function () {
-    // העדות היא הטבלה ולא הערך השלם, ואין נפילה-חזרה אליו — הוא היה מפנה מהדיסק רשומה שהטבלה אינה מכירה.
-    return yaRowsGet(kvKey).then(function (rr) {
+    // העדות היא הטבלה, בשני הדגלים — המראה מחזיקה את החי ואת הארכיון באותו מפתח.
+    return yaRowsGet().then(function (rr) {
       return (rr && rr.ok && Array.isArray(rr.data)) ? { ok: true, rows: rr.data }
                                                      : { ok: false, rows: [] };
     }, function () { return { ok: false, rows: [] }; });
@@ -56,58 +68,10 @@ function yaBkPrefix(y) { return (y || 'unknown') + '_'; }
 // עמודות ya_entries — שדה ברשומה שיש לו עמודה נקרא בשמה, ו-data נושא רק את השאר.
 var YA_ROW_COLS = ['client_id', 'yeshiva', 'archived', 'entry_date', 'created_at', 'updated_at', 'deleted', 'deleted_at', 'deleted_by'];
 
-// ── קריאה וכתיבה של kv ──
-// KV_TABLE מפריד בין המוסדות בענן והסיומת מפרידה במכשיר — סיומת שנשכחה כותבת נתוני מוסד אחד למפתח של השני.
+// ── הלקוח ──
 function getSB() {
   if (!S._sb) S._sb = sbWatch(supabase.createClient(SB_URL, SB_KEY));
   return S._sb;
-}
-
-// כתיבת אות הפולינג בלבד — ההגדרות עוברות בשכבת הדחיפה.
-// supabase-js אינו זורק בכשל רשת או הרשאה אלא מחזיר res.error — try/catch לבדו אינו רואה כשל.
-async function sbSet(key, value) {
-  // הטבלה וההקשר נלכדים בשורה הראשונה — await שיתווסף מעל הכתיבה יסיט אותה בשקט לטבלת המוסד החדש.
-  var tbl = S.KV_TABLE, _ep = ctxEpoch();
-  try {
-    var sb = getSB();
-    var res = await withTimeout(sb.from(tbl).upsert({key: key, value: JSON.stringify(value), updated_at: Date.now()}, {onConflict: "key"}));
-    // ההקשר התחלף: ok:true היה מזכה את עד הפינוי של המוסד החדש בדחיפה שלא נעשתה עבורו.
-    if (ctxStale(_ep)) return { ok: false, error: "ההקשר התחלף", ctxStale: true };
-    if (res.error) {
-      console.error('[sync] sbSet error', key, res.error.message, res.error);
-      return { ok: false, error: res.error.message || MSG_SERVER_ERR };
-    }
-    console.log('[sync] sbSet ok', key);
-    return { ok: true, error: null };
-  } catch(e) {
-    console.error('[sync] sbSet exception', key, e);
-    return { ok: false, error: (e && e.message) || String(e) };
-  }
-}
-
-// מפתח חסר (PGRST116 מ-single()) הוא תוצאה ריקה ולא כשל.
-async function sbGetResult(key) {
-  var tbl = S.KV_TABLE; // נלכדת בכניסה — החלפת מוסד באמצע ההמתנה משנה את הגלובלי
-  try {
-    var sb = getSB();
-    var res = await withTimeout(sb.from(tbl).select("value").eq("key", key).single());
-    if (res.error) {
-      var missing = res.error.code === "PGRST116";
-      if (!missing) console.error("[sync] sbGet error [" + key + "]:", res.error.message, res.error);
-      return { ok: missing, data: null, error: missing ? null : (res.error.message || MSG_SERVER_ERR) };
-    }
-    if (!res.data) return { ok: true, data: null, error: null };
-    var pr = kvParse(key, res.data.value);
-    return { ok: pr.ok, data: pr.value, bad: pr.bad, error: pr.bad ? MSG_KV_BAD : null };
-  } catch(e) {
-    console.error("[sync] sbGet exception [" + key + "]:", e);
-    return { ok: false, data: null, error: (e && e.message) || String(e) };
-  }
-}
-
-async function sbGet(key) {
-  var r = await sbGetResult(key);
-  return r.data;
 }
 
 // ── מנוע המיזוג ברמת רשומה ──
@@ -175,7 +139,8 @@ function taskSubs(cat, name) {
   return (t && Array.isArray(t.subs)) ? t.subs : [];
 }
 
-function _yaByBaseOrder(items, base) {
+// משימות הקטגוריה אחרי מיזוג — בסדר הבסיס, ומשימה שאינה בו נוספת בסופו.
+function yaSortTasks(items, base) {
   var pos = {};
   (Array.isArray(base) ? base : []).forEach(function (t, i) { if (t && !(t.id in pos)) pos[t.id] = i; });
   return items.map(function (t, i) { return { t: t, i: (t && t.id in pos) ? pos[t.id] : 1e6 + i }; })
@@ -188,28 +153,25 @@ function mergeCats(local, remote) {
       var base = mergeWinner(loc, rem, pend);
       var out = {};
       Object.keys(base).forEach(function (kk) { out[kk] = base[kk]; });
-      out.tasks = _yaByBaseOrder(mergeCore(loc.tasks, rem.tasks, { key: 'id', isPending: function () { return pend; } }), base.tasks);
+      out.tasks = yaSortTasks(mergeCore(loc.tasks, rem.tasks, { key: 'id', isPending: function () { return pend; } }), base.tasks);
       return out;
     } });
 }
 
-function yaTableOf(kvKey) { return YA_ROW_TABLES[kvKey]; }
+// מפתח הסימון נגזר מהשורה — הדגל archived מבחין בין רשומה חיה לסנאפשוט.
+function yaPendKeyOf(row) { return (row && row.archived ? PK_ARC : PK_ENTRY) + (row ? row.client_id : ''); }
 
-function yaArchivedFlag(kvKey) { return kvKey === 'ya_archive'; }
-
-function yaPendPrefix(kvKey) { return (kvKey === 'ya_archive') ? PK_ARC : PK_ENTRY; }
-
-function yaRowOf(kvKey, rec) {
+function yaRowOf(archived, rec) {
   if (!rec || rec.client_id == null) return null;
   var data = {};
   Object.keys(rec).forEach(function (k) { if (YA_ROW_COLS.indexOf(k) < 0) data[k] = rec[k]; });
   return {
     client_id: String(rec.client_id),
     yeshiva: S.YESHIVA,
-    archived: yaArchivedFlag(kvKey),
+    archived: !!archived,
     entry_date: rec.entry_date || null,
     // שורת סנאפשוט אינה רשומה — הרגע יושב בפריטים שבתוכה.
-    created_at: (yaArchivedFlag(kvKey) || !rec.created_at) ? null : rec.created_at,
+    created_at: (archived || !rec.created_at) ? null : rec.created_at,
     updated_at: Math.round(recTs(rec)),
     deleted: !!rec.deleted,
     deleted_at: rec.deleted_at == null ? null : rec.deleted_at,
@@ -233,11 +195,32 @@ function yaRecOf(r) {
   return rec;
 }
 
+// ── הארכיון: ימים, שנים וחודשים ──
+// ימי החודש — הראשון ראשון, לפי מפתח היום.
+function yaSortDays(list) {
+  return list.slice().sort(function (a, b) { return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
+}
+
+// שנים — הראשונה ראשונה, ושנה שאינה ידועה בסוף.
+function yaSortYears(list) {
+  return list.slice().sort(function (a, b) {
+    if (a === HUNKNOWN) return 1;
+    if (b === HUNKNOWN) return -1;
+    return a > b ? 1 : -1;
+  });
+}
+
+// חודשים — בסדר השנה העברית, וחודש שאינו ברשימה בסוף.
+function yaSortMonths(list) {
+  var at = function (m) { var i = HMO.indexOf(m); return i < 0 ? 999 : i; };
+  return list.slice().sort(function (a, b) { return at(a) - at(b); });
+}
+
 // ── סדר טעינה יציב ──
 // Postgres אינו מבטיח סדר בלי ORDER BY — והמיון בקוד, כי client_id אינו סדר תאריכים.
-function yaSortRows(kvKey, arr) {
+function yaSortRows(archived, arr) {
   var a = (Array.isArray(arr) ? arr : []).slice();
-  if (kvKey === 'ya_archive') {
+  if (archived) {
     a.sort(function (x, y) {
       var tx = String((x && x.entry_date) || ''), ty = String((y && y.entry_date) || '');
       if (tx !== ty) return tx < ty ? 1 : -1;
@@ -255,18 +238,17 @@ function yaSortRows(kvKey, arr) {
 }
 
 // ok:false פירושו «אין ראיה» — אין להחזיר ok:true על תשובה שאינה מערך: מערך ריק ייקרא «הענן ריק» וימחק.
-async function yaRowsGet(kvKey) {
-  var t = yaTableOf(kvKey);
-  if (!t || !S.KV_TABLE || !S.YESHIVA) return { ok: false, data: null };
+// archived בוחר את הדגל — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה; בלעדיו — שניהם, לפינוי ולחלון החם.
+async function yaRowsGet(archived) {
+  if (!S.KV_TABLE || !S.YESHIVA) return { ok: false, data: null };
   // המוסד נלכד בכניסה — _rowsPaged קורא לסגור אחרי כל await, והחלפת מוסד באמצע הייתה משרשרת עמודים של שני מוסדות.
   var yesh = S.YESHIVA, _ep = ctxEpoch();
   try {
     var sb = getSB();
     if (!sb) return { ok: false, data: null };
-    // החלון הוא דגל archived — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה.
     var rows = await _rowsPaged(function () {
-      var q = sb.from(t).select('client_id,entry_date,created_at,updated_at,deleted,deleted_at,deleted_by,data').eq('yeshiva', yesh);
-      if (t === 'ya_entries') q = q.eq('archived', yaArchivedFlag(kvKey));
+      var q = sb.from(YA_ROWS_TABLE).select('client_id,archived,entry_date,created_at,updated_at,deleted,deleted_at,deleted_by,data').eq('yeshiva', yesh);
+      if (typeof archived === 'boolean') q = q.eq('archived', archived);
       return q;
     }, 'client_id', null);
     if (!rows) return { ok: false, data: null };
@@ -276,22 +258,92 @@ async function yaRowsGet(kvKey) {
       if (rec) out.push(rec);
     });
     if (ctxStale(_ep)) return { ok: false, data: null };
-    return { ok: true, data: yaSortRows(kvKey, out) };
+    return { ok: true, data: yaSortRows(!!archived, out) };
   } catch (e) { return { ok: false, data: null }; }
 }
 
 // upsert עם onConflict: 'client_id' ולא insert — ניסיון חוזר אחרי תשובה שאבדה ברשת חייב להיות אידמפוטנטי.
-// rows הן הרשומות המקומיות, וצורת השורה נגזרת כאן — מפתח הסימון נקרא מהן ולא מהשורה שנשלחה.
-async function yaSendRows(kvKey, recs, ep) {
-  var t = yaTableOf(kvKey);
+// השורות כבר בצורת הטבלה — הן נבנו מהזיכרון ב-yaEntryRows, והמוסד שבהן נלכד עם ההקשר.
+async function yaSendRows(rows, ep) {
   var sb = getSB();
   // היעדר לקוח נרשם ככשל רשת ולא ככשל סמכותי — השורה כלל לא נשלחה, והסימון חייב להישאר.
   if (!sb) throw new Error('failed to reach cloud');
   if (ctxStale(ep)) throw new Error('failed to reach cloud');
-  var rows = recs.map(function (rec) { return yaRowOf(kvKey, rec); }).filter(function (r) { return !!r; });
-  var res = await withTimeout(sb.from(t).upsert(rows, { onConflict: 'client_id' }));
+  var res = await withTimeout(sb.from(YA_ROWS_TABLE).upsert(rows, { onConflict: 'client_id' }));
   if (!res || res.error) return res || { error: { message: 'upsert failed' } };
   return {};
+}
+
+// ── המראה של השורות ──
+// השורות נגזרות מהזיכרון — היומן החי והסנאפשוטים, כל אחד בדגל שלו.
+function yaEntryRows() {
+  return S.ENTRIES.map(function (r) { return yaRowOf(false, r); })
+    .concat(S.ARCHIVE.map(function (r) { return yaRowOf(true, r); }))
+    .filter(function (r) { return !!r; });
+}
+
+// הכתיבה האחת לדיסק — mirrorSave מעבירה בשער החלון החם.
+function yaMirrorRows() {
+  MIRROR[YA_ROWS_TABLE] = yaEntryRows();
+  return mirrorSave(YA_ROWS_TABLE);
+}
+
+// הזיכרון נבנה מהמראה — החי מהשורות בלי הדגל, והארכיון מהשורות שבו.
+function yaMirrorLoad() {
+  mirrorBoot();
+  var rows = MIRROR[YA_ROWS_TABLE] || [];
+  S.ENTRIES = []; S.ARCHIVE = [];
+  rows.forEach(function (r) {
+    var rec = yaRecOf(r);
+    if (rec) (r.archived ? S.ARCHIVE : S.ENTRIES).push(rec);
+  });
+  S.CATS = yaSetValue('cats');
+  if (!Array.isArray(S.CATS)) S.CATS = [];
+  var seen = yaSetValue(CATS_RESET_KEY);
+  S._catsResetSeen = seen == null ? '' : String(seen);
+}
+
+// ── המראה של ההגדרות ──
+function yaSetRowOf(key) {
+  var rows = MIRROR[S.KV_TABLE] || [];
+  for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].key === key) return rows[i];
+  return null;
+}
+
+function yaSetValue(key) {
+  var r = yaSetRowOf(key);
+  return r ? kvParse(key, r.value).value : null;
+}
+
+function yaSetPut(row) {
+  var t = S.KV_TABLE;
+  if (!t || !row) return false;
+  var rows = (MIRROR[t] || []).filter(function (r) { return r && r.key !== row.key; });
+  rows.push(row);
+  MIRROR[t] = rows;
+  return mirrorSave(t);
+}
+
+// הקטגוריות במראה — הערך מהזיכרון, בצורת השורה שנדחפת.
+function yaCatsPut() {
+  return yaSetPut({ key: 'cats', value: JSON.stringify(S.CATS), updated_at: Date.now() });
+}
+
+// שורות ההגדרות שהמראה מחזיקה, במשיכה אחת — ok:false הוא «אין ראיה».
+async function yaSetPull() {
+  var tbl = S.KV_TABLE; // נלכדת בכניסה — החלפת מוסד באמצע ההמתנה משנה את הגלובלי
+  if (!tbl) return { ok: false, rows: null };
+  try {
+    var res = await withTimeout(getSB().from(tbl).select('key,value,updated_at').in('key', YA_SET_KEYS));
+    if (!res || res.error || !Array.isArray(res.data)) {
+      console.error('[sync] ההגדרות אינן נקראות:', res && res.error);
+      return { ok: false, rows: null };
+    }
+    return { ok: true, rows: res.data };
+  } catch (e) {
+    console.error('[sync] ההגדרות אינן נקראות:', e);
+    return { ok: false, rows: null };
+  }
 }
 
 // ── ההגדרות ──
@@ -344,7 +396,7 @@ function yaSortEntries(list) {
     var ra = rank(a), rb = rank(b);
     for (var i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     var na = String((a && a.notes) || ''), nb = String((b && b.notes) || '');
-    if (na !== nb) return HE.compare(na, nb);
+    if (na !== nb) return HE_COLLATOR.compare(na, nb);
     var qa = num(a), qb = num(b);
     if (qa !== qb) return qa - qb;
     var ia = String((a && a.client_id) || ''), ib = String((b && b.client_id) || '');
@@ -352,35 +404,20 @@ function yaSortEntries(list) {
   });
 }
 
-function saveEntries() {
+// שמירה אחת לשורות — המראה ואז הדחיפה; החי והארכיון באותה טבלה ובאותו מחזור.
+function saveRows() {
   // t0 לפני הצילום — רשומה שתסומן אחריו אינה במה שנשלח עכשיו.
   var _t0 = Date.now();
   // ההקשר נלכד לפני ההמתנה — עד הפינוי וסימון הממתין שאחריה הם פר-מוסד.
   var _ep = ctxEpoch();
-  lsSetArray("ya_entries"+S.LS, S.ENTRIES, _yaRecTs);
+  yaMirrorRows();
   (async function(){
-    var _rows = await pushTable('ya_entries', S.ENTRIES);
+    var _rows = await pushTable(YA_ROWS_TABLE);
     if (ctxStale(_ep)) return;
     // עד הפינוי מסומן בשכבה המשותפת ואינו נכתב כאן שוב — שני אתרי סימון הם שתי הכרעות על אותה ראיה.
-    var _ok = _rows.ok;
-    if (_ok) pendConfirmPush(PK_ENTRY, _t0);
-    if (_ok && _rows.n) yaSyncLog('push', 'ya_entries', _rows.n);
-    // אות הפולינג מקודם בשכבת הדחיפה רק כשנכתב משהו — קידום כאן היה חותם גם על דחיפה ריקה.
-  })();
-}
-
-function saveArchive() {
-  var _t0 = Date.now();
-  var _ep = ctxEpoch(); // נלכד לפני ההמתנה — עד הפינוי ואישור הממתין הם פר-מוסד
-  lsSetArray("ya_archive"+S.LS, hwDiskFilter('ya_archive'+S.LS, S.ARCHIVE), _yaRecTs);
-  (async function(){
-    // ya_archive נדחף ל-ya_entries עם archived=true — הארכוב הוא דגל על השורה.
-    var _rows = await pushTable('ya_archive', S.ARCHIVE);
-    if (ctxStale(_ep)) return;
-    var _ok = _rows.ok;
-    if (_ok) pendConfirmPush(PK_ARC, _t0);
-    if (_ok && _rows.n) yaSyncLog('push', 'ya_archive', _rows.n);
-    // אות הפולינג מקודם בשכבת הדחיפה בלבד — רק כשנכתב משהו.
+    if (_rows.ok) { pendConfirmPush(PK_ENTRY, _t0); pendConfirmPush(PK_ARC, _t0); }
+    if (_rows.ok && _rows.n) yaSyncLog('push', YA_ROWS_TABLE, _rows.n);
+    // אות הבדיקה המחזורית מקודם בשכבת הדחיפה רק כשנכתב משהו — קידום כאן היה חותם גם על דחיפה ריקה.
   })();
 }
 
@@ -483,7 +520,7 @@ function autoArchiveDay(date) {
   // כולל tombstones — כך שמחיקה מהיומן מגיעה גם לסנאפשוט של אותו יום
   var dayEntries = S.ENTRIES.filter(function(e){ return e.entry_date === date; });
   if (!dayEntries.length) return;
-  if (arcPutSnapshot(date, dayEntries, Date.now())) saveArchive();
+  if (arcPutSnapshot(date, dayEntries, Date.now())) saveRows();
 }
 
 // גוף הדחיפה בלי ההשהיה, בפונקציה משלו — כדי שמודול הניסיון החוזר יקרא לאותה דחיפה בדיוק.
@@ -491,18 +528,15 @@ async function yaSyncPushNow() {
     // t0 לפני הצילום — הורדת הסימון מרשומה שסומנה אחריו הייתה מאבדת אותה בשקט.
     var _t0 = Date.now();
     // ההקשר נלכד בכניסה — המסלול נקרא גם מהתקתוק המושהה וגם מהניסיון החוזר, ושניהם יכולים להתעורר בזמן ההחלפה.
-    var _ep = ctxEpoch();
-    var rEntries = await pushTable("ya_entries", S.ENTRIES);
+    var _ep = ctxEpoch(), _tbl = S.KV_TABLE;
+    var rRows = await pushTable(YA_ROWS_TABLE);
     if (ctxStale(_ep)) return;
-    var rArchive = await pushTable("ya_archive", S.ARCHIVE);
+    var rSet = await pushTable(_tbl);
     if (ctxStale(_ep)) return;
-    var rSet = await pushTable(SET_PUSH);
-    if (ctxStale(_ep)) return;
-    // אישור הממתין פר-קטגוריה גם כאן — זה מסלול הריקון האוטומטי, ובלעדיו הסימון שורד דחיפה שהצליחה והניסיון החוזר חוזר לנצח.
-    // פר-קטגוריה ולא גורף — הצלחה באחת אינה ראיה לשנייה.
-    if (rEntries.ok) pendConfirmPush(PK_ENTRY, _t0);
-    if (rArchive.ok) pendConfirmPush(PK_ARC, _t0);
-    if (!rEntries.ok || !rArchive.ok || !rSet.ok) {
+    // אישור הממתין גם כאן — זה מסלול הריקון האוטומטי, ובלעדיו הסימון שורד דחיפה שהצליחה והניסיון החוזר חוזר לנצח.
+    // פר-טבלה ולא גורף — הצלחה באחת אינה ראיה לשנייה.
+    if (rRows.ok) { pendConfirmPush(PK_ENTRY, _t0); pendConfirmPush(PK_ARC, _t0); }
+    if (!rRows.ok || !rSet.ok) {
       // אין לחתום last_changed על נתון שלא הגיע — מכשירים אחרים היו מושכים עותק ענני ישן מעל רשומות חדשות.
       // בלי רשת השמירה הצליחה במכשיר ואינה שגיאה; כשל עם רשת הוא שגיאה.
       if (!navigator.onLine) toast(MSG_SAVED_LOCAL, null, 'good');
@@ -537,7 +571,7 @@ function extractYM(heb) {
 
 function _yaMarkSynced() {
   S._yaLastSyncAt = Date.now();
-  // הכשל נשאר שקט (פולינג כל 3 שניות — טוסט בכל מחזור היה רעש), אבל החזרה נאמרת.
+  // הכשל נשאר שקט (בדיקה מחזורית כל 3 שניות — טוסט בכל מחזור היה רעש), אבל החזרה נאמרת.
   if (S._yaNetWarned) { S._yaNetWarned = false; toast(MSG_SYNC_BACK, null, 'good'); }
   // הגיבוי והיומן אינם נתלים כאן — מנגנון שרץ רק כשהסנכרון רץ נעצר בדיוק כשאין סנכרון; הם מופעלים בעלייה.
 }
@@ -546,56 +580,38 @@ function _yaMarkSynced() {
 async function yaPullFromCloud() {
   // ההקשר נלכד כאן — המשיכה רצה כל 3 שניות, והחלפת מוסד בזמן משיכה בטיסה
   // הייתה כותבת רשומות של מוסד אחד למפתח של השני, אחרי שמפת החותמות כבר אופסה.
-  var _ep = ctxEpoch(), _ls = S.LS;
+  var _ep = ctxEpoch();
   try {
     console.log("[sync] pulling data...");
 
     // מיזוג ברמת רשומה ולא החלפה — blob ישן עם חותמת חדשה היה מוחק עבודה שמכשיר אחר הרגע הקליד.
     // כשל מחזיר אין ראיה ולא ענן ריק — מיזוג מול מערך ריק מוחק את מה שטרם עלה.
-    var _rowsE = await yaRowsGet('ya_entries');
+    var _rowsE = await yaRowsGet(false);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsE.ok) {
       var cloudEntries = _rowsE.data;
       if (Array.isArray(cloudEntries)) {
         S.ENTRIES = mergeEntries(S.ENTRIES, cloudEntries);
-        S.ENTRIES.sort(function(a,b){ return entryOrderTs(b) - entryOrderTs(a); });
-        lsSetArray("ya_entries"+_ls, S.ENTRIES, _yaRecTs);
+        S.ENTRIES = yaSortRows(false, S.ENTRIES);
+        yaMirrorRows();
         pullRender(shell.renderLog);
         console.log("[sync] merged, entries=" + liveOnly(S.ENTRIES).length +
                     " (+" + (S.ENTRIES.length - liveOnly(S.ENTRIES).length) + " tombstones)");
       }
     }
-    var _rowsA = await yaRowsGet('ya_archive');
+    var _rowsA = await yaRowsGet(true);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     if (_rowsA.ok) {
-      hwNoteCloud('ya_archive'+_ls, _rowsA.data); // ראיה עננית לשער הדיסק
+      hwNoteCloud(mirrorKey(YA_ROWS_TABLE), _rowsA.data); // ראיה עננית לשער הדיסק
       var cloudArchive = _rowsA.data;
       if (Array.isArray(cloudArchive)) {
         S.ARCHIVE = mergeArchive(S.ARCHIVE, cloudArchive);
-        lsSetArray("ya_archive"+_ls, hwDiskFilter('ya_archive'+_ls, S.ARCHIVE), _yaRecTs);
+        yaMirrorRows();
         var arcPanel = document.getElementById("panel-archive");
         if (arcPanel && !arcPanel.classList.contains("is-hidden") && S.arcSelDayKey) pullRender(shell.renderArcDetail);
       }
     }
   } catch(e) { S._yaNetWarned = true; console.error("[sync] error:", e); }
-}
-
-// ── בחירת מוסד ואתחול ──
-// ערך פגום אחד ב-localStorage זורק לפני startApp ומשאיר מסך ריק — לכן נופלים לברירת המחדל וממשיכים לעלות.
-function lsRead(key, fallback, kind) {
-  var raw;
-  try { raw = lsGet(key); } catch(e) { console.warn('[load] localStorage לא זמין:', e); return fallback; }
-  if (raw == null || raw === "") return fallback;
-  var val;
-  try { val = JSON.parse(raw); } catch(e) {
-    console.warn('[load] ערך פגום ב-' + key + ' — חוזרים לערך הנפילה-חזרה שנמסר', e);
-    return fallback;
-  }
-  var ok = (kind === 'array') ? Array.isArray(val)
-         : (kind === 'object') ? (val && typeof val === 'object' && !Array.isArray(val))
-         : (val != null);
-  if (!ok) { console.warn('[load] סוג לא צפוי ב-' + key + ' — חוזרים לערך הנפילה-חזרה שנמסר'); return fallback; }
-  return val;
 }
 
 // ── משותף למסכים ──
@@ -612,12 +628,12 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify,
-         arcPutSnapshot, autoArchiveDay, catCls, catLabelOf, cssQ, entryOrderTs, extractYM,
-         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, lsRead,
-         mergeArchive, mergeCats, mergeEntries, parseGregLike,
-         recTouch, saveArchive, saveEntries, sbGetResult, showEl, snapClientId,
-         catTasks, taskOf, taskSubs, yaRecId, yaBkPrefix, yaDayName, yaGreg, yaHeb, yaLsBases,
-         yaPendPrefix, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty,
-         yaSetRows, yaSortEntries, yaSuffix, yaSyncLog, yaSyncPushNow, yaTableOf,
-         yaYeshiva };
+export { _yaMarkPushed, _yaMarkSynced, _yaPushedThrough, _yaRecTs, _yaVerify, arcPutSnapshot,
+         autoArchiveDay, catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
+         getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly, mergeArchive,
+         mergeCats, mergeEntries, parseGregLike, recTouch, saveRows, showEl, snapClientId, taskOf,
+         taskSubs, yaBkPrefix, yaCatsPut, yaDayName, yaEntryRows, yaGreg, yaHeb, yaLsBases,
+         yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows, yaPendKeyOf, yaPullFromCloud,
+         yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty, yaSetPull, yaSetPut,
+         yaSetRowOf, yaSetRows, yaSortDays, yaSortEntries, yaSortMonths, yaSortRows, yaSortYears,
+         yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva };

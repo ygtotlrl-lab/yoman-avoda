@@ -5,7 +5,7 @@ import { appConfigure } from '../core/util.js';
 // כאן הנתונים שהליבה קוראת, והחיווט — ב-main.js; הקובץ הזה נטען ראשון, לפני כל קריאה לליבה.
 // העידן עולה בשינוי צורת רשומה או מפתחה, ושינוי שם טבלה הוא שינוי כזה — המראה ממופתחת בשם.
 // עותק בעידן ישן אינו נדחף — הממתין בו נרשם ביומן, והוא נזרק ונמשך מלא.
-var DATA_ERA = 5;
+var DATA_ERA = 6;
 
 appConfigure({ DATA_ERA: DATA_ERA });
 
@@ -86,28 +86,20 @@ var MSG_CLEAR_ALL_TITLE = '🗑 מחיקת כל הרשומות';
 
 var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנוכחי?';
 
-// ── PUSH_CFG ──
-// ya_entries לפני ya_archive — שתיהן נכתבות לאותה טבלה בדגל שונה, והסדר משאיר את הצילום אחרי החי.
-// ya_settings הוא שם לוגי ולא טבלה — הכתיבה היא ל-KV_TABLE של המוסד שנלכד.
-var SET_PUSH = 'ya_settings';
-
-var PUSH_TABLES = ['ya_entries', 'ya_archive', SET_PUSH];
-
 // ── שכבת השורות בענן ──
 // היומן והארכיון בטבלה אחת ומופרדים בעמודת archived; הסנאפשוט הוא יחידת הארכיון — שורה ליום.
-// ya_archive הוא מפתח localStorage ולא טבלה; cats נשאר ב-kv, ביתו היחיד בענן.
-var YA_ROW_TABLES = { ya_entries: 'ya_entries', ya_archive: 'ya_entries' };
+var YA_ROWS_TABLE = 'ya_entries';
 
 // ── קבועים משותפים ──
 // pushTable שהחזירה ok מאשרת כל רשומה שסומנה לפני הצילום — ולא _lastKnownTimestamp, שמתעדכן גם במשיכה.
 var PK_ENTRY = 'entry:', PK_ARC = 'arc:', PK_SET = 'setting:';
 
 // חותמת ניקוי שנקבעת בענן ביד אחרי ניקוי: מכשיר שראה חותמת חדשה משלו זורק את העותק המקומי ומושך מלא, פעם אחת.
-// חותמת ISO ולא מונה — השוואת מחרוזות ISO היא כרונולוגית.
-// _KEY הוא המפתח בענן בלי תחילית ו-_LS המפתח במכשיר עם תחילית — האחסון המקומי משותף לכל ה-origin.
+// חותמת ISO ולא מונה — השוואת מחרוזות ISO היא כרונולוגית; החותמת שנראתה היא השורה שבמראה.
 var CATS_RESET_KEY = 'cats_reset';
 
-var CATS_RESET_LS = 'ya_cats_reset';
+// מפתחות טבלת ההגדרות שהמראה מחזיקה — שאר המפתחות בטבלה אינם נקראים כאן.
+var YA_SET_KEYS = ['cats', CATS_RESET_KEY];
 
 // אין בו מרחשון — monthKeyOf ממפה אותו לחשון, אחרת לאותה שנה שני כפתורי חשוון.
 // אדר ואדר א׳/ב׳ חיים זה לצד זה — בכל שנה מופיע רק אחד מהם.
@@ -118,7 +110,7 @@ var HUNKNOWN = "לא ידוע";
 
 var DAY_VALUE_MAP = ["יום ראשון","יום שני","יום שלישי","יום רביעי","יום חמישי","ערב שבת","מוצאי שבת"];
 
-export { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREADY_AT,
+export { CATS_RESET_KEY, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREADY_AT,
          MSG_BOOT_FAIL, MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, MSG_CLOUD_NO_FANOUT,
          MSG_DAY_ARCHIVED, MSG_EDIT_FORM_CLOSED, MSG_IMG_FAIL, MSG_IMG_OFFLINE,
          MSG_IMG_PREP, MSG_INFRA_TABLE, MSG_LOCAL_ONLY, MSG_NEED_TASK,
@@ -126,5 +118,4 @@ export { CATS_RESET_KEY, CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREAD
          MSG_PICK_CATEGORY, MSG_POPUP_BLOCKED, MSG_ROW_GONE, MSG_SAVED_CLOUD,
          MSG_SUBTASK_EXISTS, MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL,
          MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_TASK_EXISTS, MSG_YESHIVA_UNKNOWN,
-         PK_ARC, PK_ENTRY, PK_SET, PUSH_TABLES, SB_KEY, SB_URL, SET_PUSH,
-         YA_ROW_TABLES, YESHIVOT };
+         PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, YA_ROWS_TABLE, YA_SET_KEYS, YESHIVOT };

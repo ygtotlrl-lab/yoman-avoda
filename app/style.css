@@ -186,7 +186,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 
 /* ── מסכים ──
    מסך בחירת הישיבה: צבעיו הם צבעי icon שבתצורה, ולא --brand ו--bg של פנים האפליקציה.
-   דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, ומודאל שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
+   דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, וחלון דו-שיח שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
 #yeshivaSelect{position:fixed;inset:0;z-index:var(--z-3);
   background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
   color:var(--on-deep);display:flex;align-items:center;justify-content:center;

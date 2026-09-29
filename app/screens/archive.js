@@ -3,12 +3,11 @@ import { MSG_SAVED, dayToday } from '../../core/util.js';
 import { idEq, newClientId, pendMark, tombKill } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
-import { HMO, HUNKNOWN, MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC,
-         PK_ENTRY } from '../constants.js';
+import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, PK_ARC, PK_ENTRY } from '../constants.js';
 import { S, shell } from '../state.js';
-import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveArchive,
-         saveEntries, showEl, snapClientId, yaDayName, yaGreg, yaHeb,
-         yaSortEntries } from '../domain.js';
+import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
+         snapClientId, yaDayName, yaGreg, yaHeb, yaSortDays, yaSortEntries, yaSortMonths,
+         yaSortYears } from '../domain.js';
 import { exportPDF } from '../domain.report.js';
 
 function screenArchiveHTML() {
@@ -87,8 +86,7 @@ function getDaysInMonth(year, month) {
     var ym = extractYM(d.heb);
     if (ym.year === year && ym.month === month) result.push(d);
   });
-  result.sort(function(a,b){ return a.key < b.key ? -1 : a.key > b.key ? 1 : 0; });
-  return result;
+  return yaSortDays(result);
 }
 
 function getNowHebYM() {
@@ -140,11 +138,7 @@ function renderArcYears() {
   // השנה הנוכחית נכללת תמיד, גם כשהיא ריקה.
   if (nowYM.year) allYears[nowYM.year] = true;
 
-  var yearList = Object.keys(allYears).sort(function(a,b){
-    if (a === HUNKNOWN) return 1;
-    if (b === HUNKNOWN) return -1;
-    return a > b ? 1 : -1;
-  });
+  var yearList = yaSortYears(Object.keys(allYears));
 
   var html = '<div class="arc-pick-label">בחר שנה:</div><div class="arc-grid">';
   yearList.forEach(function(y) {
@@ -173,11 +167,7 @@ function renderArcMonths(year) {
   var withData = monthsWithData(year);
   Object.keys(withData).forEach(function(m){ monthSet[m] = true; });
 
-  var monthList = Object.keys(monthSet).sort(function(a,b){
-    var ia = HMO.indexOf(a); if (ia < 0) ia = 999;
-    var ib = HMO.indexOf(b); if (ib < 0) ib = 999;
-    return ia - ib;
-  });
+  var monthList = yaSortMonths(Object.keys(monthSet));
 
   var html = '<div class="arc-pick-label">בחר חודש <b>' + esc(year) + '</b>:</div><div class="arc-grid">';
   monthList.forEach(function(m) {
@@ -305,9 +295,8 @@ function arcDeleteEntry(dayKey, entryId) {
     (snap.entries||[]).forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); hit = true; } });
     if (hit) { recTouch(snap, ts); pendMark(PK_ARC + snap.client_id); }
   });
-  saveArchive();
   S.ENTRIES.forEach(function(e){ if (idEq(e.client_id, entryId) && isLive(e)) { tombKill(e, ts); pendMark(PK_ENTRY + e.client_id); } });
-  saveEntries();
+  saveRows();
   renderArcDetail();
   renderArcBreadcrumb();
 }
@@ -338,11 +327,11 @@ function arcAddEntry() {
     snap.entries.unshift(newEntry);
     recTouch(snap, _now);
     pendMark(PK_ARC + snap.client_id);
-    saveArchive();
+    saveRows();
   } else {
     S.ENTRIES.unshift(newEntry);
     pendMark(PK_ENTRY + newEntry.client_id);
-    saveEntries();
+    saveRows();
   }
   renderArcDetail();
 }
@@ -428,8 +417,7 @@ function arcSaveEntry(dayKey, entryId) {
   // הסימון במפתח PK_ARC + client_id — זה המפתח שהמיזוג, הדחיפה ושער הפינוי קוראים;
   // סימון במפתח אחר אינו נראה להם, והסנאפשוט הערוך עלול להתפנות לפני שעלה.
   touchedArc.forEach(function(k) { if (k != null) pendMark(PK_ARC + k); });
-  saveEntries();
-  saveArchive();
+  saveRows();
   renderArcDetail();
   shell.renderLog();
   toast(MSG_SAVED, null, 'good');

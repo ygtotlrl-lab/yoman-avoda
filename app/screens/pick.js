@@ -65,10 +65,10 @@ var INF_ICONS = {
 
 function _infAppTh(a) {
   var icoSvg = INF_ICONS[a];
-  var cellHtml = icoSvg
+  var cellHTML = icoSvg
     ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + icoSvg + '</svg>'
     : '<span class="inf-ico-l" aria-hidden="true">' + esc(String(a).charAt(0)) + '</span>';
-  return '<th class="inf-app" title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHtml + '</th>';
+  return '<th class="inf-app" title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHTML + '</th>';
 }
 
 function _infDot(cell) {
@@ -120,7 +120,7 @@ function _infParse(md) {
 }
 
 // הציור נפרד מהפירוק — פתח/סגור הכל מצייר מחדש בלי למשוך שוב.
-function _infHtml(d) {
+function _infHTML(d) {
   var h = '<div class="inf">';
   h += '<div class="inf-hd"><b>טבלת התשתית</b>' +
        '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
@@ -181,7 +181,7 @@ async function yaInfraOpen() {
 
 function _infPaint() {
   var el = document.getElementById('modal-body');
-  if (el && S._infData) el.innerHTML = _infHtml(S._infData);
+  if (el && S._infData) el.innerHTML = _infHTML(S._infData);
 }
 
 function yaInfraToggleAll(open) {

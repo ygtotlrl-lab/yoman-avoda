@@ -98,7 +98,7 @@ function _buildReportDiv(cb, entries, date){
   var sortedPDF = yaSortEntries(entries);
   var byCAT={};sortedPDF.forEach(function(e){if(!byCAT[e.cat])byCAT[e.cat]={name:catLabelOf(e),list:[]};byCAT[e.cat].list.push(e);});
   var catIds=S.CATS.map(function(c){return c.id;}).filter(function(l){return !!byCAT[l];});
-  var rowsHtml='';
+  var rowsHTML='';
   var globalTaskIdx = 0;
   catIds.forEach(function(cid){
     var data=byCAT[cid];
@@ -107,18 +107,18 @@ function _buildReportDiv(cb, entries, date){
     tgs.forEach(function(tg,ti){
       var bg=(globalTaskIdx%2===0)?'var(--card)':'var(--bg)'; globalTaskIdx++;
       tg.items.forEach(function(e,ii){
-        rowsHtml+='<tr>';
-        if(cri===0)rowsHtml+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+esc(data.name)+'</td>';
-        if(ii===0)rowsHtml+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+esc(tg.task)+'</td>';
-        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
-        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
-        rowsHtml+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
-        rowsHtml+='</tr>';cri++;
+        rowsHTML+='<tr>';
+        if(cri===0)rowsHTML+='<td rowspan="'+data.list.length+'" class="'+catCls(letter)+' cat-fill rp-cat" style="color:var(--on-cat);font-size:var(--fs-3);text-align:center;vertical-align:middle;border:1px solid var(--border);padding:8px;min-width:65px">'+esc(data.name)+'</td>';
+        if(ii===0)rowsHTML+='<td rowspan="'+tg.items.length+'" style="padding:6px 10px;border:1px solid var(--border);font-size:12px;font-weight:600;vertical-align:middle;background:'+bg+';">'+esc(tg.task)+'</td>';
+        rowsHTML+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.sub||'')+'</td>';
+        rowsHTML+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;text-align:center;background:'+bg+';">'+esc(e.count||'')+'</td>';
+        rowsHTML+='<td style="padding:6px 10px;border:1px solid var(--border);font-size:11px;background:'+bg+';">'+esc(e.notes||'')+'</td>';
+        rowsHTML+='</tr>';cri++;
       });
     });
   });
-  var logoHtml=logoUrl?'<img src="'+esc(logoUrl)+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
-  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--text);padding-bottom:12px;margin-bottom:14px;">'+logoHtml
+  var logoHTML=logoUrl?'<img src="'+esc(logoUrl)+'" style="width:50px;height:50px;object-fit:contain;border-radius:4px;">':'';
+  div.innerHTML='<div style="display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--text);padding-bottom:12px;margin-bottom:14px;">'+logoHTML
     +'<div style="flex:1;text-align:center;"><div style="font-size:10px;color:var(--text-3);letter-spacing:2px;">ב"ה | ימות המשיח</div>'
     +'<div style="font-size:26px;font-weight:900;color:var(--text);">יומן עבודה</div>'
     +'<div style="font-size:11px;color:var(--text-2);">'+esc(instTitle)+'</div></div>'
@@ -130,7 +130,7 @@ function _buildReportDiv(cb, entries, date){
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">תת-משימה</th>'
     +'<th style="padding:9px 10px;text-align:center;font-size:12px;">כמות</th>'
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">הרחבה</th>'
-    +'</tr></thead><tbody>'+rowsHtml+'</tbody></table>';
+    +'</tr></thead><tbody>'+rowsHTML+'</tbody></table>';
     // הסיכום הוא בדיוק השורות שבטבלה ולא כל ENTRIES — אחרת הדוח מציג סיכום שאינו תואם את שורותיו.
     div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:var(--text-3);border-top:1px solid var(--card-2);padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
   showEl(div, true);cb(div);
