@@ -1,5 +1,5 @@
 // app/screens/pick.js — בחירת הישיבה ומציג טבלת התשתית
-import { errMsg, withTimeout } from '../../core/util.js';
+import { errMsg, netTimeout } from '../../core/util.js';
 import { esc, openModal } from '../../core/ui.js';
 import { MSG_INFRA_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
@@ -164,7 +164,7 @@ async function yaInfraOpen() {
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
   try {
-    var res = await withTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
+    var res = await netTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
     md = await res.text();
   } catch (e) {
