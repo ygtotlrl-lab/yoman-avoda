@@ -1,14 +1,11 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
 import { appConfigure, dayNoon, dayToday, getDeviceId, kvParse } from '../core/util.js';
-import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
-         pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
-         pushDirty, pushTable, pushedFor, rtyBoot, runSave, tombBoot } from '../core/sync.js';
-import { hwBoot, hwForget, hwNoteCloud, lsBoot, lsClearHorizons, lsGet, lsRemove,
-         lsSet, lsWindowFrom } from '../core/storage.js';
-import { bkBoot, logAwait } from '../core/backup.js';
-import { actRun, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, ksKey,
-         modalBackdrop, modalEsc, openModal, pullRender, shellBare, swApply, swHideUpdate,
-         toast } from '../core/ui.js';
+import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCount, pendForget,
+         pendHas, plForget, pushDirty, pushTable, pushedFor, runSave } from '../core/sync.js';
+import { hwForget, hwNoteCloud, lsGet, lsRemove, lsSet, lsWindowFrom } from '../core/storage.js';
+import { coreBoot, logAwait } from '../core/backup.js';
+import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, openModal,
+         pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL,
          MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL,
@@ -61,6 +58,8 @@ var MIRROR_CFG = {
   ts:     function (r) { return _yaRecTs(r); },
   clean:  function (t, rows) { return rows; },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
+  // הזיכרון נבנה מהמראה לפני כל מנגנון שדוחף — דחיפה מזיכרון ישן הייתה כותבת את נתוני המוסד הקודם.
+  loaded: function () { loadLocalData(); },
 };
 
 // עד שנבחר מוסד המדיניות ריקה — אין עֵד סנכרון למוסד שלא נטען.
@@ -195,13 +194,11 @@ var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return getSB(); },
   table:  function () { return S.KV_TABLE; },
-  // המוחק מנקה את כל סיומות המוסד — העידן ברמת האפליקציה, ומוסד שלא היה פתוח היה נשאר בצורה הישנה.
-  // ואופק הפינוי מתנקה איתם — אחרת הוא מסנן בכתיבה את מה שהמשיכה מחזירה.
+  // המראה של המוסד הפתוח ואופק הפינוי מתנקים בליבה (mirrorWipe); כאן — מפתחות כל המוסדות והזיכרון שנבנה מהמראה:
+  // העידן ברמת האפליקציה, ומוסד שלא היה פתוח היה נשאר בצורה הישנה.
   wipe:   function () {
     YESHIVOT.forEach(function (y) { yaMirrorKeys(y.id).forEach(lsRemove); });
-    yaTables().forEach(function (t) { MIRROR[t] = MIRROR_CFG.empty(); });
     S.ENTRIES = []; S.ARCHIVE = []; S.CATS = []; S._catsResetSeen = '';
-    lsClearHorizons();
   },
   // הדחיפה היא ראיה טרייה ולא זיכרון — מכשיר נקי מקבל ok עם still ריק.
   push:   function () { return pushDirty(null); },
@@ -303,22 +300,8 @@ var DOM_ACTIONS = {
   'ask-yes':        function () { closeAsk(true); },
 };
 
-// סגירת הרקע קודמת לניתוב — לחיצה על הרקע אינה נושאת data-act.
-document.addEventListener('click', function (ev) {
-  if (modalBackdrop(ev)) return;
-  var el = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
-  if (!el) return;
-  var fn = DOM_ACTIONS[el.getAttribute('data-act')];
-  if (!fn) return;
-  ev.preventDefault();
-  actRun(el, fn);
-});
+actWire(DOM_ACTIONS);
 
-// שמירה בשדה עריכה קודמת לסגירת חלון הדו-שיח — אחרת Escape בשדה שבתוך חלון דו-שיח היה סוגר אותו במקום לבטל את השדה.
-document.addEventListener('keydown', function (e) {
-  if (ksKey(e)) return;
-  modalEsc(e);
-});
 
 document.addEventListener('input', function (e) {
   var el = e.target;
@@ -549,15 +532,12 @@ function yaConfirmSwitch(y) {
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
 }
 
-// again מסמן מעבר בין מוסדות — pendBoot מוסיף מאזיני רשת בכל קריאה, ושאר ה-boot שומרים על עצמם.
 function selectYeshiva(y) {
   // האיפוס כאן ולא אצל הקורא — לפונקציה שני קוראים, וקורא ששוכח לאפס מנטרל את כל שערי ההקשר.
-  // הכניסה החוזרת נגזרת ואינה נמסרת — פרמטר שנשכח היה מריץ pendBoot פעמיים.
+  // הכניסה החוזרת נגזרת ואינה נמסרת — פרמטר שנשכח היה משאיר את ההקשר הקודם.
   var ent = yaYeshiva(y);
   if (!ent) { console.error('[switch] ישיבה שאינה במפה:', y); toast(MSG_YESHIVA_UNKNOWN, null, 'bad'); return; }
-  var reentry = !!S.YESHIVA;
-  if (reentry) yaResetTenantState();
-  var again = reentry;
+  if (S.YESHIVA) yaResetTenantState();
   S.YESHIVA  = y;
   S.KV_TABLE = ent.table;
   S.LS       = yaSuffix(y);
@@ -576,21 +556,10 @@ function selectYeshiva(y) {
     '<button class="share-btn btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
-  // המדיניות נבנית רק עכשיו כי המפתחות תלויי-מוסד; והפינוי לפני loadLocalData — כדי שהמיזוג יכתוב לאחסון שיש בו מקום.
-  try { lsRebuildPolicy(); lsBoot(); } catch (e) { console.warn('[ls] lsBoot', e); }
-  // הטעינה לפני כל boot שיכול לדחוף ואחרי lsBoot — אחרת דחיפה רצה כש-LS כבר חדש והזיכרון עדיין ישן.
-  loadLocalData();
-  // pendReload — מפתח הסימונים נושא סיומת מוסד, וסימון של מוסד אחד אינו תקף לשני.
-  try { pendReload(); if (!again) pendBoot(); } catch (e) { console.warn('[pend] pendBoot', e); }
-  try { tombBoot(); } catch (e) { console.warn('[tomb] tombBoot', e); }
-  try { eraKick(); } catch (e) { console.warn('[era] eraKick', e); }
-  // כאן ולא מוקדם יותר — BK_CFG.sources נשענת על KV_TABLE, שהוא null עד שנבחר מוסד.
-  // ואין להעביר למסלול סנכרון — גיבוי שתלוי בסנכרון נעצר בדיוק כשאין סנכרון.
-  try { bkBoot(); } catch (e) { console.warn('[bk] bkBoot', e); }
-  try { hwBoot(); } catch (e) { console.warn('[hw] hwBoot', e); }
-  try { rtyBoot(); } catch (e) { console.warn('[rty] rtyBoot', e); }
-  // כאן ולא מוקדם יותר — KV_TABLE הוא null עד שנבחר מוסד, ותקתוק לפני כן היה שואל טבלה שאינה קיימת.
-  try { plBoot(); } catch (e) { console.warn('[pl] plBoot', e); }
+  // המדיניות נבנית רק עכשיו כי המפתחות תלויי-מוסד, והליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי
+  // נושאים את המוסד, והם null עד שנבחר; בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
+  try { lsRebuildPolicy(); } catch (e) { console.warn('[ls] lsRebuildPolicy', e); }
+  coreBoot();
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
   shellBare(false);

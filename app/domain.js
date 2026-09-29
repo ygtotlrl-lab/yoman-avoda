@@ -4,7 +4,7 @@ import { GREG_MONTHS, HE_COLLATOR, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, 
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
-import { MIRROR, mirrorBoot, mirrorKey, mirrorSave } from '../core/mirror.js';
+import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -276,7 +276,6 @@ function yaMirrorRows() {
 
 // הזיכרון נבנה מהמראה — החי מהשורות בלי הדגל, והארכיון מהשורות שבו; הרשומה נושאת את הדגל.
 function yaMirrorLoad() {
-  mirrorBoot();
   var rows = MIRROR[YA_ROWS_TABLE] || [];
   S.ENTRIES = []; S.ARCHIVE = [];
   rows.forEach(function (r) {

@@ -66,16 +66,17 @@ function screenEntryHTML() {
 // getDay() מתחיל ב-0 = ראשון
 var DAY_LABEL_MAP = ["ראשון","שני","שלישי","רביעי","חמישי","ערב שבת","מוצ\"ש"];
 
-function autoSelectTodayChip() {
-  var dow = new Date().getDay();
+// היום בשבוע נבחר בשבב שלו — מהשעון בעלייה, ומהתאריך שהוקלד בשינוי השדה.
+function selectDayChip(dow) {
   var label = DAY_LABEL_MAP[dow] || "";
-  var value = DAY_VALUE_MAP[dow] || "";
-  S.selDay = value;
+  S.selDay = DAY_VALUE_MAP[dow] || "";
   document.querySelectorAll(".day-chip").forEach(function(b){
     b.classList.remove("active");
     if (b.textContent.trim() === label) b.classList.add("active");
   });
 }
+
+function autoSelectTodayChip() { selectDayChip(new Date().getDay()); }
 
 function pickDay(el, day) {
   S.selDay = day;
@@ -104,14 +105,7 @@ function onGregDateChange() {
   var p = parseGregLike(inp.value);
   if (p) {
     var d = dayNoon(p.y, p.m - 1, p.d);
-    var dow = d.getDay();
-    var label = DAY_LABEL_MAP[dow] || "";
-    var value = DAY_VALUE_MAP[dow] || "";
-    S.selDay = value;
-    document.querySelectorAll(".day-chip").forEach(function(b){
-      b.classList.remove("active");
-      if (b.textContent.trim() === label) b.classList.add("active");
-    });
+    selectDayChip(d.getDay());
     document.getElementById("hebDateInput").value = hebrewDate(d) || document.getElementById("hebDateInput").value;
     shell.renderLog();
   }
