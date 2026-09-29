@@ -18,7 +18,7 @@ function yaSuffix(y) { return '_' + y; }
 
 // בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה; הנתונים עצמם — במראה.
 function yaLsBases() {
-  return ['ya_last_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
+  return ['ya_open_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
 }
 
 // ── שכבת המראה ──
@@ -480,11 +480,10 @@ function gregDateStr(jsDate) {
 // ── הארכוב ──
 // רשומה שעוברת לארכיון נשארת אותה שורה — הדגל עולה והחותמת מתחדשת, בלי העתק ובלי מצבה: ארכוב אינו מחיקה.
 // אינה כותבת לענן — checkDayChange חייבת להישאר מקומית עד המיזוג שאחריה.
-function arcMove(list, ts, dayOf) {
+function arcMove(list, ts) {
   (Array.isArray(list) ? list : []).forEach(function (e) {
     if (!isLive(e) || e.archived) return;
     e.archived = true;
-    if (!e.entry_date && dayOf) e.entry_date = dayOf;
     recTouch(e, ts);
     pendMark(PK_ARC + e.client_id);
   });

@@ -427,19 +427,16 @@ function saveRefresh() {
 }
 
 function checkDayChange() {
-  var lastDay = lsGet("ya_last_day"+S.LS) || "";
+  var openDay = lsGet("ya_open_day"+S.LS) || "";
   var today = dayToday();
-  // היום נשמר ב-ISO; ערך בצורת toDateString מושווה בצורתו, ויום שאינו ISO אינו נמסר לארכוב.
-  if (lastDay === new Date().toDateString()) lastDay = today;
-  var lastIso = /^\d{4}-\d{2}-\d{2}$/.test(lastDay) ? lastDay : "";
-  if (lastDay && lastDay !== today && liveOnly(S.ENTRIES).length > 0) {
+  if (openDay && openDay !== today && liveOnly(S.ENTRIES).length > 0) {
     // ארכוב מקומי בלבד — syncFromCloud רץ מיד אחרי, והמיזוג מכריע מול מה שמכשיר אחר עשה באותן שורות.
     // כל רשומה נשארת בשורתה ויומה שעליה — הדגל עולה בחותמת חדשה, והחותמת מנצחת את העותק החי שבענן.
-    arcMove(S.ENTRIES, Date.now(), lastIso);
+    arcMove(S.ENTRIES, Date.now());
     yaMirrorRows();
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }
-  lsSet("ya_last_day"+S.LS, today);
+  lsSet("ya_open_day"+S.LS, today);
 }
 
 function initDate() {
