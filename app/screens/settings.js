@@ -173,13 +173,13 @@ function renderSettings() {
       + '<div class="set-badge cat-fill"></div>'
       + '<input aria-label="שם קטגוריה" class="set-name-inp" id="sname-' + ci + '" value="' + esc(cat.name) + '" placeholder="שם קטגוריה" data-kent data-blr="cat-name" data-ci="'+ ci +'" />'
       + '</div>';
-    var tasksHtml = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
+    var tasksHTML = '<div class="set-lbl">משימות (גרור לשינוי סדר):</div>'
       + (cat.tasks || []).map(function(item, ti){
           if (!isLive(item)) return '';
           var t = item.id, subs = Array.isArray(item.subs) ? item.subs : [];
-          var subsHtml = '';
+          var subsHTML = '';
           if(subs.length > 0) {
-            subsHtml = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
+            subsHTML = '<div class="subs-lbl set-lbl">תתי משימות:</div>'
               + '<div class="sub-chips" data-drag-axis="x">'
               + subs.map(function(s,si){
                   return '<div class="chip chip-sub" '
@@ -204,7 +204,7 @@ function renderSettings() {
             + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit">✏️</button>'
             + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
             + '</div>'
-            + subsHtml
+            + subsHTML
             + addSubRow
             + '</div>';
         }).join('')
@@ -212,7 +212,7 @@ function renderSettings() {
       + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
       + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
       + '</div>';
-    div.innerHTML = hdr + tasksHtml;
+    div.innerHTML = hdr + tasksHTML;
     ed.appendChild(div);
   });
 }

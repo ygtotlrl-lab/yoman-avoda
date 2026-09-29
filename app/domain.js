@@ -1,6 +1,6 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso, dayNoon,
-         dayToday, kvParse, withTimeout } from '../core/util.js';
+import { HE_COLLATOR, MSG_KV_BAD, MSG_SAVED_LOCAL, MSG_SERVER_ERR, MSG_SYNC_BACK, app, dayIso,
+         dayNoon, dayToday, kvParse, withTimeout } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwDiskFilter, hwNoteCloud, lsGet, lsSetArray } from '../core/storage.js';
@@ -11,11 +11,6 @@ import { CATS_RESET_LS, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_CLOUD_NO_FANOUT, MSG_L
          MSG_SAVED_CLOUD, PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, SET_PUSH,
          YA_ROW_TABLES, YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
-
-// ── מיון עברי ──
-try { S._heColl = new Intl.Collator('he'); } catch (e) { S._heColl = null; }
-
-var HE = S._heColl || { compare: function (a, b) { return String(a).localeCompare(String(b), 'he'); } };
 
 // סיומת מפתח האחסון פר-מוסד — בידוד אופליין
 function yaSuffix(y) { return '_' + y; }
@@ -344,7 +339,7 @@ function yaSortEntries(list) {
     var ra = rank(a), rb = rank(b);
     for (var i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     var na = String((a && a.notes) || ''), nb = String((b && b.notes) || '');
-    if (na !== nb) return HE.compare(na, nb);
+    if (na !== nb) return HE_COLLATOR.compare(na, nb);
     var qa = num(a), qb = num(b);
     if (qa !== qb) return qa - qb;
     var ia = String((a && a.client_id) || ''), ib = String((b && b.client_id) || '');

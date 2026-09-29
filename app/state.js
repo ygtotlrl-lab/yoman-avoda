@@ -8,10 +8,6 @@ const S = {
   KV_TABLE: null,
   LS: '',
   _sb: null,
-  // ── בריחת HTML ──
-  // המשווה נבנה פעם אחת ברמת המודול — localeCompare בונה משווה בכל קריאה, ובתוך sort זה O(n log n) פעמים.
-  // בלי Intl.Collator — נפילה-חזרה ל-localeCompare עם he מפורש, באותו סדר בדיוק.
-  _heColl: null,
   // ── עֵד הסנכרון ──
   // _lastKnownTimestamp אינו עֵד — הוא מתעדכן גם במשיכה ובשמירה בלי לבדוק את תוצאת הדחיפה.
   // _yaPushedAt נכתב רק אחרי pushTable שהחזירה ok.

@@ -569,16 +569,16 @@ function yaResetTenantState() {
 }
 
 function yaPickYeshiva() {
-  var listHtml = '<div class="yeshiva-list">';
+  var listHTML = '<div class="yeshiva-list">';
   for (var i = 0; i < YESHIVOT.length; i++) {
     var cur = idEq(YESHIVOT[i].id, S.YESHIVA);
-    listHtml += '<button class="btn-sm yeshiva-pick' +
+    listHTML += '<button class="btn-sm yeshiva-pick' +
             (cur ? ' is-current' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
             esc(YESHIVOT[i].name) +
             (cur ? ' ✓' : '') + '</button>';
   }
-  listHtml += '</div>';
-  openModal(MSG_SWITCH_YESHIVA, listHtml, '');
+  listHTML += '</div>';
+  openModal(MSG_SWITCH_YESHIVA, listHTML, '');
 }
 
 // אין אישור שני — הבחירה בבורר היא האישור.
