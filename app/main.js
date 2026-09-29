@@ -1,5 +1,5 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
-import { appConfigure, dayIso, dayNoon, getDeviceId, kvParse } from '../core/util.js';
+import { appConfigure, dayNoon, dayToday, getDeviceId, kvParse } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, eraKick, idEq, pendAlertDismiss,
          pendBoot, pendCount, pendForget, pendHas, pendReload, plBoot, plForget,
          pushDirty, pushTable, pushedFor, rtyBoot, runSave, tombBoot } from '../core/sync.js';
@@ -444,11 +444,14 @@ function saveRefresh() {
 
 function checkDayChange() {
   var lastDay = lsGet("ya_last_day"+S.LS) || "";
-  var today = new Date().toDateString();
+  var today = dayToday();
+  // היום נשמר ב-ISO; ערך בצורת toDateString מושווה בצורתו, ויום שאינו ISO אינו נמסר לארכוב.
+  if (lastDay === new Date().toDateString()) lastDay = today;
+  var lastIso = /^\d{4}-\d{2}-\d{2}$/.test(lastDay) ? lastDay : "";
   if (lastDay && lastDay !== today && liveOnly(S.ENTRIES).length > 0) {
     // ארכוב מקומי בלבד — syncFromCloud רץ מיד אחרי, והמיזוג מכריע מול מה שמכשיר אחר עשה באותן שורות.
     // כל רשומה נשארת בשורתה ויומה שעליה — הדגל עולה בחותמת חדשה, והחותמת מנצחת את העותק החי שבענן.
-    arcMove(S.ENTRIES, Date.now(), dayIso(dayNoon(new Date(lastDay))));
+    arcMove(S.ENTRIES, Date.now(), lastIso);
     yaMirrorRows();
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }

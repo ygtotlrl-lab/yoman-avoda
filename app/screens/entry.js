@@ -1,5 +1,5 @@
 // app/screens/entry.js — מסך ההזנה
-import { dayNoon } from '../../core/util.js';
+import { dayNoon, dayToday } from '../../core/util.js';
 import { newClientId, pendMark, schedulePush } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
@@ -94,7 +94,7 @@ function syncDatesToDay(dayValue) {
   // נשאר בתוך השבוע הנוכחי — עד ±3 ימים
   if (diff > 3) diff -= 7;
   if (diff < -3) diff += 7;
-  var target = new Date(now.getTime() + diff * 86400000);
+  var target = dayNoon(dayToday(diff));
   document.getElementById("hebDateInput").value = hebrewDate(target) || hebrewDate(now);
   document.getElementById("gregDateInput").value = gregDateStr(target);
 }
