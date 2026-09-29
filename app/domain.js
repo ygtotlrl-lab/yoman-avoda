@@ -1,6 +1,6 @@
 // app/domain.js — הסנכרון, המיזוג, הארכיון והתאריכים
-import { GREG_MONTHS, HE_COLLATOR, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayToday, kvParse,
-         withTimeout } from '../core/util.js';
+import { DAY_MONTHS, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayToday, kvParse,
+         netTimeout, sortCompare } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { hwNoteCloud } from '../core/storage.js';
@@ -18,7 +18,7 @@ function yaSuffix(y) { return '_' + y; }
 
 // בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה; הנתונים עצמם — במראה.
 function yaLsBases() {
-  return ['ya_last_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
+  return ['ya_open_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
 }
 
 // ── שכבת המראה ──
@@ -257,7 +257,7 @@ async function yaSendRows(rows, ep) {
   // היעדר לקוח נרשם ככשל רשת ולא ככשל סמכותי — השורה כלל לא נשלחה, והסימון חייב להישאר.
   if (!sb) throw new Error('failed to reach cloud');
   if (ctxStale(ep)) throw new Error('failed to reach cloud');
-  var res = await withTimeout(sb.from(YA_ROWS_TABLE).upsert(rows, { onConflict: 'client_id' }));
+  var res = await netTimeout(sb.from(YA_ROWS_TABLE).upsert(rows, { onConflict: 'client_id' }));
   if (!res || res.error) return res || { error: { message: 'upsert failed' } };
   return {};
 }
@@ -319,7 +319,7 @@ async function yaSetPull() {
   var tbl = S.KV_TABLE; // נלכדת בכניסה — החלפת מוסד באמצע ההמתנה משנה את הגלובלי
   if (!tbl) return { ok: false, rows: null };
   try {
-    var res = await withTimeout(getSB().from(tbl).select('key,value,updated_at').in('key', YA_SET_KEYS));
+    var res = await netTimeout(getSB().from(tbl).select('key,value,updated_at').in('key', YA_SET_KEYS));
     if (!res || res.error || !Array.isArray(res.data)) {
       console.error('[sync] ההגדרות אינן נקראות:', res && res.error);
       return { ok: false, rows: null };
@@ -354,7 +354,7 @@ function yaSetRows() {
 async function yaSendSettings(tbl, rows, ep) {
   var sb = getSB();
   if (!sb || !tbl || ctxStale(ep)) throw new Error('failed to reach cloud');
-  return withTimeout(sb.from(tbl).upsert(rows, { onConflict: 'key' }));
+  return netTimeout(sb.from(tbl).upsert(rows, { onConflict: 'key' }));
 }
 
 // ── המיון היחיד לרשומות היומן ──
@@ -381,7 +381,7 @@ function yaSortEntries(list) {
     var ra = rank(a), rb = rank(b);
     for (var i = 0; i < 3; i++) if (ra[i] !== rb[i]) return ra[i] - rb[i];
     var na = String((a && a.notes) || ''), nb = String((b && b.notes) || '');
-    if (na !== nb) return HE_COLLATOR.compare(na, nb);
+    if (na !== nb) return sortCompare(na, nb);
     var qa = num(a), qb = num(b);
     if (qa !== qb) return qa - qb;
     var ia = String((a && a.client_id) || ''), ib = String((b && b.client_id) || '');
@@ -417,7 +417,7 @@ function parseGregLike(s) {
   m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (m) return _gregValid(+m[3], +m[2], +m[1]);
   m = s.match(/^(\d{1,2}) (\S+) (\d{4})$/);
-  var i = m ? GREG_MONTHS.indexOf(m[2]) : -1;
+  var i = m ? DAY_MONTHS.indexOf(m[2]) : -1;
   return (i >= 0) ? _gregValid(+m[1], i + 1, +m[3]) : null;
 }
 
@@ -474,17 +474,16 @@ function getCurrentDateKey() {
 
 function gregDateStr(jsDate) {
   var d = jsDate.getDate(), m = jsDate.getMonth()+1, y = jsDate.getFullYear();
-  return d + " " + GREG_MONTHS[m-1] + " " + y;
+  return d + " " + DAY_MONTHS[m-1] + " " + y;
 }
 
 // ── הארכוב ──
 // רשומה שעוברת לארכיון נשארת אותה שורה — הדגל עולה והחותמת מתחדשת, בלי העתק ובלי מצבה: ארכוב אינו מחיקה.
 // אינה כותבת לענן — checkDayChange חייבת להישאר מקומית עד המיזוג שאחריה.
-function arcMove(list, ts, dayOf) {
+function arcMove(list, ts) {
   (Array.isArray(list) ? list : []).forEach(function (e) {
     if (!isLive(e) || e.archived) return;
     e.archived = true;
-    if (!e.entry_date && dayOf) e.entry_date = dayOf;
     recTouch(e, ts);
     pendMark(PK_ARC + e.client_id);
   });

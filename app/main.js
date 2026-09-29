@@ -3,7 +3,8 @@ import { appConfigure, dayNoon, dayToday, getDeviceId, kvParse } from '../core/u
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCount, pendForget,
          pendHas, plForget, pushDirty, pushTable, pushedFor, runSave } from '../core/sync.js';
 import { hwForget, hwNoteCloud, lsGet, lsRemove, lsSet, lsWindowFrom } from '../core/storage.js';
-import { coreBoot, logAwait } from '../core/backup.js';
+import { logAwait } from '../core/backup.js';
+import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, openModal,
          pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -426,19 +427,16 @@ function saveRefresh() {
 }
 
 function checkDayChange() {
-  var lastDay = lsGet("ya_last_day"+S.LS) || "";
+  var openDay = lsGet("ya_open_day"+S.LS) || "";
   var today = dayToday();
-  // היום נשמר ב-ISO; ערך בצורת toDateString מושווה בצורתו, ויום שאינו ISO אינו נמסר לארכוב.
-  if (lastDay === new Date().toDateString()) lastDay = today;
-  var lastIso = /^\d{4}-\d{2}-\d{2}$/.test(lastDay) ? lastDay : "";
-  if (lastDay && lastDay !== today && liveOnly(S.ENTRIES).length > 0) {
+  if (openDay && openDay !== today && liveOnly(S.ENTRIES).length > 0) {
     // ארכוב מקומי בלבד — syncFromCloud רץ מיד אחרי, והמיזוג מכריע מול מה שמכשיר אחר עשה באותן שורות.
     // כל רשומה נשארת בשורתה ויומה שעליה — הדגל עולה בחותמת חדשה, והחותמת מנצחת את העותק החי שבענן.
-    arcMove(S.ENTRIES, Date.now(), lastIso);
+    arcMove(S.ENTRIES, Date.now());
     yaMirrorRows();
     toast(MSG_DAY_ARCHIVED, null, 'good');
   }
-  lsSet("ya_last_day"+S.LS, today);
+  lsSet("ya_open_day"+S.LS, today);
 }
 
 function initDate() {
@@ -559,7 +557,7 @@ function selectYeshiva(y) {
   // המדיניות נבנית רק עכשיו כי המפתחות תלויי-מוסד, והליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי
   // נושאים את המוסד, והם null עד שנבחר; בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
   try { lsRebuildPolicy(); } catch (e) { console.warn('[ls] lsRebuildPolicy', e); }
-  coreBoot();
+  bootRun();
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
   shellBare(false);
