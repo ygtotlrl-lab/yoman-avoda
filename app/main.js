@@ -3,7 +3,8 @@ import { appConfigure, dayNoon, dayToday, getDeviceId, kvParse } from '../core/u
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCount, pendForget,
          pendHas, plForget, pushDirty, pushTable, pushedFor, runSave } from '../core/sync.js';
 import { hwForget, hwNoteCloud, lsGet, lsRemove, lsSet, lsWindowFrom } from '../core/storage.js';
-import { coreBoot, logAwait } from '../core/backup.js';
+import { logAwait } from '../core/backup.js';
+import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, openModal,
          pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -559,7 +560,7 @@ function selectYeshiva(y) {
   // המדיניות נבנית רק עכשיו כי המפתחות תלויי-מוסד, והליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי
   // נושאים את המוסד, והם null עד שנבחר; בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
   try { lsRebuildPolicy(); } catch (e) { console.warn('[ls] lsRebuildPolicy', e); }
-  coreBoot();
+  bootRun();
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
   shellBare(false);
