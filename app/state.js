@@ -8,7 +8,6 @@ const S = {
   KV_TABLE: null,
   LS: '',
   _sb: null,
-  // _lastKnownTimestamp אינו עֵד פינוי — הוא מתעדכן גם במשיכה ובשמירה; העֵד נרשם בליבה, בדחיפה עצמה.
   // send רץ אחרי await — קריאת הגלובלי בהם הייתה זוקפת דחיפה של מוסד אחד לחשבון השני.
   _yaPushEp: 0,
   _yaPushTbl: null,
@@ -32,7 +31,7 @@ const S = {
   arcSelDayKey: null,
   arcEditMode: false,
   _lastKnownTimestamp: 0,
-  // נכתב על כל שיחה מוצלחת עם הענן, גם במשיכה — ולכן אינו עד דחיפה ואינו משמש לפינוי; העד נרשם בליבה, בדחיפה עצמה.
+  // נכתב על כל שיחה מוצלחת עם הענן, גם במשיכה.
   _yaLastSyncAt: 0,
   _yaNetWarned: false,
   _infData: undefined,
