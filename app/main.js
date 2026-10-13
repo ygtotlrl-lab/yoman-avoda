@@ -60,8 +60,6 @@ var MIRROR_CFG = {
   loaded: function () { loadLocalData(); },
 };
 
-// מוצהר לפני LS_CFG — המרשם נקרא בפתיחת האחסון, לפני שהמודול מגיע לשורות שאחריו.
-var YA_LOG_PRE = 'ya_log_queue';
 var LS_CFG = {
   // cachePrefix נגזר משם האפליקציה שבתצורה ולא מקידומת האחסון — שם אחסון שישתנה היה מחזיר רשימה ריקה, והבאנר היה חוזר בכל טעינה.
   cachePrefix: self.APP.id + '-',
@@ -70,8 +68,7 @@ var LS_CFG = {
   dismissKey: 'ya_sw_dismissed',
   // מפתח פר-מוסד מוצהר לכל המוסדות ולא לפעיל בלבד — המוסד שאינו פתוח הוא נתון שממתין, ולא שארית.
   keys: function () {
-    // תור היומן בלי סיומת — מה שנרשם בפתיחת האחסון, לפני שנבחר מוסד; selectYeshiva מעבירה אותו לתור המוסד.
-    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key, YA_LOG_PRE].concat(eraKeys());
+    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key, BK_CFG.logQueueKey()].concat(eraKeys());
     YESHIVOT.forEach(function (y) {
       var sfx = yaSuffix(y.id);
       yaLsBases().forEach(function (b) { out.push(b + sfx); });
@@ -84,7 +81,8 @@ var LS_CFG = {
 var BK_CFG = {
   client: function () { return getSB(); },
   flagKey: function () { return 'ya_last_backup' + S.LS; },
-  logQueueKey: function () { return 'ya_log_queue' + S.LS; },
+  // תור אחד לשני המוסדות, בלי סיומת — שורת היומן אינה נושאת מוסד, ותור פר-מוסד אינו נשלח עד שחוזרים אליו.
+  logQueueKey: function () { return 'ya_log_queue'; },
   prefix: function () { return yaBkPrefix(S.YESHIVA); },
   // המרשם מצהיר על מפתחות הגיבוי של כל המוסדות — המוסד שאינו פתוח הוא נתון שממתין, ולא שארית.
   prefixes: function () { return YESHIVOT.map(function (y) { return yaBkPrefix(y.id); }); },
@@ -481,16 +479,6 @@ function yaConfirmSwitch(y) {
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
 }
 
-// תור היומן שנכתב לפני שנבחר מוסד עובר לתור של המוסד — תור בלי מוסד אינו נשלח לעולם.
-function yaAdoptPreQueue() {
-  var raw = lsGet(YA_LOG_PRE), pre = [], cur = [];
-  if (raw == null) return;
-  try { pre = JSON.parse(raw); } catch (e) { pre = []; }
-  try { cur = JSON.parse(lsGet(YA_LOG_PRE + S.LS) || '[]'); } catch (e) { cur = []; }
-  if (Array.isArray(pre) && pre.length) lsSet(YA_LOG_PRE + S.LS, JSON.stringify((Array.isArray(cur) ? cur : []).concat(pre)));
-  lsRemove(YA_LOG_PRE);
-}
-
 function selectYeshiva(y) {
   // האיפוס כאן ולא אצל הקורא — לפונקציה שני קוראים, וקורא ששוכח לאפס מנטרל את כל שערי ההקשר.
   // הכניסה החוזרת נגזרת ואינה נמסרת — פרמטר שנשכח היה משאיר את ההקשר הקודם.
@@ -500,7 +488,6 @@ function selectYeshiva(y) {
   S.YESHIVA  = y;
   S.KV_TABLE = ent.table;
   S.LS       = yaSuffix(y);
-  yaAdoptPreQueue();
 
   var logoEl = document.getElementById('appLogo');
   if (logoEl) {
