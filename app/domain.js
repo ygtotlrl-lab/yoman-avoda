@@ -3,8 +3,7 @@ import { DAY_MONTHS, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayTo
          netTimeout, sortCompare } from '../core/util.js';
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
-import { hwNoteCloud } from '../core/storage.js';
-import { MIRROR, mirrorKey, mirrorSave } from '../core/mirror.js';
+import { MIRROR, mirrorSave } from '../core/mirror.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -22,7 +21,7 @@ function yaLsBases() {
 }
 
 // ── שכבת המראה ──
-// המוסד בתחילית המראה — שני המוסדות חולקים localStorage, ושורות היומן של שניהם יושבות באותה טבלה בענן.
+// המוסד בתחילית המראה — שני המוסדות חולקים מסד, ושורות היומן של שניהם יושבות באותה טבלה בענן.
 function yaMirrorPrefix(y) { return self.APP.prefix + 'mirror_' + y + '_'; }
 
 // הטבלאות של מוסד — היומן המאוחד וטבלת ההגדרות שלו; המראה והדחיפה קוראים מכאן.
@@ -42,19 +41,6 @@ function yaMirrorKeys(y) {
 function _yaRecTs(r) {
   var t = r && typeof r === 'object' ? Number(r.updated_at) : NaN;
   return isFinite(t) ? t : 0;
-}
-
-// ── עדות סנכרון חלופית ──
-// בדפדפן שרק קורא עֵד הדחיפה נשאר 0 לנצח — אז משווים פר-רשומה מול שורות הטבלה המובנית, בלי סיומת המוסד.
-// נכשל סגור: נדרש מערך ולא רק ok — כשל רשת או timeout אינו מפנה דבר.
-function _yaVerify() {
-  return function () {
-    // העדות היא הטבלה, בשני הדגלים — המראה מחזיקה את החי ואת הארכיון באותו מפתח.
-    return yaRowsGet().then(function (rr) {
-      return (rr && rr.ok && Array.isArray(rr.data)) ? { ok: true, rows: rr.data }
-                                                     : { ok: false, rows: [] };
-    }, function () { return { ok: false, rows: [] }; });
-  };
 }
 
 // שלוש שכבות שאין לערבב: KV_TABLE בענן, סיומת LS בדגל המקומי, וקידומת <מוסד>_ במפתח הגיבוי — אחרת שני המוסדות כותבים ל-sh_backup תחת אותו מפתח.
@@ -91,12 +77,10 @@ function entryOrderTs(e) {
   return isFinite(t) ? t : 0;
 }
 
-// אותם מפתחות משמשים את PUSH_CFG.key ואת HW_CFG.specs[].isPending — שלוש הנקודות חייבות לקרוא אותו מפתח.
+// אותם מפתחות משמשים את PUSH_CFG.key ואת סימון הממתין — שתי הנקודות חייבות לקרוא אותו מפתח.
 function pendEntry(k) { return pendHas(PK_ENTRY + k); }
 
 function pendArc(k) { return pendHas(PK_ARC + k); }
-
-function yaRecId(r) { return r ? r.client_id : null; }
 
 // החי והארכיון ממוזגים יחד — רשומה שעוברת לארכיון היא אותה שורה בדגל אחר, ומיזוג פר-דגל היה מחזיר את עותקה החי לצד הארכיוני.
 // הסימון בשני המפתחות — רשומה שעברה לארכיון נושאת ⏳ בקידומת הארכיון, ועריכה שקדמה לה — בקידומת החי.
@@ -226,7 +210,7 @@ function yaSortRows(archived, arr) {
 }
 
 // ok:false פירושו «אין ראיה» — אין להחזיר ok:true על תשובה שאינה מערך: מערך ריק ייקרא «הענן ריק» וימחק.
-// archived בוחר את הדגל — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה; בלעדיו — שניהם, לפינוי ולחלון החם.
+// archived בוחר את הדגל — היומן החי והארכיון הם שני מסלולי משיכה באותה טבלה; בלעדיו — שניהם.
 async function yaRowsGet(archived) {
   if (!S.KV_TABLE || !S.YESHIVA) return { ok: false, data: null };
   // המוסד נלכד בכניסה — _rowsPaged קורא לסגור אחרי כל await, והחלפת מוסד באמצע הייתה משרשרת עמודים של שני מוסדות.
@@ -268,7 +252,7 @@ function yaEntryRows() {
   return S.ENTRIES.concat(S.ARCHIVE).map(yaRowOf).filter(function (r) { return !!r; });
 }
 
-// הכתיבה האחת לדיסק — mirrorSave מעבירה בשער החלון החם.
+// הכתיבה האחת לדיסק — דרך mirrorSave.
 function yaMirrorRows() {
   MIRROR[YA_ROWS_TABLE] = yaEntryRows();
   return mirrorSave(YA_ROWS_TABLE);
@@ -393,13 +377,12 @@ function yaSortEntries(list) {
 function saveRows() {
   // t0 לפני הצילום — רשומה שתסומן אחריו אינה במה שנשלח עכשיו.
   var _t0 = Date.now();
-  // ההקשר נלכד לפני ההמתנה — עד הפינוי וסימון הממתין שאחריה הם פר-מוסד.
+  // ההקשר נלכד לפני ההמתנה — סימון הממתין שאחריה הוא פר-מוסד.
   var _ep = ctxEpoch();
   yaMirrorRows();
   (async function(){
     var _rows = await pushTable(YA_ROWS_TABLE);
     if (ctxStale(_ep)) return;
-    // עד הפינוי מסומן בשכבה המשותפת ואינו נכתב כאן שוב — שני אתרי סימון הם שתי הכרעות על אותה ראיה.
     if (_rows.ok) { pendConfirmPush(PK_ENTRY, _t0); pendConfirmPush(PK_ARC, _t0); }
     if (_rows.ok && _rows.n) yaSyncLog('push', YA_ROWS_TABLE, _rows.n);
     // אות הבדיקה המחזורית מקודם בשכבת הדחיפה רק כשנכתב משהו — קידום כאן היה חותם גם על דחיפה ריקה.
@@ -558,7 +541,6 @@ async function yaPullFromCloud() {
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
     var _rowsA = await yaRowsGet(true);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — המשיכה נעצרה'); return; }
-    if (_rowsA.ok) hwNoteCloud(mirrorKey(YA_ROWS_TABLE), _rowsA.data); // ראיה עננית לשער הדיסק
     if (_rowsE.ok || _rowsA.ok) {
       yaAdoptRows([].concat(_rowsE.ok ? _rowsE.data : [], _rowsA.ok ? _rowsA.data : []));
       yaMirrorRows();
@@ -584,12 +566,12 @@ function cssQ(v) {
 // הסתרה במחלקה ולא ב-style.display — סגנון מוטבע גובר על כל מחלקה בגיליון.
 function showEl(el, on) { if (el) el.classList.toggle("is-hidden", !on); }
 
-export { _yaMarkSynced, _yaRecTs, _yaVerify, arcMove,
+export { _yaMarkSynced, arcMove,
          catCls, catLabelOf, catTasks, cssQ, entryOrderTs, extractYM,
          getCurrentDateKey, getSB, gregDateStr, isLive, isoFromParts, liveOnly,
          mergeCats, parseGregLike, recTouch, saveRows, showEl, taskOf,
          taskSubs, yaBkPrefix, yaCatsPut, yaDayName, yaEntryRows, yaGreg, yaHeb, yaLsBases,
          yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows, yaPendKeyOf, yaPullFromCloud,
-         yaAdoptRows, yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty, yaSetPull, yaSetPut,
+         yaAdoptRows, yaRowsGet, yaSendRows, yaSendSettings, yaSetDirty, yaSetPull, yaSetPut,
          yaSetRowOf, yaSetRows, yaSortDays, yaSortEntries, yaSortMonths, yaSortRows, yaSortYears,
          yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva };

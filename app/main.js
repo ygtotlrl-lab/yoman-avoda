@@ -1,8 +1,8 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
-import { appConfigure, dayNoon, dayToday, getDeviceId, kvParse } from '../core/util.js';
+import { appConfigure, dayToday, getDeviceId, kvParse } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCount, pendForget,
-         pendHas, plForget, pushDirty, pushTable, pushedFor, runSave } from '../core/sync.js';
-import { hwForget, hwNoteCloud, lsGet, lsRemove, lsSet, lsWindowFrom } from '../core/storage.js';
+         plForget, pushDirty, pushTable, runSave } from '../core/sync.js';
+import { lsGet, lsOpen, lsRemove, lsSet } from '../core/storage.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
 import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, openModal,
@@ -13,10 +13,10 @@ import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OF
          MSG_YESHIVA_UNKNOWN, PK_ARC, PK_ENTRY, PK_SET, YA_ROWS_TABLE,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
-import { _yaMarkSynced, _yaRecTs, _yaVerify, arcMove, getSB,
+import { _yaMarkSynced, arcMove, getSB,
          gregDateStr, isLive, liveOnly, mergeCats, showEl, yaAdoptRows, yaBkPrefix, yaCatsPut,
          yaEntryRows, yaLsBases, yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows,
-         yaPendKeyOf, yaPullFromCloud, yaRecId, yaRowsGet, yaSendRows, yaSendSettings, yaSetPull,
+         yaPendKeyOf, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetPull,
          yaSetPut, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
@@ -31,7 +31,6 @@ import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js
 import { addSub, addTask, editSubInline, editTaskInline, removeSub, removeTask,
          renderSettings, saveCatName, saveSettings, saveSubInline, saveTaskInline,
          screenSettingsHTML } from './screens/settings.js';
-import { MIRROR, mirrorKey, mirrorWrite } from '../core/mirror.js';
 
 // ── החיווט ──
 // החיווט נמסר בשומרי קריאה — ה-CFG מוגדרים בהמשך, והשומר קורא אותם בזמן הקריאה ולא בזמן המסירה.
@@ -40,7 +39,6 @@ appConfigure({
   get DEV_CFG() { return DEV_CFG; },
   get DOM_ACTIONS() { return DOM_ACTIONS; },
   get ERA_CFG() { return ERA_CFG; },
-  get HW_CFG() { return HW_CFG; },
   get LS_CFG() { return LS_CFG; },
   get MIRROR_CFG() { return MIRROR_CFG; },
   get PEND_CFG() { return PEND_CFG; },
@@ -56,45 +54,31 @@ var MIRROR_CFG = {
   tables: function () { return yaTables(); },
   noPush: [],
   empty:  function () { return []; },
-  ts:     function (r) { return _yaRecTs(r); },
   clean:  function (t, rows) { return rows; },
   fail:   function (where, e) { console.error('[mirror] ' + where, e); },
   // הזיכרון נבנה מהמראה לפני כל מנגנון שדוחף — דחיפה מזיכרון ישן הייתה כותבת את נתוני המוסד הקודם.
   loaded: function () { loadLocalData(); },
 };
 
-// עד שנבחר מוסד המדיניות ריקה — אין עֵד סנכרון למוסד שלא נטען.
+// מוצהר לפני LS_CFG — המרשם נקרא בפתיחת האחסון, לפני שהמודול מגיע לשורות שאחריו.
+var YA_LOG_PRE = 'ya_log_queue';
 var LS_CFG = {
   // cachePrefix נגזר משם האפליקציה שבתצורה ולא מקידומת האחסון — שם אחסון שישתנה היה מחזיר רשימה ריקה, והבאנר היה חוזר בכל טעינה.
   cachePrefix: self.APP.id + '-',
   logKey: 'ya_ls_log',
-  hzPrefix: 'ya_ls_hz_',
   // הסימן נושא את תחילית האפליקציה — ה-origin משותף, וסימן אחד היה נדרס בכל דחייה.
   dismissKey: 'ya_sw_dismissed',
   // מפתח פר-מוסד מוצהר לכל המוסדות ולא לפעיל בלבד — המוסד שאינו פתוח הוא נתון שממתין, ולא שארית.
   keys: function () {
-    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key].concat(eraKeys());
+    // תור היומן בלי סיומת — מה שנרשם בפתיחת האחסון, לפני שנבחר מוסד; selectYeshiva מעבירה אותו לתור המוסד.
+    var out = [LS_CFG.logKey, LS_CFG.dismissKey, DEV_CFG.key, YA_LOG_PRE].concat(eraKeys());
     YESHIVOT.forEach(function (y) {
       var sfx = yaSuffix(y.id);
       yaLsBases().forEach(function (b) { out.push(b + sfx); });
       out = out.concat(yaMirrorKeys(y.id));
     });
     return out;
-  },
-
-  // חלון הפינוי נגזר מסוג האפליקציה — אין מספר ימים באף רשומה.
-  appType: { type: 'annual', why: 'החישוב שלה נפרש על שנה — ⚠️ דוח יום נבנה מרשומות היומן והארכיון, ⛔ והן נקראות לאורך שנת העבודה' },
-
-  // אין כאן מטמון-מהירות לזרוק — כל מפתח ya_ הוא העותק המקומי עצמו, ומחיקתו מרוקנת את המסך אופליין.
-  wholeKeys: [],
-  // oldRecords נבנית מחדש בכל בחירת מוסד — המפתחות נושאים סיומת מוסד.
-  oldRecords: [],
-  // ריק ומוצהר — היומן והארכיון בפינוי, ואין טבלה שנדרשת במלואה לחישוב.
-  fullHistory: [],
-  // מפתח שגדל ואינו בפינוי ממלא את האחסון המשותף וחונק את כל האפליקציות שעל ה-origin.
-  fixedSize: YESHIVOT.map(function (y) {
-    return { t: y.table, why: 'הגדרות המוסד — הקטגוריות וחותמת הניקוי, ⛔ ואינן גדלות עם הזמן' };
-  })
+  }
 };
 
 var BK_CFG = {
@@ -119,7 +103,7 @@ var BK_CFG = {
   }
 };
 
-// המפתח הוא פונקציה — שני המוסדות חולקים localStorage, וסימון ממתין של אחד אינו תקף לשני.
+// המפתח הוא פונקציה — שני המוסדות חולקים מסד, וסימון ממתין של אחד אינו תקף לשני.
 var PEND_CFG = {
   key: function () { return 'ya_pending' + (typeof S.LS === 'string' ? S.LS : ''); },
   // מפה לכל ישיבה — עותק שנזרק בעידן נזרק לשתיהן, והממתינים של שתיהן נרשמים.
@@ -137,7 +121,7 @@ var RTY_CFG = {
 };
 
 // table() נקרא בכל כתיבה ואינו נלכד — ערך שנלכד בעלייה חותם את המוסד הראשון גם אחרי ההחלפה.
-// ok() הוא חותמת תצוגה בלבד — אין להזין ממנו את עד הפינוי, שנרשם בליבה בדחיפה עצמה.
+// ok() הוא חותמת תצוגה בלבד.
 var PL_CFG = {
   every:  3000,
   active: function () { return !!S.YESHIVA; },
@@ -168,34 +152,11 @@ var PUSH_CFG = {
   run:    function () { yaSyncPushNow(); },
 };
 
-// החלון החם: החי, והארכיון בחלון הפינוי של האפליקציה — רשומת ארכיון ישנה ממנו, שאינה ממתינה ואומתה בענן, מתפנה מהמראה.
-// יום בלי תאריך נשאר — אין ממה לגזור את גילו.
-var HW_CFG = {
-  specs: [{
-    key: function () { return mirrorKey(YA_ROWS_TABLE); },
-    label: 'רשומות ארכיון',
-    inWindow: function (r) {
-      if (!r || !r.archived || !r.entry_date) return true;
-      return dayNoon(String(r.entry_date)).getTime() >= lsWindowFrom();
-    },
-    idOf: yaRecId,
-    ts: function (r) { return _yaRecTs(r); },
-    isPending: function (r) { return pendHas(yaPendKeyOf(r)); },
-    fetch: async function () {
-      var r = await yaRowsGet(true);
-      return (r && r.ok && Array.isArray(r.data)) ? { ok: true, rows: r.data }
-                                                  : { ok: false, rows: [] };
-    },
-    rows: function () { return MIRROR[YA_ROWS_TABLE]; },
-    apply: function (kept) { return mirrorWrite(YA_ROWS_TABLE, kept); }
-  }]
-};
-
 var ERA_CFG = {
   prefix: self.APP.prefix,
   client: function () { return getSB(); },
   table:  function () { return S.KV_TABLE; },
-  // המראה של המוסד הפתוח ואופק הפינוי מתנקים בליבה (mirrorWipe); כאן — מפתחות כל המוסדות והזיכרון שנבנה מהמראה:
+  // המראה של המוסד הפתוח מתנקה בליבה (mirrorWipe); כאן — מפתחות כל המוסדות והזיכרון שנבנה מהמראה:
   // העידן ברמת האפליקציה, ומוסד שלא היה פתוח היה נשאר בצורה הישנה.
   wipe:   function () {
     YESHIVOT.forEach(function (y) { yaMirrorKeys(y.id).forEach(lsRemove); });
@@ -220,6 +181,8 @@ function mountView() {
     screenSettingsHTML() + screenArchiveHTML();
 }
 
+// האחסון נפתח לפני כל קריאה ממנו — אחרי שה-CFG הוגדרו, כי המרשם והייבוא קוראים אותם.
+await lsOpen();
 mountView();
 
 // ── הרישום ב-shell ──
@@ -228,16 +191,6 @@ shell.renderLog = renderLog;
 shell.renderArcDetail = renderArcDetail;
 shell.buildCatGrid = buildCatGrid;
 shell.buildTaskBtns = buildTaskBtns;
-
-// המדיניות נבנית בבחירת מוסד ומפנה את המוסד הפעיל בלבד — לעֵד של מוסד אחד אין תוקף לגבי השני.
-// חותמת עריכה חדשה דוחה את הפינוי — רשומה שנערכה עכשיו אינה ישנה.
-function lsRebuildPolicy() {
-  LS_CFG.oldRecords = [
-    { key: mirrorKey(YA_ROWS_TABLE), label: 'רשומות היומן והארכיון', ts: _yaRecTs,
-      syncedThrough: pushedFor(YA_ROWS_TABLE),
-      idOf: yaRecId, verify: _yaVerify() }
-  ];
-}
 
 // ── העברת מזהה ל-DOM ──
 
@@ -351,7 +304,6 @@ async function syncFromCloud() {
     var _rowsA = await yaRowsGet(true);
     if (ctxStale(_ep)) { console.warn('[sync] ההקשר התחלף באמצע — הסנכרון נעצר'); return; }
     if (!_rowsA.ok) failed.push('ארכיון');
-    else hwNoteCloud(mirrorKey(YA_ROWS_TABLE), _rowsA.data); // ראיה עננית לשער הדיסק
     // מיזוג אחד על שני הדגלים, והמראה נכתבת אחריו; הדחיפה מעלה רק את המסומן ⏳ — שורה שלא סומנה אינה נשלחת.
     if (_rowsE.ok || _rowsA.ok) {
       yaAdoptRows([].concat(_rowsE.ok ? _rowsE.data : [], _rowsA.ok ? _rowsA.data : []));
@@ -485,16 +437,15 @@ function yaNameOf(y) {
   return e ? e.name : '';
 }
 
-// עד הדחיפה ואות הבדיקה המחזורית הם זיכרון בלי סיומת מוסד — אות שנשאר גורם למשיכה הראשונה לחשוב שאין מה למשוך.
+// אות הבדיקה המחזורית הוא זיכרון בלי סיומת מוסד — אות שנשאר גורם למשיכה הראשונה לחשוב שאין מה למשוך.
 // כל המצב הפר-מוסדי מאופס, לא רק משתני הסנכרון — אחרת דחיפה בחלון ההחלפה כותבת את נתוני הקודם תחת החדש.
 // ואיפוס למערך ריק אינו מחיקה בענן — הדחיפה מעלה רק שורות מלוכלכות.
 function yaResetTenantState() {
   ctxSwitch();
-  // הדחיפה המושהית אינה מבוטלת כאן — שער ההקשר בשכבת הדחיפה עוצר אותה בהתעוררות; ועֵדי הדחיפה מתאפסים איתו.
+  // הדחיפה המושהית אינה מבוטלת כאן — שער ההקשר בשכבת הדחיפה עוצר אותה בהתעוררות.
   S._lastKnownTimestamp = 0;
   plForget();
   pendForget();
-  hwForget();
   S._yaLastSyncAt = 0;
   S._yaNetWarned = false;
   S._yaPullLogged = false;
@@ -530,6 +481,16 @@ function yaConfirmSwitch(y) {
   try { arcGoYears(); } catch (e) { console.warn('[arc] arcGoYears', e); }
 }
 
+// תור היומן שנכתב לפני שנבחר מוסד עובר לתור של המוסד — תור בלי מוסד אינו נשלח לעולם.
+function yaAdoptPreQueue() {
+  var raw = lsGet(YA_LOG_PRE), pre = [], cur = [];
+  if (raw == null) return;
+  try { pre = JSON.parse(raw); } catch (e) { pre = []; }
+  try { cur = JSON.parse(lsGet(YA_LOG_PRE + S.LS) || '[]'); } catch (e) { cur = []; }
+  if (Array.isArray(pre) && pre.length) lsSet(YA_LOG_PRE + S.LS, JSON.stringify((Array.isArray(cur) ? cur : []).concat(pre)));
+  lsRemove(YA_LOG_PRE);
+}
+
 function selectYeshiva(y) {
   // האיפוס כאן ולא אצל הקורא — לפונקציה שני קוראים, וקורא ששוכח לאפס מנטרל את כל שערי ההקשר.
   // הכניסה החוזרת נגזרת ואינה נמסרת — פרמטר שנשכח היה משאיר את ההקשר הקודם.
@@ -539,6 +500,7 @@ function selectYeshiva(y) {
   S.YESHIVA  = y;
   S.KV_TABLE = ent.table;
   S.LS       = yaSuffix(y);
+  yaAdoptPreQueue();
 
   var logoEl = document.getElementById('appLogo');
   if (logoEl) {
@@ -554,9 +516,8 @@ function selectYeshiva(y) {
     '<button class="share-btn btn-sm" ' +
     'data-act="share-report">📤 שיתוף הדוח</button>';
 
-  // המדיניות נבנית רק עכשיו כי המפתחות תלויי-מוסד, והליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי
-  // נושאים את המוסד, והם null עד שנבחר; בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
-  try { lsRebuildPolicy(); } catch (e) { console.warn('[ls] lsRebuildPolicy', e); }
+  // הליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי נושאים את המוסד, והם null עד שנבחר;
+  // בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
   bootRun();
   var ov = document.getElementById('yeshivaSelect');
   showEl(ov, false);
