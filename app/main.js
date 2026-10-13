@@ -1,7 +1,7 @@
 // app/main.js — העלייה, בחירת הישיבה, מפת הפעולות והניווט
 import { appConfigure, dayToday, getDeviceId, kvParse } from '../core/util.js';
 import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCount, pendForget,
-         plForget, pushDirty, pushTable, runSave } from '../core/sync.js';
+         plForget, pushTable, runSave } from '../core/sync.js';
 import { lsGet, lsOpen, lsRemove, lsSet } from '../core/storage.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
@@ -160,8 +160,6 @@ var ERA_CFG = {
     YESHIVOT.forEach(function (y) { yaMirrorKeys(y.id).forEach(lsRemove); });
     S.ENTRIES = []; S.ARCHIVE = []; S.CATS = []; S._catsResetSeen = '';
   },
-  // הדחיפה היא ראיה טרייה ולא זיכרון — מכשיר נקי מקבל ok עם still ריק.
-  push:   function () { return pushDirty(null); },
   refresh: function () { return yaPullFromCloud(); },
   log:    function (action, entries) { return logAwait(action, entries); }
 };
