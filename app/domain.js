@@ -17,7 +17,7 @@ function yaSuffix(y) { return '_' + y; }
 
 // בסיס שנכתב עם סיומת המוסד ואינו כאן — המפתח שלו נמחק בעלייה; הנתונים עצמם — במראה.
 function yaLsBases() {
-  return ['ya_open_day', 'ya_pending', 'ya_last_backup', 'ya_log_queue'];
+  return ['ya_open_day', 'ya_pending', 'ya_last_backup'];
 }
 
 // ── שכבת המראה ──
