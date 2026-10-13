@@ -181,7 +181,7 @@ function mountView() {
     screenSettingsHTML() + screenArchiveHTML();
 }
 
-// האחסון נפתח לפני כל קריאה ממנו — אחרי שה-CFG הוגדרו, כי המרשם והייבוא קוראים אותם.
+// האחסון נפתח לפני כל קריאה ממנו — אחרי שה-CFG הוגדרו, כי המרשם קורא אותם.
 await lsOpen();
 mountView();
 
