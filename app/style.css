@@ -447,7 +447,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* העובי נקבע כאן ולא ב-icon() — גוף הפונקציה אינו נערך לאפליקציה אחת. */
 .ico{width:1.15em;height:1.15em;flex:none;stroke-width:1.5}
 .tab-btn,.btn-sm,.btn-save,.ys-pick-alt,.inf-bar button{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-3)}
-.entry-edit,.del-btn,.set-edit,.task-del-btn,.arc-entry-del,.chip button{display:inline-flex;align-items:center;justify-content:center;color:var(--text-3)}
+.entry-edit,.del-btn,.set-edit,.task-del-btn,.arc-entry-del,.chip button{display:inline-flex;align-items:center;justify-content:center;color:var(--text-2)}
 .entry-edit .ico,.del-btn .ico{width:19px;height:19px}
 .set-edit .ico,.task-del-btn .ico,.arc-entry-del .ico,.arc-entry-row .entry-edit .ico,.chip button .ico{width:16px;height:16px}
 @media (hover:hover){

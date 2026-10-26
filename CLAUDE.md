@@ -3,7 +3,7 @@
 הטבלה ב-`TABLE.md` — מקור האמת היחיד ליכולת; סשן קורא ממנה את הפרקים שהסבב נוגע בהם.
 
 ## מפת המסכים
-- מסך ⟵ מודול: בחירת ישיבה ומציג טבלת התשתית ⟵ `app/screens/pick.js` · `entry` (הזנה) ⟵ `app/screens/entry.js` · `log` (יומן) ⟵ `app/screens/log.js` · `settings` (עריכה) ⟵ `app/screens/settings.js` · `archive` (עם עריכה במקום) ⟵ `app/screens/archive.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, המיזוג והתאריכים — `app/domain.js`, והדוח היומי — בנייתו, ייצואו ושיתופו — `app/domain.report.js`; החיווט, העלייה, החלפת הישיבה ומפת הפעולות — `app/main.js`.
+- מסך ⟵ מודול: בחירת ישיבה ומציג טבלת התשתית ⟵ `app/screens/pick.js` · `entry` (הזנה) ⟵ `app/screens/entry.js` · `log` (יומן) ⟵ `app/screens/log.js` · `settings` (עריכה) ⟵ `app/screens/settings.js` · `archive` (עם עריכה במקום) ⟵ `app/screens/archive.js`. הנתונים והמחרוזות — `app/constants.js`; מצב הריצה ו-`shell` — `app/state.js`; הסנכרון, המיזוג והתאריכים — `app/domain.js`, והדוח היומי — בנייתו, ייצואו ושיתופו — `app/domain.report.js`; החיווט, העלייה, החלפת הישיבה ומפת הפעולות — `app/main.js`; האייקונים — `app/icons.js`.
 - בחירת ישיבה בעלייה הראשונה, ובלחיצה על הלוגו — בורר ב-`openModal` ואישור ב-`ask`.
 - ייצוא הדוח היומי כתמונה (JPEG, `_buildReportDiv`/`_renderReport`) ושיתופו.
 - מציג טבלת התשתית — נמשך בזמן אמת מ-`TABLE.md` שב-GitHub (`RAW_BASE`).
@@ -27,6 +27,6 @@
 - המראה — שתי טבלאות: `ya_entries` (החי והארכיון, בדגל) וטבלת ההגדרות של הישיבה (`cats` · `cats_reset` בלבד); הזיכרון (`ENTRIES` · `ARCHIVE` · `CATS`) נבנה ב-`yaMirrorLoad`, והכתיבה לדיסק — `yaMirrorRows` / `yaCatsPut`. שמירה אחת — `saveRows`.
 - המראה מחזיקה את כל הרשומות, החי והארכיון — אין פינוי מקומי.
 - `entry_date` נשמר ב-ISO (`YYYY-MM-DD`), וזו הצורה היחידה; `gregDateStr` — לתצוגה בלבד, דרך `yaGreg`.
-- האייקונים — סט קווי אחד ב-`app/icons.js` (`icon(name)`), בצבע הטקסט ובעובי 1.5 (`.ico` ב-`app/style.css`), ולא אמוג׳י: בלשוניות (מוזרקים בעלייה) · שכפול · עריכה · מחיקה (פח) · נקה · שיתוף · PDF · שמירה · טבלת התשתית.
+- האייקונים: הלשוניות — הזנה (דף ופלוס) · יומן (ספר) · עריכה (מחוונים) · ארכיון (תיבה); בשורה — שכפול · עריכה · מחיקה בפח; בעובי 1.5 ובצבע הטקסט המשני.
 - שכפול רשומה ביומן (`dupEntry` · `saveDupEntry`) — טופס העריכה נפתח מתחת למקור עם פרטיו, ורשומה חדשה (`client_id` חדש, אותו יום ואותה קטגוריה) נכתבת רק בשמירה: ביטול אינו משאיר עותק.
 - `CACHE_NAME` ב-`sw.js` הוא מזהה הגרסה היחיד; `RAW_BASE` משמש את מציג הטבלה בלבד.
