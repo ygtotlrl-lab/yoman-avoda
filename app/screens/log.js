@@ -4,6 +4,7 @@ import { idEq, newClientId, pendMark, pendTag, schedulePush, tombKill } from '..
 import { ask, esc } from '../../core/ui.js';
 import { MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, PK_ENTRY } from '../constants.js';
 import { S } from '../state.js';
+import { icon } from '../icons.js';
 import { catCls, catLabelOf, cssQ, getCurrentDateKey, isLive, liveOnly, recTouch,
          saveRows, yaDayName, yaGreg, yaHeb, yaSortEntries } from '../domain.js';
 
@@ -17,7 +18,7 @@ function screenLogHTML() {
     </div>
     <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
     <div class="exp-row">
-      <button class="btn-sm btn-red" data-act="clear-all">🗑 נקה</button>
+      <button class="btn-sm btn-red" data-act="clear-all">${icon('del')}נקה</button>
       <span id="outputBtnSlot"></span>
     </div>
   </div>
@@ -46,9 +47,9 @@ function renderLog() {
       + '<div class="e-meta">' + [dateStr, e.count ? "כמות: "+esc(e.count) : "", ].filter(Boolean).join(" | ") + '</div>'
       + '</div>'
       + '<div class="entry-acts">'
-      + '<button data-act="entry-dup" data-id="' + esc(e.client_id) + '" class="entry-edit" aria-label="שכפול" title="שכפול">⧉</button>'
-      + '<button data-act="entry-edit" data-id="' + esc(e.client_id) + '" class="entry-edit">✏️</button>'
-      + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.client_id) + '">✕</button>'
+      + '<button data-act="entry-dup" data-id="' + esc(e.client_id) + '" class="entry-edit" aria-label="שכפול" title="שכפול">' + icon('dup') + '</button>'
+      + '<button data-act="entry-edit" data-id="' + esc(e.client_id) + '" class="entry-edit" aria-label="עריכה" title="עריכה">' + icon('edit') + '</button>'
+      + '<button class="del-btn" data-act="entry-del" data-id="' + esc(e.client_id) + '" aria-label="מחיקה" title="מחיקה">' + icon('del') + '</button>'
       + '</div>'
       + '</div>';
   }).join("");

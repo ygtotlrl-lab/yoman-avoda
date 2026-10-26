@@ -3,6 +3,7 @@ import { uniqHas } from '../../core/util.js';
 import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
+import { icon } from '../icons.js';
 import { tombKill } from '../../core/sync.js';
 import { catCls, catTasks, isLive, recTouch, taskOf, yaCatsPut, yaSetDirty } from '../domain.js';
 
@@ -12,7 +13,7 @@ function screenSettingsHTML() {
   <div class="card">
     <div class="card-ttl">עריכת קטגוריות ומשימות</div>
     <div id="settingsEditor"></div>
-    <button class="btn-save" data-act="save-settings">💾 שמור שינויים</button>
+    <button class="btn-save" data-act="save-settings">${icon('save')}שמור שינויים</button>
   </div>
 </div>
 `;
@@ -187,8 +188,8 @@ function renderSettings() {
                     + 'data-drag="sub" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'">'
                     + '<span class="grip sub-grip" data-grip>⠿</span>'
                     + '<span id="sub-lbl-'+ci+'-'+ti+'-'+si+'">'+esc(s)+'</span>'
-                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="set-edit">✏️</button>'
-                    + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'">×</button>'
+                    + '<button data-act="cat-sub-edit" data-ci="'+ci+'" data-ti="'+ti+'" data-si="'+si+'" data-sub="'+esc(s)+'" data-task="'+esc(t)+'" class="set-edit" aria-label="עריכה" title="עריכה">'+icon('edit')+'</button>'
+                    + '<button data-act="cat-sub-del" data-ci="'+ci+'" data-task="'+esc(t)+'" data-si="'+si+'" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button>'
                     + '</div>';
                 }).join('')
               + '</div>';
@@ -202,8 +203,8 @@ function renderSettings() {
             + '<div class="task-block-hdr">'
             + '<span class="task-drag-icon grip" data-grip>⠿</span>'
             + '<span class="task-name" id="task-lbl-'+ci+'-'+ti+'">'+esc(t)+'</span>'
-            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit">✏️</button>'
-            + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn">×</button>'
+            + '<button data-act="cat-task-edit" data-ci="'+ci+'" data-ti="'+ti+'" class="set-edit" aria-label="עריכה" title="עריכה">'+icon('edit')+'</button>'
+            + '<button data-act="cat-task-del" data-ci="'+ci+'" data-ti="'+ti+'" class="task-del-btn" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button>'
             + '</div>'
             + subsHTML
             + addSubRow

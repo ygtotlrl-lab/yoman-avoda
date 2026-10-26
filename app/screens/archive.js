@@ -5,6 +5,7 @@ import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
 import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE } from '../constants.js';
 import { S, shell } from '../state.js';
+import { icon } from '../icons.js';
 import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
          yaDayName, yaGreg, yaHeb, yaPendKeyOf, yaSortDays, yaSortEntries, yaSortMonths,
          yaSortYears } from '../domain.js';
@@ -226,8 +227,8 @@ function renderArcDetail() {
       '<div class="arc-day-heb">' + esc(d.heb||yaGreg(d.key)) + '</div>'+
       '<div class="arc-day-greg">' + esc(yaDayName(d.key) + " | " + yaGreg(d.key)) + '</div>'+
     '</div>'+
-    '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?"✓ סיים עריכה":"✏️ ערוך")+'</button>'+
-    (d.entries.length ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-key="'+esc(d.key)+'">📄 PDF</button>' : '')+
+    '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?icon('check')+"סיים עריכה":icon('edit')+"ערוך")+'</button>'+
+    (d.entries.length ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-key="'+esc(d.key)+'">'+icon('pdf')+'PDF</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
@@ -235,8 +236,8 @@ function renderArcDetail() {
   } else {
     sortedE.forEach(function(e, ei) {
       html += '<div class="arc-entry-row ' + catCls(e.cat) + '">'+
-        (S.arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'" class="entry-edit" title="ערוך">✏️</button>' +
-        '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'">×</button>' : '')+
+        (S.arcEditMode ? '<button data-act="arc-entry-edit" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'" class="entry-edit" aria-label="עריכה" title="עריכה">'+icon('edit')+'</button>' +
+        '<button class="arc-entry-del" data-act="arc-entry-del" data-key="'+esc(S.arcSelDayKey)+'" data-id="'+esc(e.client_id)+'" aria-label="מחיקה" title="מחיקה">'+icon('del')+'</button>' : '')+
         '<div class="arc-dot cat-fill"></div>'+
         '<span class="arc-cat">'+esc(catLabelOf(e))+'</span>'+
         '<span class="arc-muted">←</span>'+

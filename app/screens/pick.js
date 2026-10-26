@@ -3,6 +3,7 @@ import { errMsg, netTimeout } from '../../core/util.js';
 import { esc, openModal } from '../../core/ui.js';
 import { MSG_INFRA_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
+import { icon } from '../icons.js';
 
 // מציג הטבלה במסך הבחירה ולא בתוך הישיבה — הטבלה של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
 function screenPickHTML() {
@@ -21,7 +22,7 @@ function screenPickHTML() {
       return '<button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="' + y.id + '">' + esc(y.name) + '</button>';
     }).join('')}</div>
     <div class="ys-pick-aside">
-      <button class="ys-pick-alt" data-act="inf-open">📊 טבלת התשתית</button>
+      <button class="ys-pick-alt" data-act="inf-open">${icon('table')}טבלת התשתית</button>
     </div>
   </div>
 </div>
@@ -172,7 +173,7 @@ async function yaInfraOpen() {
     if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
       '⚠️ המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
       '<br>הטבלה נקראת בזמן אמת מהריפו, ואין עותק במכשיר.</div>' +
-      '<div class="inf-bar"><button data-act="inf-open">↻ נסה שוב</button></div></div>';
+      '<div class="inf-bar"><button data-act="inf-open">' + icon('retry') + 'נסה שוב</button></div></div>';
     return;
   }
   S._infData = _infParse(md);

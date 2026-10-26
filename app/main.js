@@ -13,6 +13,7 @@ import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OF
          MSG_YESHIVA_UNKNOWN, PK_ARC, PK_ENTRY, PK_SET, YA_ROWS_TABLE,
          YESHIVOT } from './constants.js';
 import { S, shell } from './state.js';
+import { icon } from './icons.js';
 import { _yaMarkSynced, arcMove, getSB,
          gregDateStr, isLive, liveOnly, mergeCats, showEl, yaAdoptRows, yaBkPrefix, yaCatsPut,
          yaEntryRows, yaLsBases, yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows,
@@ -254,6 +255,10 @@ var DOM_ACTIONS = {
 
 actWire(DOM_ACTIONS);
 
+// הלשוניות במעטפת הסטטית — האייקון נכנס מכאן, כי index.html אינו נושא את הסט.
+document.querySelectorAll('.tab-btn[data-tab]').forEach(function (b) {
+  b.insertAdjacentHTML('afterbegin', icon(b.getAttribute('data-tab')));
+});
 
 document.addEventListener('input', function (e) {
   var el = e.target;
@@ -463,7 +468,7 @@ function yaPickYeshiva() {
     listHTML += '<button class="btn-sm yeshiva-pick' +
             (cur ? ' is-current' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
             esc(YESHIVOT[i].name) +
-            (cur ? ' ✓' : '') + '</button>';
+            (cur ? icon('check') : '') + '</button>';
   }
   listHTML += '</div>';
   openModal(MSG_SWITCH_YESHIVA, listHTML, '');
@@ -501,7 +506,7 @@ function selectYeshiva(y) {
   var slot = document.getElementById('outputBtnSlot');
   if (slot) slot.innerHTML =
     '<button class="share-btn btn-sm" ' +
-    'data-act="share-report">📤 שיתוף הדוח</button>';
+    'data-act="share-report">' + icon('share') + 'שיתוף הדוח</button>';
 
   // הליבה עולה רק עכשיו — KV_TABLE, המראה, הסימונים והגיבוי נושאים את המוסד, והם null עד שנבחר;
   // בכניסה חוזרת היא טוענת את המוסד החדש, והזיכרון נבנה מהמראה (MIRROR_CFG.loaded).
