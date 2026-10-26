@@ -25,7 +25,7 @@ import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, 
 import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
          onGregDateChange, pickCat, pickDay, pickSub, pickTask,
          screenEntryHTML } from './screens/entry.js';
-import { clearAll, delEntry, editEntry, renderLog, saveEntry,
+import { clearAll, delEntry, dupEntry, editEntry, renderLog, saveDupEntry, saveEntry,
          screenLogHTML } from './screens/log.js';
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
 import { addSub, addTask, editSubInline, editTaskInline, removeSub, removeTask,
@@ -202,6 +202,8 @@ var DOM_ACTIONS = {
   'entry-edit':     function (el) { editEntry(el.getAttribute('data-id')); },
   'entry-del':      function (el) { delEntry(el.getAttribute('data-id')); },
   'entry-save':     function (el) { return runSave(function () { return saveEntry(el.getAttribute('data-id')); }); },
+  'entry-dup':      function (el) { dupEntry(el.getAttribute('data-id')); },
+  'entry-dup-save': function (el) { return runSave(function () { return saveDupEntry(el.getAttribute('data-id')); }); },
   'arc-pdf':        function (el) { exportArchivePDF(el.getAttribute('data-key')); },
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },

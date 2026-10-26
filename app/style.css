@@ -306,6 +306,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .ei-row{align-items:center;display:flex;background:var(--warn-soft);flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-3);border-radius:var(--r-2)}
 .ei-save{border:none;background:var(--brand-fill);color:var(--on-brand);cursor:pointer;font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-5);border-radius:var(--r-1)}
 .entry-edit{font-size:var(--fs-3);border:none;background:none;cursor:pointer;padding:var(--sp-1) var(--sp-2)}
+.entry-acts{display:flex;align-items:center;gap:var(--sp-1)}
 .log-ttl{margin:0}
 .share-btn{background:var(--brand-fill);color:var(--on-brand)}
 .cat-edge{border-right:4px solid var(--cat)}
