@@ -68,13 +68,17 @@ function _reportError(div, e){
 }
 
 // מחזירה תמיד promise ואינה זורקת סינכרונית — זריקה הייתה משאירה את פאנל הדוח על המסך.
+// html2canvas משכפל את כל הדף לפני הצריבה — רק הדוח, אבותיו וה-head נכנסים לשכפול: יומן מלא שורות ואייקונים האט פי עשרה.
 function _renderReport(div){
   if (typeof html2canvas !== 'function') {
     return Promise.reject(new Error('html2canvas not loaded'));
   }
   try {
     return Promise.resolve(
-      html2canvas(div,{scale:2,useCORS:true,backgroundColor:getComputedStyle(div).backgroundColor,logging:false})
+      html2canvas(div,{scale:2,useCORS:true,backgroundColor:getComputedStyle(div).backgroundColor,logging:false,
+        ignoreElements:function(el){
+          return !(el === div || div.contains(el) || el.contains(div) || el.tagName === 'HEAD' || !!el.closest('head'));
+        }})
     );
   } catch(e) {
     return Promise.reject(e);
