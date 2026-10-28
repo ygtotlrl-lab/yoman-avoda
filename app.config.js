@@ -30,6 +30,8 @@ self.APP = Object.freeze({
     launcherBg: { kind: 'gradient', angle: 315, start: '#2B508F', end: '#0D1F42' },
     // אפליקציות אחרות שקישור intent: רשאי לפתוח — שם ⟵ חבילה; ריק — המעטפת אינה פותחת אף אחת
     launch: {},
+    // כפתור «יציאה» שהמעטפת קולטת וסוגרת בו את האפליקציה
+    exit: false,
     // FileProvider ו-androidx — רק באפליקציה שמייצאת קובץ
     share: { chooser: 'שיתוף הדו"ח' }
   },
