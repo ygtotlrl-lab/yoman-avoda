@@ -136,15 +136,32 @@ function pickCat(id) {
   var hit = null;
   S.CATS.forEach(function (c) { if (c && String(c.id) === String(id)) hit = c; });
   if (!hit) { console.error('[cat] אין קטגוריה למזהה: ' + id); return; }
-  S.selCat = hit; S.selTask = null; S.selSub = null;
+  S.selCat = hit; S.selTask = null; S.selSub = null; S.taskAll = false;
   buildCatGrid(); buildTaskBtns(); buildSubBtns();
 }
 
+// המשימות — רשת אחידה בסדר ההגדרות. בתחילה רק ההצעות: המשימות שנרשמו הכי הרבה בקטגוריה (TASK_SUGGEST),
+// בסדר ההגדרות ולא בסדר השימוש, וכפתור «עוד» פותח את כולן; משימה שנבחרה מוצגת תמיד.
+var TASK_SUGGEST = 8;
+function taskUse(catId) {
+  var n = {};
+  S.ENTRIES.concat(S.ARCHIVE).forEach(function (r) { if (r && r.cat === catId && r.task) n[r.task] = (n[r.task] || 0) + 1; });
+  return n;
+}
 function buildTaskBtns() {
   var el = document.getElementById("taskBtns");
   el.innerHTML = "";
   if (!S.selCat) { el.innerHTML = '<span class="hint">בחר קטגוריה...</span>'; return; }
-  catTasks(S.selCat).map(function (x) { return x.id; }).forEach(function(t) {
+  var all = catTasks(S.selCat).map(function (x) { return x.id; }), shown = all;
+  if (!S.taskAll && all.length > TASK_SUGGEST + 2) {
+    var use = taskUse(S.selCat.id);
+    var top = all.filter(function (t) { return use[t]; })
+      .sort(function (a, b) { return use[b] - use[a]; }).slice(0, TASK_SUGGEST);
+    // בלי היסטוריה בקטגוריה — הראשונות בסדר ההגדרות.
+    if (!top.length) top = all.slice(0, TASK_SUGGEST);
+    shown = all.filter(function (t) { return top.indexOf(t) >= 0 || t === S.selTask; });
+  }
+  shown.forEach(function(t) {
     var b = document.createElement("button");
     b.className = "qbtn" + (S.selTask === t ? " active" : "");
     b.textContent = t;
@@ -152,7 +169,15 @@ function buildTaskBtns() {
     b.dataset.task = t;
     el.appendChild(b);
   });
+  if (all.length > shown.length || S.taskAll && all.length > TASK_SUGGEST + 2) {
+    var m = document.createElement("button");
+    m.className = "qbtn qmore";
+    m.textContent = S.taskAll ? "פחות ▴" : "עוד משימות · " + (all.length - shown.length) + " ▾";
+    m.dataset.act = 'task-more';
+    el.appendChild(m);
+  }
 }
+function toggleTaskAll() { S.taskAll = !S.taskAll; buildTaskBtns(); }
 
 // הכפתור מגיע כארגומנט — בהאצלה currentTarget הוא document, וההבזק היה נצבע על כל הדף.
 function pickTask(t, btn) {
@@ -228,5 +253,5 @@ function clearForm() {
   buildTaskBtns(); buildSubBtns();
 }
 
-export { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
+export { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns, toggleTaskAll,
          onGregDateChange, pickCat, pickDay, pickSub, pickTask, screenEntryHTML };

@@ -260,6 +260,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
 .qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text-3);margin-bottom:var(--sp-2);letter-spacing:var(--ls-2);text-transform:uppercase;}
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
+/* המשימות ותתי-המשימות — רשת אחידה: עמודות שוות, וטקסט ארוך נשבר בתוך הכפתור ואינו מותח אותו. */
+#taskBtns,#subBtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--sp-3);}
+#taskBtns .hint,#subBtns .hint{grid-column:1/-1;}
+#taskBtns .qbtn,#subBtns .qbtn{white-space:normal;min-height:42px;line-height:1.25;display:flex;align-items:center;justify-content:center;text-align:center;}
+@media (max-width:520px){ #taskBtns,#subBtns{grid-template-columns:1fr 1fr;} }
+.qbtn.qmore{background:none;border-style:dashed;color:var(--brand-ink);font-weight:700;}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text-2);white-space:nowrap;}
 .qbtn.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);font-weight:700;}

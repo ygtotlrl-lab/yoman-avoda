@@ -24,7 +24,7 @@ import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, 
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
 import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
-         onGregDateChange, pickCat, pickDay, pickSub, pickTask,
+         onGregDateChange, pickCat, pickDay, pickSub, pickTask, toggleTaskAll,
          screenEntryHTML } from './screens/entry.js';
 import { clearAll, delEntry, dupEntry, editEntry, renderLog, saveDupEntry, saveEntry,
          screenLogHTML } from './screens/log.js';
@@ -196,6 +196,7 @@ var DOM_ACTIONS = {
   'sw-dismiss':          function () { swHideUpdate(); },
   'pick-cat':            function (el) { pickCat(el.dataset.cat); },
   'pick-task':           function (el) { pickTask(el.dataset.task, el); },
+  'task-more':           function () { toggleTaskAll(); },
   'pick-sub':            function (el) { pickSub(el.dataset.sub, el); },
   // התראות התשתית נבנות ב-JS — לכן הן מנותבות במפה ולא במאזין ישיר על הכפתור.
   'ls-alert-close':      function () { var el = document.getElementById('ls-alert'); if (el) el.remove(); },
@@ -459,6 +460,7 @@ function yaResetTenantState() {
   S.arcSelYear = null;
   S.arcSelMonth = null;
   S.arcSelDayKey = null;
+  S.taskAll = false;
 }
 
 function yaPickYeshiva() {
