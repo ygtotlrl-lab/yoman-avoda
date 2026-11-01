@@ -21,7 +21,7 @@ import { _yaMarkSynced, arcMove, getSB,
          yaSetPut, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
-         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
 import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
          onGregDateChange, pickCat, pickDay, pickSub, pickTask, toggleTaskAll,
@@ -206,7 +206,7 @@ var DOM_ACTIONS = {
   'entry-save':     function (el) { return runSave(function () { return saveEntry(el.getAttribute('data-id')); }); },
   'entry-dup':      function (el) { dupEntry(el.getAttribute('data-id')); },
   'entry-dup-save': function (el) { return runSave(function () { return saveDupEntry(el.getAttribute('data-id')); }); },
-  'arc-pdf':        function (el) { exportArchivePDF(el.getAttribute('data-key')); },
+  'arc-img':        function (el) { exportArchiveImage(el.getAttribute('data-key')); },
   'arc-entry-edit': function (el) { arcEditEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-del':  function (el) { arcDeleteEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },
   'arc-entry-save': function (el) { arcSaveEntry(el.getAttribute('data-key'), el.getAttribute('data-id')); },

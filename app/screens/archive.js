@@ -9,7 +9,7 @@ import { icon } from '../icons.js';
 import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
          yaDayName, yaGreg, yaHeb, yaPendKeyOf, yaSortDays, yaSortEntries, yaSortMonths,
          yaSortYears } from '../domain.js';
-import { exportPDF } from '../domain.report.js';
+import { exportImage } from '../domain.report.js';
 
 function screenArchiveHTML() {
   return `
@@ -228,7 +228,7 @@ function renderArcDetail() {
       '<div class="arc-day-greg">' + esc(yaDayName(d.key) + " | " + yaGreg(d.key)) + '</div>'+
     '</div>'+
     '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?icon('check')+"סיים עריכה":icon('edit')+"ערוך")+'</button>'+
-    (d.entries.length ? '<button class="arc-pdf-btn btn-sm hide-mobile" data-act="arc-pdf" data-key="'+esc(d.key)+'">'+icon('pdf')+'PDF</button>' : '')+
+    (d.entries.length ? '<button class="arc-img-btn btn-sm" data-act="arc-img" data-key="'+esc(d.key)+'">'+icon('share')+'תמונה</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {
@@ -343,10 +343,10 @@ function renderArchive() {
 }
 
 // היום מזוהה במפתחו — הרשומות והכותרת נגזרים ממנו.
-function exportArchivePDF(dayKey) {
+function exportArchiveImage(dayKey) {
   var d = getAllArchiveDays()[dayKey];
   if (!d) return;
-  exportPDF(dayKey, d.entries);
+  exportImage(dayKey, d.entries);
 }
 
 function arcEditEntry(dayKey, entryId) {
@@ -399,5 +399,5 @@ function arcSaveEntry(dayKey, entryId) {
 }
 
 export { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
-         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchivePDF, renderArcDetail,
+         arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML };

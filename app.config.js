@@ -23,8 +23,8 @@ self.APP = Object.freeze({
     // צבע כפתור הניסיון החוזר בדף האופליין של המעטפת
     accent: '#2563eb',
     // לעולם אינו יורד — בלי קידום המכשיר המותקן אינו מקבל את ה-APK החדש.
-    versionCode: 29,
-    versionName: '20.0',
+    versionCode: 30,
+    versionName: '21.0',
     // שוליי ic_launcher הם מדרג באלכסון ולא צבע אחד — צבע אחיד מחטיא ב-36 יחידות לערוץ, והמדרג ב-5.
     // 315 מעלות הן שמאל-עליון אל ימין-תחתון.
     launcherBg: { kind: 'gradient', angle: 315, start: '#2B508F', end: '#0D1F42' },

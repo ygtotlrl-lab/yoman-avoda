@@ -9,7 +9,7 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.SEND" />
-            <data android:mimeType="image/*" />
+            <data android:mimeType="*/*" />
         </intent>
     </queries>
 

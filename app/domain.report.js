@@ -1,7 +1,7 @@
-// app/domain.report.js — הדוח היומי: בנייה, רינדור, הדפסה ושיתוף
+// app/domain.report.js — הדוח היומי: בנייה, רינדור ושיתוף כתמונה
 import { esc, toast } from '../core/ui.js';
-import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS,
-         MSG_PDF_PREP, MSG_POPUP_BLOCKED } from './constants.js';
+import { shareFile } from '../core/share.js';
+import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
 import { S } from './state.js';
 import { catCls, catLabelOf, getCurrentDateKey, liveOnly, showEl, yaDayName, yaGreg, yaHeb, yaSortEntries,
          yaYeshiva } from './domain.js';
@@ -15,39 +15,21 @@ function instName() {
   return y ? y.full : '';
 }
 
-// ── פלטים — PDF ותמונת הדוח ──
+// ── פלטים — תמונת הדוח ──
 // הייצוא מצלם את הדוח ואינו בונה HTML חדש — מסמך שני מאבד את צבעי הקטגוריות שהמסך מראה.
 // היום והרשומות נמסרים — הכותרת נגזרת מהיום, ואין מצב גלובלי שמוחלף בזמן הרינדור.
-function exportPDF(date, entries) {
+// יום מהארכיון — תמונה, באותה דרך של שיתוף הדוח (core/share.js): חלון הדפסה אינו עובד במעטפת.
+function exportImage(date, entries) {
   var live = liveOnly(entries);
   if (!live.length) { toast(MSG_NO_ROWS); return; }
   var fileTitle = "יומן עבודה " + yaHeb(date) + " " + yaGreg(date);
-  toast(MSG_PDF_PREP);
+  toast(MSG_IMG_PREP);
   _buildReportDiv(function (div) {
     _renderReport(div).then(function (canvas) {
       _hideReportDiv(div);
-      _printCanvas(canvas, fileTitle);
+      shareFile(canvas.toDataURL('image/jpeg', 0.95).split(',')[1], 'image/jpeg', fileTitle + '.jpg');
     }).catch(function (e) { _reportError(div, e); });
   }, live, date);
-}
-
-// מעטפת הדפסה לצילום בלבד — אין בה טבלה, כותרת או צבע, רק הפיקסלים שנמדדו.
-function _printCanvas(canvas, title) {
-  var w = null;
-  try { w = window.open("", "_blank", "width=900,height=700"); } catch (e) { w = null; }
-  // חוסם חלונות קופצים מחזיר null — בלי הבדיקה הפונקציה נופלת בשקט.
-  if (!w || !w.document) {
-    toast(MSG_POPUP_BLOCKED, null, 'bad');
-    return;
-  }
-  w.document.write('<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8">'
-    + '<title>' + esc(title) + '</title><style>@page{size:A4 portrait;margin:10mm}'
-    + 'html,body{margin:0;padding:0;background:var(--card)}img{width:100%;height:auto;display:block}'
-    + '</style></head><body><img alt="' + esc(title) + '" src="' + canvas.toDataURL('image/png') + '">'
-    + '<' + 'script>window.onload=function(){setTimeout(function(){window.print();},500);}<\/script>'
-    + '</body></html>');
-  w.document.close();
-  setTimeout(function () { try { w.document.title = title; } catch (e) {} }, 80);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -140,41 +122,8 @@ function _buildReportDiv(cb, entries, date){
   showEl(div, true);cb(div);
 }
 
-// אין כאן פרמטר יעד — בורר המערכת בוחר; והחתימה היא חוזה עם Java, ומשתנה בשני הצדדים יחד.
-// AndroidShareBridge (addWebMessageListener) נוסה ראשון — בו WebView עצמו אוכף את רשימת המקורות;
-// AndroidShare (addJavascriptInterface) נשאר ל-WebView ישן מ-88, והמעטפת מאמתת בו את מקור הדף.
-function _androidShareImage(canvas){
-  try {
-    var br = window.AndroidShareBridge;
-    if (br && typeof br.postMessage === 'function') {
-      br.postMessage(JSON.stringify({
-        data: canvas.toDataURL('image/jpeg',0.95).split(',')[1],
-        mime: 'image/jpeg'
-      }));
-      return true;
-    }
-    if (window.AndroidShare && typeof window.AndroidShare.shareImage === 'function') {
-      var b64 = canvas.toDataURL('image/jpeg',0.95).split(',')[1];
-      window.AndroidShare.shareImage(b64, 'image/jpeg');
-      return true;
-    }
-  } catch(e) { /* נופל לשיתוף של הדפדפן */ }
-  return false;
-}
-
-// הורדה בלבד, בלי קישור-עומק ליעד — קישור כזה הוא מסלול שיתוף שני שאיש אינו בודק, ונשבר בשקט.
-function _shareDownloadFallback(canvas){
-  var dataUrl = canvas.toDataURL('image/jpeg',0.95);
-  var a=document.createElement('a');
-  a.href=dataUrl;
-  a.download='yoman.jpg';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
 // ── שיתוף הדוח כתמונה ──
-// html2canvas לקובץ, ומשם לגיליון השיתוף של המערכת; בדסקטופ — הורדת התמונה.
+// html2canvas לקובץ, ומשם לשיתוף — core/share.js: במעטפת הגשר, בדפדפן גיליון השיתוף, ובלעדיו הורדה.
 function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(S.ENTRIES).filter(function(e){ return e.entry_date === curKey; });
@@ -183,19 +132,9 @@ function shareReport(){
   _buildReportDiv(function(div){
     _renderReport(div).then(function(canvas){
       _hideReportDiv(div);
-      if (_androidShareImage(canvas)) return;
-      canvas.toBlob(function(blob){
-        var file = new File([blob], 'yoman.jpg', {type:'image/jpeg'});
-        if (navigator.canShare && navigator.canShare({files:[file]})) {
-          navigator.share({files:[file]}).catch(function(err){
-            if (err && err.name !== 'AbortError') _shareDownloadFallback(canvas);
-          });
-          return;
-        }
-        _shareDownloadFallback(canvas);
-      },'image/jpeg',0.95);
+      shareFile(canvas.toDataURL('image/jpeg',0.95).split(',')[1], 'image/jpeg', 'yoman.jpg');
     }).catch(function(e){ _reportError(div, e); });
   }, todayEntries, curKey);
 }
 
-export { exportPDF, shareReport };
+export { exportImage, shareReport };

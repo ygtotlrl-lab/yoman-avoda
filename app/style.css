@@ -273,7 +273,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .hint{color:var(--text-3);font-size:var(--fs-1);}
 /* ── שדות קלט ── */
 .inp-grid{display:grid;grid-template-columns:1fr;gap:var(--sp-4);margin-bottom:var(--sp-5);}
-.hide-mobile{display:none !important;}
 .fld{display:flex;flex-direction:column;gap:var(--sp-2);}
 .fld label{font-size:var(--fs-1);font-weight:700;color:var(--text-2);}
 .fld input{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-4) var(--sp-5);font-family:'Heebo',sans-serif;font-size:var(--fs-3);
@@ -421,7 +420,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-empty-month{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-4)}
 .arc-muted{color:var(--text-3)}
 .arc-notes{flex:1;color:var(--text-3);font-size:var(--fs-1);text-align:left}
-.arc-pdf-btn{background:var(--ok-soft);color:var(--ok);font-size:var(--fs-1);padding:var(--sp-3) var(--sp-5)}
+.arc-img-btn{background:var(--ok-soft);color:var(--ok);font-size:var(--fs-1);padding:var(--sp-3) var(--sp-5)}
 .arc-spacer{flex:1}
 .arc-task{font-weight:700;color:var(--text)}
 .day-count{font-size:var(--fs-1);font-weight:400;opacity:var(--op-6)}
@@ -445,7 +444,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (min-width:480px){.cat-grid{grid-template-columns:repeat(3,1fr);}}
 @media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
 @media (min-width:640px){.inp-grid{grid-template-columns:1fr 1fr;}}
-@media (min-width:900px){.hide-mobile{display:inline-flex !important;}}
 @media (min-width:640px){.veil{align-items:center}}
 @media (min-width:640px){.sheet{border-radius:var(--r-6)}}
 
