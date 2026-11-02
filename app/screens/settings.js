@@ -123,7 +123,7 @@ function addSub(ci, ti) {
   var val = inp.value.trim();
   if (!val) return;
   if (!Array.isArray(t.subs)) t.subs = [];
-  if (uniqHas(t.subs, val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'bad'); return; }
+  if (uniqHas(t.subs, val)) { toast(MSG_SUBTASK_EXISTS, 4000, 'warn'); return; }
   t.subs.push(val);
   recTouch(t);
   inp.value = "";
@@ -149,7 +149,7 @@ function saveTaskInline(inp) {
   var ci = +inp.dataset.ci, ti = +inp.dataset.ti, oldVal = inp.defaultValue;
   var newVal = inp.value.trim(), cat = S.CATS[ci], old = taskAt(ci, ti);
   if (old && newVal && newVal !== oldVal) {
-    if (taskOf(cat, newVal)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); renderSettings(); return; }
+    if (taskOf(cat, newVal)) { toast(MSG_TASK_EXISTS, 4000, 'warn'); renderSettings(); return; }
     // השם הוא המזהה — הפריט הישן נמחק, והחדש נושא את מפתחות-המשנה במקומו.
     var subs = Array.isArray(old.subs) ? old.subs.slice() : [];
     tombKill(old);
@@ -233,7 +233,7 @@ function addTask(ci) {
   var val = inp.value.trim();
   if (!val) return;
   // השם הוא מזהה הפריט — שתי משימות באותו שם הן פריט אחד.
-  if (uniqHas(catTasks(S.CATS[ci]).map(function (t) { return t.id; }), val)) { toast(MSG_TASK_EXISTS, 4000, 'bad'); return; }
+  if (uniqHas(catTasks(S.CATS[ci]).map(function (t) { return t.id; }), val)) { toast(MSG_TASK_EXISTS, 4000, 'warn'); return; }
   taskPut(S.CATS[ci], { id: val, updated_at: Date.now(), subs: [] });
   inp.value = "";
   saveCats();

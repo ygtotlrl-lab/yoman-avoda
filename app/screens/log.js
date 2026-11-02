@@ -16,7 +16,7 @@ function screenLogHTML() {
       <div class="log-ttl card-ttl">רשומות יומן</div>
       <div class="log-cnt" id="logCount">0</div>
     </div>
-    <div id="logList"><div class="empty">📋<br>עוד אין רשומות</div></div>
+    <div id="logList"><div class="empty"><span class="big">${icon('log')}</span>עוד אין רשומות</div></div>
     <div class="exp-row">
       <button class="btn-sm btn-red" data-act="clear-all">${icon('del')}נקה</button>
       <span id="outputBtnSlot"></span>
@@ -33,7 +33,7 @@ function renderLog() {
   var filtered = liveOnly(S.ENTRIES).filter(function(e){ return e.entry_date === curKey; });
   cnt.textContent = filtered.length;
   if (!filtered.length) {
-    list.innerHTML = '<div class="empty">📋<br>אין רשומות לתאריך זה</div>';
+    list.innerHTML = '<div class="empty"><span class="big">' + icon('log') + '</span>אין רשומות לתאריך זה</div>';
     return;
   }
   filtered = yaSortEntries(filtered);
@@ -67,7 +67,7 @@ function delEntry(id) {
 }
 
 function clearAll() {
-  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE).then(function (yes) {
+  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE, icon('del')).then(function (yes) {
     if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();

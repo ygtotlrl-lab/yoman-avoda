@@ -26,60 +26,60 @@ const SB_URL = self.APP.supabase.url;
 const SB_KEY = self.APP.supabase.key;
 
 // ── הודעות פר-אפליקציה ──
-var MSG_SYNCED = '✅ מסונכרן';
+var MSG_SYNCED = 'מסונכרן';
 
-var MSG_SYNC_FAIL_LOCAL = '⚠️ הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
+var MSG_SYNC_FAIL_LOCAL = 'הסנכרון נכשל — עובד עם הנתונים שבמכשיר';
 
-var MSG_SYNC_PARTIAL = '⚠️ סנכרון חלקי — נכשל: ';
+var MSG_SYNC_PARTIAL = 'סנכרון חלקי — נכשל: ';
 
-var MSG_OFFLINE_LOCAL = '⚠️ אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר';
+var MSG_OFFLINE_LOCAL = 'אין חיבור לאינטרנט — עובד עם הנתונים שבמכשיר';
 
-var MSG_DAY_ARCHIVED = '📅 יום חדש! הרשומות הועברו לארכיון אוטומטית';
+var MSG_DAY_ARCHIVED = 'יום חדש! הרשומות הועברו לארכיון אוטומטית';
 
-var MSG_PICK_CATEGORY = '⚠️ יש לבחור קטגוריה';
+var MSG_PICK_CATEGORY = 'יש לבחור קטגוריה';
 
-var MSG_NEED_TASK = '⚠️ יש להזין משימה';
+var MSG_NEED_TASK = 'יש להזין משימה';
 
 var MSG_NO_ROWS = 'אין רשומות';
 
-var MSG_IMG_OFFLINE = '⚠️ יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
+var MSG_IMG_OFFLINE = 'יצירת התמונה לא זמינה — נדרש חיבור לאינטרנט פעם אחת';
 
-var MSG_IMG_FAIL = '⚠️ יצירת התמונה נכשלה — נסה שוב';
+var MSG_IMG_FAIL = 'יצירת התמונה נכשלה — נסה שוב';
 
-var MSG_LOCAL_ONLY = '⚠️ נשמר במכשיר בלבד — הענן לא עודכן';
+var MSG_LOCAL_ONLY = 'נשמר במכשיר בלבד — הענן לא עודכן';
 
-var MSG_CLOUD_NO_FANOUT = '⚠️ נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת';
+var MSG_CLOUD_NO_FANOUT = 'נשמר בענן, אך מכשירים אחרים לא יעודכנו כעת';
 
-var MSG_SAVED_CLOUD = '✅ נשמר בענן';
+var MSG_SAVED_CLOUD = 'נשמר בענן';
 
-var MSG_SUBTASK_EXISTS = '⚠️ תת-המשימה כבר קיימת';
+var MSG_SUBTASK_EXISTS = 'תת-המשימה כבר קיימת';
 
-var MSG_TASK_EXISTS = '⚠️ המשימה כבר קיימת בקטגוריה';
+var MSG_TASK_EXISTS = 'המשימה כבר קיימת בקטגוריה';
 
 var MSG_INFRA_TABLE = 'טבלת התשתית';
 
-var MSG_SYNC_LOAD_FAIL = '⚠️ לא הצליח לטעון סנכרון';
+var MSG_SYNC_LOAD_FAIL = 'לא הצליח לטעון סנכרון';
 
 // המסך הריק אינו מבטיח פעולה — אין במסך דרך להוסיף קטגוריה, וקטגוריות המוסד נבנות במסד.
-var MSG_NO_CATS = '⚠️ אין קטגוריות למוסד הזה';
+var MSG_NO_CATS = 'אין קטגוריות למוסד הזה';
 
 var MSG_SWITCH_YESHIVA = 'החלפת ישיבה';
 
 var MSG_ALREADY_AT = 'כבר במוסד ';
 
-var MSG_YESHIVA_UNKNOWN = '❌ הישיבה אינה מוכרת — לא נבחרה';
+var MSG_YESHIVA_UNKNOWN = 'הישיבה אינה מוכרת — לא נבחרה';
 
-var MSG_BOOT_FAIL = '⚠️ שגיאה בעליית האפליקציה — נסה לרענן';
+var MSG_BOOT_FAIL = 'שגיאה בעליית האפליקציה — נסה לרענן';
 
 var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
 
 var MSG_IMG_PREP = 'מכין תמונה...';
 
-var MSG_EDIT_FORM_CLOSED = '⚠️ טופס העריכה נסגר — נסה שוב';
+var MSG_EDIT_FORM_CLOSED = 'טופס העריכה נסגר — נסה שוב';
 
-var MSG_ROW_GONE = '⚠️ הרשומה לא נמצאה — לא נשמר';
+var MSG_ROW_GONE = 'הרשומה לא נמצאה — לא נשמר';
 
-var MSG_CLEAR_ALL_TITLE = '🗑 מחיקת כל הרשומות';
+var MSG_CLEAR_ALL_TITLE = 'מחיקת כל הרשומות';
 
 var MSG_CLEAR_ALL_BODY = 'האם למחוק את כל רשומות היום הנוכחי?';
 

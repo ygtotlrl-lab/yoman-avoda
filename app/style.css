@@ -304,6 +304,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .e-meta{font-size:var(--fs-1);color:var(--text-3);}
 .del-btn{background:none;border:none;color:var(--text-3);font-size:var(--fs-4);cursor:pointer;padding:var(--sp-1) var(--sp-3);border-radius:var(--r-2);transition:all var(--dur-2);flex-shrink:0;}
 .empty{text-align:center;padding:var(--sp-7);color:var(--text-3);font-size:var(--fs-3);line-height:var(--lh-6);}
+.empty .big{display:flex;justify-content:center;margin-bottom:var(--sp-3);opacity:var(--op-5)}
+.empty .big .ico{width:36px;height:36px}
 .exp-row{display:flex;gap:var(--sp-4);margin-top:var(--sp-5);justify-content:flex-end;flex-wrap:wrap;}
 .ei-cancel{border:none;background:var(--card-2);color:var(--text-2);cursor:pointer;font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-5);border-radius:var(--r-1)}
 .ei-count{border:1px solid var(--border);font-family:Heebo,sans-serif;padding:var(--sp-2) var(--sp-4);border-radius:var(--r-1);width:60px}

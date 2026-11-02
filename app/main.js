@@ -326,14 +326,14 @@ async function syncFromCloud() {
     if (failed.length === 0) {
       toast(MSG_SYNCED, null, 'good');
     } else if (failed.length >= 3) {
-      toast(MSG_SYNC_FAIL_LOCAL, null, 'bad');
+      toast(MSG_SYNC_FAIL_LOCAL, null, 'warn');
     } else {
-      toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'bad');
+      toast(MSG_SYNC_PARTIAL + failed.join(", "), null, 'warn');
     }
   } catch(e) {
     console.error("[sync] syncFromCloud:", e);
     S._yaNetWarned = true;
-    toast(MSG_OFFLINE_LOCAL, null, 'bad');
+    toast(MSG_OFFLINE_LOCAL, null, 'warn');
   }
 }
 
@@ -421,7 +421,7 @@ function startApp() {
     } else if (attempt < 10) {
       setTimeout(function(){ trySync(attempt + 1); }, 1000);
     } else {
-      toast(MSG_SYNC_LOAD_FAIL, 2000, 'bad');
+      toast(MSG_SYNC_LOAD_FAIL, 2000, 'warn');
     }
   }
   setTimeout(function(){ trySync(0); }, 1500);
@@ -469,8 +469,7 @@ function yaPickYeshiva() {
     var cur = idEq(YESHIVOT[i].id, S.YESHIVA);
     listHTML += '<button class="btn-sm yeshiva-pick' +
             (cur ? ' is-current' : '') + '" data-act="switch-yeshiva" data-yeshiva="' + YESHIVOT[i].id + '">' +
-            esc(YESHIVOT[i].name) +
-            (cur ? icon('check') : '') + '</button>';
+            esc(YESHIVOT[i].name) + '</button>'; // הנוכחי — בהיר בלבד, בלי סימון נוסף
   }
   listHTML += '</div>';
   openModal(MSG_SWITCH_YESHIVA, listHTML, '');
@@ -521,7 +520,7 @@ function selectYeshiva(y) {
     startApp();
   } catch(e) {
     console.error('[boot] startApp נכשל', e);
-    toast(MSG_BOOT_FAIL, null, 'bad');
+    toast(MSG_BOOT_FAIL, null, 'warn');
   }
 }
 

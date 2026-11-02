@@ -377,7 +377,7 @@ function arcSaveEntry(dayKey, entryId) {
   var ts = Date.now();
   function fld(id) { var el = document.getElementById(id); return el ? el.value.trim() : null; }
   var vals = { task: fld('aei_task'), sub: fld('aei_sub'), count: fld('aei_count'), notes: fld('aei_notes') };
-  if (vals.task === null) { toast(MSG_EDIT_FORM_CLOSED, null, 'bad'); return; }
+  if (vals.task === null) { toast(MSG_EDIT_FORM_CLOSED, null, 'warn'); return; }
   function apply(e) {
     e.task = vals.task; e.sub = vals.sub; e.count = vals.count; e.notes = vals.notes;
     recTouch(e, ts);
@@ -389,7 +389,7 @@ function arcSaveEntry(dayKey, entryId) {
   if (!hits) {
     console.warn('[arc] arcSaveEntry — רשומה לא נמצאה:', entryId, dayKey);
     renderArcDetail();
-    toast(MSG_ROW_GONE, null, 'bad');
+    toast(MSG_ROW_GONE, null, 'warn');
     return;
   }
   saveRows();

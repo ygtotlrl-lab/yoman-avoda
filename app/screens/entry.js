@@ -27,10 +27,10 @@ function screenEntryHTML() {
       </div>
       <!-- התאריך העברי של היום שנבחר — נגזר מהתאריך הלועזי ואינו נערך -->
       <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" readonly tabindex="-1" placeholder="תאריך עברי..." />
-      <!-- ⛔ בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy,
+      <!-- בלי inputmode בכוונה — הפורמט המתקבל הוא dd/mm/yyyy,
            yyyy-mm-dd או הפורמט השמור, ומקלדת המספרים של iOS אינה מציעה
-           «/» ולא «-»; ⚠️ ה-pattern הוא רמז הצורה, וההכרעה ב-parseGregLike,
-           שנכשלת-סגור על כל קלט אחר ⭐ ומתורגמת לפורמט השמור. -->
+           «/» ולא «-»; ה-pattern הוא רמז הצורה, וההכרעה ב-parseGregLike,
+           שנכשלת-סגור על כל קלט אחר ומתורגמת לפורמט השמור. -->
       <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2} [א-ת]+ \d{4}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
     </div>
   </div>
@@ -223,8 +223,8 @@ function addEntry() {
   var sub  = document.getElementById("subInput").value.trim() || S.selSub || "";
   var notes = document.getElementById("notesInput").value.trim();
   var count = document.getElementById("countInput").value.trim();
-  if (!S.selCat) { toast(MSG_PICK_CATEGORY, null, 'bad'); return; }
-  if (!task)   { toast(MSG_NEED_TASK, null, 'bad'); return; }
+  if (!S.selCat) { toast(MSG_PICK_CATEGORY, null, 'warn'); return; }
+  if (!task)   { toast(MSG_NEED_TASK, null, 'warn'); return; }
   var now = new Date();
   var entry = {
     // newClientId ולא השעון — שני מכשירים באותה מילישנייה היו מקבלים אותו מזהה.

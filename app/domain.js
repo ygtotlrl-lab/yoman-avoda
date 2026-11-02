@@ -491,7 +491,7 @@ async function yaSyncPushNow() {
       // אין לחתום last_changed על נתון שלא הגיע — מכשירים אחרים היו מושכים עותק ענני ישן מעל רשומות חדשות.
       // בלי רשת השמירה הצליחה במכשיר ואינה שגיאה; כשל עם רשת הוא שגיאה.
       if (!navigator.onLine) toast(MSG_SAVED_LOCAL, null, 'good');
-      else toast(MSG_LOCAL_ONLY, null, 'bad');
+      else toast(MSG_LOCAL_ONLY, null, 'warn');
       return;
     }
     // החותמת נכתבת אחרי הנתונים — מכשיר שרואה אותה מושך נתון שכבר בענן.
@@ -499,7 +499,7 @@ async function yaSyncPushNow() {
     var stampTs = Date.now();
     var rTs = await plStampWrite(stampTs);
     if (ctxStale(_ep)) return;
-    if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'bad'); return; }
+    if (!rTs.ok) { toast(MSG_CLOUD_NO_FANOUT, null, 'warn'); return; }
     app.PL_CFG.note(stampTs);
     toast(MSG_SAVED_CLOUD, null, 'good');
 }

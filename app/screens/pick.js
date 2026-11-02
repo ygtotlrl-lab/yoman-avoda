@@ -4,6 +4,7 @@ import { esc, openModal } from '../../core/ui.js';
 import { MSG_INFRA_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
+import { stIcon } from '../../core/icons.js';
 
 // מציג הטבלה במסך הבחירה ולא בתוך הישיבה — הטבלה של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
 function screenPickHTML() {
@@ -172,7 +173,7 @@ async function yaInfraOpen() {
   } catch (e) {
     var el = document.getElementById('modal-body');
     if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
-      '⚠️ המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
+      stIcon('warn') + 'המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
       '<br>הטבלה נקראת בזמן אמת מהריפו, ואין עותק במכשיר.</div>' +
       '<div class="inf-bar"><button data-act="inf-open">' + icon('retry') + 'נסה שוב</button></div></div>';
     return;
