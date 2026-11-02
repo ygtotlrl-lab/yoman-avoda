@@ -16,14 +16,13 @@ function screenEntryHTML() {
     <div class="card-ttl">תאריך ויום</div>
     <div class="date-row">
       <span class="date-lbl">יום:</span>
+      <!-- חמשת ימי העבודה בשורה אחת; ערב שבת ומוצ״ש — דרך שדה התאריך (נדירים) -->
       <div class="day-chips">
         <button class="day-chip" data-act="pick-day" data-day="יום ראשון">ראשון</button>
         <button class="day-chip" data-act="pick-day" data-day="יום שני">שני</button>
         <button class="day-chip" data-act="pick-day" data-day="יום שלישי">שלישי</button>
         <button class="day-chip" data-act="pick-day" data-day="יום רביעי">רביעי</button>
         <button class="day-chip" data-act="pick-day" data-day="יום חמישי">חמישי</button>
-        <button class="day-chip" data-act="pick-day" data-day="ערב שבת">ערב שבת</button>
-        <button class="day-chip" data-act="pick-day" data-day="מוצאי שבת">מוצ"ש</button>
       </div>
       <!-- התאריך העברי של היום שנבחר — נגזר מהתאריך הלועזי ואינו נערך -->
       <input aria-label="תאריך עברי" class="heb-inp" id="hebDateInput" type="text" readonly tabindex="-1" placeholder="תאריך עברי..." />

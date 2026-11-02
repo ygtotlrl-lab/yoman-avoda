@@ -239,8 +239,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 }
 .date-row{display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap;}
 .date-lbl{font-size:var(--fs-1);font-weight:700;color:var(--text-2);white-space:nowrap;}
-.day-chips{display:flex;gap:var(--sp-2);flex-wrap:wrap;}
-.day-chip{background:var(--card-2);color:var(--text-2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) var(--sp-5);font-size:var(--fs-1);
+.day-chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--sp-2);flex:1 1 100%;}
+.day-chip{background:var(--card-2);color:var(--text-2);border:1.5px solid var(--border);border-radius:var(--r-3);padding:var(--sp-3) 0;text-align:center;font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;transition:all var(--dur-3);white-space:nowrap;}
 .day-chip.active{background:var(--brand-fill);color:var(--on-brand);border-color:var(--brand-fill);box-shadow:0 2px 8px var(--shadow-brand);}
 .heb-inp{border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-3) var(--sp-5);font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-3);
@@ -248,12 +248,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .heb-inp:focus{outline:none;border-color:var(--brand-ink);}
 /* שתיים, שלוש ואז ארבע עמודות — קפיצה משתיים לארבע הייתה מצמצמת את הכפתור לרוחב שבו השם נחתך. */
 .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
-.cat-btn{border:1.5px solid var(--border);border-inline-start:6px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
+.cat-btn{position:relative;overflow:hidden;border:1.5px solid var(--border);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* במסך ההזנה הצבע הוא פס הצד בלבד — הכפתור לבן והכיתוב בדיו, כדי שהמסך לא יהיה צבעוני מדי;
+/* במסך ההזנה הצבע הוא פס עליון בלבד — הכפתור לבן והכיתוב בדיו, כדי שהמסך לא יהיה צבעוני מדי;
    הקטגוריה הנבחרת — רקע בגוון בהיר של צבעה ומסגרת בצבעה, באותו עובי (הכפתור אינו זז). */
-.cat-btn{color:var(--text);font-weight:600;}
+.cat-btn{color:var(--text);font-weight:600;padding-top:calc(var(--sp-5) + 3px);}
+.cat-btn::before{content:"";position:absolute;top:0;inset-inline:0;height:4px;background:var(--cat);}
 .cat-btn.sel{background:color-mix(in srgb,var(--cat) 12%,var(--card));color:var(--text);border-color:var(--cat);font-weight:700;}
 /* ── כפתורים מהירים ── */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
