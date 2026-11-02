@@ -61,7 +61,8 @@ var INF_ICONS = {
   'הנהלה': '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15 11l2 2 4-4"/>',
   'שכר': '<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/><path d="M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/>',
   'גיוס': '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
-  'קופה': '<circle cx="12" cy="4.5" r="2.5"/><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M9 13h6"/>'
+  'קופה': '<circle cx="12" cy="4.5" r="2.5"/><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M9 13h6"/>',
+  'שיעורים': '<path d="M3 20h18"/><rect x="4" y="5" width="3.5" height="15" rx=".5"/><rect x="8.5" y="7.5" width="3.5" height="12.5" rx=".5"/><path d="M14.2 8.6l3.4-.9 2.9 11.4-3.4.9z"/>'
 };
 
 function _infAppTh(a) {
