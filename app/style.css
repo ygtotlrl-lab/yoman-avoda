@@ -164,7 +164,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   font-family:'Heebo',sans-serif;direction:rtl}
 .sheet-hd{padding:var(--sp-6) var(--sp-6);border-bottom:1px solid var(--sh-1);position:sticky;top:0;background:var(--card);z-index:var(--z-1)}
 .sheet-hd h3{font-size:var(--fs-4);flex:1;margin:0;font-weight:800}
-.sheet-hd .x{color:var(--text-2);padding:var(--sp-1) var(--sp-3);border-radius:var(--r-3)}
+.sheet-hd .x{color:var(--text-2);border-radius:var(--r-3)}
 .sheet-bd{padding:var(--sp-6) var(--sp-6);font-size:var(--fs-3);line-height:var(--lh-4);color:var(--text-2)}
 .sheet-ft{padding:var(--sp-5) var(--sp-6) var(--sp-6);gap:var(--sp-4)}
 .sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid var(--text-3);
