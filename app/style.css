@@ -107,7 +107,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .card{background:var(--card);border-radius:var(--r-5);padding:var(--sp-6);margin-bottom:var(--sp-5);
   box-shadow:0 2px 12px var(--shadow);border:1.5px solid var(--border);}
 .card-ttl{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-4);font-weight:700;color:var(--brand-ink);margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4);}
-.card-ttl::before{content:"▸";color:var(--accent);font-size:var(--fs-3);}
+/* סימן הכותרת — פס אנכי קצר בצבע האפליקציה, ולא תו */
+.card-ttl::before{content:"";flex:none;width:4px;height:1.05em;border-radius:2px;background:var(--brand-fill);}
 @keyframes fadein{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .btn-sm{border:none;border-radius:var(--r-4);padding:var(--sp-4) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;cursor:pointer;transition:all var(--dur-3);}
 .btn-blue{background:var(--card-2);color:var(--brand-ink);border:1px solid var(--border);}
@@ -228,7 +229,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   .cat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px var(--shadow);}
 }
 @media (hover:hover){
-  .cat-btn.sel:hover{box-shadow:inset 0 0 0 1px var(--cat-deep),0 6px 16px var(--shadow);}
+  .cat-btn.sel:hover{box-shadow:0 6px 16px var(--shadow);}
 }
 @media (hover:hover){
   .qbtn:hover{background:var(--brand-ink);color:var(--bg);border-color:var(--brand-ink);}
@@ -247,15 +248,13 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .heb-inp:focus{outline:none;border-color:var(--brand-ink);}
 /* שתיים, שלוש ואז ארבע עמודות — קפיצה משתיים לארבע הייתה מצמצמת את הכפתור לרוחב שבו השם נחתך. */
 .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5);}
-.cat-btn{border:2px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
+.cat-btn{border:1.5px solid var(--border);border-inline-start:6px solid var(--cat);border-radius:var(--r-4);padding:var(--sp-5) var(--sp-4);font-family:'Heebo',sans-serif;font-size:var(--fs-2);font-weight:700;
   cursor:pointer;transition:all var(--dur-3);text-align:center;line-height:var(--lh-3);background:var(--card);box-shadow:0 1px 4px var(--shadow);}
 .cat-btn strong{font-size:var(--fs-4);font-family:'Frank Ruhl Libre',serif;}
-/* המשתנה --cat הוא המסגרת והדיו כאחד ואינו מתחלף עם הערכה, ולכן אין לו כלל כהה. */
-.cat-btn{color:var(--cat);}
-/* המסגרת בגוון עמוק של צבע הקטגוריה — מסגרת בצבע המילוי נבלעת בו.
-   העובי הנוסף ב-box-shadow ולא ב-border-width, כדי שהכפתור לא יגדל ולא יזוז. */
-.cat-btn.sel{--cat-deep:color-mix(in srgb,var(--cat) 60%,var(--cat-shade));
-  background:var(--cat);color:var(--on-cat);border-color:var(--cat-deep);box-shadow:inset 0 0 0 1px var(--cat-deep);}
+/* במסך ההזנה הצבע הוא פס הצד בלבד — הכפתור לבן והכיתוב בדיו, כדי שהמסך לא יהיה צבעוני מדי;
+   הקטגוריה הנבחרת — רקע בגוון בהיר של צבעה ומסגרת בצבעה, באותו עובי (הכפתור אינו זז). */
+.cat-btn{color:var(--text);font-weight:600;}
+.cat-btn.sel{background:color-mix(in srgb,var(--cat) 12%,var(--card));color:var(--text);border-color:var(--cat);font-weight:700;}
 /* ── כפתורים מהירים ── */
 .qsec{margin-bottom:var(--sp-5);min-height:32px;}
 .qlbl{font-size:var(--fs-1);font-weight:700;color:var(--text-3);margin-bottom:var(--sp-2);letter-spacing:var(--ls-2);text-transform:uppercase;}
