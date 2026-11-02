@@ -105,7 +105,7 @@ public class MainActivity extends ShellActivity {
             final String mime = (mimeType == null || mimeType.isEmpty()) ? "image/jpeg" : mimeType;
             final String ext = "application/pdf".equals(mime) ? ".pdf"
                 : "image/png".equals(mime) ? ".png"
-                : "application/vnd.ms-excel".equals(mime) ? ".xls"
+                : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equals(mime) ? ".xlsx"
                 : "text/csv".equals(mime) ? ".csv"
                 : ".jpg";
             String base = name == null ? "" : name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]+", " ").trim();
@@ -123,31 +123,40 @@ public class MainActivity extends ShellActivity {
             fos.write(bytes);
             fos.flush();
             fos.close();
-
-            final Uri uri = FileProvider.getUriForFile(
-                MainActivity.this, getPackageName() + ".fileprovider", f);
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    Intent send = new Intent(Intent.ACTION_SEND);
-                    send.setType(mime);
-                    send.putExtra(Intent.EXTRA_STREAM, uri);
-                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-                    // createChooser בלי FLAG_ACTIVITY_NEW_TASK — המשתמש בוחר יעד בכל פעם, והחזרה מביאה אותו למעטפת.
-                    Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
-                    try {
-                        startActivity(toStart);
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "שגיאה בשיתוף", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            });
+            shareSaved(f, mime);
         } catch (Exception e) {
             toastUi("שגיאה בהכנת הקובץ לשיתוף");
         }
     }
+
+    // קובץ שכבר נכתב במטמון «shared» — לבורר השיתוף של המערכת.
+    private void shareSaved(final File f, final String mime) {
+        final Uri uri;
+        try {
+            uri = FileProvider.getUriForFile(MainActivity.this, getPackageName() + ".fileprovider", f);
+        } catch (Exception e) {
+            toastUi("שגיאה בהכנת הקובץ לשיתוף");
+            return;
+        }
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType(mime);
+                send.putExtra(Intent.EXTRA_STREAM, uri);
+                send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+                // createChooser בלי FLAG_ACTIVITY_NEW_TASK — המשתמש בוחר יעד בכל פעם, והחזרה מביאה אותו למעטפת.
+                Intent toStart = Intent.createChooser(send, "שיתוף הדו\"ח");
+                try {
+                    startActivity(toStart);
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "שגיאה בשיתוף", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+
 
     // מתודות JavascriptInterface רצות ב-binder thread פרטי — לכן ה-URL החי נקרא ב-UI thread לפני כל פעולה: זה המנעול השני.
     private class ShareBridge {
