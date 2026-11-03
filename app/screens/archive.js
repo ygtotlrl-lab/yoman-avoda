@@ -228,7 +228,7 @@ function renderArcDetail() {
       '<div class="arc-day-greg">' + esc(yaDayName(d.key) + " | " + yaGreg(d.key)) + '</div>'+
     '</div>'+
     '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?icon('check')+"סיים עריכה":icon('edit')+"ערוך")+'</button>'+
-    (d.entries.length ? '<button class="arc-img-btn btn-sm" data-act="arc-img" data-key="'+esc(d.key)+'">'+icon('share')+'תמונה</button>' : '')+
+    (d.entries.length ? '<button class="share-btn btn-sm" data-act="arc-img" data-key="'+esc(d.key)+'">'+icon('share')+'שיתוף הדוח</button>' : '')+
     '</div>';
 
   if (!sortedE.length) {

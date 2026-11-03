@@ -423,7 +423,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-empty-month{font-size:var(--fs-2);color:var(--text-3);padding:var(--sp-4)}
 .arc-muted{color:var(--text-3)}
 .arc-notes{flex:1;color:var(--text-3);font-size:var(--fs-1);text-align:left}
-.arc-img-btn{background:var(--ok-soft);color:var(--ok);font-size:var(--fs-1);padding:var(--sp-3) var(--sp-5)}
 .arc-spacer{flex:1}
 .arc-task{font-weight:700;color:var(--text)}
 .day-count{font-size:var(--fs-1);font-weight:400;opacity:var(--op-6)}
