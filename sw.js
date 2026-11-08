@@ -1,7 +1,7 @@
 // sw.js — service worker של האפליקציה
 importScripts('./app.config.js');
 // מכאן נגזרת גרסת האפליקציה שבבאנר.
-var CACHE_NAME = self.APP.id + '-v308';
+var CACHE_NAME = self.APP.id + '-v309';
 
 var CORE = [
   './',
@@ -35,6 +35,7 @@ var CORE = [
   './manifest.json',
   './icons/icon-192.74a54a06.png',
   './icons/icon-512.a51e40af.png',
+  './icons/icon-maskable-512.b54af653.png',
   // לוגואי המוסדות מוטמנים מראש — בלעדיהם הכותרת נשארת בלי לוגו אופליין.
   './logos/rishon.png',
   './logos/ramataviv.png'
