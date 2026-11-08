@@ -8,7 +8,7 @@ import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
          yaDayName, yaGreg, yaHeb, yaPendKeyOf, yaSortDays, yaSortEntries, yaSortMonths,
-         yaSortYears } from '../domain.js';
+         yaSortYears, taskSubs } from '../domain.js';
 import { exportImage } from '../domain.report.js';
 
 function screenArchiveHTML() {
@@ -256,9 +256,13 @@ function renderArcDetail() {
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel" data-chg="arc-add-cat">'+
       liveOnly(S.CATS).map(function(cat){ return '<option value="'+esc(cat.id)+'">'+esc(cat.name)+'</option>'; }).join("")+
       '</select>'+
-      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel">'+
+      '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel" data-chg="arc-add-task">'+
       (liveOnly(S.CATS)[0]?catTasks(liveOnly(S.CATS)[0]).map(function(t){ return '<option>'+esc(t.id)+'</option>'; }).join(""):"")+
       '</select>'+
+      // תת-משימה וכמות — כמו בהזנה: תת-משימה מהרשימה של המשימה, או חדשה בהקלדה
+      '<input aria-label="תת-משימה לרשומת הארכיון" id="arc-add-sub" list="arc-add-subs" placeholder="תת-משימה..." class="arc-add-notes" />'+
+      '<datalist id="arc-add-subs">'+arcSubOptions(liveOnly(S.CATS)[0], liveOnly(S.CATS)[0]?(catTasks(liveOnly(S.CATS)[0])[0]||{}).id:'')+'</datalist>'+
+      '<input aria-label="כמות לרשומת הארכיון" id="arc-add-count" inputmode="numeric" placeholder="כמות" class="arc-add-notes arc-add-count" />'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes" />'+
       '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
       '</div></div>';
@@ -268,10 +272,24 @@ function renderArcDetail() {
   el.innerHTML = html;
 }
 
+function arcSubOptions(cat, task) {
+  return (cat && task) ? taskSubs(cat, task).map(function(s){ return '<option value="'+esc(s)+'">'; }).join('') : '';
+}
+
 function arcAddCatChange(sel) {
   var cat = S.CATS.find(function(c){ return c.id === sel.value; });
   var taskSel = document.getElementById("arc-add-task");
   if (cat && taskSel) taskSel.innerHTML = catTasks(cat).map(function(t){ return '<option>'+esc(t.id)+'</option>'; }).join("");
+  arcAddTaskChange();
+}
+
+// המשימה התחלפה — רשימת תתי-המשימות שלה, והשדה מתרוקן
+function arcAddTaskChange() {
+  var catSel = document.getElementById("arc-add-cat"), taskSel = document.getElementById("arc-add-task");
+  var dl = document.getElementById("arc-add-subs"), subIn = document.getElementById("arc-add-sub");
+  var cat = catSel && S.CATS.find(function(c){ return c.id === catSel.value; });
+  if (dl) dl.innerHTML = arcSubOptions(cat, taskSel ? taskSel.value : '');
+  if (subIn) subIn.value = '';
 }
 
 function arcToggleEdit() {
@@ -307,7 +325,10 @@ function arcAddEntry() {
     created_at: new Date(_now).toISOString(),
     entry_date: d.key,
     cat: catId,
-    task: taskSel.value, sub: "", notes: notesSel ? notesSel.value.trim() : "", count: "",
+    task: taskSel.value,
+    sub: (document.getElementById("arc-add-sub") || {}).value ? document.getElementById("arc-add-sub").value.trim() : "",
+    notes: notesSel ? notesSel.value.trim() : "",
+    count: (document.getElementById("arc-add-count") || {}).value ? document.getElementById("arc-add-count").value.trim() : "",
     updated_at: _now
   };
   // יום שעבר, או יום שכבר יש בו רשומה בארכיון — הרשומה נכנסת לארכיון; היום הפתוח — ליומן החי.
@@ -398,6 +419,6 @@ function arcSaveEntry(dayKey, entryId) {
   toast(MSG_SAVED, null, 'good');
 }
 
-export { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
+export { arcAddCatChange, arcAddEntry, arcAddTaskChange, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML };

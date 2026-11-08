@@ -20,7 +20,7 @@ import { _yaMarkSynced, arcMove, getSB,
          yaPendKeyOf, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetPull,
          yaSetPut, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva } from './domain.js';
 import { shareReport } from './domain.report.js';
-import { arcAddCatChange, arcAddEntry, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
+import { arcAddCatChange, arcAddEntry, arcAddTaskChange, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
 import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtns,
@@ -279,6 +279,7 @@ document.addEventListener('focusout', function (e) {
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'arc-add-cat') arcAddCatChange(el);
+  if (el && el.dataset && el.dataset.chg === 'arc-add-task') arcAddTaskChange();
 });
 
 // הגרירה לסידור במנגנון שבליבה; המחילים לכל סוג — במסך ההגדרות.

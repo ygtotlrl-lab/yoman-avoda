@@ -406,6 +406,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .aei-row{align-items:center;display:flex;background:var(--warn-soft);flex-wrap:wrap;gap:var(--sp-3);padding:var(--sp-2);border-radius:var(--r-2);width:100%}
 .arc-add{margin-top:var(--sp-5);border-top:2px dashed var(--accent);padding-top:var(--sp-5)}
 .arc-add-btn{white-space:nowrap}
+.arc-add-count{width:64px}
 .arc-add-notes{font-size:var(--fs-2);border:1.5px solid var(--border);font-family:Heebo;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-3);width:100px}
 .arc-add-row{align-items:center;display:flex;flex-wrap:wrap;gap:var(--sp-3)}
 .arc-add-sel{font-size:var(--fs-2);border:1.5px solid var(--border);font-family:Heebo;padding:var(--sp-3) var(--sp-4);border-radius:var(--r-3)}
