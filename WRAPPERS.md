@@ -43,12 +43,12 @@
 | # | שם | קישור | הערה |
 |---|---|---|---|
 | | **הרשימה** | | |
-| 1 | ![](logos/wrappers/tchelet.png) תכלת | [tchelet.org](https://tchelet.org/) | |
-| 2 | ![](logos/wrappers/budget.png) צבאות השם | [th770.co.il](https://th770.co.il/budget-pro?check_logged_in=1) | |
-| 3 | ![](logos/wrappers/luach.png) הלוח שלנו | [claude.ai](https://claude.ai/artifact/PsPuvcDhBn8UajBuMauxnN) | |
-| 4 | ![](logos/wrappers/gezalt.png) געצאלט ברעט | [claude.ai](https://claude.ai/artifact/5AkEtCB7xCmLjBQxvsTav8) | |
+| 1 | ![](logos/wrappers/gezalt.png) געצאלט ברעט | [claude.ai](https://claude.ai/artifact/5AkEtCB7xCmLjBQxvsTav8) | |
+| 2 | ![](logos/wrappers/luach.png) הלוח שלנו | [claude.ai](https://claude.ai/artifact/PsPuvcDhBn8UajBuMauxnN) | |
+| 3 | ![](logos/wrappers/clalit.png) כללית | [clalit.co.il](https://www.clalit.co.il/) | |
+| 4 | ![](logos/wrappers/mzt.png) מצבת תלמידים | [mzt.education.gov.il](https://mzt.education.gov.il/MztNet/) | |
 | 5 | ![](logos/wrappers/nedavot.png) נדבות ברעט | [claude.ai](https://claude.ai/artifact/BixGpzPb1jBttsy8f7p162) | |
-| 6 | ![](logos/wrappers/mzt.png) מצבת תלמידים | [mzt.education.gov.il](https://mzt.education.gov.il/MztNet/) | |
-| 7 | ![](logos/wrappers/clalit.png) כללית | [clalit.co.il](https://www.clalit.co.il/) | |
+| 6 | ![](logos/wrappers/budget.png) צבאות השם | [th770.co.il](https://th770.co.il/budget-pro?check_logged_in=1) | |
+| 7 | ![](logos/wrappers/capitel.png) קאפיטל | [capitel.netlify.app](https://capitel.netlify.app/search) | |
 | 8 | ![](logos/wrappers/complete.png) קומפלט | [allcomplete.co.il](https://www.allcomplete.co.il/) | |
-| 9 | ![](logos/wrappers/capitel.png) קאפיטל | [capitel.netlify.app](https://capitel.netlify.app/search) | |
+| 9 | ![](logos/wrappers/tchelet.png) תכלת | [tchelet.org](https://tchelet.org/) | |
