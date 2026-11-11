@@ -236,7 +236,7 @@ var DOM_ACTIONS = {
   'pick-day':       function (el) { pickDay(el, el.getAttribute('data-day')); },
   'pick-yeshiva':   function (el) { selectYeshiva(el.getAttribute('data-yeshiva')); },
   'open-yeshiva-picker': function () { yaPickYeshiva(); },
-  'inf-open':       function () { return yaInfraOpen(); },
+  'inf-open':       function (el) { return yaInfraOpen(el.getAttribute('data-doc')); },
   'inf-all':        function (el) { yaInfraToggleAll(el.getAttribute('data-open') === '1'); },
   'switch-yeshiva': function (el) { yaConfirmSwitch(el.getAttribute('data-yeshiva')); },
   'add-entry':      function () { addEntry(); },
@@ -406,6 +406,8 @@ function initDate() {
 }
 
 S._infData = null;
+
+S._infDoc = 'table';
 
 S._infOpen = false;
 
