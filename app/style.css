@@ -473,3 +473,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a97b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-size:16px;background-position:left var(--sp-4) center}
 .arc-add-row select:focus,.arc-add-row input:focus{outline:none;border-color:var(--brand,#1a3a6b)}
+/* כמות והערה — הכיתוב בדיו כמו בבוררים; הערה לכל הרוחב, ו«הוסף» מתחתיה לכל הרוחב */
+.arc-add-row input::placeholder{color:var(--text);opacity:1}
+.arc-add-row .arc-a-notes,.arc-add-row .arc-add-btn{grid-column:1/-1}
+.arc-add-row .arc-add-btn{min-height:44px}
