@@ -460,3 +460,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .entry-edit:hover,.set-edit:hover{color:var(--brand-ink)}
 }
+/* הוספת רשומה בארכיון — רשת של ארבעה רבעים: קטגוריה ומשימה (חצי כל אחת) · תת-משימה (שלושה רבעים) וכמות · הערה (שלושה רבעים) ו«הוסף» */
+.arc-add-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--sp-3);align-items:stretch}
+.arc-add-row>*{width:100%;min-width:0;margin:0;box-sizing:border-box}
+.arc-add-row .arc-a-cat,.arc-add-row .arc-a-task{grid-column:span 2}
+.arc-add-row .arc-a-sub,.arc-add-row .arc-a-notes{grid-column:span 3}
+.arc-add-row .arc-a-count,.arc-add-row .arc-add-btn{grid-column:span 1}
+.arc-add-row .arc-add-btn{justify-content:center}
