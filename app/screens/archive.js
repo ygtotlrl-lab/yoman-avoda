@@ -259,9 +259,10 @@ function renderArcDetail() {
       '<select aria-label="משימה להוספה לארכיון" id="arc-add-task" class="arc-add-sel" data-chg="arc-add-task">'+
       (liveOnly(S.CATS)[0]?catTasks(liveOnly(S.CATS)[0]).map(function(t){ return '<option>'+esc(t.id)+'</option>'; }).join(""):"")+
       '</select>'+
-      // תת-משימה וכמות — כמו בהזנה: תת-משימה מהרשימה של המשימה, או חדשה בהקלדה
-      '<input aria-label="תת-משימה לרשומת הארכיון" id="arc-add-sub" list="arc-add-subs" placeholder="תת-משימה..." class="arc-add-notes" />'+
-      '<datalist id="arc-add-subs">'+arcSubOptions(liveOnly(S.CATS)[0], liveOnly(S.CATS)[0]?(catTasks(liveOnly(S.CATS)[0])[0]||{}).id:'')+'</datalist>'+
+      // תת-משימה — בורר כמו הקטגוריה והמשימה: תתי-המשימות של המשימה, או «תת-משימה חדשה…» שפותחת שדה להקלדה
+      '<select aria-label="תת-משימה לרשומת הארכיון" id="arc-add-subsel" class="arc-add-sel" data-chg="arc-add-subsel">'+
+      arcSubOptions(liveOnly(S.CATS)[0], liveOnly(S.CATS)[0]?(catTasks(liveOnly(S.CATS)[0])[0]||{}).id:'')+'</select>'+
+      '<input aria-label="תת-משימה חדשה" id="arc-add-sub" placeholder="תת-משימה חדשה..." class="arc-add-notes hidden" />'+
       '<input aria-label="כמות לרשומת הארכיון" id="arc-add-count" inputmode="numeric" placeholder="כמות" class="arc-add-notes arc-add-count" />'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes" />'+
       '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
@@ -273,7 +274,19 @@ function renderArcDetail() {
 }
 
 function arcSubOptions(cat, task) {
-  return (cat && task) ? taskSubs(cat, task).map(function(s){ return '<option value="'+esc(s)+'">'; }).join('') : '';
+  var subs = (cat && task) ? taskSubs(cat, task) : [];
+  return '<option value="">'+(subs.length ? 'תת-משימה…' : 'בלי תת-משימה')+'</option>'+
+    subs.map(function(s){ return '<option value="'+esc(s)+'">'+esc(s)+'</option>'; }).join('')+
+    '<option value="__new">＋ תת-משימה חדשה…</option>';
+}
+// בבורר — תת-משימה מהרשימה נכתבת לשדה; «חדשה» פותחת את השדה להקלדה
+function arcAddSubChange(sel) {
+  var subIn = document.getElementById("arc-add-sub");
+  if (!subIn) return;
+  var isNew = sel.value === '__new';
+  subIn.classList.toggle('hidden', !isNew);
+  subIn.value = isNew ? '' : sel.value;
+  if (isNew) subIn.focus();
 }
 
 function arcAddCatChange(sel) {
@@ -286,10 +299,10 @@ function arcAddCatChange(sel) {
 // המשימה התחלפה — רשימת תתי-המשימות שלה, והשדה מתרוקן
 function arcAddTaskChange() {
   var catSel = document.getElementById("arc-add-cat"), taskSel = document.getElementById("arc-add-task");
-  var dl = document.getElementById("arc-add-subs"), subIn = document.getElementById("arc-add-sub");
+  var dl = document.getElementById("arc-add-subsel"), subIn = document.getElementById("arc-add-sub");
   var cat = catSel && S.CATS.find(function(c){ return c.id === catSel.value; });
   if (dl) dl.innerHTML = arcSubOptions(cat, taskSel ? taskSel.value : '');
-  if (subIn) subIn.value = '';
+  if (subIn) { subIn.value = ''; subIn.classList.add('hidden'); }
 }
 
 function arcToggleEdit() {
@@ -419,6 +432,6 @@ function arcSaveEntry(dayKey, entryId) {
   toast(MSG_SAVED, null, 'good');
 }
 
-export { arcAddCatChange, arcAddEntry, arcAddTaskChange, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
+export { arcAddCatChange, arcAddEntry, arcAddSubChange, arcAddTaskChange, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML };
