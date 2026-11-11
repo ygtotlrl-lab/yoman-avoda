@@ -68,7 +68,7 @@ public class MainActivity extends ShellActivity {
                         }
                     }
                 });
-            // כמה קבצים בבורר אחד (דוח שחולק לכמה תמונות) — גשר משלו: הדף מזהה לפי קיומו שהמעטפת יודעת לשלוח כמה, ומעטפת ישנה — קובץ אחר קובץ.
+            // כמה קבצים בבורר אחד (דוח שחולק לכמה תמונות) — גשר משלו: הדף מזהה לפי קיומו שהמעטפת יודעת לשלוח כמה, ובמעטפת ישנה — הודעה לעדכן את האפליקציה.
             WebViewCompat.addWebMessageListener(
                 webView, "AndroidShareFiles", ALLOWED_ORIGINS,
                 new WebViewCompat.WebMessageListener() {

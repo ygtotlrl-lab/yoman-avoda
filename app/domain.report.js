@@ -73,7 +73,8 @@ function _shareReport(entries, date, title) {
   toast(MSG_IMG_PREP);
   function next(i) {
     if (i >= n) {
-      shareFiles(out);
+      // מעטפת ישנה, בלי גשר הקבצים — ההודעה מבקשת לעדכן את האפליקציה המותקנת
+      try { shareFiles(out); } catch (e) { toast(e.message, null, 'bad'); }
       return;
     }
     var part = parts[i], info = n > 1 ? { i: i + 1, n: n, a: from, b: from + part.length - 1, total: rows.length } : null;

@@ -58,24 +58,18 @@ function shareFile(b64, mime, name) {
 }
 
 // כמה קבצים בשיתוף אחד — list: [{ b64, mime, name }] (דוח שחולק לכמה תמונות).
-// במעטפת — גשר הקבצים (AndroidShareFiles), ובו בורר אחד לכולם; מעטפת ישנה בלעדיו — קובץ אחר קובץ, בגשר הרגיל;
+// במעטפת — גשר הקבצים (AndroidShareFiles), ובו בורר אחד לכולם; מעטפת שאין בה גשר כזה — גרסה ישנה: שגיאה שמבקשת עדכון, כמו בהדפסה;
 // בדפדפן — גיליון השיתוף עם כל הקבצים, ובלעדיו הורדה של כל קובץ בשמו.
 function shareFiles(list) {
   list = (list || []).map(function (f) { return { b64: f.b64, mime: f.mime, name: _safeName(f.name) }; });
   if (!list.length) return;
   if (list.length === 1) { shareFile(list[0].b64, list[0].mime, list[0].name); return; }
-  try {
-    var mb = window.AndroidShareFiles;
-    if (mb && typeof mb.postMessage === 'function') {
-      mb.postMessage(JSON.stringify({ files: list.map(function (f) { return { data: f.b64, mime: f.mime, name: f.name }; }) }));
-      return;
-    }
-  } catch (e) { /* נופל לקובץ אחר קובץ */ }
-  if (window.AndroidShareBridge || window.AndroidShare) {
-    // מעטפת ישנה — בורר לכל קובץ; מהאחרון לראשון, כדי שהראשון יהיה העליון
-    list.slice().reverse().forEach(function (f, i) { setTimeout(function () { _bridge(f.b64, f.mime, f.name); }, i * 700); });
+  var mb = window.AndroidShareFiles;
+  if (mb && typeof mb.postMessage === 'function') {
+    mb.postMessage(JSON.stringify({ files: list.map(function (f) { return { data: f.b64, mime: f.mime, name: f.name }; }) }));
     return;
   }
+  if (window.AndroidShareBridge || window.AndroidShare) throw new Error('יש לעדכן את האפליקציה המותקנת');
   var blobs = list.map(function (f) { return _blob(f.b64, f.mime); });
   function each() { blobs.forEach(function (b, i) { setTimeout(function () { _download(b, list[i].name); }, i * 400); }); }
   try {
