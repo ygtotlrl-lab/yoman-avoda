@@ -36,3 +36,19 @@
 | 22 | הבנייה | `python3 tools/build_all.py <פלט> [dir…]` — כל האפליקציות, או רק אלה שנקבו | |
 | 23 | הפלט | `<השם בעברית>.apk` בתיקיית ההורדות · והגרסה הקודמת עוברת לסל המיחזור | |
 | 24 | אפליקציה חדשה | שורה ברישום · תיקיית סמל ב-`res/<dir>` · וחבילה `com.mmf.web.<prefix>` — וכל היכולות נכנסות בה, כי הקוד אחד | |
+| 25 | רשימת האפליקציות | פרק «האפליקציות» כאן — סמל · שם · קישור — וסמליו ב-`logos/wrappers/` נכתבים מהרישום אחרי כל בנייה, ב-`tools/apps_doc.py <yoman-avoda>` · ואינם נערכים ביד | |
+
+### האפליקציות
+
+| # | שם | קישור | הערה |
+|---|---|---|---|
+| | **הרשימה** | | |
+| 1 | ![](logos/wrappers/tchelet.png) תכלת | [tchelet.org](https://tchelet.org/) | |
+| 2 | ![](logos/wrappers/budget.png) צבאות השם | [th770.co.il](https://th770.co.il/budget-pro?check_logged_in=1) | |
+| 3 | ![](logos/wrappers/luach.png) הלוח שלנו | [claude.ai](https://claude.ai/artifact/PsPuvcDhBn8UajBuMauxnN) | |
+| 4 | ![](logos/wrappers/gezalt.png) געצאלט ברעט | [claude.ai](https://claude.ai/artifact/5AkEtCB7xCmLjBQxvsTav8) | |
+| 5 | ![](logos/wrappers/nedavot.png) נדבות ברעט | [claude.ai](https://claude.ai/artifact/BixGpzPb1jBttsy8f7p162) | |
+| 6 | ![](logos/wrappers/mzt.png) מצבת תלמידים | [mzt.education.gov.il](https://mzt.education.gov.il/MztNet/) | |
+| 7 | ![](logos/wrappers/clalit.png) כללית | [clalit.co.il](https://www.clalit.co.il/) | |
+| 8 | ![](logos/wrappers/complete.png) קומפלט | [allcomplete.co.il](https://www.allcomplete.co.il/) | |
+| 9 | ![](logos/wrappers/capitel.png) קאפיטל | [capitel.netlify.app](https://capitel.netlify.app/search) | |

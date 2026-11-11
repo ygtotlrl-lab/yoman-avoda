@@ -55,9 +55,12 @@ function _infCells(line) {
 }
 
 // ההמרה אחרי esc — המרה לפניו הייתה מחזירה HTML מהקובץ אל תוך הדף.
+// תמונה — נתיב יחסי בריפו בלבד; קישור — https בלבד: כתובת אחרת נשארת טקסט.
 function _infMd(t) {
   return esc(t).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
-               .replace(/`([^`]+)`/g, '<code>$1</code>');
+               .replace(/`([^`]+)`/g, '<code>$1</code>')
+               .replace(/!\[\]\(([\w\/.-]+)\)/g, '<img class="inf-img" src="' + RAW_BASE + '$1" alt="" loading="lazy">')
+               .replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 }
 
 // תא שאינו אחד משלושת הסימנים מוצג כפי שהוא ואינו נבלע.
@@ -102,7 +105,13 @@ function _infParse(md) {
     if (l.charAt(0) !== '|') continue;
     var c = _infCells(l);
     // האפליקציות נגזרות מהעמודות שבין התקן להערה — רשימה מוקלדת הייתה מציגה עמודה תחת כותרת של אחרת.
-    if (c[0] === '#') { apps = c.slice(3, -1); width = c.length; continue; }
+    // כותרות העמודות נלקחות מהקובץ, לכל פרק — טבלה אחרת נושאת כותרות אחרות.
+    if (c[0] === '#') {
+      apps = c.slice(3, -1); width = c.length;
+      if (!chap) { chap = { title: '', cats: [] }; chaps.push(chap); }
+      chap.head = { name: c[1], std: c[2], note: c[c.length - 1] };
+      continue;
+    }
     if (!width || c.length !== width) continue;
     // שורת סדר-הפנים אינה שורת נתונים ואינה כותרת — בלי הענף הזה היא נקראת ונזרקת.
     if (c[0] === '' && cur && c[1].charAt(0) === '↳') {
@@ -144,19 +153,22 @@ function _infHTML(d) {
   d.chaps.forEach(function (p) {
     if (p.title) h += '<h4 class="inf-chap">' + esc(p.title) + '</h4>';
     p.cats.forEach(function (c) {
+      var head = p.head || { name: '', std: '', note: '' };
+      // עמודת הערה שכל תאיה ריקים אינה מוצגת.
+      var notes = c.rows.some(function (r) { return r.note; });
       h += '<details class="inf-cat"' + (S._infOpen ? ' open' : '') + '>' +
            '<summary>' + esc(c.title) + ' — ' + c.rows.length + '</summary>' +
            (c.order ? '<div class="inf-ord">↳ ' + _infMd(c.order) + '</div>' : '') +
            '<div class="inf-wrap"><table class="inf-tbl">' +
            '<colgroup><col class="c-n"><col class="c-t"><col class="c-s">' +
            d.apps.map(function () { return '<col class="c-a">'; }).join('') +
-           '<col class="c-r"></colgroup><thead><tr><th>#</th><th>כותרת</th><th>התקן</th>' +
+           (notes ? '<col class="c-r">' : '') + '</colgroup><thead><tr><th>#</th><th>' + esc(head.name) + '</th><th>' + esc(head.std) + '</th>' +
            d.apps.map(_infAppTh).join('') +
-           '<th>הערה</th></tr></thead><tbody>';
+           (notes ? '<th>' + esc(head.note) + '</th>' : '') + '</tr></thead><tbody>';
       c.rows.forEach(function (r) {
         h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
              r.apps.map(function (a) { return '<td class="inf-app">' + _infDot(a) + '</td>'; }).join('') +
-             '<td>' + _infMd(r.note) + '</td></tr>';
+             (notes ? '<td>' + _infMd(r.note) + '</td>' : '') + '</tr>';
       });
       h += '</tbody></table></div></details>';
     });
