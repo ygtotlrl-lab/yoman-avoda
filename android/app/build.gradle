@@ -11,7 +11,7 @@ android {
         applicationId "com.yoman.avoda"
         minSdk 21
         targetSdk 34
-        versionCode 35
+        versionCode 36
         versionName "21.0"
     }
 

@@ -1,6 +1,6 @@
 // app/domain.report.js — הדוח היומי: בנייה, רינדור ושיתוף כתמונה
 import { esc, toast } from '../core/ui.js';
-import { shareFile } from '../core/share.js';
+import { shareFiles } from '../core/share.js';
 import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
 import { S } from './state.js';
 import { catCls, catLabelOf, getCurrentDateKey, liveOnly, showEl, yaDayName, yaGreg, yaHeb, yaSortEntries,
@@ -22,14 +22,72 @@ function instName() {
 function exportImage(date, entries) {
   var live = liveOnly(entries);
   if (!live.length) { toast(MSG_NO_ROWS); return; }
-  var fileTitle = "יומן עבודה " + yaHeb(date) + " " + yaGreg(date);
+  _shareReport(live, date, "יומן עבודה " + yaHeb(date) + " " + yaGreg(date));
+}
+
+// ── החלוקה לחלקים ──
+// עד RP_MAX רשומות — תמונה אחת; מעליהן — כמה תמונות בגודל דומה, כל אחת עד RP_MAX: תמונה ארוכה מדי אינה נקראת בטלפון.
+// החיתוך בגבול משימה, ומשימה ארוכה מחלק שלם — בגבול שורה; המיון — כמו בדוח, והחלוקה אחריו.
+var RP_MAX = 50;
+// הרשומות בסדר שבו הן בטבלה: קטגוריה בסדר ההגדרות, ובתוכה המיון של yaSortEntries
+function _rpOrdered(entries) {
+  var sorted = yaSortEntries(entries), by = {};
+  sorted.forEach(function (e) { (by[e.cat] = by[e.cat] || []).push(e); });
+  return S.CATS.reduce(function (out, c) { return by[c.id] ? out.concat(by[c.id]) : out; }, []);
+}
+function _rpParts(rows) {
+  if (rows.length <= RP_MAX) return [rows];
+  // יחידות — קבוצה רצופה של קטגוריה ומשימה; משימה ארוכה מחלק שלם — כמה יחידות, בגבול שורה
+  var units = [];
+  rows.forEach(function (e) {
+    var u = units[units.length - 1];
+    if (u && u.cat === e.cat && u.task === (e.task || '')) u.rows.push(e);
+    else units.push({ cat: e.cat, task: e.task || '', rows: [e] });
+  });
+  units = units.reduce(function (out, u) {
+    if (u.rows.length <= RP_MAX) return out.concat([u.rows]);
+    var k = Math.ceil(u.rows.length / RP_MAX), size = Math.ceil(u.rows.length / k);
+    for (var i = 0; i < u.rows.length; i += size) out.push(u.rows.slice(i, i + size));
+    return out;
+  }, []);
+  // מילוי עד תקרה: היחידה הבאה שאינה נכנסת — לחלק חדש
+  function pack(cap) {
+    var parts = [], cur = [];
+    units.forEach(function (u) {
+      if (cur.length && cur.length + u.length > cap) { parts.push(cur); cur = []; }
+      cur = cur.concat(u);
+    });
+    if (cur.length) parts.push(cur);
+    return parts;
+  }
+  // מספר החלקים — המזערי בתקרה של RP_MAX; והתקרה — הנמוכה ביותר שעוד נותנת אותו מספר: החלקים בגודל דומה
+  var n = pack(RP_MAX).length, cap = Math.ceil(rows.length / n);
+  while (cap < RP_MAX && pack(cap).length > n) cap++;
+  return pack(cap);
+}
+// רינדור החלקים בזה אחר זה, באותו פאנל, ומשם לשיתוף אחד — כל החלקים יחד
+function _shareReport(entries, date, title) {
+  var rows = _rpOrdered(entries), parts = _rpParts(rows), n = parts.length, out = [], from = 1;
+  // דוח שחולק — שם מלא לכל חלק, עם מספרו: בהורדה כל חלק הוא קובץ נפרד
+  if (n > 1) title = "יומן עבודה " + yaHeb(date) + " " + yaGreg(date);
   toast(MSG_IMG_PREP);
-  _buildReportDiv(function (div) {
-    _renderReport(div).then(function (canvas) {
-      _hideReportDiv(div);
-      shareFile(canvas.toDataURL('image/jpeg', 0.95).split(',')[1], 'image/jpeg', fileTitle + '.jpg');
-    }).catch(function (e) { _reportError(div, e); });
-  }, live, date);
+  function next(i) {
+    if (i >= n) {
+      shareFiles(out);
+      return;
+    }
+    var part = parts[i], info = n > 1 ? { i: i + 1, n: n, a: from, b: from + part.length - 1, total: rows.length } : null;
+    from += part.length;
+    _buildReportDiv(function (div) {
+      _renderReport(div).then(function (canvas) {
+        _hideReportDiv(div);
+        out.push({ b64: canvas.toDataURL('image/jpeg', 0.95).split(',')[1], mime: 'image/jpeg',
+          name: title + (info ? ' - חלק ' + info.i + ' מתוך ' + info.n : '') + '.jpg' });
+        next(i + 1);
+      }).catch(function (e) { _reportError(div, e); });
+    }, n > 1 ? part : entries, date, info);
+  }
+  next(0);
 }
 
 // ── רשת ביטחון לרינדור הדוח ──
@@ -70,7 +128,7 @@ function _renderReport(div){
 // entries אופציונלי — הייצוא מוסר את רשומות הארכיון, וסינון קשיח ליום הנוכחי היה מוציא דוח ריק.
 // הדוח נצרב לתמונה ונושא את סגנונו מוטבע; שורשו .rp מחיל את הערכה הבהירה גם במצב כהה,
 // וכל צבע הוא var(--…) — html2canvas קורא את הסגנון המחושב, והמשתנה נפתר לפני הצריבה.
-function _buildReportDiv(cb, entries, date){
+function _buildReportDiv(cb, entries, date, part){
   var div=document.getElementById('_rpDiv');
   if(!div){div=document.createElement('div');div.id='_rpDiv';document.body.appendChild(div);}
   // שורש הפלט שנצרב לתמונה נושא את סגנונו מוטבע, וכך כל ילדיו — מחלקה כאן הייתה מפצלת את הדוח בין הגיליון לבונה.
@@ -118,7 +176,10 @@ function _buildReportDiv(cb, entries, date){
     +'<th style="padding:9px 10px;text-align:right;font-size:12px;">הרחבה</th>'
     +'</tr></thead><tbody>'+rowsHTML+'</tbody></table>';
     // הסיכום הוא בדיוק השורות שבטבלה ולא כל ENTRIES — אחרת הדוח מציג סיכום שאינו תואם את שורותיו.
-    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:var(--text-3);border-top:1px solid var(--card-2);padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | סה״כ ' + sortedPDF.length + ' רשומות</div>';
+    // בדוח שחולק — בכל חלק: מספרו, טווח הרשומות שבו והסה״כ של כל הדוח
+    var tail = part ? 'חלק ' + part.i + ' מתוך ' + part.n + ' · רשומות ' + part.a + '–' + part.b + ' · סה״כ ' + part.total + ' רשומות'
+      : 'סה״כ ' + sortedPDF.length + ' רשומות';
+    div.innerHTML += '<div style="margin-top:14px;text-align:center;font-size:10px;color:var(--text-3);border-top:1px solid var(--card-2);padding-top:10px;font-family:Heebo,Arial,sans-serif;">' + 'יחי אדוננו מורנו ורבינו מלך המשיח לעולם ועד! | ' + (part ? '<b style="color:var(--text-2)">' + tail + '</b>' : tail) + '</div>';
   showEl(div, true);cb(div);
 }
 
@@ -128,13 +189,7 @@ function shareReport(){
   var curKey = getCurrentDateKey();
   var todayEntries = liveOnly(S.ENTRIES).filter(function(e){ return e.entry_date === curKey; });
   if(!todayEntries.length){ toast(MSG_NOTHING_TO_SHARE); return; }
-  toast(MSG_IMG_PREP);
-  _buildReportDiv(function(div){
-    _renderReport(div).then(function(canvas){
-      _hideReportDiv(div);
-      shareFile(canvas.toDataURL('image/jpeg',0.95).split(',')[1], 'image/jpeg', 'yoman.jpg');
-    }).catch(function(e){ _reportError(div, e); });
-  }, todayEntries, curKey);
+  _shareReport(todayEntries, curKey, 'yoman');
 }
 
 export { exportImage, shareReport };
