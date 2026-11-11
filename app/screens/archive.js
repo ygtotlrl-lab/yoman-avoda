@@ -262,7 +262,7 @@ function renderArcDetail() {
       arcTaskOptions(null)+'</select>'+
       '<select aria-label="תת-משימה לרשומת הארכיון" id="arc-add-sub" class="arc-add-sel arc-a-sub">'+
       arcSubOptions(null, '')+'</select>'+
-      '<input aria-label="כמות לרשומת הארכיון" id="arc-add-count" inputmode="numeric" placeholder="כמות" class="arc-add-notes arc-a-count" />'+
+      '<input aria-label="כמות לרשומת הארכיון" id="arc-add-count" inputmode="numeric" placeholder="כמות..." class="arc-add-notes arc-a-count" />'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes arc-a-notes" />'+
       '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
       '</div></div>';
