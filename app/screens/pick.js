@@ -1,12 +1,12 @@
-// app/screens/pick.js — בחירת הישיבה ומציג טבלת התשתית
+// app/screens/pick.js — בחירת הישיבה ומציג הטבלאות: טבלת התשתית ותקן מעטפות האתרים
 import { errMsg, netTimeout } from '../../core/util.js';
 import { esc, openModal } from '../../core/ui.js';
-import { MSG_INFRA_TABLE, YESHIVOT } from '../constants.js';
+import { MSG_INFRA_TABLE, MSG_WRAP_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
 
-// מציג הטבלה במסך הבחירה ולא בתוך הישיבה — הטבלה של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
+// מציג הטבלאות במסך הבחירה ולא בתוך הישיבה — הן של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
 function screenPickHTML() {
   return `
 <div id="yeshivaSelect">
@@ -23,23 +23,28 @@ function screenPickHTML() {
       return '<button class="ys-pick-btn" data-act="pick-yeshiva" data-yeshiva="' + y.id + '">' + esc(y.name) + '</button>';
     }).join('')}</div>
     <div class="ys-pick-aside">
-      <button class="ys-pick-alt" data-act="inf-open">${icon('table')}טבלת התשתית</button>
+      <button class="ys-pick-alt" data-act="inf-open" data-doc="table">${icon('table')}${esc(MSG_INFRA_TABLE)}</button>
+      <button class="ys-pick-alt" data-act="inf-open" data-doc="wrappers">${icon('table')}${esc(MSG_WRAP_TABLE)}</button>
     </div>
   </div>
 </div>
 `;
 }
 
-// צרכנו היחיד של RAW_BASE הוא מציג טבלת התשתית — כתובת שנייה הייתה מקור אמת שני.
+// צרכנו היחיד של RAW_BASE הוא מציג הטבלאות — כתובת שנייה הייתה מקור אמת שני.
 var GITHUB_USER = "ygtotlrl-lab";
 
 var GITHUB_REPO = "yoman-avoda";
 
 var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB_REPO + "/main/";
 
-// ── מציג טבלת התשתית ──
+// ── מציג הטבלאות ──
 // הקובץ נמשך בזמן אמת ואינו מוטבע — עותק בקוד מתיישן; וכשל משיכה מוצג גלוי, שמסך ריק נקרא כאין נתונים.
-var YA_INF_MD = RAW_BASE + 'TABLE.md';
+// שתי טבלאות באותו מבנה ובאותו מציג: התקן של שש האפליקציות, ותקן מעטפות האתרים — שהקוד שלו בריפו הפרטי site-wrappers.
+var INF_DOCS = {
+  table:    { file: 'TABLE.md',    title: MSG_INFRA_TABLE },
+  wrappers: { file: 'WRAPPERS.md', title: MSG_WRAP_TABLE }
+};
 
 // הפרדה על | משאירה תא ריק בשני הקצוות
 function _infCells(line) {
@@ -125,15 +130,16 @@ function _infParse(md) {
 // הציור נפרד מהפירוק — פתח/סגור הכל מצייר מחדש בלי למשוך שוב.
 function _infHTML(d) {
   var h = '<div class="inf">';
-  h += '<div class="inf-hd"><b>טבלת התשתית</b>' +
+  h += '<div class="inf-hd"><b>' + esc(INF_DOCS[S._infDoc].title) + '</b>' +
        '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
 
   h += '<div class="inf-card">' +
        '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתח הכל</button>' +
        '<button data-act="inf-all" data-open="0">סגור הכל</button>' +
-       '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
+       // מקרא הסימנים — רק לטבלה שיש בה עמודות אפליקציה.
+       (d.apps.length ? '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
        '<span class="inf-tag"><span class="inf-dot gap"></span> חסר-מנומק</span>' +
-       '<span class="inf-tag"><span class="inf-dot bad"></span> לא מטופל</span></div>';
+       '<span class="inf-tag"><span class="inf-dot bad"></span> לא מטופל</span>' : '') + '</div>';
   // כותרת הפרק אינה מתקפלת — פתח/סגור הכל חל על הקטגוריות בלבד.
   d.chaps.forEach(function (p) {
     if (p.title) h += '<h4 class="inf-chap">' + esc(p.title) + '</h4>';
@@ -160,14 +166,16 @@ function _infHTML(d) {
   return h;
 }
 
-async function yaInfraOpen() {
+async function yaInfraOpen(doc) {
+  S._infDoc = INF_DOCS[doc] ? doc : 'table';
   S._infOpen = false;
-  openModal(MSG_INFRA_TABLE,
-    '<div class="inf"><div class="inf-hd"><b>טבלת התשתית</b>' +
+  var title = INF_DOCS[S._infDoc].title;
+  openModal(title,
+    '<div class="inf"><div class="inf-hd"><b>' + esc(title) + '</b>' +
     '<span>מושך מ-GitHub…</span></div></div>', '');
   var md = null;
   try {
-    var res = await netTimeout(fetch(YA_INF_MD, { cache: 'no-store' }));
+    var res = await netTimeout(fetch(RAW_BASE + INF_DOCS[S._infDoc].file, { cache: 'no-store' }));
     if (!res || !res.ok) throw new Error('HTTP ' + (res ? res.status : '—'));
     md = await res.text();
   } catch (e) {
@@ -175,7 +183,7 @@ async function yaInfraOpen() {
     if (el) el.innerHTML = '<div class="inf"><div class="inf-err">' +
       stIcon('warn') + 'המשיכה מ-GitHub נכשלה — ' + esc(errMsg(e)) +
       '<br>הטבלה נקראת בזמן אמת מהריפו, ואין עותק במכשיר.</div>' +
-      '<div class="inf-bar"><button data-act="inf-open">' + icon('retry') + 'נסה שוב</button></div></div>';
+      '<div class="inf-bar"><button data-act="inf-open" data-doc="' + S._infDoc + '">' + icon('retry') + 'נסה שוב</button></div></div>';
     return;
   }
   S._infData = _infParse(md);

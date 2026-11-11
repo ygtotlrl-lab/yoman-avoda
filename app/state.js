@@ -37,6 +37,7 @@ const S = {
   _yaLastSyncAt: 0,
   _yaNetWarned: false,
   _infData: undefined,
+  _infDoc: undefined,
   _infOpen: undefined
 };
 

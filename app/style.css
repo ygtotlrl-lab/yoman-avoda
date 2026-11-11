@@ -215,7 +215,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 }
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* המרווח והקו מפרידים — כפתור שלישי צמוד היה נקרא כישיבה שלישית. */
-.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);}
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);
+  display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-4);}
 /* מובחן בגודל ובעובי המסגרת ולא בצבע — גוון שלישי על הגרדיאנט שובר את המוטיב. */
 .ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
   color:var(--on-deep);background:transparent;border:1px dashed var(--edge-deep);
