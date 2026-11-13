@@ -51,4 +51,5 @@
 | 6 | ![](logos/wrappers/budget.png) צבאות השם | [th770.co.il](https://th770.co.il/budget-pro?check_logged_in=1) | |
 | 7 | ![](logos/wrappers/capitel.png) קאפיטל | [capitel.netlify.app](https://capitel.netlify.app/search) | |
 | 8 | ![](logos/wrappers/complete.png) קומפלט | [allcomplete.co.il](https://www.allcomplete.co.il/) | |
-| 9 | ![](logos/wrappers/tchelet.png) תכלת | [tchelet.org](https://tchelet.org/) | |
+| 9 | ![](logos/wrappers/kupas.png) קופת רבינו | [kupasrabeinu.org](https://kupasrabeinu.org/he/) | |
+| 10 | ![](logos/wrappers/tchelet.png) תכלת | [tchelet.org](https://tchelet.org/) | |
