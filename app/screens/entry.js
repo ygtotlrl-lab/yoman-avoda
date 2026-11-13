@@ -39,11 +39,11 @@ function screenEntryHTML() {
     <div class="cat-grid" id="catGrid"></div>
     <div class="qsec">
       <div class="qlbl">משימה</div>
-      <div class="qrow" id="taskBtns"><span class="hint">בחר קטגוריה...</span></div>
+      <div class="qrow task-btns" id="taskBtns"><span class="hint">בחר קטגוריה...</span></div>
     </div>
     <div class="qsec">
       <div class="qlbl">תת-משימה</div>
-      <div class="qrow" id="subBtns"><span class="hint">בחר משימה...</span></div>
+      <div class="qrow sub-btns" id="subBtns"><span class="hint">בחר משימה...</span></div>
     </div>
     <div data-ks>
     <div class="inp-grid">

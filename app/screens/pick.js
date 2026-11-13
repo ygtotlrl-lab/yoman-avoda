@@ -9,7 +9,7 @@ import { stIcon } from '../../core/icons.js';
 // מציג הטבלאות במסך הבחירה ולא בתוך הישיבה — הן של הארגון, ומסך שנפתח מתוך מוסד נקרא כמתאר אותו.
 function screenPickHTML() {
   return `
-<div id="yeshivaSelect">
+<div id="yeshivaSelect" class="yeshiva-select">
   <div class="ys-pick-card">
     <svg class="ys-pick-mark" viewBox="0 0 268 264" aria-hidden="true" focusable="false">
       <rect x="72" y="0" width="196" height="48" rx="24" opacity="0.6"></rect>

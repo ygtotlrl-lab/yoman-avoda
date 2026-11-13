@@ -115,7 +115,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .btn-red{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);}
 
 /* ── מציג טבלת התשתית ── */
-#modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
+.veil-modal:has(.inf) .sheet{max-width:min(1180px,96vw)}
 .inf{font-family:'Heebo',sans-serif;color:var(--text)}
 .inf-hd{background:linear-gradient(135deg,var(--brand-fill) 0%,var(--deep-1) 100%);color:var(--on-brand);
   border-radius:var(--r-5);padding:var(--sp-6) var(--sp-6);margin-bottom:var(--sp-6)}
@@ -189,12 +189,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ── מסכים ──
    מסך בחירת הישיבה: צבעיו הם צבעי icon שבתצורה, ולא --brand ו--bg של פנים האפליקציה.
    דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, וחלון דו-שיח שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
-#yeshivaSelect{position:fixed;inset:0;z-index:var(--z-3);
+.yeshiva-select{position:fixed;inset:0;z-index:var(--z-3);
   background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
   color:var(--on-deep);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 /* כלל ה-id שמעל גובר על .is-hidden בסגוליות — ולכן מצב הסגירה נכתב כאן. */
-#yeshivaSelect.is-hidden{display:none;}
+.yeshiva-select.is-hidden{display:none;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
 /* padding ולא margin — margin נבלע במרווח של בחר ישיבה שמתחתיו */
@@ -264,10 +264,10 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .qrow{display:flex;flex-wrap:wrap;gap:var(--sp-2);}
 /* המשימות ותתי-המשימות — רשת אחידה: עמודות שוות, וטקסט ארוך נשבר בתוך הכפתור ואינו מותח אותו. */
 /* בגודל הכפתורים הקטנים שבשאר ההזנה, ולא בגודל הקטגוריות — שלוש בשורה בטלפון. */
-#taskBtns,#subBtns{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--sp-2);}
-#taskBtns .hint,#subBtns .hint{grid-column:1/-1;}
-#taskBtns .qbtn,#subBtns .qbtn{white-space:normal;min-height:28px;padding:var(--sp-2) var(--sp-3);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;}
-@media (max-width:520px){ #taskBtns,#subBtns{grid-template-columns:repeat(3,1fr);} }
+.task-btns,.sub-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--sp-2);}
+.task-btns .hint,.sub-btns .hint{grid-column:1/-1;}
+.task-btns .qbtn,.sub-btns .qbtn{white-space:normal;min-height:28px;padding:var(--sp-2) var(--sp-3);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;}
+@media (max-width:520px){ .task-btns,.sub-btns{grid-template-columns:repeat(3,1fr);} }
 .qbtn.qmore{background:none;border-style:dashed;color:var(--brand-ink);font-weight:700;}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text-2);white-space:nowrap;}
