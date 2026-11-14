@@ -67,22 +67,21 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* גובה הכרטיס קבוע — מעטפת אנדרואיד מגדילה טקסט (font boosting), וגובה שנגזר מהתוכן יוצא שם אחר מבדפדפן. */
 /* רך ובהיר — רך הזהות ודיו כהה, בלי צל, כמו האייקון ומסך הבחירה. */
 .hdr{background:var(--hdr-bg);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:180px;overflow:hidden;}
-/* הלוגו ממורכז לגוש הטקסט ולא לכרטיס — יחי יושב מתחת לגוש, ולוגו ממורכז לכרטיס צף מעל הטקסט. */
-.hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
-/* הלוגו, הקו ויחי קוראים את --hdr-inset — ערך שני ללוגו בנקודת שבירה שובר את הקו. */
-.hdr-logo-wrap{padding:0;padding-inline-start:var(--hdr-inset);display:flex;align-items:center;justify-content:center;}
-/* הסטה של 2% — איזון אופטי, והאחוז נע עם גובה הלוגו. */
-.hdr-logo{width:88px;height:88px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-2);
-  transform:translateY(-2%);}
+  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:222px;overflow:hidden;}
+/* הכל בעמודה אחת וממורכז: ב״ה · סמל המוסד, קטן · הכותרת · שם המוסד; ויחי מתחת לקו. */
+.hdr-top{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+/* הקו ויחי קוראים את --hdr-inset. */
+.hdr-logo-wrap{padding:0;margin-bottom:var(--sp-3);display:flex;align-items:center;justify-content:center;}
+/* קטן — סימן ולא כותרת; הריבוע הלבן נשאר, ולוגו שקוף אינו נבלע ברקע. */
+.hdr-logo{width:52px;height:52px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-1);}
 /* כפתור אמיתי ולא role=button — מסלול הפעלה אחד לעכבר ולמקלדת, בלי מאזין keydown שני. */
 .hdr-logo-btn{background:none;border:none;padding:0;cursor:pointer;display:block;line-height:0;}
 .hdr-logo-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:var(--r-4);}
 @media (hover:hover){
   .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
 }
-.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:var(--fs-1);color:var(--text-2);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
+.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-6);display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.hdr-bh{font-size:var(--fs-1);color:var(--text-2);letter-spacing:var(--ls-3);margin-bottom:var(--sp-4);}
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
 .hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--mark);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 .hdr-title-wrap::after{content:none;}
@@ -434,18 +433,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ── נקודות שבירה ── */
 @media (min-width:360px){
   .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
-}
-/* במסך רחב הכותרת מתמרכזת לכרטיס כולו והלוגו יוצא מהזרימה לפינה — שני מרכזים סמוכים נקראים כטעות.
-   במובייל אין לגעת: הלוגו תופס חלק גדול מהרוחב, ומרכוז לכרטיס היה מציב את הכותרת מתחתיו.
-   הסף נמדד: מעליו הטקסט והלוגו אינם נוגעים. */
-@media (min-width:900px){
-  .hdr-top{position:relative;}
-}
-@media (min-width:900px){
-  .hdr-logo-wrap{position:absolute;top:0;bottom:0;right:0;}
-}
-@media (min-width:900px){
-  .hdr-mid{padding:0 var(--sp-6);}
 }
 @media (min-width:480px){.cat-grid{grid-template-columns:repeat(3,1fr);}}
 @media (min-width:640px){.cat-grid{grid-template-columns:repeat(4,1fr);}}
