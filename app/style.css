@@ -67,11 +67,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* גובה הכרטיס קבוע — מעטפת אנדרואיד מגדילה טקסט (font boosting), וגובה שנגזר מהתוכן יוצא שם אחר מבדפדפן. */
 /* רך ובהיר — רך הזהות ודיו כהה, בלי צל, כמו האייקון ומסך הבחירה. */
 .hdr{background:var(--hdr-bg);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:222px;overflow:hidden;}
-/* הכל בעמודה אחת וממורכז: ב״ה · סמל המוסד, קטן · הכותרת · שם המוסד; ויחי מתחת לקו. */
-.hdr-top{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:212px;overflow:hidden;}
+/* עמודה אחת ממורכזת: ב״ה זעיר · סמל המוסד ואוויר סביבו · הכותרת; שם המוסד צמוד לקו, ויחי מתחת לו. */
+.hdr-top{flex:1;display:flex;align-items:stretch;justify-content:center;min-height:0;}
 /* הקו ויחי קוראים את --hdr-inset. */
-.hdr-logo-wrap{padding:0;margin-bottom:var(--sp-3);display:flex;align-items:center;justify-content:center;}
+.hdr-logo-wrap{padding:0;margin:var(--sp-5) 0;display:flex;align-items:center;justify-content:center;}
 /* קטן — סימן ולא כותרת; הריבוע הלבן נשאר, ולוגו שקוף אינו נבלע ברקע. */
 .hdr-logo{width:52px;height:52px;object-fit:contain;border-radius:var(--r-3);background:var(--card);padding:var(--sp-1);}
 /* כפתור אמיתי ולא role=button — מסלול הפעלה אחד לעכבר ולמקלדת, בלי מאזין keydown שני. */
@@ -80,13 +80,14 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 @media (hover:hover){
   .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
 }
-.hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-6);display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:var(--fs-1);color:var(--text-2);letter-spacing:var(--ls-3);margin-bottom:var(--sp-4);}
-.hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
+.hdr-mid{flex:1;min-width:0;text-align:center;padding:var(--sp-6) var(--sp-6) var(--sp-4);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+/* זעיר — סימן בראש הדף, לא שורת כותרת. */
+.hdr-bh{font-size:10px;line-height:1;color:var(--text-2);letter-spacing:var(--ls-3);}
+.hdr-title-wrap{position:relative;display:inline-block;}
 .hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--mark);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 .hdr-title-wrap::after{content:none;}
 /* בשורה אחת — שם מוסד שנשבר לשתיים מזיז את גוש הטקסט שהלוגו ממורכז אליו. */
-.hdr-sub{font-size:var(--fs-1);color:var(--text);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
+.hdr-sub{font-size:var(--fs-1);color:var(--text);margin-top:auto;letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* בלי הקו הרווח שמעל יחי נראה כחלל שנשאר בטעות. */
 .hdr-div{height:1px;background:var(--hdr-line);margin:0 var(--hdr-inset);}
