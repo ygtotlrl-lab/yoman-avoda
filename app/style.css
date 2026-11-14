@@ -66,8 +66,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .app{max-width:var(--col);margin:0 auto;padding:var(--sp-6);}
 /* גובה הכרטיס קבוע — מעטפת אנדרואיד מגדילה טקסט (font boosting), וגובה שנגזר מהתוכן יוצא שם אחר מבדפדפן. */
 /* רך ובהיר — רך הזהות ודיו כהה, בלי צל, כמו האייקון ומסך הבחירה. */
-.hdr{background:var(--hdr-bg);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:266px;overflow:hidden;}
+.hdr{position:relative;background:var(--hdr-bg);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
+  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:248px;overflow:hidden;}
 /* עמודה אחת ממורכזת: ב״ה זעיר · סמל המוסד ואוויר סביבו · הכותרת; שם המוסד צמוד לקו, ויחי מתחת לו. */
 .hdr-top{flex:1;display:flex;align-items:stretch;justify-content:center;min-height:0;}
 /* הקו ויחי קוראים את --hdr-inset. */
@@ -81,8 +81,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
 }
 .hdr-mid{flex:1;min-width:0;text-align:center;padding:var(--sp-7) var(--sp-6) var(--sp-4);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
-/* זעיר — סימן בראש הדף, לא שורת כותרת. */
-.hdr-bh{font-size:10px;line-height:1;color:var(--text-2);letter-spacing:var(--ls-3);}
+/* זעיר ובפינה השמאלית העליונה — סימן בראש הדף, מחוץ לזרימה ולא שורת כותרת. */
+.hdr-bh{position:absolute;top:var(--sp-5);left:var(--sp-6);font-size:9px;line-height:1;color:var(--text-2);letter-spacing:var(--ls-2);}
 .hdr-title-wrap{position:relative;display:inline-block;}
 .hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--mark);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 .hdr-title-wrap::after{content:none;}
