@@ -8,7 +8,7 @@ self.APP = Object.freeze({
   prefix: 'ya_',
   colors: { theme: '#1E6FBF', background: '#F0F4FA' },
   // דף האופליין של ה-service worker — הכהה לפי אסימוני הערכה הכהה של האפליקציה
-  offline: { light: { bg: '#101A3A', ink: '#F5EDD6' }, dark: { bg: '#0d151d', ink: '#e8eef5' }, mark: '📕' },
+  offline: { light: { bg: '#F0F4FA', ink: '#1A2540' }, dark: { bg: '#0d151d', ink: '#e8eef5' }, mark: '📕' },
   // מפתח anon ציבורי ולא מפתח שירות — ההרשאות נאכפות במסד.
   supabase: {
     url: 'https://kxbtskqobynewvnckaaz.supabase.co',
@@ -23,11 +23,9 @@ self.APP = Object.freeze({
     // צבע כפתור הניסיון החוזר בדף האופליין של המעטפת
     accent: '#2563eb',
     // לעולם אינו יורד — בלי קידום המכשיר המותקן אינו מקבל את ה-APK החדש.
-    versionCode: 38,
+    versionCode: 39,
     versionName: '21.0',
-    // שוליי ic_launcher הם מדרג באלכסון ולא צבע אחד — צבע אחיד מחטיא ב-36 יחידות לערוץ, והמדרג ב-5.
-    // 315 מעלות הן שמאל-עליון אל ימין-תחתון.
-    launcherBg: { kind: 'gradient', angle: 315, start: '#2B508F', end: '#0D1F42' },
+    launcherBg: { kind: 'solid', color: '#FFFFFF' },
     // אפליקציות אחרות שקישור intent: רשאי לפתוח — שם ⟵ חבילה; ריק — המעטפת אינה פותחת אף אחת
     launch: {},
     // כפתור «יציאה» שהמעטפת קולטת וסוגרת בו את האפליקציה

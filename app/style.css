@@ -27,8 +27,8 @@
   --inf-go:#16A34A; --inf-wait:#EAB308; --inf-stop:#DC2626;
   --border:#D0DAF0; --shadow:rgba(30,60,120,0.10);
   --deep-1:#2A4E8C; --deep-2:#0E2145;
-  --on-deep:#F7F3EA; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
-  --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+  /* הכחול של סמל האייקון — design/icon-master.svg */
+  --mark:#2A4E8C;
   --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
 }
 
@@ -48,8 +48,7 @@
       --accent:#FFB930;
       --shadow:rgba(0,0,0,0.45);
       --deep-1:#2A4E8C; --deep-2:#0E2145;
-      --on-deep:#F7F3EA; --fill-deep:rgba(247,244,235,0.10); --fill-deep-2:rgba(247,244,235,0.18);
-      --edge-deep:rgba(247,244,235,0.45); --edge-deep-2:rgba(247,244,235,0.75);
+      --mark:#7FB2F0;
       --shadow-brand:rgba(0,0,0,0.45); --shadow-brand-soft:rgba(0,0,0,0.25);
     }
 }
@@ -187,40 +186,38 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .is-hidden{display:none !important}
 
 /* ── מסכים ──
-   מסך בחירת הישיבה: צבעיו הם צבעי icon שבתצורה, ולא --brand ו--bg של פנים האפליקציה.
+   מסך בחירת הישיבה: בהיר, באסימוני פנים האפליקציה, והסמל — סמל האייקון עצמו, בכחול שלו (--mark).
    דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, וחלון דו-שיח שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
-.yeshiva-select{position:fixed;inset:0;z-index:var(--z-3);
-  background:linear-gradient(141deg,var(--deep-1) 0%,var(--deep-2) 100%);
-  color:var(--on-deep);display:flex;align-items:center;justify-content:center;
+.yeshiva-select{position:fixed;inset:0;z-index:var(--z-3);background:var(--bg);
+  color:var(--text);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 /* כלל ה-id שמעל גובר על .is-hidden בסגוליות — ולכן מצב הסגירה נכתב כאן. */
 .yeshiva-select.is-hidden{display:none;}
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
-.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--on-deep);}
+.ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--mark);}
 /* padding ולא margin — margin נבלע במרווח של בחר ישיבה שמתחתיו */
-.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;
+.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--text);
   letter-spacing:var(--ls-2);line-height:var(--lh-1);margin:0;padding:var(--sp-6) 0 var(--sp-7);}
-.ys-pick-lead{font-size:var(--fs-3);font-weight:700;opacity:var(--op-5);margin:var(--sp-7) 0 var(--sp-5);}
+.ys-pick-lead{font-size:var(--fs-3);font-weight:700;color:var(--text-2);margin:var(--sp-7) 0 var(--sp-5);}
 .ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
-/* שקוף ולא לבן — משטח לבן היה מכניס גוון שלישי למסך. */
 .ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
-  color:var(--on-deep);background:var(--fill-deep);border:2px solid var(--edge-deep);
+  color:var(--brand-ink);background:var(--card);border:2px solid var(--border);
   border-radius:var(--r-5);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
 /* :hover רק במכשיר עם ריחוף — במגע הוא נשאר על הרכיב אחרי הלחיצה.
    וכלל ריחוף יושב ליד רכיבו — אחרי .active באותה סגוליות הוא היה גובר עליו. */
 @media (hover:hover){
-  .ys-pick-btn:hover{background:var(--fill-deep-2);border-color:var(--on-deep);}
+  .ys-pick-btn:hover{background:var(--brand-soft);border-color:var(--brand-ink);}
 }
 @media (hover:hover){
-  .ys-pick-alt:hover{background:var(--fill-deep);border-color:var(--edge-deep-2);}
+  .ys-pick-alt:hover{background:var(--card-2);border-color:var(--text-3);}
 }
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* המרווח והקו מפרידים — כפתור שלישי צמוד היה נקרא כישיבה שלישית. */
-.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--fill-deep-2);
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--border);
   display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-4);}
-/* מובחן בגודל ובעובי המסגרת ולא בצבע — גוון שלישי על הגרדיאנט שובר את המוטיב. */
+/* מובחן בגודל, בעובי המסגרת ובקו המקווקו — לא כפתור ישיבה. */
 .ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
-  color:var(--on-deep);background:transparent;border:1px dashed var(--edge-deep);
+  color:var(--text-2);background:transparent;border:1px dashed var(--border);
   border-radius:var(--r-4);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
 .ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* ── הזנה ── */
