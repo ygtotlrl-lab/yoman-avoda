@@ -29,6 +29,8 @@
   --deep-1:#2A4E8C; --deep-2:#0E2145;
   /* הכחול של סמל האייקון — design/icon-master.svg */
   --mark:#2A4E8C;
+  /* הכותרת ומסך הבחירה — כחול רך ומלא יותר מרך הזהות, והקו שלו */
+  --hdr-bg:#D5E3F5; --hdr-line:#B5CBEA;
   --shadow-brand:rgba(30,111,191,0.30); --shadow-brand-soft:rgba(30,111,191,0.12);
 }
 
@@ -49,6 +51,7 @@
       --shadow:rgba(0,0,0,0.45);
       --deep-1:#2A4E8C; --deep-2:#0E2145;
       --mark:#7FB2F0;
+      --hdr-bg:#16283A; --hdr-line:#24405C;
       --shadow-brand:rgba(0,0,0,0.45); --shadow-brand-soft:rgba(0,0,0,0.25);
     }
 }
@@ -63,8 +66,8 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .app{max-width:var(--col);margin:0 auto;padding:var(--sp-6);}
 /* גובה הכרטיס קבוע — מעטפת אנדרואיד מגדילה טקסט (font boosting), וגובה שנגזר מהתוכן יוצא שם אחר מבדפדפן. */
 /* רך ובהיר — רך הזהות ודיו כהה, בלי צל, כמו האייקון ומסך הבחירה. */
-.hdr{background:var(--brand-soft);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
-  --hdr-inset:var(--sp-7);border:1px solid var(--border);box-shadow:none;display:flex;flex-direction:column;height:180px;overflow:hidden;}
+.hdr{background:var(--hdr-bg);border-radius:var(--r-6);padding:0;margin-bottom:var(--sp-7);
+  --hdr-inset:var(--sp-7);border:1px solid var(--hdr-line);box-shadow:none;display:flex;flex-direction:column;height:180px;overflow:hidden;}
 /* הלוגו ממורכז לגוש הטקסט ולא לכרטיס — יחי יושב מתחת לגוש, ולוגו ממורכז לכרטיס צף מעל הטקסט. */
 .hdr-top{flex:1;display:flex;align-items:center;min-height:0;}
 /* הלוגו, הקו ויחי קוראים את --hdr-inset — ערך שני ללוגו בנקודת שבירה שובר את הקו. */
@@ -79,16 +82,16 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
   .tab-btn:hover{background:var(--card-2);color:var(--brand-ink);border-color:var(--brand-ink);}
 }
 .hdr-mid{flex:1;min-width:0;text-align:center;padding:0 var(--sp-5) 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.hdr-bh{font-size:var(--fs-1);color:var(--text-3);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
+.hdr-bh{font-size:var(--fs-1);color:var(--text-2);letter-spacing:var(--ls-3);margin-bottom:var(--sp-2);}
 .hdr-title-wrap{position:relative;display:inline-block;padding-bottom:var(--sp-4);}
-.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--brand-ink);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
+.hdr-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--mark);letter-spacing:var(--ls-2);line-height:var(--lh-1);}
 .hdr-title-wrap::after{content:none;}
 /* בשורה אחת — שם מוסד שנשבר לשתיים מזיז את גוש הטקסט שהלוגו ממורכז אליו. */
-.hdr-sub{font-size:var(--fs-1);color:var(--text-2);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
+.hdr-sub{font-size:var(--fs-1);color:var(--text);margin-top:var(--sp-4);letter-spacing:var(--ls-1);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 /* בלי הקו הרווח שמעל יחי נראה כחלל שנשאר בטעות. */
-.hdr-div{height:1px;background:var(--border);margin:0 var(--hdr-inset);}
-.hdr-yechi{padding:var(--sp-4) var(--hdr-inset) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--brand-ink);
+.hdr-div{height:1px;background:var(--hdr-line);margin:0 var(--hdr-inset);}
+.hdr-yechi{padding:var(--sp-4) var(--hdr-inset) var(--sp-5);font-size:var(--fs-1);font-weight:800;color:var(--mark);
   letter-spacing:var(--ls-1);line-height:var(--lh-3);text-align:center;}
 /* במסך הצר הכתובית מתכווצת ואינה נחתכת — נמדד שאינה נכנסת; זו ברירת המחדל, וההרחבה מחזירה את הגודל. */
 .hdr-sub{font-size:var(--fs-1);letter-spacing:0;}
@@ -189,7 +192,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 /* ── מסכים ──
    מסך בחירת הישיבה: בהיר, באסימוני פנים האפליקציה, והסמל — סמל האייקון עצמו, בכחול שלו (--mark).
    דרגתו תפריט ולא נעילה — הוא פותח דיאלוג, וחלון דו-שיח שנפתח מדרגת נעילה קיים ב-DOM ואינו נראה. */
-.yeshiva-select{position:fixed;inset:0;z-index:var(--z-3);background:var(--bg);
+.yeshiva-select{position:fixed;inset:0;z-index:var(--z-3);background:var(--hdr-bg);
   color:var(--text);display:flex;align-items:center;justify-content:center;
   font-family:'Heebo',sans-serif;direction:rtl;padding:var(--sp-7);overflow:auto;}
 /* כלל ה-id שמעל גובר על .is-hidden בסגוליות — ולכן מצב הסגירה נכתב כאן. */
@@ -197,12 +200,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .ys-pick-card{width:100%;max-width:420px;text-align:center;}
 .ys-pick-mark{width:112px;height:110px;display:block;margin:0 auto var(--sp-6);fill:var(--mark);}
 /* padding ולא margin — margin נבלע במרווח של בחר ישיבה שמתחתיו */
-.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--text);
+.ys-pick-h1{font-family:'Frank Ruhl Libre',serif;font-size:var(--fs-6);font-weight:900;color:var(--mark);
   letter-spacing:var(--ls-2);line-height:var(--lh-1);margin:0;padding:var(--sp-6) 0 var(--sp-7);}
-.ys-pick-lead{font-size:var(--fs-3);font-weight:700;color:var(--text-2);margin:var(--sp-7) 0 var(--sp-5);}
+.ys-pick-lead{font-size:var(--fs-3);font-weight:700;color:var(--text);margin:var(--sp-7) 0 var(--sp-5);}
 .ys-pick-btns{display:flex;flex-direction:column;gap:var(--sp-5);}
 .ys-pick-btn{padding:var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-5);font-weight:800;
-  color:var(--brand-ink);background:var(--card);border:2px solid var(--border);
+  color:var(--mark);background:var(--card);border:2px solid var(--hdr-line);
   border-radius:var(--r-5);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
 /* :hover רק במכשיר עם ריחוף — במגע הוא נשאר על הרכיב אחרי הלחיצה.
    וכלל ריחוף יושב ליד רכיבו — אחרי .active באותה סגוליות הוא היה גובר עליו. */
@@ -214,11 +217,11 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 }
 .ys-pick-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* המרווח והקו מפרידים — כפתור שלישי צמוד היה נקרא כישיבה שלישית. */
-.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--border);
+.ys-pick-aside{margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--hdr-line);
   display:flex;flex-wrap:wrap;justify-content:center;gap:var(--sp-4);}
 /* מובחן בגודל, בעובי המסגרת ובקו המקווקו — לא כפתור ישיבה. */
 .ys-pick-alt{padding:var(--sp-5) var(--sp-6);font-family:'Heebo',sans-serif;font-size:var(--fs-3);font-weight:700;
-  color:var(--text-2);background:transparent;border:1px dashed var(--border);
+  color:var(--text);background:transparent;border:1px dashed var(--mark);
   border-radius:var(--r-4);cursor:pointer;transition:background var(--dur-3),border-color var(--dur-3);}
 .ys-pick-alt:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
 /* ── הזנה ── */
