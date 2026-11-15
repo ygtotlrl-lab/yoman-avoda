@@ -1,8 +1,9 @@
 // app/domain.report.js — הדוח היומי: בנייה, רינדור ושיתוף כתמונה
-import { esc, toast } from '../core/ui.js';
+import { esc, openModal, toast } from '../core/ui.js';
 import { shareFiles } from '../core/share.js';
-import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
+import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_RP_PARTS, MSG_RP_PARTS_NOTE, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
 import { S } from './state.js';
+import { icon } from './icons.js';
 import { catCls, catLabelOf, getCurrentDateKey, liveOnly, showEl, yaDayName, yaGreg, yaHeb, yaSortEntries,
          yaYeshiva } from './domain.js';
 
@@ -65,7 +66,26 @@ function _rpParts(rows) {
   while (cap < RP_MAX && pack(cap).length > n) cap++;
   return pack(cap);
 }
-// רינדור החלקים בזה אחר זה, באותו פאנל, ומשם לשיתוף אחד — כל החלקים יחד
+// דוח שחולק — כל חלק בשיתוף משלו, מחלון שנשאר פתוח: תמונות שנשלחות יחד מתקבצות בוואטסאפ לאלבום אחד,
+// ותמונה שנשלחת לבד היא הודעה משלה. החלון — כפתור לכל חלק, ומה ששותף מסומן; אפשר לשתף שוב.
+var _rpOut = [];
+function _rpPartsDialog(out) {
+  _rpOut = out;
+  openModal(MSG_RP_PARTS, '<p class="rp-parts-note">' + esc(MSG_RP_PARTS_NOTE) + '</p><div class="rp-parts">' +
+    out.map(function (f, i) {
+      return '<button class="btn-sm rp-part" data-act="rp-share-part" data-i="' + i + '">' +
+        icon('share') + '<span>שיתוף חלק ' + (i + 1) + ' מתוך ' + out.length + '</span></button>';
+    }).join('') + '</div>', '', icon('share'));
+}
+function rpSharePart(el) {
+  var f = _rpOut[Number(el.getAttribute('data-i'))];
+  if (!f) return;
+  try { shareFiles([f]); } catch (e) { toast(e.message, null, 'bad'); return; }
+  el.classList.add('is-done');
+  el.innerHTML = icon('check') + '<span>' + esc(el.textContent.replace(/^שיתוף /, 'שותף: ')) + '</span>';
+}
+
+// רינדור החלקים בזה אחר זה, באותו פאנל — ותמונה אחת לשיתוף, או חלון החלקים
 function _shareReport(entries, date, title) {
   var rows = _rpOrdered(entries), parts = _rpParts(rows), n = parts.length, out = [], from = 1;
   // דוח שחולק — שם מלא לכל חלק, עם מספרו: בהורדה כל חלק הוא קובץ נפרד
@@ -74,6 +94,7 @@ function _shareReport(entries, date, title) {
   function next(i) {
     if (i >= n) {
       // מעטפת ישנה, בלי גשר הקבצים — ההודעה מבקשת לעדכן את האפליקציה המותקנת
+      if (out.length > 1) { _rpPartsDialog(out); return; }
       try { shareFiles(out); } catch (e) { toast(e.message, null, 'bad'); }
       return;
     }
@@ -193,4 +214,4 @@ function shareReport(){
   _shareReport(todayEntries, curKey, 'yoman');
 }
 
-export { exportImage, shareReport };
+export { exportImage, rpSharePart, shareReport };

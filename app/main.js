@@ -19,7 +19,7 @@ import { _yaMarkSynced, arcMove, getSB,
          yaEntryRows, yaLsBases, yaMirrorKeys, yaMirrorLoad, yaMirrorPrefix, yaMirrorRows,
          yaPendKeyOf, yaPullFromCloud, yaRowsGet, yaSendRows, yaSendSettings, yaSetPull,
          yaSetPut, yaSetRows, yaSuffix, yaSyncLog, yaSyncPushNow, yaTables, yaYeshiva } from './domain.js';
-import { shareReport } from './domain.report.js';
+import { rpSharePart, shareReport } from './domain.report.js';
 import { arcAddCatChange, arcAddEntry, arcAddTaskChange, arcDeleteEntry, arcEditEntry, arcGoDays, arcGoDetail,
          arcGoMonths, arcGoYears, arcSaveEntry, arcToggleEdit, exportArchiveImage, renderArcDetail,
          renderArchive, screenArchiveHTML } from './screens/archive.js';
@@ -243,6 +243,7 @@ var DOM_ACTIONS = {
   'clear-all':      function () { clearAll(); },
   'save-settings':  function () { return runSave(saveSettings); },
   'share-report':   function () { shareReport(); },
+  'rp-share-part':  function (el) { rpSharePart(el); },
   'arc-go-years':   function () { arcGoYears(); },
   'arc-toggle-edit': function () { arcToggleEdit(); },
   'arc-add-entry':  function () { arcAddEntry(); },

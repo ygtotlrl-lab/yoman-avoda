@@ -378,6 +378,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .task-add-row{margin-top:var(--sp-4)}
 .yeshiva-list{display:flex;gap:var(--sp-5);flex-direction:column}
 .yeshiva-pick{background:var(--brand-fill);color:var(--on-brand);padding:var(--sp-6);font-size:var(--fs-4);font-weight:800}
+.rp-parts-note{font-size:var(--fs-2);color:var(--text-2);line-height:var(--lh-3);margin:0 0 var(--sp-6)}
+.rp-parts{display:flex;gap:var(--sp-5);flex-direction:column}
+.rp-part{display:flex;align-items:center;justify-content:center;gap:var(--sp-4);background:var(--brand-fill);color:var(--on-brand);padding:var(--sp-6);font-size:var(--fs-4);font-weight:800}
+.rp-part .ico{width:20px;height:20px;margin:0}
+/* ששותף — בהיר ובסימון וי, ועדיין לחיץ לשיתוף חוזר */
+.rp-part.is-done{background:var(--brand-soft);color:var(--brand-ink)}
 /* ── ארכיון ── */
 @media (hover:hover){
   .arc-btn:hover{border-color:var(--brand-ink);color:var(--brand-ink);background:var(--card-2);}
