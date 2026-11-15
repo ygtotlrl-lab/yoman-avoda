@@ -96,7 +96,7 @@ function entryFormEl(e, save) {
     '<input aria-label="תת-משימה" id="ei_sub" placeholder="תת-משימה" class="ei-inp">' +
     '<input aria-label="כמות" id="ei_count" type="text" inputmode="numeric" autocomplete="off" placeholder="כמות" class="ei-count">' +
     '<input aria-label="הערות" id="ei_notes" placeholder="הרחבה" class="ei-notes">' +
-    '<button data-act="' + save + '" data-ksave data-id="' + esc(e.client_id) + '" class="ei-save">שמור</button>' +
+    '<button data-act="' + save + '" data-ksave data-id="' + esc(e.client_id) + '" class="ei-save">' + icon('save') + 'שמירה</button>' +
     '<button data-act="entry-edit-cancel" data-kesc class="ei-cancel">ביטול</button>' +
     '</div>';
   // הערכים נקבעים ב-JS ולא בתוך ה-HTML — כך אין בעיית בריחה

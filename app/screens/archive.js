@@ -227,7 +227,7 @@ function renderArcDetail() {
       '<div class="arc-day-heb">' + esc(d.heb||yaGreg(d.key)) + '</div>'+
       '<div class="arc-day-greg">' + esc(yaDayName(d.key) + " | " + yaGreg(d.key)) + '</div>'+
     '</div>'+
-    '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?icon('check')+"סיים עריכה":icon('edit')+"ערוך")+'</button>'+
+    '<button class="arc-edit-btn btn-sm'+(S.arcEditMode?" btn-blue":"")+'" data-act="arc-toggle-edit">'+(S.arcEditMode?icon('check')+"סיים עריכה":icon('edit')+"עריכה")+'</button>'+
     (d.entries.length ? '<button class="share-btn btn-sm" data-act="arc-img" data-key="'+esc(d.key)+'">'+icon('share')+'שיתוף הדוח</button>' : '')+
     '</div>';
 
@@ -251,7 +251,7 @@ function renderArcDetail() {
 
   if (S.arcEditMode) {
     html += '<div class="arc-add">'+
-      '<div class="arc-add-ttl">+ הוסף רשומה</div>'+
+      '<div class="arc-add-ttl">+ הוספת רשומה</div>'+
       '<div class="arc-add-row" data-ks>'+
       // שלושת הבוררים — באותה צורה: מתחילים ריקים (קטגוריה · משימה · תת-משימה) ובוחרים מהרשימה בלבד
       '<select aria-label="קטגוריה להוספה לארכיון" id="arc-add-cat" class="arc-add-sel arc-a-cat" data-chg="arc-add-cat">'+
@@ -264,7 +264,7 @@ function renderArcDetail() {
       arcSubOptions(null, '')+'</select>'+
       '<input aria-label="כמות לרשומת הארכיון" id="arc-add-count" inputmode="numeric" placeholder="כמות..." class="arc-add-notes arc-a-count" />'+
       '<input aria-label="הערה לרשומת הארכיון" id="arc-add-notes" placeholder="הערה..." class="arc-add-notes arc-a-notes" />'+
-      '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>+ הוסף</button>'+
+      '<button class="arc-add-btn btn-mini" data-act="arc-add-entry" data-ksave>' + icon('plus') + 'הוספה</button>'+
       '</div></div>';
   }
 
@@ -391,8 +391,8 @@ function arcEditEntry(dayKey, entryId) {
     '<input aria-label="תת-משימה" id="aei_sub" value="' + esc(e.sub||'') + '" placeholder="תת-משימה" class="aei-inp">' +
     '<input aria-label="כמות" id="aei_count" type="text" inputmode="numeric" autocomplete="off" value="' + esc(e.count||'') + '" placeholder="כמות" class="aei-count">' +
     '<input aria-label="הערות" id="aei_notes" value="' + esc(e.notes||'') + '" placeholder="הרחבה" class="aei-notes">' +
-    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(dayKey) + '" data-id="' + esc(entryId) + '" class="ei-save">שמור</button>' +
-    '<button data-act="arc-entry-edit-cancel" data-kesc class="ei-cancel">בטל</button>' +
+    '<button data-act="arc-entry-save" data-ksave data-key="' + esc(dayKey) + '" data-id="' + esc(entryId) + '" class="ei-save">' + icon('save') + 'שמירה</button>' +
+    '<button data-act="arc-entry-edit-cancel" data-kesc class="ei-cancel">ביטול</button>' +
     '</div>';
 }
 

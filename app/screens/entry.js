@@ -5,6 +5,7 @@ import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
 import { DAY_VALUE_MAP, MSG_NEED_TASK, MSG_NO_CATS, MSG_PICK_CATEGORY,
          PK_ENTRY } from '../constants.js';
+import { icon } from '../icons.js';
 import { S, shell } from '../state.js';
 import { catCls, catTasks, getCurrentDateKey, gregDateStr, liveOnly, parseGregLike,
          saveRows, taskSubs } from '../domain.js';
@@ -54,7 +55,7 @@ function screenEntryHTML() {
       <div class="fld"><label for="notesInput">הרחבה / הערות</label><input id="notesInput" type="text" placeholder="הערות..." /></div>
       <div class="fld"><label for="countInput">כמות</label><input id="countInput" type="text" inputmode="numeric" autocomplete="off" placeholder="1" /></div>
     </div>
-    <button class="btn-add" data-act="add-entry" data-ksave>+ הוסף לסדר היום</button>
+    <button class="btn-add" data-act="add-entry" data-ksave>${icon('plus')}הוספה לסדר היום</button>
     </div>
 
   </div>

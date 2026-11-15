@@ -196,7 +196,7 @@ function renderSettings() {
           }
           var addSubRow = '<div class="sub-add-row" data-ks>'
             + '<input aria-label="תת-משימה חדשה" class="sub-add-inp set-add-inp" id="snewsub-'+ci+'-'+ti+'" placeholder="+ תת-משימה..." />'
-            + '<button class="sub-add-btn btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">+ הוסף</button>'
+            + '<button class="sub-add-btn btn-mini" data-act="cat-sub-add" data-ksave data-ci="'+ci+'" data-ti="'+ti+'">' + icon('plus') + 'הוספה</button>'
             + '</div>';
           return '<div class="task-block" '
             + 'data-drag="task" data-ci="'+ci+'" data-ti="'+ti+'">'
@@ -211,8 +211,8 @@ function renderSettings() {
             + '</div>';
         }).join('')
       + '<div class="task-add-row set-add-row" data-ks>'
-      + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוסף משימה..." />'
-      + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">+ הוסף</button>'
+      + '<input aria-label="משימה חדשה" class="set-add-inp" id="snewtask-' + ci + '" placeholder="הוספת משימה..." />'
+      + '<button class="btn-mini" data-act="cat-task-add" data-ksave data-ci="' + ci + '">' + icon('plus') + 'הוספה</button>'
       + '</div>';
     div.innerHTML = hdr + tasksHTML;
     ed.appendChild(div);

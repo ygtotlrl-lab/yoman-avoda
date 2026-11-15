@@ -143,8 +143,8 @@ function _infHTML(d) {
        '<span>' + d.rows.length + ' שורות · נמשך מ-GitHub בזמן אמת</span></div>';
 
   h += '<div class="inf-card">' +
-       '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתח הכל</button>' +
-       '<button data-act="inf-all" data-open="0">סגור הכל</button>' +
+       '<div class="inf-bar"><button data-act="inf-all" data-open="1">פתיחת הכל</button>' +
+       '<button data-act="inf-all" data-open="0">סגירת הכל</button>' +
        // מקרא הסימנים — רק לטבלה שיש בה עמודות אפליקציה.
        (d.apps.length ? '<span class="inf-tag"><span class="inf-dot ok"></span> תקין</span>' +
        '<span class="inf-tag"><span class="inf-dot gap"></span> חסר-מנומק</span>' +
