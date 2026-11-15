@@ -66,8 +66,8 @@ function _rpParts(rows) {
   while (cap < RP_MAX && pack(cap).length > n) cap++;
   return pack(cap);
 }
-// דוח שחולק — כל חלק בשיתוף משלו, מחלון שנשאר פתוח: תמונות שנשלחות יחד מתקבצות בוואטסאפ לאלבום אחד,
-// ותמונה שנשלחת לבד היא הודעה משלה. החלון — כפתור לכל חלק, ומה ששותף מסומן; אפשר לשתף שוב.
+// דוח שחולק — כל חלק בשיתוף משלו, מחלון שנשאר פתוח, ועם כיתוב משלו: תמונות שנשלחות יחד או ברצף בלי כיתוב
+// מתקבצות בוואטסאפ לאלבום אחד. החלון — כפתור לכל חלק, ומה ששותף מסומן; אפשר לשתף שוב.
 var _rpOut = [];
 function _rpPartsDialog(out) {
   _rpOut = out;
@@ -103,8 +103,10 @@ function _shareReport(entries, date, title) {
     _buildReportDiv(function (div) {
       _renderReport(div).then(function (canvas) {
         _hideReportDiv(div);
+        // כיתוב לכל חלק — תמונה עם כיתוב אינה מתקבצת בוואטסאפ לאלבום עם התמונות שלפניה ואחריה
         out.push({ b64: canvas.toDataURL('image/jpeg', 0.95).split(',')[1], mime: 'image/jpeg',
-          name: title + (info ? ' - חלק ' + info.i + ' מתוך ' + info.n : '') + '.jpg' });
+          name: title + (info ? ' - חלק ' + info.i + ' מתוך ' + info.n : '') + '.jpg',
+          text: info ? 'יומן עבודה · ' + yaHeb(date) + ' · חלק ' + info.i + ' מתוך ' + info.n : '' });
         next(i + 1);
       }).catch(function (e) { _reportError(div, e); });
     }, n > 1 ? part : entries, date, info);
