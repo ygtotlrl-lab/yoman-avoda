@@ -5,8 +5,8 @@ import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCou
 import { lsGet, lsOpen, lsRemove, lsSet } from '../core/storage.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
-import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, openModal,
-         pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
+import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, modalDismiss,
+         openModal, pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL,
          MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL, MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL,
@@ -250,7 +250,7 @@ var DOM_ACTIONS = {
   // ביטול עריכה הוא רינדור מחדש ולא שחזור ערך — המסך נבנה מהמצב השמור, ומה שלא נשמר נעלם מעצמו.
   'entry-edit-cancel':     function () { renderLog(); },
   'arc-entry-edit-cancel': function () { renderArcDetail(); },
-  'modal-close':    function () { closeModal(); },
+  'modal-close':    function () { modalDismiss(); },
   'ask-no':         function () { closeAsk(false); },
   'ask-yes':        function () { closeAsk(true); },
 };
