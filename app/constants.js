@@ -77,7 +77,6 @@ var MSG_NOTHING_TO_SHARE = 'אין רשומות לשיתוף להיום';
 var MSG_IMG_PREP = 'מכין תמונה...';
 // דוח שחולק — חלון החלקים: כל חלק בשיתוף משלו, ואינו מתקבץ עם האחרים לאלבום
 var MSG_RP_PARTS = 'שיתוף הדוח בחלקים';
-var MSG_RP_PARTS_NOTE = 'הדוח ארוך, וחולק לכמה תמונות. כל חלק נשלח בנפרד — לחצו על הראשון, ואחרי השליחה חזרו לכאן לבא.';
 
 var MSG_EDIT_FORM_CLOSED = 'טופס העריכה נסגר — נסה שוב';
 
@@ -114,7 +113,7 @@ var DAY_VALUE_MAP = ["יום ראשון","יום שני","יום שלישי","י
 export { CATS_RESET_KEY, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREADY_AT,
          MSG_BOOT_FAIL, MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, MSG_CLOUD_NO_FANOUT,
          MSG_DAY_ARCHIVED, MSG_EDIT_FORM_CLOSED, MSG_IMG_FAIL, MSG_IMG_OFFLINE,
-         MSG_IMG_PREP, MSG_INFRA_TABLE, MSG_RP_PARTS, MSG_RP_PARTS_NOTE, MSG_LOCAL_ONLY, MSG_NEED_TASK,
+         MSG_IMG_PREP, MSG_INFRA_TABLE, MSG_RP_PARTS, MSG_LOCAL_ONLY, MSG_NEED_TASK,
          MSG_NOTHING_TO_SHARE, MSG_NO_CATS, MSG_NO_ROWS, MSG_OFFLINE_LOCAL,
          MSG_PICK_CATEGORY, MSG_ROW_GONE, MSG_SAVED_CLOUD,
          MSG_SUBTASK_EXISTS, MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL,

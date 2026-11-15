@@ -1,7 +1,7 @@
 // app/domain.report.js — הדוח היומי: בנייה, רינדור ושיתוף כתמונה
 import { esc, openModal, toast } from '../core/ui.js';
 import { shareFiles } from '../core/share.js';
-import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_RP_PARTS, MSG_RP_PARTS_NOTE, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
+import { MSG_IMG_FAIL, MSG_IMG_OFFLINE, MSG_IMG_PREP, MSG_RP_PARTS, MSG_NOTHING_TO_SHARE, MSG_NO_ROWS } from './constants.js';
 import { S } from './state.js';
 import { icon } from './icons.js';
 import { catCls, catLabelOf, getCurrentDateKey, liveOnly, showEl, yaDayName, yaGreg, yaHeb, yaSortEntries,
@@ -71,7 +71,7 @@ function _rpParts(rows) {
 var _rpOut = [];
 function _rpPartsDialog(out) {
   _rpOut = out;
-  openModal(MSG_RP_PARTS, '<p class="rp-parts-note">' + esc(MSG_RP_PARTS_NOTE) + '</p><div class="rp-parts">' +
+  openModal(MSG_RP_PARTS, '<div class="rp-parts">' +
     out.map(function (f, i) {
       return '<button class="btn-sm rp-part" data-act="rp-share-part" data-i="' + i + '">' +
         icon('share') + '<span>שיתוף חלק ' + (i + 1) + ' מתוך ' + out.length + '</span></button>';
