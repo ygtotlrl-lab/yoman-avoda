@@ -250,7 +250,7 @@ function renderArcDetail() {
   }
 
   if (S.arcEditMode) {
-    html += '<div class="arc-add">'+
+    html += '<div class="arc-add" data-ks-area>'+
       '<div class="arc-add-ttl">+ הוספת רשומה</div>'+
       '<div class="arc-add-row" data-ks>'+
       // שלושת הבוררים — באותה צורה: מתחילים ריקים (קטגוריה · משימה · תת-משימה) ובוחרים מהרשימה בלבד

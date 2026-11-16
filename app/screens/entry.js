@@ -12,7 +12,7 @@ import { catCls, catTasks, getCurrentDateKey, gregDateStr, liveOnly, parseGregLi
 
 function screenEntryHTML() {
   return `
-<div class="panel" id="panel-entry">
+<div class="panel" id="panel-entry" data-ks-area>
   <div class="card">
     <div class="card-ttl">תאריך ויום</div>
     <div class="date-row">
