@@ -13,7 +13,7 @@ function screenSettingsHTML() {
   <div class="card">
     <div class="card-ttl">עריכת קטגוריות ומשימות</div>
     <div id="settingsEditor"></div>
-    <button class="btn-save" data-act="save-settings">${icon('save')}שמור שינויים</button>
+    <button class="btn-save" data-act="save-settings">${icon('save')}שמירה</button>
   </div>
 </div>
 `;
