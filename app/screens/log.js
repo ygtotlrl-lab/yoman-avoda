@@ -67,7 +67,7 @@ function delEntry(id) {
 }
 
 function clearAll() {
-  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE, icon('del')).then(function (yes) {
+  ask(MSG_CLEAR_ALL_TITLE, MSG_CLEAR_ALL_BODY, MSG_DELETE, icon('del'), null, true).then(function (yes) {
     if (!yes) return;
     var curKey = getCurrentDateKey();
     var ts = Date.now();

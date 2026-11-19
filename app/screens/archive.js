@@ -3,7 +3,7 @@ import { MSG_SAVED, dayToday } from '../../core/util.js';
 import { idEq, newClientId, pendMark, tombKill } from '../../core/sync.js';
 import { esc, toast } from '../../core/ui.js';
 import { hebrewDate } from '../../core/hebrew.js';
-import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE } from '../constants.js';
+import { MSG_EDIT_FORM_CLOSED, MSG_ROW_GONE, MSG_NEED_CAT_TASK } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
 import { catCls, catLabelOf, catTasks, extractYM, isLive, liveOnly, recTouch, saveRows, showEl,
@@ -320,7 +320,7 @@ function arcAddEntry() {
   var notesSel = document.getElementById("arc-add-notes");
   if (!catSel || !taskSel) return;
   var catId = catSel.value;
-  if (!S.CATS.some(function(c){ return c.id === catId; }) || !taskSel.value) { toast('יש לבחור קטגוריה ומשימה', null, 'warn'); return; }
+  if (!S.CATS.some(function(c){ return c.id === catId; }) || !taskSel.value) { toast(MSG_NEED_CAT_TASK, null, 'warn'); return; }
   // created_at נפרד לסדר — uuid אינו ניתן להשוואה.
   var _now = Date.now();
   var newEntry = {

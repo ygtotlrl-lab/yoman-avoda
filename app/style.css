@@ -174,7 +174,6 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .sheet-ft{padding:var(--sp-5) var(--sp-6) var(--sp-6);gap:var(--sp-4)}
 .sheet-ft button{flex:1;padding:var(--sp-5);border-radius:var(--r-4);border:1.5px solid var(--text-3);
   background:var(--card-2);color:var(--text);font-family:Heebo;font-size:var(--fs-3);font-weight:600;cursor:pointer}
-.sheet-ft button.danger{border:none;background:var(--bad);color:var(--bad-soft)}
 .rp-cat{font-weight:900}
 .is-current{opacity:var(--op-4)}
 .cat-fill{background:var(--cat)}
