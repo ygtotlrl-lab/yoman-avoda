@@ -190,3 +190,23 @@ body:has(.card-win){overflow:hidden}
 .per-del .ico{width:14px;height:14px}
 .per-add{width:100%;min-height:44px;font:inherit;font-size:var(--fs-3);font-weight:600;border:1.5px dashed var(--border);background:var(--card);color:var(--text-2);cursor:pointer;padding:var(--sp-3);border-radius:var(--r-4)}
 .per-del:focus-visible,.per-add:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+
+/* ── משתמשים (core/gauth.js) — רשימה, ושורת מתג בטופס ── */
+.ga-list{display:flex;flex-direction:column;gap:var(--sp-3)}
+.ga-empty{color:var(--text-2);text-align:center;padding:var(--sp-6)}
+.ga-ur{display:flex;align-items:center;gap:var(--sp-4);width:100%;text-align:right;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:var(--sp-4) var(--sp-5);font:inherit;color:var(--text);cursor:pointer}
+.ga-ur.is-off{opacity:.55}
+.ga-ur-n{flex:1;display:flex;flex-direction:column;min-width:0}
+.ga-ur-n small{color:var(--text-2);direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis}
+.ga-ur-b{display:inline-flex;color:var(--brand-ink)}
+.ga-ur-b svg{width:16px;height:16px}
+.ga-ur-r{font-size:.8rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:2px 10px}
+.modal-body .ga-sw{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-5);padding:var(--sp-4) var(--sp-5);margin:var(--sp-4) 0;border:1px solid var(--border);border-radius:14px;font-weight:600;color:var(--text);cursor:pointer}
+.modal-body .ga-sw span{display:inline-flex;align-items:center;gap:var(--sp-4)}
+.modal-body .ga-sw svg{width:18px;height:18px;color:var(--brand-ink)}
+.modal-body input.ga-swi{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:42px;height:24px;margin:0;padding:0;border:0;border-radius:999px;background:var(--border);cursor:pointer;transition:background .15s}
+.modal-body input.ga-swi::after{content:"";position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:right .15s}
+.modal-body input.ga-swi:checked{background:var(--ok)}
+.modal-body input.ga-swi:checked::after{right:21px}
+.modal-body input.ga-swi:disabled{opacity:.5;cursor:default}
+.ga-err2{color:var(--bad);font-size:.88rem;min-height:1.2em;margin-top:var(--sp-3)}

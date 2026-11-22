@@ -30,6 +30,10 @@ self.APP = Object.freeze({
     launch: {},
     // כפתור «יציאה» שהמעטפת קולטת וסוגרת בו את האפליקציה
     exit: false,
+    // ההתראות — FCM במעטפת; google-services.json שב-android/app — של האפליקציה הזו בלבד
+    push: true,
+    // הכניסה עם Google במעטפת — לקוח ה-Web של פרויקט Google (הקהל של אסימון הזהות); ריק — אין כניסה עם Google
+    google: '1083124359240-4umlnm6fic0locuq2tm8m4q6udmbrgdv.apps.googleusercontent.com',
     // גשר השיתוף (FileProvider ו-androidx) וגשר ההדפסה — בכל האפליקציות, אחידים
     share: { chooser: 'שיתוף הדו"ח', print: true }
   },
