@@ -5,7 +5,7 @@ import { ctxEpoch, ctxStale, ctxSwitch, eraKeys, idEq, pendAlertDismiss, pendCou
 import { lsGet, lsOpen, lsRemove, lsSet } from '../core/storage.js';
 import { logAwait } from '../core/backup.js';
 import { bootRun } from '../core/boot-run.js';
-import { actWire, closeAsk, closeModal, dragCancel, dragDown, dragMove, dragUp, esc, modalDismiss,
+import { actWire, closeAsk, closeModal, comboFocus, comboInput, comboMake, comboMore, comboPick, dragCancel, dragDown, dragMove, dragUp, esc, modalDismiss,
          openModal, pullRender, shellBare, swApply, swHideUpdate, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
 import { CATS_RESET_KEY, MSG_ALREADY_AT, MSG_BOOT_FAIL, MSG_DAY_ARCHIVED, MSG_OFFLINE_LOCAL,
@@ -247,6 +247,9 @@ var DOM_ACTIONS = {
   'arc-go-years':   function () { arcGoYears(); },
   'arc-toggle-edit': function () { arcToggleEdit(); },
   'arc-add-entry':  function () { arcAddEntry(); },
+  'combo-pick':     function (el) { return comboPick(el); },
+  'combo-make':     function (el) { return comboMake(el); },
+  'combo-more':     function (el) { return comboMore(el); },
   // ביטול עריכה הוא רינדור מחדש ולא שחזור ערך — המסך נבנה מהמצב השמור, ומה שלא נשמר נעלם מעצמו.
   'entry-edit-cancel':     function () { renderLog(); },
   'arc-entry-edit-cancel': function () { renderArcDetail(); },
@@ -262,7 +265,9 @@ document.querySelectorAll('.tab-btn[data-tab]').forEach(function (b) {
   b.insertAdjacentHTML('afterbegin', icon(b.getAttribute('data-tab')));
 });
 
+document.addEventListener('focusin', comboFocus);
 document.addEventListener('input', function (e) {
+  if (comboInput(e)) return;
   var el = e.target;
   if (el && el.dataset && el.dataset.inp === 'greg-date') onGregDateChange();
 });
@@ -280,7 +285,6 @@ document.addEventListener('focusout', function (e) {
 document.addEventListener('change', function (e) {
   var el = e.target;
   if (el && el.dataset && el.dataset.chg === 'arc-add-cat') arcAddCatChange(el);
-  if (el && el.dataset && el.dataset.chg === 'arc-add-task') arcAddTaskChange();
 });
 
 // הגרירה לסידור במנגנון שבליבה; המחילים לכל סוג — במסך ההגדרות.

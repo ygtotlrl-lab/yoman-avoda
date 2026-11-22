@@ -113,6 +113,8 @@ var DAY_VALUE_MAP = ["יום ראשון","יום שני","יום שלישי","י
 
 // הודעות — מחרוזת למשתמש היא קבוע.
 var MSG_NEED_CAT_TASK = 'יש לבחור קטגוריה ומשימה';
+// טקסט חופשי במשימה ובתת-המשימה של רשומה שנוספת בארכיון — השורה האחרונה ברשימה.
+var ARC_FREE_LABEL = function (q) { return q ? '«' + q + '» — טקסט חופשי' : 'או מקלידים טקסט חופשי בשדה'; };
 
 export { CATS_RESET_KEY, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREADY_AT,
          MSG_BOOT_FAIL, MSG_CLEAR_ALL_BODY, MSG_CLEAR_ALL_TITLE, MSG_CLOUD_NO_FANOUT,
@@ -123,4 +125,4 @@ export { CATS_RESET_KEY, DAY_VALUE_MAP, HMO, HUNKNOWN, MSG_ALREADY_AT,
          MSG_SUBTASK_EXISTS, MSG_SWITCH_YESHIVA, MSG_SYNCED, MSG_SYNC_FAIL_LOCAL,
          MSG_SYNC_LOAD_FAIL, MSG_SYNC_PARTIAL, MSG_TASK_EXISTS, MSG_WRAP_TABLE, MSG_YESHIVA_UNKNOWN,
          PK_ARC, PK_ENTRY, PK_SET, SB_KEY, SB_URL, YA_ROWS_TABLE, YA_SET_KEYS, YESHIVOT,
-         MSG_NEED_CAT_TASK };
+         MSG_NEED_CAT_TASK, ARC_FREE_LABEL };

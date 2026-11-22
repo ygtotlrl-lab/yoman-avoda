@@ -472,3 +472,12 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .arc-add-row input::placeholder{color:var(--text);opacity:1}
 .arc-add-row .arc-a-notes,.arc-add-row .arc-add-btn{grid-column:1/-1}
 .arc-add-row .arc-add-btn{min-height:44px}
+/* המשימה ותת-המשימה — הרשימה הנפתחת של הליבה: המעטפת שקופה והשדה שבתוכה נושא את מסגרת הבוררים; והרשימה — כרטיס לבן מתחת לשדה. */
+.arc-add-row .combo.arc-add-sel{border:0;padding:0;border-radius:0;min-width:0}
+.arc-add-row .combo .combo-q{width:100%;box-sizing:border-box}
+.combo-list{--combo-gap:var(--sp-2);background:var(--card);border:1.5px solid var(--border);border-radius:var(--r-3);box-shadow:0 8px 24px var(--shadow);padding:var(--sp-2) 0}
+.combo-opt{min-height:44px;padding:var(--sp-3) var(--sp-4);font-family:Heebo;font-size:var(--fs-2);color:var(--text)}
+.combo-opt.is-on,.combo-opt:active,.combo-opt:focus-visible{background:var(--brand-soft);color:var(--brand-ink);outline:none}
+.combo-opt mark{background:none;color:var(--brand-ink);font-weight:700}
+.combo-make{color:var(--brand-ink);font-weight:600}
+.combo-empty{padding:var(--sp-3) var(--sp-4);font-size:var(--fs-2);color:var(--text-3)}
