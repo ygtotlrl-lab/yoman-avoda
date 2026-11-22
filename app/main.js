@@ -28,6 +28,7 @@ import { addEntry, autoSelectTodayChip, buildCatGrid, buildSubBtns, buildTaskBtn
          screenEntryHTML } from './screens/entry.js';
 import { clearAll, delEntry, dupEntry, editEntry, renderLog, saveDupEntry, saveEntry,
          screenLogHTML } from './screens/log.js';
+import { GAUTH_ACTIONS, gauthGate, gauthHeaders, gauthUser } from '../core/gauth.js';
 import { screenPickHTML, yaInfraOpen, yaInfraToggleAll } from './screens/pick.js';
 import { addSub, addTask, editSubInline, editTaskInline, removeSub, removeTask,
          renderSettings, saveCatName, saveSettings, saveSubInline, saveTaskInline,
@@ -39,6 +40,8 @@ appConfigure({
   get BK_CFG() { return BK_CFG; },
   get DEV_CFG() { return DEV_CFG; },
   get DOM_ACTIONS() { return DOM_ACTIONS; },
+  get GAUTH_CFG() { return GAUTH_CFG; },
+  get NOTIFY_CFG() { return NOTIFY_CFG; },
   get ERA_CFG() { return ERA_CFG; },
   get LS_CFG() { return LS_CFG; },
   get MIRROR_CFG() { return MIRROR_CFG; },
@@ -48,6 +51,13 @@ appConfigure({
   get RTY_CFG() { return RTY_CFG; },
   get saveRefresh() { return saveRefresh; }
 });
+
+// הכניסה עם Google (core/gauth.js) — הלקוח של האפליקציה; וההתראות (core/push.js) — המשתמש מזוהה מול השער באסימון הסשן
+var GAUTH_CFG = { sb: function () { return getSB(); } };
+var NOTIFY_CFG = {
+  auth: async function () { return { headers: await gauthHeaders() }; },
+  user: function () { return gauthUser(); }
+};
 
 // המראה ממופתחת בשם הטבלה, והמוסד בתחילית — prefix ו-tables נקראים בכל קריאה, ומוסד שהוחלף אינו נלכד.
 var MIRROR_CFG = {
@@ -258,6 +268,7 @@ var DOM_ACTIONS = {
   'ask-yes':        function () { closeAsk(true); },
 };
 
+Object.assign(DOM_ACTIONS, GAUTH_ACTIONS);
 actWire(DOM_ACTIONS);
 
 // הלשוניות במעטפת הסטטית — האייקון נכנס מכאן, כי index.html אינו נושא את הסט.
@@ -533,6 +544,8 @@ function selectYeshiva(y) {
 }
 
 window.bootOk();
+// הכניסה — מסך הכניסה מעל הכל, עד שנכנס משתמש מהרשימה; בלי APP.auth.required — מיד
+await gauthGate();
 
 // הגדרות ושורות יומן נבנים מחדש, ולכן הציור עובר ב-pullRender — שדה פתוח בהם היה נמחק.
 function yaPullDraw() {

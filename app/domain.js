@@ -4,6 +4,7 @@ import { DAY_MONTHS, MSG_SAVED_LOCAL, MSG_SYNC_BACK, app, dayIso, dayNoon, dayTo
 import { _rowsPaged, ctxEpoch, ctxStale, idEq, mergeCore, mergeWinner, pendConfirmPush, pendHas,
          pendMark, plStampWrite, pushTable, sbWatch, schedulePush } from '../core/sync.js';
 import { MIRROR, mirrorSave } from '../core/mirror.js';
+import { gauthClientOpts } from '../core/gauth.js';
 import { logAction } from '../core/backup.js';
 import { pullRender, toast } from '../core/ui.js';
 import { hebrewDate } from '../core/hebrew.js';
@@ -52,7 +53,7 @@ var YA_ROW_COLS = ['client_id', 'yeshiva', 'archived', 'entry_date', 'created_at
 
 // ── הלקוח ──
 function getSB() {
-  if (!S._sb) S._sb = sbWatch(supabase.createClient(SB_URL, SB_KEY));
+  if (!S._sb) S._sb = sbWatch(supabase.createClient(SB_URL, SB_KEY, gauthClientOpts()));
   return S._sb;
 }
 

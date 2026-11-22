@@ -4,12 +4,14 @@ import { dragDef, dragOrder, esc, toast } from '../../core/ui.js';
 import { MSG_SUBTASK_EXISTS, MSG_TASK_EXISTS } from '../constants.js';
 import { S, shell } from '../state.js';
 import { icon } from '../icons.js';
+import { gauthCardHTML } from '../../core/gauth.js';
 import { tombKill } from '../../core/sync.js';
 import { catCls, catTasks, isLive, recTouch, taskOf, yaCatsPut, yaSetDirty } from '../domain.js';
 
 function screenSettingsHTML() {
   return `
 <div class="is-hidden panel" id="panel-settings">
+  <div id="gaCardSlot"></div>
   <div class="card">
     <div class="card-ttl">עריכת קטגוריות ומשימות</div>
     <div id="settingsEditor"></div>
@@ -162,6 +164,8 @@ function saveTaskInline(inp) {
 // אין להוסיף שער סיסמה מעל מסך ההגדרות, ואין לזרוע ברירת מחדל לסיסמה או לתפקיד —
 // בהתקנה טרייה שער כזה נופל לערך ידוע ונפתח לכל מקליד; וכאן אין משתמשים כלל — הכניסה היא בחירת מוסד.
 function renderSettings() {
+  var slot = document.getElementById('gaCardSlot');
+  if (slot) slot.innerHTML = gauthCardHTML(); // החשבון — המשתמש, «משתמשים» למנהל, התראות ויציאה
   var ed = document.getElementById("settingsEditor");
   ed.innerHTML = "";
   S.CATS.forEach(function(cat, ci) {
