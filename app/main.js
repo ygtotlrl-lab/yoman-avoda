@@ -53,7 +53,11 @@ appConfigure({
 });
 
 // הכניסה עם Google (core/gauth.js) — הלקוח של האפליקציה; וההתראות (core/push.js) — המשתמש מזוהה מול השער באסימון הסשן
-var GAUTH_CFG = { sb: function () { return getSB(); } };
+var GAUTH_CFG = {
+  sb: function () { return getSB(); },
+  // כרטיס החשבון — בצורת שאר הכרטיסים של המסך
+  card: function (title, inner) { return '<div class="card ga-card"><div class="card-ttl">' + esc(title) + '</div>' + inner + '</div>'; }
+};
 var NOTIFY_CFG = {
   auth: async function () { return { headers: await gauthHeaders() }; },
   user: function () { return gauthUser(); }

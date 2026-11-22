@@ -61,13 +61,16 @@ async function _post(body) {
   var a = {};
   try { a = _cfg().auth ? (await _cfg().auth()) || {} : {}; } catch (e) { a = {}; }
   var k = self.APP.supabase.key;
-  var res = await fetch(_gateUrl(), {
-    method: 'POST',
-    headers: Object.assign({ apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, a.headers || {}),
-    body: JSON.stringify(Object.assign({ app: self.APP.id }, a.body || {}, body))
-  });
   var j = null;
-  try { j = await res.json(); } catch (e) { j = null; }
+  try {
+    // זמן קצוב — בלי תשובה תוך 20 שניות הבקשה נחשבת כשל, ושום חלון אינו נשאר תקוע
+    var res = await Promise.race([fetch(_gateUrl(), {
+      method: 'POST',
+      headers: Object.assign({ apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, a.headers || {}),
+      body: JSON.stringify(Object.assign({ app: self.APP.id }, a.body || {}, body))
+    }), new Promise(function (_, no) { setTimeout(function () { no(new Error('timeout')); }, 20000); })]);
+    j = await res.json();
+  } catch (e) { j = null; }
   return j || { error: 'net' };
 }
 

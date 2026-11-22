@@ -75,6 +75,7 @@ function _screen(show) {
       (_icon() ? '<img class="ga-ico" alt="" src="' + esc(_icon()) + '">' : '') +
       '<div class="ga-name">' + esc(_app().name || '') + '</div>' +
       '<div class="ga-sub">כניסה בחשבון Google שהמנהל אישר</div>' +
+      '<div class="ga-gsi" id="ga-gsi"></div>' +
       '<button type="button" class="ga-btn" id="ga-go">' + G_LOGO + '<span>כניסה עם Google</span></button>' +
       '<div class="ga-err" id="ga-err" role="alert"></div></div>';
     document.body.appendChild(el);
@@ -105,11 +106,50 @@ async function _signIn(sb) {
     if (res.error) { console.warn('[gauth] idToken', res.error); _err(MSG_SIGNIN_FAIL); return false; }
     return true;
   }
-  // בדפדפן — הדף עוזב ל-Google וחוזר; ההמשך בעלייה הבאה
+  // בדפדפן, כשאין כפתור Google (GIS לא נטען) — הדף עוזב ל-Google וחוזר; ההמשך בעלייה הבאה
   var o = await sb.auth.signInWithOAuth({ provider: 'google',
     options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } } });
   if (o.error) { _err(MSG_SIGNIN_FAIL); return false; }
   return false;
+}
+
+// ── בדפדפן — כפתור Google עצמו (Google Identity Services): חלון הבחירה של Google נפתח מעל הדף, בשם האפליקציה
+// ולא בכתובת השרת, והאסימון שחוזר נכנס ל-Supabase (signInWithIdToken) — כמו במעטפת. בלי הספרייה — הכפתור שלנו והפניה.
+var GSI_SRC = 'https://accounts.google.com/gsi/client';
+var _gsiP = null;
+function _gsiLoad() {
+  if (self.google && self.google.accounts && self.google.accounts.id) return Promise.resolve(true);
+  if (_gsiP) return _gsiP;
+  _gsiP = new Promise(function (resolve) {
+    var sc = document.createElement('script');
+    sc.src = GSI_SRC; sc.async = true;
+    sc.onload = function () { resolve(!!(self.google && self.google.accounts && self.google.accounts.id)); };
+    sc.onerror = function () { _gsiP = null; resolve(false); };
+    document.head.appendChild(sc);
+    setTimeout(function () { resolve(false); }, 8000);
+  });
+  return _gsiP;
+}
+function _clientId() { return ((_app().android || {}).google) || ''; }
+// מצייר את כפתור Google במקום הכפתור שלנו; done — נקרא כשהכניסה הצליחה
+async function _gsiButton(sb, done) {
+  if (_native() || !_clientId() || !(await _gsiLoad())) return false;
+  var host = document.getElementById('ga-gsi'), mine = document.getElementById('ga-go');
+  if (!host) return false;
+  self.google.accounts.id.initialize({
+    client_id: _clientId(), ux_mode: 'popup', auto_select: false, cancel_on_tap_outside: true,
+    callback: async function (resp) {
+      _err('');
+      var res = await sb.auth.signInWithIdToken({ provider: 'google', token: resp.credential });
+      if (res.error) { console.warn('[gauth] gsi', res.error); _err(MSG_SIGNIN_FAIL); return; }
+      done();
+    }
+  });
+  host.innerHTML = '';
+  self.google.accounts.id.renderButton(host, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with',
+    locale: 'he', width: Math.min(312, host.clientWidth || 312), logo_alignment: 'center' });
+  if (mine) mine.hidden = true;
+  return true;
 }
 
 // השורה של המשתמש — המסד מחזיר אותה רק למי שברשימה ופעיל; בלעדיה — חסימה: השער רושם, מתריע ומנתק בשרת
@@ -158,6 +198,7 @@ async function gauthGate() {
     }
     _screen(true);
     await new Promise(function (resolve) {
+      _gsiButton(sb, resolve);
       var b = document.getElementById('ga-go');
       b.onclick = async function () {
         b.disabled = true; _err('');
@@ -176,22 +217,47 @@ async function gauthSignOut(quiet) {
   if (!quiet) location.reload();
 }
 // לשער ההתראות — אסימון הסשן
+// זמן קצוב — בקשה שנתקעה (רשת, נעילת הסשן) אינה משאירה «טוען…» לנצח
+function gauthTimed(p, ms) {
+  return Promise.race([p, new Promise(function (_, no) { setTimeout(function () { no(new Error('timeout')); }, ms); })]);
+}
 async function gauthHeaders() {
   var s = null;
-  try { s = (await _sb().auth.getSession()).data.session; } catch (e) { s = null; }
+  try { s = (await gauthTimed(_sb().auth.getSession(), 8000)).data.session; } catch (e) { s = null; }
   return s ? { Authorization: 'Bearer ' + s.access_token } : {};
 }
 
-// ── הכרטיס «החשבון» במסך ההגדרות — אחיד בכל האפליקציות עם כניסה ──
+// ── הכרטיס «החשבון» — בתחתית מסך ההגדרות, אחיד בכל האפליקציות עם כניסה ──
+// התוכן מהליבה, והמעטפת מהאפליקציה (GAUTH_CFG.card(title, inner)) — כך הכרטיס בצורת שאר הכרטיסים שלה
+function _initials(n) {
+  var w = String(n || '').trim().split(/\s+/).filter(Boolean);
+  return w.length ? (w[0][0] + (w[1] ? w[1][0] : '')) : '?';
+}
+function _accountInner() {
+  var nm = _user.full_name || _user.login;
+  var row = function (act, ic, label, cls) {
+    return '<button type="button" class="ga-row' + (cls ? ' ' + cls : '') + '" data-act="' + act + '">' +
+      '<span class="ga-ri">' + _ic(ic) + '</span><span class="ga-rl">' + label + '</span><span class="ga-chev" aria-hidden="true"></span></button>';
+  };
+  return '<div class="ga-me"><span class="ga-av">' + esc(_initials(nm)) + '</span>' +
+      '<span class="ga-who"><b>' + esc(nm) + '</b><small>' + esc(_user.login) + '</small></span>' +
+      '<span class="ga-role">' + esc(ROLE_LABELS[_user.role] || '') + '</span></div>' +
+    '<div class="ga-rows">' +
+      (gauthIsAdmin() ? row('ga-users', 'user', 'משתמשים') : '') +
+      row('push-open', 'bell', 'התראות במכשיר הזה') +
+      row('ga-signout', 'logout', 'יציאה', 'is-out') +
+    '</div>';
+}
 function gauthCardHTML() {
   if (!gauthRequired() || !_user) return '';
-  return '<div class="card ga-card">' +
-    '<div class="ga-me">' + _ic('user') + '<span><b>' + esc(_user.full_name || _user.login) + '</b><small>' + esc(_user.login) + '</small></span></div>' +
-    '<div class="ga-acts">' +
-      (gauthIsAdmin() ? '<button class="btn out" data-act="ga-users">' + _ic('user') + 'משתמשים</button>' : '') +
-      '<button class="btn out" data-act="push-open">' + _ic('bell') + 'התראות במכשיר הזה</button>' +
-      '<button class="btn out" data-act="ga-signout">' + _ic('logout') + 'יציאה</button>' +
-    '</div></div>';
+  var wrap = app.GAUTH_CFG && app.GAUTH_CFG.card;
+  return wrap ? wrap('החשבון', _accountInner()) : '<div class="card ga-card">' + _accountInner() + '</div>';
+}
+
+// אותו תוכן בחלון — לאפליקציה שאין בה מסך הגדרות
+function gauthAccountOpen() {
+  if (!_user) return;
+  openModal('החשבון', '<div class="ga-card">' + _accountInner() + '</div>', '', _ic('user'));
 }
 
 // ── ניהול המשתמשים — מנהל בלבד, דרך השער (הטבלה נכתבת רק במפתח השירות) ──
@@ -200,8 +266,10 @@ var _rows = [], _devs = {};
 async function _gate(body) {
   var k = _app().supabase.key;
   var h = Object.assign({ apikey: k, Authorization: 'Bearer ' + k, 'Content-Type': 'application/json' }, await gauthHeaders());
-  var r = await fetch(_gateUrl(), { method: 'POST', headers: h, body: JSON.stringify(Object.assign({ app: _app().id }, body)) });
-  try { return await r.json(); } catch (e) { return { error: 'net' }; }
+  try {
+    var r = await gauthTimed(fetch(_gateUrl(), { method: 'POST', headers: h, body: JSON.stringify(Object.assign({ app: _app().id }, body)) }), 20000);
+    return await r.json();
+  } catch (e) { console.warn('[gauth] gate', body.action, e); return { error: 'net' }; }
 }
 function _listHTML() {
   if (!_rows.length) return '<div class="ga-empty">אין משתמשים</div>';
@@ -215,10 +283,12 @@ function _listHTML() {
 async function gauthUsersOpen() {
   openModal('משתמשים', '<div class="ga-list" id="ga-list"><div class="ga-empty">טוען…</div></div>',
     '<button class="btn" data-act="ga-user-edit" data-id="">' + _ic('plus') + 'הוספת משתמש</button>', _ic('user'));
-  var r = await _gate({ action: 'users_list' });
-  _devs = await pushDevices();
+  // הרשימה והמכשירים במקביל; המכשירים — תוספת, ובלעדיהם הרשימה מוצגת בלי פעמונים מלאים
+  var both = await Promise.all([_gate({ action: 'users_list' }), pushDevices()]);
+  var r = both[0];
+  _devs = both[1] || {};
   var l = document.getElementById('ga-list');
-  if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">אין חיבור לשרת</div>'; return; }
+  if (!r || !r.rows) { if (l) l.innerHTML = '<div class="ga-empty">' + (r && r.error === 'perm' ? 'רק מנהל רואה את המשתמשים' : 'אין חיבור לשרת — נסו שוב') + '</div>'; return; }
   _rows = r.rows;
   if (l) l.innerHTML = _listHTML();
 }
@@ -255,11 +325,12 @@ async function gauthUserSave() {
 
 // מפת הפעולות — האפליקציה פורשת אותה לתוך DOM_ACTIONS שלה (כולל פעולות ההתראות)
 var GAUTH_ACTIONS = Object.assign({}, PUSH_ACTIONS, {
+  'ga-account': function () { gauthAccountOpen(); },
   'ga-users': function () { return gauthUsersOpen(); },
   'ga-user-edit': function (el) { gauthUserEdit(el.getAttribute('data-id') || ''); },
   'ga-user-save': function () { return gauthUserSave(); },
   'ga-signout': function () { closeModal(); return gauthSignOut(false); }
 });
 
-export { AUTH_IDLE_MS, GAUTH_ACTIONS, gauthCardHTML, gauthClientOpts, gauthGate, gauthHeaders, gauthIsAdmin,
+export { gauthTimed, AUTH_IDLE_MS, GAUTH_ACTIONS, gauthAccountOpen, gauthCardHTML, gauthClientOpts, gauthGate, gauthHeaders, gauthIsAdmin,
          gauthRequired, gauthSignOut, gauthUser };

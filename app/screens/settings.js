@@ -11,12 +11,12 @@ import { catCls, catTasks, isLive, recTouch, taskOf, yaCatsPut, yaSetDirty } fro
 function screenSettingsHTML() {
   return `
 <div class="is-hidden panel" id="panel-settings">
-  <div id="gaCardSlot"></div>
   <div class="card">
     <div class="card-ttl">עריכת קטגוריות ומשימות</div>
     <div id="settingsEditor"></div>
     <button class="btn-save" data-act="save-settings">${icon('save')}שמירה</button>
   </div>
+  <div id="gaCardSlot"></div>
 </div>
 `;
 }
@@ -161,8 +161,8 @@ function saveTaskInline(inp) {
   renderSettings(); shell.buildCatGrid(); shell.buildTaskBtns();
 }
 
-// אין להוסיף שער סיסמה מעל מסך ההגדרות, ואין לזרוע ברירת מחדל לסיסמה או לתפקיד —
-// בהתקנה טרייה שער כזה נופל לערך ידוע ונפתח לכל מקליד; וכאן אין משתמשים כלל — הכניסה היא בחירת מוסד.
+// אין להוסיף שער סיסמה מעל מסך ההגדרות, ואין לזרוע ברירת מחדל לסיסמה או לתפקיד — הכניסה היא בחשבון Google
+// (core/gauth.js), וכרטיס החשבון בתחתית המסך.
 function renderSettings() {
   var slot = document.getElementById('gaCardSlot');
   if (slot) slot.innerHTML = gauthCardHTML(); // החשבון — המשתמש, «משתמשים» למנהל, התראות ויציאה
