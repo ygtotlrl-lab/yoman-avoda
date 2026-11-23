@@ -481,3 +481,4 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .combo-opt mark{background:none;color:var(--brand-ink);font-weight:700}
 .combo-make{color:var(--brand-ink);font-weight:600}
 .combo-empty{padding:var(--sp-3) var(--sp-4);font-size:var(--fs-2);color:var(--text-3)}
+.inf-tbl .inf-sub{opacity:.5}

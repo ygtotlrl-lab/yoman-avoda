@@ -74,12 +74,17 @@ var INF_ICONS = {
   'שיעורים': '<path d="M3 20h18"/><rect x="4" y="5" width="3.5" height="15" rx=".5"/><rect x="8.5" y="7.5" width="3.5" height="12.5" rx=".5"/><path d="M14.2 8.6l3.4-.9 2.9 11.4-3.4.9z"/>'
 };
 
+// אפליקציית בת — עמודה ששמה נפתח בשם האם ואחריו רווח: הסמל של האם, והעמודה כולה חיוורת
+function _infMother(a) {
+  for (var k in INF_ICONS) if (String(a).indexOf(k + ' ') === 0) return k;
+  return '';
+}
 function _infAppTh(a) {
-  var icoSvg = INF_ICONS[a];
+  var mom = _infMother(a), icoSvg = INF_ICONS[a] || INF_ICONS[mom];
   var cellHTML = icoSvg
     ? '<svg class="inf-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + icoSvg + '</svg>'
     : '<span class="inf-ico-l" aria-hidden="true">' + esc(String(a).charAt(0)) + '</span>';
-  return '<th class="inf-app" title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHTML + '</th>';
+  return '<th class="inf-app' + (mom ? ' inf-sub' : '') + '" title="' + esc(a) + '" aria-label="' + esc(a) + '">' + cellHTML + '</th>';
 }
 
 function _infDot(cell) {
@@ -167,7 +172,7 @@ function _infHTML(d) {
            (notes ? '<th>' + esc(head.note) + '</th>' : '') + '</tr></thead><tbody>';
       c.rows.forEach(function (r) {
         h += '<tr><td>' + r.n + '</td><td>' + _infMd(r.name) + '</td><td>' + _infMd(r.std) + '</td>' +
-             r.apps.map(function (a) { return '<td class="inf-app">' + _infDot(a) + '</td>'; }).join('') +
+             r.apps.map(function (a, k) { return '<td class="inf-app' + (_infMother(d.apps[k]) ? ' inf-sub' : '') + '">' + _infDot(a) + '</td>'; }).join('') +
              (notes ? '<td>' + _infMd(r.note) + '</td>' : '') + '</tr>';
       });
       h += '</tbody></table></div></details>';
