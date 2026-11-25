@@ -1,7 +1,7 @@
 // app/screens/pick.js — בחירת הישיבה ומציג הטבלאות: טבלת התשתית ותקן מעטפות האתרים
 import { errMsg, netTimeout } from '../../core/util.js';
 import { esc, openModal } from '../../core/ui.js';
-import { MSG_INFRA_TABLE, MSG_WRAP_TABLE, YESHIVOT } from '../constants.js';
+import { MSG_INFRA_TABLE, MSG_REASONS_TABLE, MSG_WRAP_TABLE, YESHIVOT } from '../constants.js';
 import { S } from '../state.js';
 import { icon } from '../icons.js';
 import { stIcon } from '../../core/icons.js';
@@ -24,6 +24,7 @@ function screenPickHTML() {
     }).join('')}</div>
     <div class="ys-pick-aside">
       <button class="ys-pick-alt" data-act="inf-open" data-doc="table">${icon('table')}${esc(MSG_INFRA_TABLE)}</button>
+      <button class="ys-pick-alt" data-act="inf-open" data-doc="reasons">${icon('table')}${esc(MSG_REASONS_TABLE)}</button>
       <button class="ys-pick-alt" data-act="inf-open" data-doc="wrappers">${icon('table')}${esc(MSG_WRAP_TABLE)}</button>
     </div>
   </div>
@@ -41,8 +42,10 @@ var RAW_BASE = "https://raw.githubusercontent.com/" + GITHUB_USER + "/" + GITHUB
 // ── מציג הטבלאות ──
 // הקובץ נמשך בזמן אמת ואינו מוטבע — עותק בקוד מתיישן; וכשל משיכה מוצג גלוי, שמסך ריק נקרא כאין נתונים.
 // שתי טבלאות באותו מבנה ובאותו מציג: התקן של שש האפליקציות, ותקן מעטפות האתרים — שהקוד שלו בריפו הפרטי site-wrappers.
+// plain — טבלה בלי עמודות אפליקציה: כל העמודות שאחרי המספר הן טקסט, וכותרותיהן מהקובץ (טבלת ההנמקות).
 var INF_DOCS = {
   table:    { file: 'TABLE.md',    title: MSG_INFRA_TABLE },
+  reasons:  { file: 'REASONS.md',  title: MSG_REASONS_TABLE, plain: true },
   wrappers: { file: 'WRAPPERS.md', title: MSG_WRAP_TABLE }
 };
 
@@ -95,7 +98,7 @@ function _infDot(cell) {
 }
 
 // אין כאן סיכום כללים — הטבלה היא ההוראה, ואין פרק כללים לפרק.
-function _infParse(md) {
+function _infParse(md, plain) {
   var lines = md.split('\n');
   var chaps = [], chap = null, cats = [], cur = null, rows = [], apps = null, width = 0;
   for (var i = 0; i < lines.length; i++) {
@@ -112,8 +115,10 @@ function _infParse(md) {
     // האפליקציות נגזרות מהעמודות שבין התקן להערה — רשימה מוקלדת הייתה מציגה עמודה תחת כותרת של אחרת.
     // כותרות העמודות נלקחות מהקובץ, לכל פרק — טבלה אחרת נושאת כותרות אחרות.
     if (c[0] === '#') {
-      apps = c.slice(3, -1); width = c.length;
+      width = c.length;
       if (!chap) { chap = { title: '', cats: [] }; chaps.push(chap); }
+      if (plain) { chap.head = { cols: c.slice(1) }; apps = []; continue; }
+      apps = c.slice(3, -1);
       chap.head = { name: c[1], std: c[2], note: c[c.length - 1] };
       continue;
     }
@@ -132,8 +137,8 @@ function _infParse(md) {
       continue;
     }
     if (!/^\d+$/.test(c[0])) continue;
-    var row = { n: Number(c[0]), name: c[1], std: c[2],
-                apps: c.slice(3, -1), note: c[c.length - 1] };
+    var row = plain ? { n: Number(c[0]), cols: c.slice(1) }
+                    : { n: Number(c[0]), name: c[1], std: c[2], apps: c.slice(3, -1), note: c[c.length - 1] };
     rows.push(row);
     if (!cur) { cur = { title: '—', order: '', rows: [] }; cats.push(cur); chap.cats.push(cur); }
     cur.rows.push(row);
@@ -159,6 +164,15 @@ function _infHTML(d) {
     if (p.title) h += '<h4 class="inf-chap">' + esc(p.title) + '</h4>';
     p.cats.forEach(function (c) {
       var head = p.head || { name: '', std: '', note: '' };
+      if (head.cols) {
+        h += '<details class="inf-cat"' + (S._infOpen ? ' open' : '') + '>' +
+             '<summary>' + esc(c.title) + ' — ' + c.rows.length + '</summary>' +
+             '<div class="inf-wrap"><table class="inf-tbl inf-plain"><thead><tr><th>#</th>' +
+             head.cols.map(function (x) { return '<th>' + esc(x) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+             c.rows.map(function (r) { return '<tr><td>' + r.n + '</td>' + r.cols.map(function (x) { return '<td>' + _infMd(x) + '</td>'; }).join('') + '</tr>'; }).join('') +
+             '</tbody></table></div></details>';
+        return;
+      }
       // עמודת הערה שכל תאיה ריקים אינה מוצגת.
       var notes = c.rows.some(function (r) { return r.note; });
       h += '<details class="inf-cat"' + (S._infOpen ? ' open' : '') + '>' +
@@ -203,7 +217,7 @@ async function yaInfraOpen(doc) {
       '<div class="inf-bar"><button data-act="inf-open" data-doc="' + S._infDoc + '">' + icon('retry') + 'נסה שוב</button></div></div>';
     return;
   }
-  S._infData = _infParse(md);
+  S._infData = _infParse(md, !!INF_DOCS[S._infDoc].plain);
   _infPaint();
 }
 
