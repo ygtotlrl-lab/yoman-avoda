@@ -482,3 +482,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .combo-make{color:var(--brand-ink);font-weight:600}
 .combo-empty{padding:var(--sp-3) var(--sp-4);font-size:var(--fs-2);color:var(--text-3)}
 .inf-tbl .inf-sub{opacity:.5}
+/* טבלה בלי עמודות אפליקציה (טבלת ההנמקות) — המספר צר, ושאר העמודות חולקות את הרוחב */
+.inf-plain{table-layout:auto}
+.inf-plain th:first-child,.inf-plain td:first-child{width:2.5em;white-space:nowrap}
+.inf-plain td:nth-child(2){font-weight:700;white-space:nowrap}
