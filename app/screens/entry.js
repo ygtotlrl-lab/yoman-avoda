@@ -31,7 +31,7 @@ function screenEntryHTML() {
            yyyy-mm-dd או הפורמט השמור, ומקלדת המספרים של iOS אינה מציעה
            «/» ולא «-»; ה-pattern הוא רמז הצורה, וההכרעה ב-parseGregLike,
            שנכשלת-סגור על כל קלט אחר ומתורגמת לפורמט השמור. -->
-      <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" pattern="\d{1,2}/\d{1,2}/\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2} [א-ת]+ \d{4}" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
+      <input aria-label="תאריך לועזי" class="greg-inp heb-inp" id="gregDateInput" type="text" autocomplete="off" placeholder="תאריך לועזי..." data-inp="greg-date" />
     </div>
   </div>
 
