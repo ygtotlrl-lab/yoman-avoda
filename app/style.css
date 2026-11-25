@@ -267,7 +267,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .task-btns,.sub-btns{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--sp-2);}
 .task-btns .hint,.sub-btns .hint{grid-column:1/-1;}
 .task-btns .qbtn,.sub-btns .qbtn{white-space:normal;min-height:28px;padding:var(--sp-2) var(--sp-3);line-height:1.2;display:flex;align-items:center;justify-content:center;text-align:center;}
-@media (max-width:520px){ .task-btns,.sub-btns{grid-template-columns:repeat(3,1fr);} }
+@media not all and (min-width:480px){ .task-btns,.sub-btns{grid-template-columns:repeat(3,1fr);} }
 .qbtn.qmore{background:none;border-style:dashed;color:var(--brand-ink);font-weight:700;}
 .qbtn{background:var(--card-2);border:1.5px solid var(--border);border-radius:var(--r-5);padding:var(--sp-2) var(--sp-5);font-size:var(--fs-1);
   font-family:'Heebo',sans-serif;cursor:pointer;transition:all var(--dur-2);color:var(--text-2);white-space:nowrap;}
@@ -436,6 +436,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .day-count{font-size:var(--fs-1);font-weight:400;opacity:var(--op-6)}
 
 /* ── נקודות שבירה ── */
+/* 900 · 1200 — אין שינוי: העמודה קצובה, ומסך רחב מציג אותה במרכז. */
 @media (min-width:360px){
   .hdr-sub{font-size:var(--fs-1);letter-spacing:var(--ls-1);}
 }
