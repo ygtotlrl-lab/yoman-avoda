@@ -94,3 +94,12 @@ create policy ya_settings_rishon_users on public.ya_settings_rishon as permissiv
 alter table public.ya_users enable row level security;
 drop policy if exists ya_users_select on public.ya_users;
 create policy ya_users_select on public.ya_users as permissive for select to authenticated using (ya_is_user());
+
+drop trigger if exists ya_entries_history on public.ya_entries;
+create trigger ya_entries_history AFTER INSERT OR DELETE OR UPDATE ON public.ya_entries FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
+drop trigger if exists ya_settings_ramataviv_history on public.ya_settings_ramataviv;
+create trigger ya_settings_ramataviv_history AFTER INSERT OR DELETE OR UPDATE ON public.ya_settings_ramataviv FOR EACH ROW EXECUTE FUNCTION sh_history_log('key');
+drop trigger if exists ya_settings_rishon_history on public.ya_settings_rishon;
+create trigger ya_settings_rishon_history AFTER INSERT OR DELETE OR UPDATE ON public.ya_settings_rishon FOR EACH ROW EXECUTE FUNCTION sh_history_log('key');
+drop trigger if exists ya_users_history on public.ya_users;
+create trigger ya_users_history AFTER INSERT OR DELETE OR UPDATE ON public.ya_users FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
