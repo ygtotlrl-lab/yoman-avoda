@@ -140,7 +140,7 @@ body{font-family:'Heebo',sans-serif;background:var(--bg);min-height:100vh;color:
 .inf-wrap{overflow-x:auto}
 .inf-tbl{width:100%;min-width:860px;table-layout:fixed;border-collapse:collapse;font-size:var(--fs-2)}
 .inf-tbl th,.inf-tbl td{border-top:1px solid var(--border);padding:var(--sp-3) var(--sp-4);
-  vertical-align:top;text-align:right;line-height:var(--lh-4);overflow-wrap:anywhere}
+  vertical-align:top;text-align:right;line-height:var(--lh-4)}
 .inf-tbl th{background:var(--card-2);font-weight:800;font-size:var(--fs-2);color:var(--text-2)}
 /* הסמל והנקודה ממורכזים ברוחב העמודה הקבוע, בלי ריווח אופקי — ולכן בכל רוחב מסך. */
 .inf-tbl .inf-app{padding-inline:0;text-align:center}
