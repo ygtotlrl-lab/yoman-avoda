@@ -13,7 +13,8 @@ create table if not exists public.ya_entries (
   deleted_by text,
   entry_date date,
   created_at timestamp with time zone,
-  constraint ya_entries_pkey PRIMARY KEY (client_id)
+  constraint ya_entries_pkey PRIMARY KEY (client_id),
+  constraint ya_entries_cat_task_req CHECK ((deleted OR ((COALESCE((data ->> 'cat'::text), ''::text) <> ''::text) AND (COALESCE((data ->> 'task'::text), ''::text) <> ''::text))))
 );
 
 create table if not exists public.ya_settings_ramataviv (
