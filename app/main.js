@@ -105,14 +105,14 @@ var BK_CFG = {
   user: function () { return null; },
   // ריק בכוונה — אין טבלת משתמשים ואין סוד, ומנגנון הסינון נשאר דרוך.
   secrets: [],
+  // המקורות — הטבלאות שהאפליקציה דוחפת (yaTables), ולא רשימה שמוקלדת שנית; ריקה עד שנבחר מוסד.
+  // מפתח הגיבוי הוא שם הטבלה, והמוסד בתחילית שלו — ya_entries משותפת לשני המוסדות, ולכן רק שורות המוסד (eq).
   sources: function () {
-    if (!S.KV_TABLE) return [];
-    // שתי טבלאות, בשכבות — היומן המאוחד, כולל שורות archived, וטבלת ההגדרות של המוסד.
-    // מפתח הגיבוי הוא שם הטבלה, והמוסד בתחילית שלו — ya_entries משותפת לשני המוסדות, ושמה לבדו מתנגש ב-sh_backup.
-    return [
-      { name: YA_ROWS_TABLE, eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' },
-      { name: S.KV_TABLE,    order: 'key',       ts: 'updated_at' }
-    ];
+    return yaTables().map(function (t) {
+      return t === YA_ROWS_TABLE
+        ? { name: t, eq: ['yeshiva', S.YESHIVA], order: 'client_id', ts: 'updated_at' }
+        : { name: t, order: 'key', ts: 'updated_at' };
+    });
   }
 };
 
