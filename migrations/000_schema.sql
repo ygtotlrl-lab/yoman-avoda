@@ -94,7 +94,7 @@ drop policy if exists ya_settings_rishon_users on public.ya_settings_rishon;
 create policy ya_settings_rishon_users on public.ya_settings_rishon as permissive for all to authenticated using (ya_is_user()) with check (ya_is_user());
 alter table public.ya_users enable row level security;
 drop policy if exists ya_users_select on public.ya_users;
-create policy ya_users_select on public.ya_users as permissive for select to authenticated using (ya_is_user());
+create policy ya_users_select on public.ya_users as permissive for select to authenticated using (ya_is_user() and login = lower(auth.jwt() ->> 'email'));
 
 drop trigger if exists ya_entries_history on public.ya_entries;
 create trigger ya_entries_history AFTER INSERT OR DELETE OR UPDATE ON public.ya_entries FOR EACH ROW EXECUTE FUNCTION sh_history_log('client_id');
